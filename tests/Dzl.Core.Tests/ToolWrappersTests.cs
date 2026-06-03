@@ -59,4 +59,16 @@ public class ToolWrappersTests
         WorkDrive.IsMounted(dir).Should().BeTrue();
         WorkDrive.IsMounted(@"X:\definitely\not\there").Should().BeFalse();
     }
+
+    [Fact]
+    public void MountArgs_with_source() =>
+        WorkDrive.MountArgs(@"C:\dayz proj").Should().Equal("/Mount", @"C:\dayz proj");
+
+    [Fact]
+    public void MountArgs_without_source() =>
+        WorkDrive.MountArgs(null).Should().Equal("/Mount");
+
+    [Fact]
+    public void ExtractArgs_builds_game_and_dest() =>
+        WorkDrive.ExtractArgs(@"E:\DayZ", @"P:\").Should().Equal("/extractGameData", @"E:\DayZ", @"P:\");
 }

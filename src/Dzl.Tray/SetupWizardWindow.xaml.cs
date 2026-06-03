@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Dzl.Core.Config;
@@ -91,7 +92,9 @@ public partial class SetupWizardWindow : FluentWindow
                 RefreshPathStatuses();
                 break;
 
-            case 3: // Work drive
+            case 3: // Work drive — prefill the work folder (becomes P:)
+                if (string.IsNullOrWhiteSpace(WorkFolderBox.Text))
+                    WorkFolderBox.Text = DefaultWorkFolder();
                 RefreshWorkDrive();
                 break;
 
@@ -263,6 +266,16 @@ public partial class SetupWizardWindow : FluentWindow
             : @"Mounts via <Tools>\Bin\WorkDrive\WorkDrive.exe.";
     }
 
+    /// <summary>Prefill for the work folder: settings.ini WorkDirPath, else ~\Documents\DayZ Projects.</summary>
+    private string DefaultWorkFolder()
+    {
+        var tools = ToolsPathBox.Text?.Trim() ?? "";
+        var fromIni = tools.Length > 0 ? EnvDetect.WorkDir(tools) : null;
+        return !string.IsNullOrWhiteSpace(fromIni)
+            ? fromIni
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "DayZ Projects");
+    }
+
     private void OnMountWorkDrive(object sender, RoutedEventArgs e)
     {
         var tools = ToolsPathBox.Text?.Trim() ?? "";
@@ -271,12 +284,52 @@ public partial class SetupWizardWindow : FluentWindow
             WorkDriveNote.Text = "DayZ Tools path is required to mount the work drive.";
             return;
         }
+        var workFolder = WorkFolderBox.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(workFolder)) workFolder = DefaultWorkFolder();
+        try { Directory.CreateDirectory(workFolder); } catch { /* surfaced via mount failure */ }
+
         var exe = Path.Combine(tools, "Bin", "WorkDrive", "WorkDrive.exe");
-        WorkDrive.Mount(exe);
+        WorkDrive.Mount(exe, workFolder);
         RefreshWorkDrive();
     }
 
     // ---- Step 4: Game data ----------------------------------------------
+
+    private async void OnExtractGameData(object sender, RoutedEventArgs e)
+    {
+        var tools = ToolsPathBox.Text?.Trim() ?? "";
+        var dayz = DayzPathBox.Text?.Trim() ?? "";
+        if (tools.Length == 0)
+        {
+            GameDataNote.Text = "Set the DayZ Tools path on the Paths step first.";
+            return;
+        }
+        if (!WorkDrive.IsMounted())
+        {
+            GameDataNote.Text = "P: is not mounted — mount P: on the previous (Work drive) step first.";
+            return;
+        }
+        var exe = Path.Combine(tools, "Bin", "WorkDrive", "WorkDrive.exe");
+        if (!File.Exists(exe))
+        {
+            GameDataNote.Text = @"WorkDrive.exe not found under <Tools>\Bin\WorkDrive. Use 'Open DayZ Tools' instead.";
+            return;
+        }
+
+        ExtractBtn.IsEnabled = false;
+        GameDataNote.Text = "Extracting… (this can take several minutes)";
+        try
+        {
+            var (ok, output) = await Task.Run(() => WorkDrive.ExtractGameData(exe, dayz, @"P:\"));
+            GameDataNote.Text = ok
+                ? "Game data extracted to P:."
+                : "Extraction failed." + (string.IsNullOrWhiteSpace(output) ? "" : "\r\n" + output);
+        }
+        finally
+        {
+            ExtractBtn.IsEnabled = true;
+        }
+    }
 
     private void OnOpenDayzTools(object sender, RoutedEventArgs e)
     {

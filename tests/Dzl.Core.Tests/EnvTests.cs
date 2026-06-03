@@ -36,4 +36,8 @@ public class EnvTests
         var s = SteamCmd.DownloadServerScript(@"D:\dzserver");
         s.Should().Contain("223350").And.Contain("force_install_dir").And.Contain(@"D:\dzserver").And.Contain("validate");
     }
+
+    [Fact]
+    public void ParseWorkDir_reads_quoted_value() =>
+        EnvDetect.ParseWorkDir("Generic\n  WorkDirPath=\"C:\\Users\\m\\DayZ Projects\"\n").Should().Be(@"C:\Users\m\DayZ Projects");
 }

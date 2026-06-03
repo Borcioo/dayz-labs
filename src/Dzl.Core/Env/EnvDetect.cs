@@ -11,6 +11,11 @@ public static class EnvDetect
     private static readonly Regex PathEntry =
         new("\"path\"\\s*\"([^\"]*)\"", RegexOptions.Compiled);
 
+    // Matches a   WorkDirPath = "<value>"   line in DayZ Tools' settings.ini (quotes/=/ws optional).
+    private static readonly Regex WorkDirEntry =
+        new(@"^\s*WorkDirPath\s*=?\s*""?([^""\r\n]*?)""?\s*$",
+            RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase);
+
     /// <summary>Extract every library root path from a libraryfolders.vdf, unescaping \\ -> \, in order.</summary>
     public static List<string> ParseLibraryFolders(string vdfText)
     {
@@ -19,6 +24,35 @@ public static class EnvDetect
         foreach (Match m in PathEntry.Matches(vdfText))
             result.Add(m.Groups[1].Value.Replace("\\\\", "\\"));
         return result;
+    }
+
+    /// <summary>
+    /// Read the <c>WorkDirPath</c> value out of a DayZ Tools <c>settings.ini</c>
+    /// (e.g. <c>WorkDirPath="C:\Users\m\DayZ Projects"</c>). Quotes and surrounding
+    /// whitespace are stripped. Returns null if absent.
+    /// </summary>
+    public static string? ParseWorkDir(string settingsIniText)
+    {
+        if (string.IsNullOrEmpty(settingsIniText)) return null;
+        var m = WorkDirEntry.Match(settingsIniText);
+        if (!m.Success) return null;
+        var v = m.Groups[1].Value.Trim();
+        return v.Length == 0 ? null : v;
+    }
+
+    /// <summary>Read <c>&lt;toolsPath&gt;\settings.ini</c> and return its WorkDirPath; null if missing. Thin/manual.</summary>
+    public static string? WorkDir(string toolsPath)
+    {
+        if (string.IsNullOrWhiteSpace(toolsPath)) return null;
+        try
+        {
+            var ini = Path.Combine(toolsPath, "settings.ini");
+            return File.Exists(ini) ? ParseWorkDir(File.ReadAllText(ini)) : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>First &lt;lib&gt;\steamapps\common\&lt;relFolder&gt; that exists, else null.</summary>

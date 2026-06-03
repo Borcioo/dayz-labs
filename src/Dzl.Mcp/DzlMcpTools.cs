@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using Dzl.Core.App;
 using Dzl.Core.Config;
+using Dzl.Core.Env;
 using Dzl.Core.Tools;
 using ModelContextProtocol.Server;
 
@@ -97,10 +98,11 @@ public static class DzlMcpTools
         {
             case "mount":
                 var wdExe = Path.Combine(ToolsPath(), "Bin", "WorkDrive", "WorkDrive.exe");
-                WorkDrive.Mount(File.Exists(wdExe) ? wdExe : "");
+                WorkDrive.Mount(File.Exists(wdExe) ? wdExe : "", EnvDetect.WorkDir(ToolsPath()));
                 break;
             case "unmount":
-                WorkDrive.Unmount();
+                var wdExeOff = Path.Combine(ToolsPath(), "Bin", "WorkDrive", "WorkDrive.exe");
+                WorkDrive.Unmount(File.Exists(wdExeOff) ? wdExeOff : "");
                 break;
         }
         return J(new { mounted = WorkDrive.IsMounted() });

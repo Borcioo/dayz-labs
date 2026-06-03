@@ -9,6 +9,7 @@ using System.Windows.Threading;
 using Dzl.Core.Config;
 using Dzl.Core.Ipc;
 using Dzl.Core.Launch;
+using Dzl.Core.Env;
 using Dzl.Core.Tools;
 using H.NotifyIcon;
 
@@ -121,7 +122,7 @@ public sealed class TrayIcon : IDisposable
             Task.Run(() =>
             {
                 var wdExe = Path.Combine(toolsPath, "Bin", "WorkDrive", "WorkDrive.exe");
-                WorkDrive.Mount(File.Exists(wdExe) ? wdExe : "");
+                WorkDrive.Mount(File.Exists(wdExe) ? wdExe : "", EnvDetect.WorkDir(toolsPath));
             });
         };
         sub.Items.Add(wd);

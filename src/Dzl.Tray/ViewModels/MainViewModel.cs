@@ -13,6 +13,7 @@ using Dzl.Core.Config;
 using Dzl.Core.Launch;
 using Dzl.Core.Logs;
 using Dzl.Core.Mods;
+using Dzl.Core.Env;
 using Dzl.Core.Tools;
 using Dzl.Tray;
 
@@ -638,18 +639,23 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void MountWorkDrive()
     {
         var exe = Path.Combine(_cfg.DayzToolsPath, "Bin", "WorkDrive", "WorkDrive.exe");
+        var source = EnvDetect.WorkDir(_cfg.DayzToolsPath);
         Task.Run(() =>
         {
-            try { WorkDrive.Mount(exe); } catch { }
+            try { WorkDrive.Mount(exe, source); } catch { }
             finally { _dispatcher.BeginInvoke(RefreshWorkDrive); }
         });
     }
 
-    public void UnmountWorkDrive() => Task.Run(() =>
+    public void UnmountWorkDrive()
     {
-        try { WorkDrive.Unmount(); } catch { }
-        finally { _dispatcher.BeginInvoke(RefreshWorkDrive); }
-    });
+        var exe = Path.Combine(_cfg.DayzToolsPath, "Bin", "WorkDrive", "WorkDrive.exe");
+        Task.Run(() =>
+        {
+            try { WorkDrive.Unmount(exe); } catch { }
+            finally { _dispatcher.BeginInvoke(RefreshWorkDrive); }
+        });
+    }
 
     /// <summary>Resolve a CLI-wrappable tool exe path by key, or null if not present.</summary>
     public string? ToolExe(string key) => ToolCatalog.Find(_cfg.DayzToolsPath, key) is { Exists: true } t ? t.ExePath : null;

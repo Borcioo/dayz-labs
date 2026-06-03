@@ -3,6 +3,7 @@ using System.CommandLine.Invocation;
 using System.Text.Json;
 using Dzl.Core.App;
 using Dzl.Core.Config;
+using Dzl.Core.Env;
 using Dzl.Core.Ipc;
 using Dzl.Core.Launch;
 using Dzl.Core.Logs;
@@ -457,11 +458,12 @@ workdriveCmd.SetHandler(ctx =>
     {
         case "mount":
             var wdExe = Path.Combine(cfg.DayzToolsPath, "Bin", "WorkDrive", "WorkDrive.exe");
-            WorkDrive.Mount(File.Exists(wdExe) ? wdExe : "");
+            WorkDrive.Mount(File.Exists(wdExe) ? wdExe : "", EnvDetect.WorkDir(cfg.DayzToolsPath));
             Console.WriteLine(WorkDrive.IsMounted() ? "P: mounted" : "P: not mounted");
             break;
         case "unmount":
-            WorkDrive.Unmount();
+            var wdExeOff = Path.Combine(cfg.DayzToolsPath, "Bin", "WorkDrive", "WorkDrive.exe");
+            WorkDrive.Unmount(File.Exists(wdExeOff) ? wdExeOff : "");
             Console.WriteLine(WorkDrive.IsMounted() ? "P: mounted" : "P: not mounted");
             break;
         default:

@@ -209,6 +209,16 @@
             <TextBlock Text="Work drive (P:)" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
             <TextBlock Style="{StaticResource Blurb}"
                        Text="DayZ tooling expects vanilla game data on the P: work drive. Mount it with DayZ Tools' WorkDrive.exe. Needs DayZ Tools. This step is optional." />
+
+            <TextBlock Text="Work folder" Style="{StaticResource FieldLabel}" />
+            <Grid Margin="0,0,0,4">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <ui:TextBox x:Name="WorkFolderBox" Grid.Column="0" />
+              <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="WorkFolderBox" Click="OnBrowseFolder" />
+            </Grid>
+            <TextBlock Text="This folder will be mounted as P:." FontSize="12" Margin="0,0,0,16"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+
             <TextBlock x:Name="WorkDriveStatus" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,12" />
             <ui:Button x:Name="MountBtn" Content="Mount P: drive" Icon="{ui:SymbolIcon HardDrive24}"
                        Click="OnMountWorkDrive" HorizontalAlignment="Left" />
@@ -224,11 +234,15 @@
             <TextBlock Text="Game data" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
             <TextBlock Style="{StaticResource Blurb}"
                        Text="Unpacking vanilla PBOs to P: lets you reference base-game configs and assets from your mods. This step is optional." />
-            <ui:Button x:Name="OpenToolsBtn" Content="Open DayZ Tools…" Icon="{ui:SymbolIcon Toolbox24}"
-                       Click="OnOpenDayzTools" HorizontalAlignment="Left" Margin="0,0,0,12" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+              <ui:Button x:Name="ExtractBtn" Content="Extract Game Data" Icon="{ui:SymbolIcon ArrowDownload24}"
+                         Appearance="Primary" Click="OnExtractGameData" />
+              <ui:Button x:Name="OpenToolsBtn" Content="Open DayZ Tools…" Icon="{ui:SymbolIcon Toolbox24}"
+                         Click="OnOpenDayzTools" Margin="8,0,0,0" />
+            </StackPanel>
             <TextBlock Style="{StaticResource Blurb}"
-                       Text="In DayZ Tools click 'Extract Game Data' to unpack vanilla PBOs to P:. This can take a while; you can continue setup meanwhile." />
-            <TextBlock x:Name="GameDataNote" FontSize="12"
+                       Text="Extract runs WorkDrive.exe /extractGameData to unpack vanilla PBOs to P:. This can take several minutes; you can continue setup meanwhile. The 'Open DayZ Tools' button is a fallback." />
+            <TextBlock x:Name="GameDataNote" FontSize="12" TextWrapping="Wrap"
                        Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
           </StackPanel>
         </ScrollViewer>
