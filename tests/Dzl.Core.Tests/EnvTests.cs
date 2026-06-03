@@ -42,6 +42,16 @@ public class EnvTests
         EnvDetect.ParseWorkDir("Generic\n  WorkDirPath=\"C:\\Users\\m\\DayZ Projects\"\n").Should().Be(@"C:\Users\m\DayZ Projects");
 
     [Fact]
+    public void ParseWorkDir_reads_projectdrive_section() =>
+        EnvDetect.ParseWorkDir("[Game]\nuser=0\npath=D:\\SteamLibrary\\steamapps\\common\\DayZ\n\n[ProjectDrive]\nuser=0\npath=D:\\DayZ\\Workdrive_1\n\n[Tools]\nMount=0")
+            .Should().Be(@"D:\DayZ\Workdrive_1");
+
+    [Fact]
+    public void ParseGamePath_reads_game_section() =>
+        EnvDetect.ParseGamePath("[Game]\nuser=0\npath=D:\\SteamLibrary\\steamapps\\common\\DayZ\n\n[ProjectDrive]\npath=D:\\DayZ\\Workdrive_1")
+            .Should().Be(@"D:\SteamLibrary\steamapps\common\DayZ");
+
+    [Fact]
     public void InstallUri_builds_steam_protocol()
     {
         Dzl.Core.Env.SteamInstall.InstallUri(830640).Should().Be("steam://install/830640");

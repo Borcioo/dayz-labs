@@ -11,7 +11,15 @@ public static class EnvDetect
     private static readonly Regex PathEntry =
         new("\"path\"\\s*\"([^\"]*)\"", RegexOptions.Compiled);
 
-    // Matches a   WorkDirPath = "<value>"   line in DayZ Tools' settings.ini (quotes/=/ws optional).
+    // DayZ Tools settings.ini real format: a [ProjectDrive] section with `path=<dir>`
+    // (the work-drive source folder), and a [Game] section with `path=<dir>`.
+    private static readonly Regex ProjectDrivePath =
+        new(@"\[ProjectDrive\][^\[]*?\bpath\s*=\s*([^\r\n]+)",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
+    private static readonly Regex GamePathEntry =
+        new(@"\[Game\][^\[]*?\bpath\s*=\s*([^\r\n]+)",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
+    // Legacy fallback: a   WorkDirPath = "<value>"   line (WorkDrive.exe's runtime dump form).
     private static readonly Regex WorkDirEntry =
         new(@"^\s*WorkDirPath\s*=?\s*""?([^""\r\n]*?)""?\s*$",
             RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase);
@@ -34,7 +42,18 @@ public static class EnvDetect
     public static string? ParseWorkDir(string settingsIniText)
     {
         if (string.IsNullOrEmpty(settingsIniText)) return null;
-        var m = WorkDirEntry.Match(settingsIniText);
+        // Prefer the real [ProjectDrive] path=, fall back to a legacy WorkDirPath= line.
+        var v = ProjectDrivePath.Match(settingsIniText) is { Success: true } p ? p.Groups[1].Value.Trim()
+              : WorkDirEntry.Match(settingsIniText) is { Success: true } w ? w.Groups[1].Value.Trim()
+              : "";
+        return v.Length == 0 ? null : v;
+    }
+
+    /// <summary>Read the [Game] path= value out of a DayZ Tools settings.ini; null if absent.</summary>
+    public static string? ParseGamePath(string settingsIniText)
+    {
+        if (string.IsNullOrEmpty(settingsIniText)) return null;
+        var m = GamePathEntry.Match(settingsIniText);
         if (!m.Success) return null;
         var v = m.Groups[1].Value.Trim();
         return v.Length == 0 ? null : v;
