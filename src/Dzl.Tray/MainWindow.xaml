@@ -305,7 +305,7 @@
             </StackPanel>
           </Border>
           <!-- CLIENT pill -->
-          <Border CornerRadius="14" Padding="12,5"
+          <Border CornerRadius="14" Padding="12,5" Margin="0,0,10,0"
                   Background="{DynamicResource ControlFillColorDefaultBrush}"
                   BorderThickness="1"
                   BorderBrush="{DynamicResource ControlElevationBorderBrush}">
@@ -314,6 +314,21 @@
                        Fill="{Binding ClientUp, Converter={StaticResource StatusDotConverter}}" />
               <TextBlock Text="CLIENT" FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" />
               <TextBlock Text="{Binding ClientStatus}" FontSize="11" VerticalAlignment="Center"
+                         Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+          </Border>
+          <!-- MCP / automation server pill: reflects whether the named-pipe host (driving the
+               dzl CLI + Claude MCP integration) is actually running this session. -->
+          <Border CornerRadius="14" Padding="12,5"
+                  Background="{DynamicResource ControlFillColorDefaultBrush}"
+                  BorderThickness="1"
+                  BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                  ToolTip="Automation server (lets the dzl CLI and the Claude MCP integration control this app). Toggle in Settings → Automation; applies on next launch.">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <Ellipse Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center"
+                       Fill="{Binding AutomationOn, Converter={StaticResource StatusDotConverter}}" />
+              <TextBlock Text="MCP" FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" />
+              <TextBlock Text="{Binding AutomationStatus}" FontSize="11" VerticalAlignment="Center"
                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             </StackPanel>
           </Border>

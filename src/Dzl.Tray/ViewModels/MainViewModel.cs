@@ -47,6 +47,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _serverStatus = "down";
     [ObservableProperty] private string _clientStatus = "down";
 
+    /// <summary>True when the named-pipe automation/IPC server is actually running this session
+    /// (read once from <see cref="App.AutomationServerRunning"/> in the ctor). Drives the MCP
+    /// status pill dot. Static at runtime — the server's started/not at launch and never toggles.</summary>
+    public bool AutomationOn { get; }
+
+    /// <summary>Human-readable automation state for the MCP pill ("on"/"off").</summary>
+    public string AutomationStatus => AutomationOn ? "on" : "off";
+
     /// <summary>True when <see cref="Mode"/> is "normal" (drives the mode ToggleSwitch).</summary>
     public bool IsNormalMode => Mode == "normal";
 
@@ -120,6 +128,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _configPath = configPath;
         _dispatcher = Dispatcher.CurrentDispatcher;
         _svc = new LauncherService(configPath);
+        AutomationOn = App.AutomationServerRunning;
 
         Profiles.EnsureDefault(configPath);
         var (cfg, savePath, active) = Profiles.ResolveActive(configPath);

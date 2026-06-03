@@ -20,6 +20,14 @@ public partial class App : Application
     private TrayIcon? _tray;
 
     /// <summary>
+    /// True when the named-pipe <see cref="PipeServer"/> was actually started this session
+    /// (i.e. <c>EnableAutomationServer</c> was on at launch). Reflects the REAL running state,
+    /// not just the config value (which only takes effect on next launch). Surfaced by the
+    /// MainWindow "MCP" status pill.
+    /// </summary>
+    public static bool AutomationServerRunning { get; private set; }
+
+    /// <summary>
     /// Resolves the config path: <c>DZL_CONFIG</c> env var, else
     /// <c>%LOCALAPPDATA%\dzl\config.json</c>.
     /// </summary>
@@ -54,7 +62,10 @@ public partial class App : Application
         _cts = new CancellationTokenSource();
         var (cfg, _, _) = Profiles.ResolveActive(configPath);
         if (cfg.EnableAutomationServer)
+        {
             _ = new PipeServer(() => new LauncherService(configPath)).RunAsync(_cts.Token);
+            AutomationServerRunning = true;
+        }
 
         _tray = new TrayIcon(configPath);
     }
