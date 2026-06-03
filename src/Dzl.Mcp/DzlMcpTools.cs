@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using Dzl.Core.App;
 using Dzl.Core.Config;
+using Dzl.Core.Tools;
 using ModelContextProtocol.Server;
 
 namespace Dzl.Mcp;
@@ -43,4 +44,65 @@ public static class DzlMcpTools
 
     [McpServerTool, Description("Restart the server. mode = debug|normal.")]
     public static string Restart([Description("debug|normal")] string mode = "debug") => J(Svc().Restart(mode, "mcp"));
+
+    // --- DayZ Tools ---
+
+    private static string ToolsPath() => Profiles.ResolveActive(ConfigPath()).cfg.DayzToolsPath;
+
+    [McpServerTool, Description("Discover DayZ Tools exes under <DayZ Tools>\\Bin (key, name, path, present, kind).")]
+    public static string ListTools() => J(ToolCatalog.Discover(ToolsPath()));
+
+    [McpServerTool, Description("Launch a DayZ tool GUI by key (see list_tools).")]
+    public static string OpenTool([Description("Tool key, e.g. workbench")] string key)
+    {
+        var tool = ToolCatalog.Find(ToolsPath(), key);
+        if (tool is null || !tool.Exists) return J(new { ok = false, error = $"tool not found: {key}" });
+        return J(new { ok = ToolLauncher.Launch(tool) });
+    }
+
+    [McpServerTool, Description("Batch convert PNG/TGA to PAA in a folder (ImageToPAA).")]
+    public static string ConvertPaa([Description("Folder with images")] string dir,
+                                    [Description("recurse into subfolders")] bool recursive = false)
+    {
+        var exe = ToolCatalog.Find(ToolsPath(), "imagetopaa");
+        if (exe is null || !exe.Exists) return J(new { ok = false, error = "tool not found: imagetopaa" });
+        return J(ImageToPaa.ConvertFolder(exe.ExePath, dir, recursive));
+    }
+
+    [McpServerTool, Description("Pack a source folder into a PBO (Addon Builder).")]
+    public static string PackPbo([Description("Source folder")] string src,
+                                 [Description("Output folder")] string dst,
+                                 [Description("PBO prefix")] string? prefix = null,
+                                 [Description("Private key file to sign with")] string? sign = null)
+    {
+        var exe = ToolCatalog.Find(ToolsPath(), "addonbuilder");
+        if (exe is null || !exe.Exists) return J(new { ok = false, error = "tool not found: addonbuilder" });
+        return J(AddonBuilder.Pack(exe.ExePath, src, dst, true, true, prefix, sign));
+    }
+
+    [McpServerTool, Description("Unbinarize a config.bin to .cpp (CfgConvert / DeRap).")]
+    public static string Unbinarize([Description("config.bin path")] string bin,
+                                    [Description("output .cpp (defaults to same name)")] string? outCpp = null)
+    {
+        var exe = ToolCatalog.Find(ToolsPath(), "cfgconvert");
+        if (exe is null || !exe.Exists) return J(new { ok = false, error = "tool not found: cfgconvert" });
+        var (ok, output) = CfgConvert.Unbinarize(exe.ExePath, bin, outCpp ?? Path.ChangeExtension(bin, ".cpp"));
+        return J(new { ok, output });
+    }
+
+    [McpServerTool, Description("Check/mount/unmount the P: work drive. action = status|mount|unmount.")]
+    public static string WorkDriveAction([Description("status|mount|unmount")] string action)
+    {
+        switch (action)
+        {
+            case "mount":
+                var wdExe = Path.Combine(ToolsPath(), "Bin", "WorkDrive", "WorkDrive.exe");
+                WorkDrive.Mount(File.Exists(wdExe) ? wdExe : "");
+                break;
+            case "unmount":
+                WorkDrive.Unmount();
+                break;
+        }
+        return J(new { mounted = WorkDrive.IsMounted() });
+    }
 }

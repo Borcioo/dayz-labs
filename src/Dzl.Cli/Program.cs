@@ -6,6 +6,7 @@ using Dzl.Core.Config;
 using Dzl.Core.Ipc;
 using Dzl.Core.Launch;
 using Dzl.Core.Logs;
+using Dzl.Core.Tools;
 
 // Global --config option (shared instance read inside handlers).
 var defaultConfig = Path.Combine(
@@ -320,5 +321,154 @@ presetRmCmd.SetHandler(ctx =>
 });
 presetCmd.AddCommand(presetRmCmd);
 root.AddCommand(presetCmd);
+
+// ---- tools ----
+string ToolsPath(InvocationContext ctx) => Resolve(ctx).cfg.DayzToolsPath;
+
+void ListTools(InvocationContext ctx)
+{
+    foreach (var t in ToolCatalog.Discover(ToolsPath(ctx)))
+    {
+        var present = t.Exists ? "present" : "missing";
+        var kind = t.Kind == ToolKind.CliWrappable ? "cli" : "launch";
+        Console.WriteLine($"{t.Key,-16} {t.DisplayName,-22} [{present}]  ({kind})");
+    }
+}
+
+var toolsCmd = new Command("tools", "Discover and launch DayZ Tools.");
+toolsCmd.SetHandler(ListTools);
+
+var toolsListCmd = new Command("list", "List discovered DayZ Tools.");
+toolsListCmd.SetHandler(ListTools);
+toolsCmd.AddCommand(toolsListCmd);
+
+var toolsOpenArg = new Argument<string>("key", "Tool key (see 'tools list').");
+var toolsOpenCmd = new Command("open", "Launch a tool by key.") { toolsOpenArg };
+toolsOpenCmd.SetHandler(ctx =>
+{
+    var key = ctx.ParseResult.GetValueForArgument(toolsOpenArg);
+    var tool = ToolCatalog.Find(ToolsPath(ctx), key);
+    if (tool is null || !tool.Exists)
+    {
+        Console.Error.WriteLine($"tool not found or missing: {key}");
+        ctx.ExitCode = 1;
+        return;
+    }
+    if (!ToolLauncher.Launch(tool))
+    {
+        Console.Error.WriteLine($"failed to launch: {key}");
+        ctx.ExitCode = 1;
+        return;
+    }
+    Console.WriteLine($"launched {tool.DisplayName}");
+});
+toolsCmd.AddCommand(toolsOpenCmd);
+root.AddCommand(toolsCmd);
+
+// ---- paa ----
+var paaDirArg = new Argument<string>("dir", "Folder of .png/.tga to convert to .paa.");
+var paaRecursive = new Option<bool>("--recursive", "Recurse into subfolders.");
+var paaCmd = new Command("paa", "Batch convert PNG/TGA to PAA (ImageToPAA).") { paaDirArg, paaRecursive };
+paaCmd.SetHandler(ctx =>
+{
+    var (cfg, _, _, _) = Resolve(ctx);
+    var dir = ctx.ParseResult.GetValueForArgument(paaDirArg);
+    var recursive = ctx.ParseResult.GetValueForOption(paaRecursive);
+    var paaExe = ToolCatalog.Find(cfg.DayzToolsPath, "imagetopaa");
+    if (paaExe is null || !paaExe.Exists)
+    {
+        Console.Error.WriteLine("tool not found: imagetopaa");
+        ctx.ExitCode = 1;
+        return;
+    }
+    foreach (var job in ImageToPaa.PlanFolder(dir, recursive).Where(j => !j.SuffixOk))
+        Console.WriteLine($"warn: {Path.GetFileName(job.Input)} has no DayZ texture suffix");
+    var results = ImageToPaa.ConvertFolder(paaExe.ExePath, dir, recursive,
+        new Progress<PaaResult>(r =>
+            Console.WriteLine($"{(r.Ok ? "ok " : "ERR")} {r.Input} -> {r.Output} {(r.Ok ? "" : r.Message)}")));
+    var failed = results.Count(r => !r.Ok);
+    Console.WriteLine($"{results.Count - failed} converted, {failed} failed");
+    if (failed > 0) ctx.ExitCode = 1;
+});
+root.AddCommand(paaCmd);
+
+// ---- pack ----
+var packSrcArg = new Argument<string>("src", "Source folder to pack.");
+var packDstArg = new Argument<string>("dst", "Output folder for the PBO.");
+var packPrefix = new Option<string?>("--prefix", () => null, "PBO prefix.");
+var packSign = new Option<string?>("--sign", () => null, "Private key file to sign with.");
+var packNoClear = new Option<bool>("--no-clear", "Do not clear temp before packing.");
+var packCmd = new Command("pack", "Pack a folder into a PBO (Addon Builder).")
+{ packSrcArg, packDstArg, packPrefix, packSign, packNoClear };
+packCmd.SetHandler(ctx =>
+{
+    var (cfg, _, _, _) = Resolve(ctx);
+    var src = ctx.ParseResult.GetValueForArgument(packSrcArg);
+    var dst = ctx.ParseResult.GetValueForArgument(packDstArg);
+    var prefix = ctx.ParseResult.GetValueForOption(packPrefix);
+    var sign = ctx.ParseResult.GetValueForOption(packSign);
+    var noClear = ctx.ParseResult.GetValueForOption(packNoClear);
+    var addonExe = ToolCatalog.Find(cfg.DayzToolsPath, "addonbuilder");
+    if (addonExe is null || !addonExe.Exists)
+    {
+        Console.Error.WriteLine("tool not found: addonbuilder");
+        ctx.ExitCode = 1;
+        return;
+    }
+    var res = AddonBuilder.Pack(addonExe.ExePath, src, dst, clear: !noClear, packOnly: true, prefix: prefix, signKey: sign);
+    Console.WriteLine($"exit {res.ExitCode}");
+    if (!string.IsNullOrWhiteSpace(res.Output)) Console.WriteLine(res.Output);
+    if (!res.Ok) ctx.ExitCode = 1;
+});
+root.AddCommand(packCmd);
+
+// ---- derap ----
+var derapBinArg = new Argument<string>("bin", "config.bin to unbinarize.");
+var derapOutArg = new Argument<string?>("out", () => null, "Output .cpp (defaults to same name).");
+var derapCmd = new Command("derap", "Unbinarize a config.bin to .cpp (CfgConvert).") { derapBinArg, derapOutArg };
+derapCmd.SetHandler(ctx =>
+{
+    var (cfg, _, _, _) = Resolve(ctx);
+    var bin = ctx.ParseResult.GetValueForArgument(derapBinArg);
+    var outCpp = ctx.ParseResult.GetValueForArgument(derapOutArg) ?? Path.ChangeExtension(bin, ".cpp");
+    var cfgExe = ToolCatalog.Find(cfg.DayzToolsPath, "cfgconvert");
+    if (cfgExe is null || !cfgExe.Exists)
+    {
+        Console.Error.WriteLine("tool not found: cfgconvert");
+        ctx.ExitCode = 1;
+        return;
+    }
+    var (ok, output) = CfgConvert.Unbinarize(cfgExe.ExePath, bin, outCpp);
+    Console.WriteLine(ok ? $"unbinarized -> {outCpp}" : "failed");
+    if (!string.IsNullOrWhiteSpace(output)) Console.WriteLine(output);
+    if (!ok) ctx.ExitCode = 1;
+});
+root.AddCommand(derapCmd);
+
+// ---- workdrive ----
+var workdriveActionArg = new Argument<string>("action", "status|mount|unmount")
+    .FromAmong("status", "mount", "unmount");
+var workdriveCmd = new Command("workdrive", "Check/mount/unmount the P: work drive.") { workdriveActionArg };
+workdriveCmd.SetHandler(ctx =>
+{
+    var (cfg, _, _, _) = Resolve(ctx);
+    var action = ctx.ParseResult.GetValueForArgument(workdriveActionArg);
+    switch (action)
+    {
+        case "mount":
+            var wdExe = Path.Combine(cfg.DayzToolsPath, "Bin", "WorkDrive", "WorkDrive.exe");
+            WorkDrive.Mount(File.Exists(wdExe) ? wdExe : "");
+            Console.WriteLine(WorkDrive.IsMounted() ? "P: mounted" : "P: not mounted");
+            break;
+        case "unmount":
+            WorkDrive.Unmount();
+            Console.WriteLine(WorkDrive.IsMounted() ? "P: mounted" : "P: not mounted");
+            break;
+        default:
+            Console.WriteLine(WorkDrive.IsMounted() ? "P: mounted" : "P: not mounted");
+            break;
+    }
+});
+root.AddCommand(workdriveCmd);
 
 return await root.InvokeAsync(args);

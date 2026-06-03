@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using Dzl.Core.Config;
 using Dzl.Core.Ipc;
 using Dzl.Core.Launch;
+using Dzl.Core.Tools;
 using H.NotifyIcon;
 
 namespace Dzl.Tray;
@@ -62,6 +64,8 @@ public sealed class TrayIcon : IDisposable
         menu.Items.Add(MenuItem("Stop server", StopServer));
         menu.Items.Add(MenuItem("Restart server", RestartServer));
         menu.Items.Add(new Separator());
+        menu.Items.Add(BuildToolsMenu());
+        menu.Items.Add(new Separator());
         menu.Items.Add(MenuItem("Open main window", OpenMainWindow));
         menu.Items.Add(MenuItem("Open config folder", OpenConfigFolder));
         menu.Items.Add(new Separator());
@@ -75,6 +79,54 @@ public sealed class TrayIcon : IDisposable
         var item = new MenuItem { Header = header };
         item.Click += onClick;
         return item;
+    }
+
+    // Builds the "Tools ▸" submenu from the discovered DayZ Tools catalog.
+    private MenuItem BuildToolsMenu()
+    {
+        var sub = new MenuItem { Header = "Tools" };
+        string toolsPath;
+        try { toolsPath = Profiles.ResolveActive(_configPath).cfg.DayzToolsPath; }
+        catch { toolsPath = ""; }
+
+        var catalog = string.IsNullOrWhiteSpace(toolsPath)
+            ? new List<ToolEntry>()
+            : ToolCatalog.Discover(toolsPath);
+
+        var present = catalog
+            .Where(t => t.Exists && t.Kind == ToolKind.LaunchOnly)
+            .ToList();
+
+        if (present.Count == 0)
+        {
+            sub.Items.Add(new MenuItem { Header = "(no tools found)", IsEnabled = false });
+        }
+        else
+        {
+            foreach (var tool in present)
+            {
+                var item = new MenuItem { Header = tool.DisplayName };
+                var captured = tool;
+                item.Click += (_, _) => Task.Run(() => ToolLauncher.Launch(captured));
+                sub.Items.Add(item);
+            }
+        }
+
+        sub.Items.Add(new Separator());
+        var mounted = WorkDrive.IsMounted();
+        var wd = new MenuItem { Header = $"Work drive: P: {(mounted ? "✓" : "✗")}" };
+        wd.Click += (_, _) =>
+        {
+            if (WorkDrive.IsMounted()) return;
+            Task.Run(() =>
+            {
+                var wdExe = Path.Combine(toolsPath, "Bin", "WorkDrive", "WorkDrive.exe");
+                WorkDrive.Mount(File.Exists(wdExe) ? wdExe : "");
+            });
+        };
+        sub.Items.Add(wd);
+
+        return sub;
     }
 
     // --- Server ops: run off the UI thread, report via balloon. ---
