@@ -73,8 +73,8 @@ public class ToolWrappersTests
         WorkDrive.DismountArgs().Should().Equal("/y", "/Silent", "/nowarnings", "/dismount", "P:");
 
     [Fact]
-    public void ExtractArgs_builds_game_and_dest() =>
-        WorkDrive.ExtractArgs(@"E:\DayZ", @"P:\").Should().Equal("/y", "/Silent", "/nowarnings", "/extractGameData", @"E:\DayZ", @"P:\");
+    public void ExtractArgs_is_silent_no_paths() =>
+        WorkDrive.ExtractArgs().Should().Equal("/y", "/Silent", "/nowarnings", "/ExtractGameData");
 
     [Fact] public void ParseDosDeviceTarget_strips_nt_prefix() =>
         WorkDrive.ParseDosDeviceTarget(@"\??\D:\DayZWorkDrive").Should().Be(@"D:\DayZWorkDrive");

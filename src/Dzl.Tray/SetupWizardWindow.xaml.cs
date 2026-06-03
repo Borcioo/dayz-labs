@@ -473,7 +473,6 @@ public partial class SetupWizardWindow : FluentWindow
     private async void OnExtractGameData(object sender, RoutedEventArgs e)
     {
         var tools = ToolsPathBox.Text?.Trim() ?? "";
-        var dayz = DayzPathBox.Text?.Trim() ?? "";
         if (tools.Length == 0)
         {
             GameDataNote.Text = "Set the DayZ Tools path on the Paths step first.";
@@ -497,7 +496,7 @@ public partial class SetupWizardWindow : FluentWindow
                           + "The spinner stays until it finishes.";
         try
         {
-            await Task.Run(() => WorkDrive.ExtractGameData(exe, dayz, @"P:\"));
+            await Task.Run(() => WorkDrive.ExtractGameData(exe));
             // WorkDrive exits while it keeps unpacking in the BACKGROUND (its log says
             // "completing some operations in the background"), so don't treat a not-yet-present
             // P:\DZ as failure — it can take several minutes. Verify on disk, else say "in progress".

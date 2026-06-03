@@ -97,9 +97,10 @@ public static class WorkDrive
     public static List<string> DismountArgs(string drive = "P") =>
         new(Silent) { "/dismount", DriveColon(drive) };
 
-    /// <summary><c>/extractGameData [gamePath] [destPath]</c> (silent).</summary>
-    public static List<string> ExtractArgs(string gamePath, string dest) =>
-        new(Silent) { "/extractGameData", gamePath, dest };
+    /// <summary><c>/ExtractGameData</c> with NO paths — exactly what DayZ Tools itself runs; it reads
+    /// the game path + work-drive letter from settings.ini and unpacks vanilla PBOs to P:\ (under their
+    /// PBO prefixes, e.g. P:\DZ\...). Passing an explicit dest caused property-file write errors.</summary>
+    public static List<string> ExtractArgs() => new(Silent) { "/ExtractGameData" };
 
     // ---- process wrappers (manual; never throw) -------------------------
 
@@ -157,15 +158,15 @@ public static class WorkDrive
     }
 
     /// <summary>
-    /// Unpack vanilla PBOs from <paramref name="gamePath"/> into <paramref name="dest"/> (usually P:\).
-    /// LONG-running — callers should run it on a background Task. Captures stdout+stderr.
-    /// Returns (exit==0, combined output); (false, "") on failure to start.
+    /// Run DayZ Tools' game-data extraction (vanilla PBOs → P:\, using settings.ini's game path +
+    /// work-drive letter). LONG-running and WorkDrive keeps unpacking in the BACKGROUND after it
+    /// exits — callers run it on a background Task and verify by checking P:\ on disk afterwards.
+    /// Returns (exit==0, "") ; (false, "") on failure to start.
     /// </summary>
-    public static (bool ok, string output) ExtractGameData(string exePath, string gamePath, string dest)
+    public static (bool ok, string output) ExtractGameData(string exePath)
     {
         if (!File.Exists(exePath)) return (false, "");
-        // Same user session as mount; caller also verifies success by checking P:\ on disk after.
-        var code = RunWorkDrive(exePath, ExtractArgs(gamePath, dest), 20 * 60 * 1000);  // up to 20 min
+        var code = RunWorkDrive(exePath, ExtractArgs(), 20 * 60 * 1000);  // up to 20 min
         return (code == 0, "");
     }
 
