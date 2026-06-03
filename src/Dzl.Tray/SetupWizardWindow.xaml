@@ -284,6 +284,8 @@
                          Appearance="Primary" Click="OnExtractGameData" />
               <ui:Button x:Name="OpenToolsBtn" Content="Open DayZ Tools…" Icon="{ui:SymbolIcon Toolbox24}"
                          Click="OnOpenDayzTools" Margin="8,0,0,0" />
+              <ui:ProgressRing x:Name="ExtractRing" IsIndeterminate="True" Visibility="Collapsed"
+                               Width="22" Height="22" Margin="12,0,0,0" VerticalAlignment="Center" />
             </StackPanel>
             <TextBlock Style="{StaticResource Blurb}"
                        Text="Extract runs WorkDrive.exe /extractGameData to unpack vanilla PBOs to P:. This can take several minutes; you can continue setup meanwhile. The 'Open DayZ Tools' button is a fallback." />

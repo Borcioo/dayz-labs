@@ -392,16 +392,24 @@ public partial class SetupWizardWindow : FluentWindow
         }
 
         ExtractBtn.IsEnabled = false;
-        GameDataNote.Text = "Extracting… (this can take several minutes)";
+        ExtractRing.Visibility = Visibility.Visible;   // indeterminate spinner = "still working"
+        GameDataNote.Text = "Extracting… the DayZ Tools window does the work; this can take several minutes. "
+                          + "The spinner stays until it finishes.";
         try
         {
             var (ok, output) = await Task.Run(() => WorkDrive.ExtractGameData(exe, dayz, @"P:\"));
-            GameDataNote.Text = ok
-                ? "Game data extracted to P:."
-                : "Extraction failed." + (string.IsNullOrWhiteSpace(output) ? "" : "\r\n" + output);
+            // Confirm against the disk: vanilla data lands in P:\dz (don't trust exit code alone —
+            // WorkDrive may hand off to its own window).
+            var present = Directory.Exists(@"P:\dz") || Directory.Exists(@"P:\DZ");
+            GameDataNote.Text = present
+                ? "Done — vanilla game data is in P:\\."
+                : ok
+                    ? "WorkDrive finished, but P:\\dz isn't there yet. If a DayZ Tools window is still extracting, wait for it to finish, then this step is done."
+                    : "Extraction didn't complete." + (string.IsNullOrWhiteSpace(output) ? "" : "\r\n" + output);
         }
         finally
         {
+            ExtractRing.Visibility = Visibility.Collapsed;
             ExtractBtn.IsEnabled = true;
         }
     }
