@@ -262,6 +262,9 @@
                          Click="OnReCheckWorkDrive" HorizontalAlignment="Left" Margin="8,0,0,0" />
               <ui:Button x:Name="VerifyToolsBtn" Content="Verify (Steam)" Icon="{ui:SymbolIcon CheckmarkCircle24}"
                          Click="OnVerifyTools" HorizontalAlignment="Left" Margin="8,0,0,0" />
+              <ui:Button x:Name="LinkedConnBtn" Content="Fix drive visibility" Visibility="Collapsed"
+                         Appearance="Caution" Click="OnEnableLinkedConnections"
+                         HorizontalAlignment="Left" Margin="8,0,0,0" />
             </StackPanel>
             <TextBlock x:Name="VerifyHint" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap" Visibility="Collapsed"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />

@@ -24,6 +24,35 @@ public static class EnvDetect
         catch { return false; }
     }
 
+    private const string LinkedConnKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System";
+
+    /// <summary>True if Windows' EnableLinkedConnections policy is on (mapped/subst drives are
+    /// shared between a user's elevated and normal sessions — fixes "admin sees P:, Explorer doesn't").</summary>
+    public static bool LinkedConnectionsEnabled()
+    {
+        try
+        {
+            if (!OperatingSystem.IsWindows()) return false;
+            using var k = Registry.LocalMachine.OpenSubKey(LinkedConnKey);
+            return (k?.GetValue("EnableLinkedConnections") as int?) == 1;
+        }
+        catch { return false; }
+    }
+
+    /// <summary>Set EnableLinkedConnections=1 (HKLM — needs admin; dzl has it when elevated). A reboot
+    /// (or restart of LanmanWorkstation) is required to take effect. Returns true on success.</summary>
+    public static bool TryEnableLinkedConnections()
+    {
+        try
+        {
+            if (!OperatingSystem.IsWindows()) return false;
+            using var k = Registry.LocalMachine.CreateSubKey(LinkedConnKey, writable: true);
+            k!.SetValue("EnableLinkedConnections", 1, RegistryValueKind.DWord);
+            return true;
+        }
+        catch { return false; }
+    }
+
     // Matches    "path"   "<value>"   entries in libraryfolders.vdf, robust to tabs/spaces.
     private static readonly Regex PathEntry =
         new("\"path\"\\s*\"([^\"]*)\"", RegexOptions.Compiled);

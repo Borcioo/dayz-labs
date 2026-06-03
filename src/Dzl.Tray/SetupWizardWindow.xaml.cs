@@ -348,13 +348,18 @@ public partial class SetupWizardWindow : FluentWindow
 
         // The #1 cause of "shows mounted but no P:" — dzl running as admin sees admin-session
         // drive maps that Explorer + the game (normal user) don't, and vice versa.
-        if (EnvDetect.IsElevated())
+        bool elevated = EnvDetect.IsElevated();
+        bool linked = EnvDetect.LinkedConnectionsEnabled();
+        if (elevated && !linked)
         {
-            WorkDriveStatus.Text = "⚠ dzl is running as ADMINISTRATOR — it sees admin-session drives. "
-                + "A P: it shows here may NOT exist for Explorer or the game (and vice versa). "
-                + "Close it and run dzl normally (not as admin) so P: matches your normal session.";
+            WorkDriveStatus.Text = "⚠ dzl is running as ADMINISTRATOR — admin-session drives differ from "
+                + "Explorer/the game. A P: mounted here won't be seen by the (non-admin) game. Either run dzl "
+                + "normally (not as admin), OR click 'Fix drive visibility' to share drive maps across both "
+                + "(one-time, needs a reboot).";
             WorkDriveStatus.Foreground = System.Windows.Media.Brushes.Goldenrod;
         }
+        // Offer the system fix only when it's relevant (elevated + not yet enabled).
+        LinkedConnBtn.Visibility = (elevated && !linked) ? Visibility.Visible : Visibility.Collapsed;
 
         WorkDriveNote.Text = string.IsNullOrWhiteSpace(ToolsPathBox.Text)
             ? "Set the DayZ Tools path on the Paths step to enable mounting."
@@ -362,6 +367,19 @@ public partial class SetupWizardWindow : FluentWindow
     }
 
     private void OnReCheckWorkDrive(object sender, RoutedEventArgs e) => RefreshWorkDrive();
+
+    private void OnEnableLinkedConnections(object sender, RoutedEventArgs e)
+    {
+        var ok = EnvDetect.TryEnableLinkedConnections();
+        System.Windows.MessageBox.Show(
+            ok ? "Shared drive mappings enabled (EnableLinkedConnections=1).\n\nReboot for it to take effect — "
+                 + "after that, a work drive mounted by either an admin or a normal app is visible to both."
+               : "Couldn't write the setting — dzl needs to be running as administrator to change it.",
+            "dzl — drive visibility",
+            System.Windows.MessageBoxButton.OK,
+            ok ? System.Windows.MessageBoxImage.Information : System.Windows.MessageBoxImage.Warning);
+        RefreshWorkDrive();
+    }
 
     private void OnWorkFolderChanged(object sender, TextChangedEventArgs e)
     {
