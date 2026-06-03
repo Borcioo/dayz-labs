@@ -712,9 +712,18 @@
               <ItemsControl ItemsSource="{Binding LogPanes}"
                             ItemTemplate="{StaticResource LogPaneTemplate}"
                             Visibility="{Binding LogsViewMode, Converter={StaticResource StringEqualsVis}, ConverterParameter=grid}"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                             dd:DragDrop.IsDragSource="True"
                             dd:DragDrop.IsDropTarget="True"
                             dd:DragDrop.DropHandler="{Binding LogsDropHandler}">
+                <!-- Force each generated container to fill its UniformGrid cell, so panes
+                     stretch to the full page height (otherwise ItemsControl items size to content). -->
+                <ItemsControl.ItemContainerStyle>
+                  <Style TargetType="ContentPresenter">
+                    <Setter Property="HorizontalAlignment" Value="Stretch" />
+                    <Setter Property="VerticalAlignment" Value="Stretch" />
+                  </Style>
+                </ItemsControl.ItemContainerStyle>
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate>
                     <UniformGrid Columns="2" />
