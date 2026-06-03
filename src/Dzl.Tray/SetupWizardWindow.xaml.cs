@@ -470,7 +470,15 @@ public partial class SetupWizardWindow : FluentWindow
 
     // ---- Step 4: Game data ----------------------------------------------
 
-    private async void OnExtractGameData(object sender, RoutedEventArgs e)
+    // Extract button: a real extract you watch (WorkDrive's progress console is shown).
+    private void OnExtractGameData(object sender, RoutedEventArgs e) => _ = RunExtract(showConsole: true);
+
+    // Re-check IS the same /ExtractGameData run — it's idempotent and version-checks every PBO, so
+    // re-running it is the authoritative verify (better than just probing P:\DZ on disk, which can't
+    // tell stale from current). Quiet: no console, ~1s when already up to date.
+    private void OnReCheckGameData(object sender, RoutedEventArgs e) => _ = RunExtract(showConsole: false);
+
+    private async Task RunExtract(bool showConsole)
     {
         var tools = ToolsPathBox.Text?.Trim() ?? "";
         if (tools.Length == 0)
@@ -490,36 +498,36 @@ public partial class SetupWizardWindow : FluentWindow
             return;
         }
 
-        ExtractBtn.IsEnabled = false;
-        ExtractRing.Visibility = Visibility.Visible;   // indeterminate spinner = "still working"
-        GameDataNote.Text = "Extracting… the DayZ Tools window does the work; this can take several minutes. "
-                          + "The spinner stays until it finishes.";
+        ExtractBtn.IsEnabled = GameDataReCheckBtn.IsEnabled = false;
+        ExtractRing.Visibility = Visibility.Visible;
+        GameDataNote.Text = showConsole
+            ? "Extracting… WorkDrive's console shows per-PBO progress. First run can take several minutes; "
+              + "re-runs are instant (it only unpacks what changed)."
+            : "Verifying… re-running extraction to version-check every PBO (instant when up to date).";
         try
         {
-            await Task.Run(() => WorkDrive.ExtractGameData(exe));
-            // WorkDrive exits while it keeps unpacking in the BACKGROUND (its log says
-            // "completing some operations in the background"), so don't treat a not-yet-present
-            // P:\DZ as failure — it can take several minutes. Verify on disk, else say "in progress".
-            GameDataNote.Text = GameDataPresent()
-                ? "Done — vanilla game data is in P:\\ (P:\\DZ)."
-                : "Extraction started — DayZ Tools keeps unpacking to P:\\ in the BACKGROUND (several "
-                  + "minutes). Click Re-check once it settles. If it never appears, run 'Extract Game Data' "
-                  + "inside DayZ Tools ('Open DayZ Tools…') to watch its progress directly.";
+            // Synchronous + idempotent: WorkDrive unpacks out-of-date PBOs then exits 0. Trust the code.
+            var (ok, _) = await Task.Run(() => WorkDrive.ExtractGameData(exe, showConsole));
+            var present = GameDataPresent();
+            GameDataNote.Text = (ok, present) switch
+            {
+                (true, true)  => "✓ Done — vanilla game data is in P:\\ (P:\\DZ). Re-check anytime to re-verify.",
+                (true, false) => "WorkDrive reported success but P:\\DZ isn't there. P: may be mounted in another "
+                                 + "session (run dzl non-elevated — see the Work-drive step's warning).",
+                (false, true) => "P:\\DZ is present, but the last run returned an error code. Check WorkDrive's log "
+                                 + @"under <Tools>\Bin\Logs\WorkDrive.*.rpt.",
+                _             => "Extraction failed to complete. Use 'Open DayZ Tools…' to run it manually and watch "
+                                 + "the error, or check <Tools>\\Bin\\Logs\\WorkDrive.*.rpt.",
+            };
         }
         finally
         {
             ExtractRing.Visibility = Visibility.Collapsed;
-            ExtractBtn.IsEnabled = true;
+            ExtractBtn.IsEnabled = GameDataReCheckBtn.IsEnabled = true;
         }
     }
 
     private static bool GameDataPresent() => Directory.Exists(@"P:\DZ") || Directory.Exists(@"P:\dz");
-
-    private void OnReCheckGameData(object sender, RoutedEventArgs e) =>
-        GameDataNote.Text = GameDataPresent()
-            ? "✓ Vanilla game data present in P:\\ (P:\\DZ)."
-            : "P:\\DZ not there yet. Extraction may still be running in the background — wait a bit and "
-              + "Re-check, or extract via 'Open DayZ Tools…' to watch progress.";
 
     private void OnOpenDayzTools(object sender, RoutedEventArgs e)
     {

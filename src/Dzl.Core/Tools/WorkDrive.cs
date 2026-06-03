@@ -161,15 +161,16 @@ public static class WorkDrive
 
     /// <summary>
     /// Run DayZ Tools' game-data extraction (vanilla PBOs → P:\, using settings.ini's game path +
-    /// work-drive letter). LONG-running and WorkDrive keeps unpacking in the BACKGROUND after it
-    /// exits — callers run it on a background Task and verify by checking P:\ on disk afterwards.
-    /// Returns (exit==0, "") ; (false, "") on failure to start.
+    /// work-drive letter). It runs SYNCHRONOUSLY: WorkDrive unpacks every out-of-date PBO and then
+    /// exits 0 ("The tasks were executed."). It is also IDEMPOTENT — re-running it just version-checks
+    /// each PBO ("Data seems to be up to date") and exits in ~1s, so the same call doubles as a verify.
+    /// <paramref name="showWindow"/>: show WorkDrive's progress console (true for a real extract you want
+    /// to watch; false for a quiet re-check). Returns (exit==0, "") ; (false, "") on failure to start.
     /// </summary>
-    public static (bool ok, string output) ExtractGameData(string exePath)
+    public static (bool ok, string output) ExtractGameData(string exePath, bool showWindow = true)
     {
         if (!File.Exists(exePath)) return (false, "");
-        // showWindow: let WorkDrive's progress console appear so the user can watch the long extract.
-        var code = RunWorkDrive(exePath, ExtractArgs(), 20 * 60 * 1000, showWindow: true);  // up to 20 min
+        var code = RunWorkDrive(exePath, ExtractArgs(), 20 * 60 * 1000, showWindow);  // up to 20 min
         return (code == 0, "");
     }
 
