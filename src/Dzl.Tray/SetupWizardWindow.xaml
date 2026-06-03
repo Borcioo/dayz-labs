@@ -251,7 +251,7 @@
             <StackPanel Orientation="Horizontal">
               <ui:Button x:Name="MountBtn" Content="Mount P: drive" Icon="{ui:SymbolIcon HardDrive24}"
                          Click="OnMountWorkDrive" HorizontalAlignment="Left" />
-              <ui:Button x:Name="OpenToolsBtn" Content="Open DayZ Tools" Icon="{ui:SymbolIcon Toolbox24}"
+              <ui:Button x:Name="WdOpenToolsBtn" Content="Open DayZ Tools" Icon="{ui:SymbolIcon Toolbox24}"
                          Click="OnOpenDayzTools" HorizontalAlignment="Left" Margin="8,0,0,0" />
               <ui:Button x:Name="VerifyToolsBtn" Content="Verify (Steam)" Icon="{ui:SymbolIcon CheckmarkCircle24}"
                          Click="OnVerifyTools" HorizontalAlignment="Left" Margin="8,0,0,0" />
