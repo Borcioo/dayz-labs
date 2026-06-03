@@ -62,15 +62,19 @@ public class ToolWrappersTests
 
     [Fact]
     public void MountArgs_with_source() =>
-        WorkDrive.MountArgs(@"C:\dayz proj").Should().Equal("/Mount", @"C:\dayz proj");
+        WorkDrive.MountArgs(@"C:\dayz proj").Should().Equal("/y", "/Silent", "/nowarnings", "/mount", "P:", @"C:\dayz proj");
 
     [Fact]
     public void MountArgs_without_source() =>
-        WorkDrive.MountArgs(null).Should().Equal("/Mount");
+        WorkDrive.MountArgs(null).Should().Equal("/y", "/Silent", "/nowarnings", "/mount", "P:");
+
+    [Fact]
+    public void DismountArgs_has_drive_letter() =>
+        WorkDrive.DismountArgs().Should().Equal("/y", "/Silent", "/nowarnings", "/dismount", "P:");
 
     [Fact]
     public void ExtractArgs_builds_game_and_dest() =>
-        WorkDrive.ExtractArgs(@"E:\DayZ", @"P:\").Should().Equal("/extractGameData", @"E:\DayZ", @"P:\");
+        WorkDrive.ExtractArgs(@"E:\DayZ", @"P:\").Should().Equal("/y", "/Silent", "/nowarnings", "/extractGameData", @"E:\DayZ", @"P:\");
 
     [Fact] public void ParseDosDeviceTarget_strips_nt_prefix() =>
         WorkDrive.ParseDosDeviceTarget(@"\??\D:\DayZWorkDrive").Should().Be(@"D:\DayZWorkDrive");

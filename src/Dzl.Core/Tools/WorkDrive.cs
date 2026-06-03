@@ -75,13 +75,31 @@ public static class WorkDrive
 
     // ---- pure arg-builders (tested) -------------------------------------
 
-    /// <summary><c>/Mount [source]</c> — source omitted means "use the configured WorkDirPath".</summary>
-    public static List<string> MountArgs(string? source) =>
-        string.IsNullOrWhiteSpace(source) ? new() { "/Mount" } : new() { "/Mount", source };
+    // Exact arg shape DayZ Tools itself uses (from WorkDrive's own log):
+    //   /y /Silent /nowarnings /mount P: "<source>"
+    //   /y /Silent /nowarnings /dismount P:
+    //   /y /Silent /nowarnings /extractGameData "<game>" "<dest>"
+    // The drive LETTER ("P:") is required after /mount — omitting it (our old bug) made WorkDrive
+    // treat the source path as the drive letter and silently fail. /y /Silent /nowarnings suppress
+    // all confirmation prompts (so nothing blocks/hangs).
+    private static readonly string[] Silent = { "/y", "/Silent", "/nowarnings" };
+    private static string DriveColon(string drive) => drive.TrimEnd('\\', ':') + ":";
 
-    /// <summary><c>/extractGameData [gamePath] [destPath]</c>.</summary>
+    /// <summary><c>/mount P: [source]</c> — drive letter required; source = the folder to map.</summary>
+    public static List<string> MountArgs(string? source, string drive = "P")
+    {
+        var a = new List<string>(Silent) { "/mount", DriveColon(drive) };
+        if (!string.IsNullOrWhiteSpace(source)) a.Add(source);
+        return a;
+    }
+
+    /// <summary><c>/dismount P:</c>.</summary>
+    public static List<string> DismountArgs(string drive = "P") =>
+        new(Silent) { "/dismount", DriveColon(drive) };
+
+    /// <summary><c>/extractGameData [gamePath] [destPath]</c> (silent).</summary>
     public static List<string> ExtractArgs(string gamePath, string dest) =>
-        new() { "/extractGameData", gamePath, dest };
+        new(Silent) { "/extractGameData", gamePath, dest };
 
     // ---- process wrappers (manual; never throw) -------------------------
 
@@ -104,7 +122,7 @@ public static class WorkDrive
             // here and in Explorer (NOT runas — that mounts in a separate admin session). subst is
             // a last-resort fallback when the exe is missing (DayZ Tools won't see a plain subst).
             if (File.Exists(exePath))
-                RunWorkDrive(exePath, MountArgs(source), 60000);
+                RunWorkDrive(exePath, MountArgs(source, drive), 60000);
             else if (!string.IsNullOrWhiteSpace(source))
                 RunSubst(drive, source);
             else
@@ -121,7 +139,7 @@ public static class WorkDrive
     public static void Unmount(string exePath, string drive = "P:")
     {
         // 1) DayZ Tools' own dismount (elevated), if the exe is there.
-        try { if (File.Exists(exePath)) RunWorkDrive(exePath, new[] { "/Dismount" }, 30000); }
+        try { if (File.Exists(exePath)) RunWorkDrive(exePath, DismountArgs(drive), 30000); }
         catch { /* best-effort */ }
         // 2) ALWAYS also clear a plain subst — an earlier (pre-elevation) fallback may have left a
         //    `subst P: <dir>` that WorkDrive /Dismount doesn't remove and that DayZ Tools ignores.
