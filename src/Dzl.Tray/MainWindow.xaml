@@ -276,6 +276,7 @@
                            Click="OnModeToggleClick"
                            OffContent="debug" OnContent="normal"
                            VerticalAlignment="Center" />
+          <local:InfoTip Text="{x:Static local:HelpText.Mode}" />
         </StackPanel>
 
         <!-- Profile quick switcher (full management lives on the Settings page) -->
@@ -330,6 +331,7 @@
               <TextBlock Text="MCP" FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" />
               <TextBlock Text="{Binding AutomationStatus}" FontSize="11" VerticalAlignment="Center"
                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+              <local:InfoTip Text="{x:Static local:HelpText.Mcp}" />
             </StackPanel>
           </Border>
         </StackPanel>
@@ -495,7 +497,10 @@
                   <!-- Launch command card -->
                   <ui:Card Grid.Row="1" Margin="0,0,0,12" Padding="16">
                     <StackPanel>
-                      <TextBlock Text="Launch command" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8" />
+                      <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="Launch command" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <local:InfoTip Text="{x:Static local:HelpText.Mode}" />
+                      </StackPanel>
                       <Border CornerRadius="4" Padding="10"
                               Background="{DynamicResource ControlFillColorDefaultBrush}">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="140">
@@ -522,6 +527,7 @@
                         <TextBlock Text="{Binding ServerModsCount, StringFormat=' ({0})'}" FontSize="14"
                                    VerticalAlignment="Center"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <local:InfoTip Text="{x:Static local:HelpText.ModSide}" />
                       </StackPanel>
                       <Border Grid.Row="1" CornerRadius="4" Padding="4"
                               Background="{DynamicResource ControlFillColorDefaultBrush}">
@@ -601,7 +607,10 @@
                   <!-- Launch command card -->
                   <ui:Card Grid.Row="1" Margin="0,0,0,12" Padding="16">
                     <StackPanel>
-                      <TextBlock Text="Launch command" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8" />
+                      <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="Launch command" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <local:InfoTip Text="{x:Static local:HelpText.Mode}" />
+                      </StackPanel>
                       <Border CornerRadius="4" Padding="10"
                               Background="{DynamicResource ControlFillColorDefaultBrush}">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="140">
@@ -628,6 +637,7 @@
                         <TextBlock Text="{Binding ClientModsCount, StringFormat=' ({0})'}" FontSize="14"
                                    VerticalAlignment="Center"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <local:InfoTip Text="{x:Static local:HelpText.ModSide}" />
                       </StackPanel>
                       <Border Grid.Row="1" CornerRadius="4" Padding="4"
                               Background="{DynamicResource ControlFillColorDefaultBrush}">
@@ -735,7 +745,13 @@
                 <DataGrid.Columns>
                   <!-- Enabled (TemplateColumn so the checkbox is interactive on a single click;
                        DataGridCheckBoxColumn needs the cell to enter edit mode first = two clicks) -->
-                  <DataGridTemplateColumn Header="On" Width="44">
+                  <DataGridTemplateColumn Width="44">
+                    <DataGridTemplateColumn.Header>
+                      <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="On" VerticalAlignment="Center" />
+                        <local:InfoTip Text="{x:Static local:HelpText.ModEnabled}" />
+                      </StackPanel>
+                    </DataGridTemplateColumn.Header>
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
                         <!-- MinWidth/Padding 0 so the Fluent CheckBox collapses to just the box
@@ -747,8 +763,15 @@
                     </DataGridTemplateColumn.CellTemplate>
                   </DataGridTemplateColumn>
                   <!-- Load order # -->
-                  <DataGridTextColumn Header="#" Width="40" IsReadOnly="True"
-                                      Binding="{Binding Order}" />
+                  <DataGridTextColumn Width="40" IsReadOnly="True"
+                                      Binding="{Binding Order}">
+                    <DataGridTextColumn.Header>
+                      <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="#" VerticalAlignment="Center" />
+                        <local:InfoTip Text="{x:Static local:HelpText.ModOrder}" />
+                      </StackPanel>
+                    </DataGridTextColumn.Header>
+                  </DataGridTextColumn>
                   <!-- Name (prominent) -->
                   <DataGridTextColumn Header="Name" Width="*" IsReadOnly="True"
                                       Binding="{Binding Name}">
@@ -761,7 +784,13 @@
                     </DataGridTextColumn.ElementStyle>
                   </DataGridTextColumn>
                   <!-- Side (inline edit) -->
-                  <DataGridTemplateColumn Header="Side" Width="110">
+                  <DataGridTemplateColumn Width="110">
+                    <DataGridTemplateColumn.Header>
+                      <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Side" VerticalAlignment="Center" />
+                        <local:InfoTip Text="{x:Static local:HelpText.ModSide}" />
+                      </StackPanel>
+                    </DataGridTemplateColumn.Header>
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
                         <ComboBox ItemsSource="{x:Static vm:MainViewModel.Sides}"
@@ -1146,7 +1175,10 @@
                 <!-- Work drive -->
                 <ui:Card Margin="0,0,0,12" Padding="16">
                   <StackPanel>
-                    <TextBlock Text="Work drive" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                      <TextBlock Text="Work drive" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                      <local:InfoTip Text="{x:Static local:HelpText.WorkDrive}" />
+                    </StackPanel>
                     <StackPanel Orientation="Horizontal">
                       <Ellipse Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center"
                                Fill="{Binding WorkDriveMounted, Converter={StaticResource StatusDotConverter}}" />
@@ -1204,7 +1236,10 @@
                 <!-- Batch PAA -->
                 <ui:Card Margin="0,0,0,12" Padding="16">
                   <StackPanel>
-                    <TextBlock Text="Batch PAA" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                      <TextBlock Text="Batch PAA" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                      <local:InfoTip Text="{x:Static local:HelpText.GameData}" />
+                    </StackPanel>
                     <Grid Margin="0,0,0,8">
                       <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -1274,7 +1309,10 @@
                 <!-- Profiles management -->
                 <ui:Card Margin="0,0,0,12" Padding="16">
                   <StackPanel>
-                    <TextBlock Text="Profiles" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,4" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                      <TextBlock Text="Profiles" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                      <local:InfoTip Text="{x:Static local:HelpText.Profile}" />
+                    </StackPanel>
                     <TextBlock FontSize="12" Margin="0,0,0,12"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Text="Saved snapshots of mods, mode and params. The active profile is marked." />
@@ -1337,21 +1375,30 @@
                       <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="dir:CfgDayzPath" Click="OnBrowseInto" />
                     </Grid>
 
-                    <TextBlock Text="DayZ Tools" Style="{StaticResource FieldLabel}" />
+                    <StackPanel Orientation="Horizontal">
+                      <TextBlock Text="DayZ Tools" Style="{StaticResource FieldLabel}" />
+                      <local:InfoTip Text="{x:Static local:HelpText.WorkDrive}" />
+                    </StackPanel>
                     <Grid Margin="0,0,0,10">
                       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                       <ui:TextBox x:Name="CfgDayzToolsPath" Grid.Column="0" />
                       <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="dir:CfgDayzToolsPath" Click="OnBrowseInto" />
                     </Grid>
 
-                    <TextBlock Text="Server profiles" Style="{StaticResource FieldLabel}" />
+                    <StackPanel Orientation="Horizontal">
+                      <TextBlock Text="Server profiles" Style="{StaticResource FieldLabel}" />
+                      <local:InfoTip Text="{x:Static local:HelpText.ProfilesDir}" />
+                    </StackPanel>
                     <Grid Margin="0,0,0,10">
                       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                       <ui:TextBox x:Name="CfgProfilesPath" Grid.Column="0" />
                       <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="dir:CfgProfilesPath" Click="OnBrowseInto" />
                     </Grid>
 
-                    <TextBlock Text="Client profiles" Style="{StaticResource FieldLabel}" />
+                    <StackPanel Orientation="Horizontal">
+                      <TextBlock Text="Client profiles" Style="{StaticResource FieldLabel}" />
+                      <local:InfoTip Text="{x:Static local:HelpText.ProfilesDir}" />
+                    </StackPanel>
                     <Grid Margin="0,0,0,10">
                       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                       <ui:TextBox x:Name="CfgClientProfilesPath" Grid.Column="0" />
@@ -1389,15 +1436,24 @@
                     <Grid>
                       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                       <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                        <TextBlock Text="Port" Style="{StaticResource FieldLabel}" />
+                        <StackPanel Orientation="Horizontal">
+                          <TextBlock Text="Port" Style="{StaticResource FieldLabel}" />
+                          <local:InfoTip Text="{x:Static local:HelpText.Port}" />
+                        </StackPanel>
                         <ui:TextBox x:Name="CfgPort" Margin="0,0,0,10" />
-                        <TextBlock Text="Mission" Style="{StaticResource FieldLabel}" />
+                        <StackPanel Orientation="Horizontal">
+                          <TextBlock Text="Mission" Style="{StaticResource FieldLabel}" />
+                          <local:InfoTip Text="{x:Static local:HelpText.Mission}" />
+                        </StackPanel>
                         <Grid Margin="0,0,0,10">
                           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                           <ui:TextBox x:Name="CfgMission" Grid.Column="0" />
                           <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Click="OnBrowseMission" />
                         </Grid>
-                        <TextBlock Text="Config name" Style="{StaticResource FieldLabel}" />
+                        <StackPanel Orientation="Horizontal">
+                          <TextBlock Text="Config name" Style="{StaticResource FieldLabel}" />
+                          <local:InfoTip Text="{x:Static local:HelpText.ConfigName}" />
+                        </StackPanel>
                         <Grid>
                           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                           <ui:TextBox x:Name="CfgConfigName" Grid.Column="0" />
@@ -1405,9 +1461,15 @@
                         </Grid>
                       </StackPanel>
                       <StackPanel Grid.Column="1" Margin="8,0,0,0">
-                        <TextBlock Text="Player name" Style="{StaticResource FieldLabel}" />
+                        <StackPanel Orientation="Horizontal">
+                          <TextBlock Text="Player name" Style="{StaticResource FieldLabel}" />
+                          <local:InfoTip Text="{x:Static local:HelpText.PlayerName}" />
+                        </StackPanel>
                         <ui:TextBox x:Name="CfgPlayerName" Margin="0,0,0,10" />
-                        <TextBlock Text="Connect IP" Style="{StaticResource FieldLabel}" />
+                        <StackPanel Orientation="Horizontal">
+                          <TextBlock Text="Connect IP" Style="{StaticResource FieldLabel}" />
+                          <local:InfoTip Text="{x:Static local:HelpText.ConnectIp}" />
+                        </StackPanel>
                         <ui:TextBox x:Name="CfgConnectIp" />
                       </StackPanel>
                     </Grid>
@@ -1419,8 +1481,11 @@
                   <StackPanel>
                     <Grid Margin="0,0,0,12">
                       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                      <TextBlock Grid.Column="0" Text="Mod scan roots (one path per line)"
-                                 FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Mod scan roots (one path per line)"
+                                   FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <local:InfoTip Text="{x:Static local:HelpText.ScanRoots}" />
+                      </StackPanel>
                       <ui:Button Grid.Column="1" Content="Add folder…" Icon="{ui:SymbolIcon FolderAdd24}"
                                  Click="OnAddScanRoot" />
                     </Grid>
@@ -1433,7 +1498,10 @@
                 <!-- Automation -->
                 <ui:Card Margin="0,0,0,12" Padding="16">
                   <StackPanel>
-                    <TextBlock Text="Automation" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                      <TextBlock Text="Automation" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                      <local:InfoTip Text="{x:Static local:HelpText.Automation}" />
+                    </StackPanel>
                     <ui:ToggleSwitch x:Name="CfgEnableAutomationServer"
                                      Content="Enable automation server (MCP / CLI control)" />
                     <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" FontSize="12" Opacity="0.7"
@@ -1454,7 +1522,11 @@
                 <!-- Launch params -->
                 <ui:Card x:Name="ParamsCard" Margin="0,0,0,4" Padding="16">
                   <StackPanel>
-                    <TextBlock Text="Launch params" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                      <TextBlock Text="Launch params" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                      <local:InfoTip Text="{x:Static local:HelpText.PerModeParams}" />
+                      <local:InfoTip Text="{x:Static local:HelpText.Flags}" />
+                    </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                       <TextBlock Text="Target" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="0,0,8,0" />
                       <ComboBox x:Name="ParamTarget" Width="120" SelectedIndex="0"

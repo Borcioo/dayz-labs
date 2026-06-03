@@ -1,0 +1,21 @@
+<UserControl x:Class="Dzl.Tray.InfoTip"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             x:Name="Root">
+  <!-- Tiny inline ⓘ icon with a wrapped tooltip. Used to teach DayZ-modding
+       concepts next to options across the UI. Text comes from the Text DP
+       (usually a HelpText const). -->
+  <ui:SymbolIcon Symbol="Info24" FontSize="14"
+                 Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                 Cursor="Help" VerticalAlignment="Center" Margin="6,0,0,0"
+                 ToolTipService.InitialShowDelay="200"
+                 ToolTipService.ShowDuration="60000">
+    <ui:SymbolIcon.ToolTip>
+      <ToolTip>
+        <TextBlock MaxWidth="380" TextWrapping="Wrap"
+                   Text="{Binding Text, ElementName=Root}" />
+      </ToolTip>
+    </ui:SymbolIcon.ToolTip>
+  </ui:SymbolIcon>
+</UserControl>

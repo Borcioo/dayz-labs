@@ -206,7 +206,10 @@
                        Visibility="Collapsed"
                        Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
 
-            <TextBlock Text="DayZ Server (optional)" Style="{StaticResource FieldLabel}" />
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="DayZ Server (optional)" Style="{StaticResource FieldLabel}" />
+              <local:InfoTip Text="{x:Static local:HelpText.DiagServer}" />
+            </StackPanel>
             <Grid Margin="0,0,0,4">
               <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
               <ui:TextBox x:Name="ServerPathBox" Grid.Column="0" TextChanged="OnServerPathChanged" />
@@ -228,7 +231,10 @@
         <!-- 3: WORK DRIVE -->
         <ScrollViewer x:Name="Page2" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
           <StackPanel>
-            <TextBlock Text="Work drive (P:)" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+              <TextBlock Text="Work drive (P:)" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <local:InfoTip Text="{x:Static local:HelpText.WorkDrive}" />
+            </StackPanel>
             <TextBlock Style="{StaticResource Blurb}"
                        Text="DayZ tooling expects vanilla game data on the P: work drive. Mount it with DayZ Tools' WorkDrive.exe. Needs DayZ Tools. This step is optional." />
 
@@ -253,7 +259,10 @@
         <!-- 4: GAME DATA -->
         <ScrollViewer x:Name="Page3" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
           <StackPanel>
-            <TextBlock Text="Game data" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+              <TextBlock Text="Game data" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <local:InfoTip Text="{x:Static local:HelpText.GameData}" />
+            </StackPanel>
             <TextBlock Style="{StaticResource Blurb}"
                        Text="Unpacking vanilla PBOs to P: lets you reference base-game configs and assets from your mods. This step is optional." />
             <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
@@ -272,7 +281,10 @@
         <!-- 5: SERVER INSTANCE -->
         <ScrollViewer x:Name="Page4" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
           <StackPanel>
-            <TextBlock Text="Server instance" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+              <TextBlock Text="Server instance" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <local:InfoTip Text="{x:Static local:HelpText.Scaffold}" />
+            </StackPanel>
             <TextBlock Style="{StaticResource Blurb}"
                        Text="Scaffold a dev serverDZ.cfg, profiles + profiles_client folders, and copy the vanilla mission. Optional but encouraged." />
             <TextBlock Text="Instance directory" Style="{StaticResource FieldLabel}" />
@@ -290,7 +302,10 @@
         <!-- 6: SERVER FILES (PROD) -->
         <ScrollViewer x:Name="Page5" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
           <StackPanel>
-            <TextBlock Text="Server files (optional)" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+              <TextBlock Text="Server files (optional)" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <local:InfoTip Text="{x:Static local:HelpText.DiagServer}" />
+            </StackPanel>
             <TextBlock Style="{StaticResource Blurb}"
                        Text="For dev you don't need a separate server — DayZDiag runs as the server. For a dedicated/production server, use SteamCMD:" />
             <TextBox x:Name="SteamCmdBox" Height="80" Style="{StaticResource MonoBox}" Margin="0,0,0,8" />
@@ -302,7 +317,10 @@
         <!-- 7: MODS -->
         <ScrollViewer x:Name="Page6" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
           <StackPanel>
-            <TextBlock Text="Mods" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+              <TextBlock Text="Mods" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <local:InfoTip Text="{x:Static local:HelpText.ScanRoots}" />
+            </StackPanel>
             <TextBlock Style="{StaticResource Blurb}"
                        Text="Scan roots are folders searched for mods (one per line). Preview counts how many mods are found." />
             <TextBox x:Name="ScanRootsBox" Height="140" AcceptsReturn="True"
