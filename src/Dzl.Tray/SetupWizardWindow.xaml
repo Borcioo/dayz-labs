@@ -254,7 +254,7 @@
             <StackPanel Orientation="Horizontal">
               <ui:Button x:Name="MountBtn" Content="Mount P: drive" Icon="{ui:SymbolIcon HardDrive24}"
                          Click="OnMountWorkDrive" HorizontalAlignment="Left" />
-              <ui:Button x:Name="UnmountBtn" Content="Unmount P:" Icon="{ui:SymbolIcon Eject24}"
+              <ui:Button x:Name="UnmountBtn" Content="Unmount P:"
                          Click="OnUnmountWorkDrive" HorizontalAlignment="Left" Margin="8,0,0,0" />
               <ui:Button x:Name="WdOpenToolsBtn" Content="Open DayZ Tools" Icon="{ui:SymbolIcon Toolbox24}"
                          Click="OnOpenToolsForWorkDrive" HorizontalAlignment="Left" Margin="8,0,0,0" />
