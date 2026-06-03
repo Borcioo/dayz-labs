@@ -816,28 +816,31 @@
             </Grid>
 
             <Grid Grid.Row="1">
-              <!-- GRID: 2-up UniformGrid, drag-reorderable -->
-              <ItemsControl ItemsSource="{Binding LogPanes}"
-                            ItemTemplate="{StaticResource LogPaneTemplate}"
-                            Visibility="{Binding LogsViewMode, Converter={StaticResource StringEqualsVis}, ConverterParameter=grid}"
-                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                            dd:DragDrop.IsDragSource="True"
-                            dd:DragDrop.IsDropTarget="True"
-                            dd:DragDrop.DropHandler="{Binding LogsDropHandler}">
-                <!-- Force each generated container to fill its UniformGrid cell, so panes
-                     stretch to the full page height (otherwise ItemsControl items size to content). -->
-                <ItemsControl.ItemContainerStyle>
-                  <Style TargetType="ContentPresenter">
-                    <Setter Property="HorizontalAlignment" Value="Stretch" />
-                    <Setter Property="VerticalAlignment" Value="Stretch" />
-                  </Style>
-                </ItemsControl.ItemContainerStyle>
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate>
-                    <UniformGrid Columns="2" />
-                  </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-              </ItemsControl>
+              <!-- GRID: explicit 2x2. ContentControls with *ContentAlignment=Stretch so each
+                   pane fills its cell (ItemsControl+UniformGrid wouldn't stretch the cards;
+                   the default ContentControl content alignment is Left/Top). Reorder lives in List. -->
+              <Grid Visibility="{Binding LogsViewMode, Converter={StaticResource StringEqualsVis}, ConverterParameter=grid}">
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="*" />
+                  <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ContentControl Grid.Row="0" Grid.Column="0" Content="{Binding LogPanes[0]}"
+                                ContentTemplate="{StaticResource LogPaneTemplate}"
+                                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                <ContentControl Grid.Row="0" Grid.Column="1" Content="{Binding LogPanes[1]}"
+                                ContentTemplate="{StaticResource LogPaneTemplate}"
+                                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                <ContentControl Grid.Row="1" Grid.Column="0" Content="{Binding LogPanes[2]}"
+                                ContentTemplate="{StaticResource LogPaneTemplate}"
+                                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding LogPanes[3]}"
+                                ContentTemplate="{StaticResource LogPaneTemplate}"
+                                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+              </Grid>
 
               <!-- LIST: vertical stack of full-width panes, drag-reorderable, scrollable -->
               <ScrollViewer VerticalScrollBarVisibility="Auto"
@@ -875,6 +878,7 @@
               <!-- FOCUS: one big pane chosen by the selector -->
               <ContentControl Content="{Binding SelectedLogPane}"
                               ContentTemplate="{StaticResource LogPaneTemplate}"
+                              HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                               Visibility="{Binding LogsViewMode, Converter={StaticResource StringEqualsVis}, ConverterParameter=focus}" />
             </Grid>
           </Grid>
