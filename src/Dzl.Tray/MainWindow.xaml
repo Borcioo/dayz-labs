@@ -22,6 +22,11 @@
         <DockPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,0">
             <TextBlock DockPanel.Dock="Top" Text="Mods" FontWeight="Bold" Margin="0,0,0,4" />
 
+            <TextBox DockPanel.Dock="Top" Margin="0,0,0,4"
+                     Text="{Binding ModFilter, UpdateSourceTrigger=PropertyChanged}"
+                     VerticalContentAlignment="Center"
+                     ToolTip="filter mods…" />
+
             <WrapPanel DockPanel.Dock="Bottom" Margin="0,4,0,0">
                 <Button Content="Up"        Command="{Binding MoveUpCommand}"     Margin="0,0,4,4" Padding="6,2" />
                 <Button Content="Down"      Command="{Binding MoveDownCommand}"   Margin="0,0,4,4" Padding="6,2" />
@@ -31,7 +36,7 @@
                 <Button Content="Rescan"    Command="{Binding RescanCommand}"     Margin="0,0,4,4" Padding="6,2" />
             </WrapPanel>
 
-            <ListBox ItemsSource="{Binding Mods}"
+            <ListBox ItemsSource="{Binding ModsView}"
                      SelectedItem="{Binding SelectedMod, Mode=TwoWay}"
                      HorizontalContentAlignment="Stretch"
                      ScrollViewer.HorizontalScrollBarVisibility="Auto">
@@ -121,13 +126,19 @@
                 <Button Content="Stop server"    Command="{Binding StopServerCommand}"    Margin="0,0,4,0" Padding="8,3" />
                 <Button Content="Restart server" Command="{Binding RestartServerCommand}" Margin="0,0,4,0" Padding="8,3" />
                 <Button Content="Start client"   Command="{Binding StartClientCommand}"   Margin="0,0,4,0" Padding="8,3" />
-                <Button Content="Stop client"    Command="{Binding StopClientCommand}"    Margin="0,0,12,0" Padding="8,3" />
+                <Button Content="Stop client"    Command="{Binding StopClientCommand}"    Margin="0,0,4,0" Padding="8,3" />
+                <Button Content="Restart client" Command="{Binding RestartClientCommand}" Margin="0,0,12,0" Padding="8,3" />
                 <Button Content="Toggle mode"    Command="{Binding ToggleModeCommand}"    Margin="0,0,4,0" Padding="8,3" />
                 <TextBlock Text="{Binding Mode}" VerticalAlignment="Center" FontWeight="Bold" Margin="6,0,0,0" />
             </WrapPanel>
-            <TextBox Text="{Binding ArgvPreview, Mode=OneWay}" IsReadOnly="True"
-                     FontFamily="Consolas" TextWrapping="Wrap"
-                     VerticalScrollBarVisibility="Auto" MaxHeight="90" />
+            <StackPanel>
+                <TextBox Text="{Binding ServerArgv, Mode=OneWay, StringFormat='SERVER:  {0}'}" IsReadOnly="True"
+                         FontFamily="Consolas" TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto" MaxHeight="60" Margin="0,0,0,2" />
+                <TextBox Text="{Binding ClientArgv, Mode=OneWay, StringFormat='CLIENT:  {0}'}" IsReadOnly="True"
+                         FontFamily="Consolas" TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto" MaxHeight="60" />
+            </StackPanel>
         </DockPanel>
     </Grid>
 </Window>

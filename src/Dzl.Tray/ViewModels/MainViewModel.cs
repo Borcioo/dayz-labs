@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Data;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -16,8 +18,9 @@ namespace Dzl.Tray.ViewModels;
 /// <summary>
 /// Backs <c>MainWindow</c>: a mod checklist (reorderable, side-cycle), live status
 /// line, argv preview, profile switcher and four live log panes. Edits persist to the
-/// active profile; server/client ops go through <see cref="ControlPlane"/> so a running
-/// tray/CLI/MCP all agree.
+/// active profile; server/client ops go through the tray's own <see cref="LauncherService"/>
+/// (the tray process is the IPC authority, so the window calls it directly rather than
+/// routing back through a pipe).
 /// </summary>
 public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
@@ -28,16 +31,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private readonly Dispatcher _dispatcher;
     private readonly DispatcherTimer _statusTimer;
     private readonly CancellationTokenSource _cts = new();
+    private readonly LauncherService _svc;
     private DzlConfig _cfg;
     private bool _suppressPersist;
     private bool _disposed;
 
     [ObservableProperty] private string _mode = "debug";
     [ObservableProperty] private string _statusLine = "loading…";
-    [ObservableProperty] private string _argvPreview = "";
+    [ObservableProperty] private string _serverArgv = "";
+    [ObservableProperty] private string _clientArgv = "";
     [ObservableProperty] private string _activePreset = "";
     [ObservableProperty] private string _newPresetName = "";
     [ObservableProperty] private string _selectedPreset = "";
+    [ObservableProperty] private string _modFilter = "";
     [ObservableProperty] private ModRowVm? _selectedMod;
 
     [ObservableProperty] private string _scriptLog = "";
@@ -48,10 +54,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<ModRowVm> Mods { get; } = new();
     public ObservableCollection<string> Presets { get; } = new();
 
+    /// <summary>Filtered view over <see cref="Mods"/> bound by the ListBox; reorder
+    /// commands still mutate the underlying collection.</summary>
+    public ICollectionView ModsView { get; }
+
     public MainViewModel(string configPath)
     {
         _configPath = configPath;
         _dispatcher = Dispatcher.CurrentDispatcher;
+        _svc = new LauncherService(configPath);
 
         Profiles.EnsureDefault(configPath);
         var (cfg, savePath, active) = Profiles.ResolveActive(configPath);
@@ -60,6 +71,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         ActivePreset = active;
         SelectedPreset = active;
         Mode = string.IsNullOrEmpty(cfg.Mode) ? "debug" : cfg.Mode;
+
+        ModsView = CollectionViewSource.GetDefaultView(Mods);
+        ModsView.Filter = FilterMod;
 
         LoadMods();
         LoadPresets();
@@ -118,14 +132,29 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }).ToList();
         _cfg = _cfg with { Mods = entries, Mode = Mode };
         ConfigStore.Save(_cfg, _savePath);
+        // Reorder commands mutate the ObservableCollection via Move(); refresh the
+        // filtered view so its ordering stays in sync with the underlying list.
+        ModsView.Refresh();
         RefreshPreview();
     }
 
     private void RefreshPreview()
     {
-        var exe = ProcessManager.ServerExe(_cfg, Mode);
-        ArgvPreview = exe + " " + string.Join(" ", ArgvBuilder.Build(Mode, "server", _cfg));
+        ServerArgv = ProcessManager.ServerExe(_cfg, Mode) + " " + string.Join(" ", ArgvBuilder.Build(Mode, "server", _cfg));
+        ClientArgv = ProcessManager.ClientExe(_cfg, Mode) + " " + string.Join(" ", ArgvBuilder.Build(Mode, "client", _cfg));
     }
+
+    // --- Mod filter --------------------------------------------------------
+
+    private bool FilterMod(object obj)
+    {
+        if (string.IsNullOrEmpty(ModFilter)) return true;
+        if (obj is not ModRowVm m) return true;
+        return (m.Name?.Contains(ModFilter, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (m.Path?.Contains(ModFilter, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    partial void OnModFilterChanged(string value) => ModsView.Refresh();
 
     private void RefreshStatus()
     {
@@ -146,27 +175,31 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    // --- Server / client ops (background; route via ControlPlane) ----------
+    // --- Server / client ops (background; call the tray's LauncherService) -
 
-    private void RunOp(Func<string> op) => Task.Run(() =>
+    private void RunOp(Action op) => Task.Run(() =>
     {
         try { op(); } catch { /* surfaced via status poll */ }
+        finally { _dispatcher.BeginInvoke(RefreshStatus); }
     });
 
     [RelayCommand]
-    private void StartServer() => RunOp(() => new ControlPlane(_configPath).StartJson(Mode, false, "tui"));
+    private void StartServer() => RunOp(() => _svc.StartTarget("server", Mode));
 
     [RelayCommand]
-    private void StopServer() => RunOp(() => new ControlPlane(_configPath).StopJson(false));
+    private void StopServer() => RunOp(() => _svc.StopTarget("server"));
 
     [RelayCommand]
-    private void RestartServer() => RunOp(() => new ControlPlane(_configPath).RestartJson(Mode, "tui"));
+    private void RestartServer() => RunOp(() => _svc.RestartTarget("server", Mode));
 
     [RelayCommand]
-    private void StartClient() => RunOp(() => new ControlPlane(_configPath).StartJson(Mode, true, "tui"));
+    private void StartClient() => RunOp(() => _svc.StartTarget("client", Mode));
 
     [RelayCommand]
-    private void StopClient() => RunOp(() => new ControlPlane(_configPath).StopJson(true));
+    private void StopClient() => RunOp(() => _svc.StopTarget("client"));
+
+    [RelayCommand]
+    private void RestartClient() => RunOp(() => _svc.RestartTarget("client", Mode));
 
     [RelayCommand]
     private void ToggleMode()

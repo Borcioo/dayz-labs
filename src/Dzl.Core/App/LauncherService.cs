@@ -108,4 +108,31 @@ public sealed class LauncherService
         ProcessManager.Restart(mode, cfg, _configPath, source);
         return new OpResult(true, $"restarted server ({mode})");
     }
+
+    public OpResult StartTarget(string target, string mode, string source = "tui")
+    {
+        var (cfg, _, _) = Resolve();
+        ProcessManager.Spawn(mode, target, cfg, source, _configPath);
+        return new OpResult(true, $"started {target} ({mode})");
+    }
+
+    public OpResult StopTarget(string target, string source = "tui")
+    {
+        var (cfg, _, _) = Resolve();
+        ProcessManager.Stop(target, cfg, _configPath);
+        return new OpResult(true, $"stopped {target}");
+    }
+
+    public OpResult RestartTarget(string target, string mode, string source = "tui")
+    {
+        var (cfg, _, _) = Resolve();
+        if (target == "server")
+            ProcessManager.Restart(mode, cfg, _configPath, source);
+        else
+        {
+            ProcessManager.Stop(target, cfg, _configPath);
+            ProcessManager.Spawn(mode, target, cfg, source, _configPath);
+        }
+        return new OpResult(true, $"restarted {target} ({mode})");
+    }
 }
