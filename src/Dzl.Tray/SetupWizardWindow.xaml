@@ -244,8 +244,9 @@
               <ui:TextBox x:Name="WorkFolderBox" Grid.Column="0" />
               <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="WorkFolderBox" Click="OnBrowseFolder" />
             </Grid>
-            <TextBlock Text="This folder will be mounted as P:." FontSize="12" Margin="0,0,0,16"
-                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+            <TextBlock TextWrapping="Wrap" FontSize="12" Margin="0,0,0,16"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                       Text="Prefilled from DayZ Tools' settings (its configured work drive). Clicking Mount creates this folder if it doesn't exist (empty), then mounts it as P:. Extract Game Data later fills it with vanilla data — an empty P: at first is normal." />
 
             <TextBlock x:Name="ToolsRegStatus" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,8" />
             <TextBlock x:Name="WorkDriveStatus" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,12" />
