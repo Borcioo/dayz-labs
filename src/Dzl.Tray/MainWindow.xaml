@@ -157,6 +157,46 @@
         </ui:Card>
       </DataTemplate>
 
+      <!-- Accordion pane for the List view: a collapsible Expander whose header (icon + Title +
+           dimmed FileName + open/clear buttons) is always visible, so all panes' headers show at
+           once and the user expands only the logs they care about. IsExpanded is two-way bound so
+           state survives drag-reorder. HorizontalContentAlignment=Stretch lets the header Grid fill
+           the row and right-align the buttons. -->
+      <DataTemplate x:Key="LogPaneAccordionTemplate">
+        <ui:CardExpander Margin="0,0,0,8" IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
+                         HorizontalContentAlignment="Stretch">
+          <ui:CardExpander.Header>
+            <Grid Margin="0,0,8,0">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:SymbolIcon Symbol="Document24" FontSize="16" Margin="0,0,8,0"
+                               Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <TextBlock Text="{Binding FileName}" FontSize="11" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open log folder"
+                           Padding="6" Margin="0,0,6,0"
+                           Command="{Binding DataContext.OpenLogFolderCommand, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}"
+                           CommandParameter="{Binding}" />
+                <ui:Button Icon="{ui:SymbolIcon Eraser24}" ToolTip="Clear view"
+                           Padding="6"
+                           Command="{Binding DataContext.ClearLogCommand, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}"
+                           CommandParameter="{Binding}" />
+              </StackPanel>
+            </Grid>
+          </ui:CardExpander.Header>
+          <TextBox Text="{Binding Text, Mode=OneWay}" MinHeight="220"
+                   TextChanged="OnLogTextChanged"
+                   Style="{StaticResource LogTextBox}" />
+        </ui:CardExpander>
+      </DataTemplate>
+
       <!-- Small read-only mono output area for Tools (pack/paa/unbinarize results). -->
       <Style x:Key="ToolOutputBox" TargetType="TextBox">
         <Setter Property="IsReadOnly" Value="True" />
@@ -846,6 +886,7 @@
               <ScrollViewer VerticalScrollBarVisibility="Auto"
                             Visibility="{Binding LogsViewMode, Converter={StaticResource StringEqualsVis}, ConverterParameter=list}">
                 <ItemsControl ItemsSource="{Binding LogPanes}"
+                              ItemTemplate="{StaticResource LogPaneAccordionTemplate}"
                               dd:DragDrop.IsDragSource="True"
                               dd:DragDrop.IsDropTarget="True"
                               dd:DragDrop.DropHandler="{Binding LogsDropHandler}">
@@ -854,12 +895,6 @@
                       <StackPanel Orientation="Vertical" />
                     </ItemsPanelTemplate>
                   </ItemsControl.ItemsPanel>
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <ContentControl Content="{Binding}" MinHeight="220"
-                                      ContentTemplate="{StaticResource LogPaneTemplate}" />
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
                 </ItemsControl>
               </ScrollViewer>
 

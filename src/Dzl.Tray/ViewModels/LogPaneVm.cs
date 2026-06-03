@@ -21,6 +21,9 @@ public sealed partial class LogPaneVm : ObservableObject
     [ObservableProperty] private string _fileName = "(none)";
     [ObservableProperty] private string _text = "";
 
+    /// <summary>Accordion (List view) expand state; default expanded so the tail is visible.</summary>
+    [ObservableProperty] private bool _isExpanded = true;
+
     /// <summary>Resolved log file path (for Open-folder); null until the tail resolves it.</summary>
     public string? Path { get; set; }
 
