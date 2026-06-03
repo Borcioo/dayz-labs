@@ -478,8 +478,10 @@
                     </StackPanel>
                   </ui:Card>
 
-                  <!-- Active mods card (grows to fill remaining height) -->
-                  <ui:Card Grid.Row="2" Margin="0,0,0,12" Padding="16">
+                  <!-- Active mods (Border, not ui:Card: Card sizes to content; Border fills the * row) -->
+                  <Border Grid.Row="2" Margin="0,0,0,12" Padding="16" CornerRadius="8"
+                          Background="{DynamicResource ControlFillColorDefaultBrush}"
+                          BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
                     <Grid>
                       <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -520,7 +522,7 @@
                         </Grid>
                       </Border>
                     </Grid>
-                  </ui:Card>
+                  </Border>
 
                   <!-- Shortcuts -->
                   <StackPanel Grid.Row="3" Orientation="Horizontal">
@@ -582,8 +584,10 @@
                     </StackPanel>
                   </ui:Card>
 
-                  <!-- Active mods card (grows to fill remaining height) -->
-                  <ui:Card Grid.Row="2" Margin="0,0,0,12" Padding="16">
+                  <!-- Active mods (Border, not ui:Card: Card sizes to content; Border fills the * row) -->
+                  <Border Grid.Row="2" Margin="0,0,0,12" Padding="16" CornerRadius="8"
+                          Background="{DynamicResource ControlFillColorDefaultBrush}"
+                          BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
                     <Grid>
                       <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -624,7 +628,7 @@
                         </Grid>
                       </Border>
                     </Grid>
-                  </ui:Card>
+                  </Border>
 
                   <!-- Shortcuts -->
                   <StackPanel Grid.Row="3" Orientation="Horizontal">
