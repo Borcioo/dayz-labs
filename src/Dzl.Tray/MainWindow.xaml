@@ -396,6 +396,13 @@
                 <TextBlock Text="Tools" VerticalAlignment="Center" />
               </StackPanel>
             </ListBoxItem>
+            <!-- MCP setup guide: only shown when the automation server is running (ShowMcpTab). -->
+            <ListBoxItem Tag="mcp" Visibility="{Binding ShowMcpTab, Converter={StaticResource BoolToVis}}">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:SymbolIcon Symbol="PlugConnected24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                <TextBlock Text="MCP" VerticalAlignment="Center" />
+              </StackPanel>
+            </ListBoxItem>
           </ListBox>
         </DockPanel>
       </Border>
@@ -1459,6 +1466,88 @@
                       <ui:Button Content="Reset to defaults" Icon="{ui:SymbolIcon ArrowReset24}" Margin="8,0,0,0"
                                  Click="OnResetParams" />
                     </StackPanel>
+                  </StackPanel>
+                </ui:Card>
+
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+
+          <!-- ===== MCP =====
+               Setup guide for wiring Claude Code to the dzl stdio MCP server. Only reachable
+               when the automation server is running (the nav item binds ShowMcpTab). -->
+          <Grid x:Name="PageMcp" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Margin="0,0,0,12">
+              <TextBlock Text="MCP integration" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock TextWrapping="Wrap" FontSize="12"
+                         Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                         Text="Let Claude Code drive dzl in natural language — start/stop the server, read logs, switch profiles, pack PBOs and more." />
+            </StackPanel>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+              <StackPanel>
+
+                <!-- Register in Claude Code -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Register in Claude Code" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <Border Grid.Column="0" CornerRadius="4" Padding="10"
+                              Background="{DynamicResource ControlFillColorDefaultBrush}"
+                              BorderThickness="1"
+                              BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+                        <TextBox Text="{Binding McpRegisterCommand, Mode=OneWay}" IsReadOnly="True"
+                                 BorderThickness="0" Background="Transparent"
+                                 FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                                 TextWrapping="Wrap" VerticalAlignment="Center" />
+                      </Border>
+                      <ui:Button Grid.Column="1" Content="Copy" Appearance="Primary"
+                                 Icon="{ui:SymbolIcon Copy24}" Margin="8,0,0,0"
+                                 VerticalAlignment="Center"
+                                 Command="{Binding CopyMcpCommandCommand}" />
+                    </Grid>
+                    <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" FontSize="12" Opacity="0.7"
+                               Text="Run this in a terminal, then restart Claude Code. The Dzl.Mcp project must be built (or published) first." />
+                  </StackPanel>
+                </ui:Card>
+
+                <!-- Tools -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Tools" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <TextBlock FontSize="12" Margin="0,0,0,10"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="Actions Claude can call once dzl is registered." />
+                    <ItemsControl ItemsSource="{Binding McpTools}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <TextBlock Text="{Binding}" Margin="0,2"
+                                     FontFamily="Cascadia Mono, Consolas" FontSize="13" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </ui:Card>
+
+                <!-- Note -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Symbol="Info24" FontSize="18" Margin="0,2,10,0"
+                                   VerticalAlignment="Top"
+                                   Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                    <TextBlock TextWrapping="Wrap" FontSize="12" MaxWidth="640"
+                               HorizontalAlignment="Left"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="Enable the automation server (Settings → Automation) so actions from Claude show live in this window. MCP also works without it (it drives the launcher through the shared config/state)." />
                   </StackPanel>
                 </ui:Card>
 

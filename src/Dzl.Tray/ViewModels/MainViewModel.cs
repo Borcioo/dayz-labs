@@ -55,6 +55,39 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Human-readable automation state for the MCP pill ("on"/"off").</summary>
     public string AutomationStatus => AutomationOn ? "on" : "off";
 
+    /// <summary>Drives the "MCP" nav-rail item's visibility: only shown once the automation
+    /// server is actually running this session (so the setup guide is discoverable in context).</summary>
+    public bool ShowMcpTab => AutomationOn;
+
+    /// <summary>Full <c>claude mcp add</c> command that registers the dzl stdio MCP server in
+    /// Claude Code, with <c>DZL_CONFIG</c> pinned to the same config path this app uses. Built
+    /// once in the ctor; the resolved executable is best-effort (exe → dll+dotnet → placeholder).</summary>
+    public string McpRegisterCommand { get; }
+
+    /// <summary>The MCP tool names exposed by <c>Dzl.Mcp.DzlMcpTools</c> (shown on the MCP page).</summary>
+    public IReadOnlyList<string> McpTools { get; } = new[]
+    {
+        "status", "list_mods", "list_presets", "set_preset", "logs",
+        "start", "stop", "restart", "list_tools", "open_tool",
+        "convert_paa", "pack_pbo", "unbinarize", "work_drive_action",
+    };
+
+    /// <summary>Resolve how to invoke the Dzl.Mcp stdio server, best-effort: a sibling
+    /// <c>Dzl.Mcp.exe</c> (run directly), else a sibling <c>Dzl.Mcp.dll</c> (via <c>dotnet</c>),
+    /// else a clearly-marked placeholder dll path (dev/unbuilt — must be built or published).</summary>
+    private static string ResolveMcpCommand()
+    {
+        var baseDir = AppContext.BaseDirectory;
+        var exe = Path.Combine(baseDir, "Dzl.Mcp.exe");
+        if (File.Exists(exe)) return Quote(exe);
+        var dll = Path.Combine(baseDir, "Dzl.Mcp.dll");
+        if (File.Exists(dll)) return $"dotnet {Quote(dll)}";
+        // Dev / unbuilt: point at where the dll would live; it must be built or published first.
+        return $"dotnet {Quote(dll)}";
+    }
+
+    private static string Quote(string s) => s.Contains(' ') ? $"\"{s}\"" : s;
+
     /// <summary>True when <see cref="Mode"/> is "normal" (drives the mode ToggleSwitch).</summary>
     public bool IsNormalMode => Mode == "normal";
 
@@ -129,6 +162,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _dispatcher = Dispatcher.CurrentDispatcher;
         _svc = new LauncherService(configPath);
         AutomationOn = App.AutomationServerRunning;
+        McpRegisterCommand =
+            $"claude mcp add dzl --env DZL_CONFIG=\"{configPath}\" -- {ResolveMcpCommand()}";
 
         Profiles.EnsureDefault(configPath);
         var (cfg, savePath, active) = Profiles.ResolveActive(configPath);
@@ -326,6 +361,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     [RelayCommand]
     private void RestartClient() => RunOp(() => _svc.RestartTarget("client", Mode));
+
+    /// <summary>Copy the <c>claude mcp add</c> registration command to the clipboard
+    /// (clipboard access can throw if another process holds it; swallow best-effort).</summary>
+    [RelayCommand]
+    private void CopyMcpCommand()
+    {
+        try { System.Windows.Clipboard.SetText(McpRegisterCommand); }
+        catch { /* clipboard busy/unavailable — best-effort */ }
+    }
 
     [RelayCommand]
     private void ToggleMode()

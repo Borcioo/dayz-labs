@@ -62,6 +62,7 @@ public partial class MainWindow : FluentWindow
         PageMods.Visibility = tag == "mods" ? Visibility.Visible : Visibility.Collapsed;
         PageLogs.Visibility = tag == "logs" ? Visibility.Visible : Visibility.Collapsed;
         PageTools.Visibility = tag == "tools" ? Visibility.Visible : Visibility.Collapsed;
+        PageMcp.Visibility = tag == "mcp" ? Visibility.Visible : Visibility.Collapsed;
         PageSettings.Visibility = tag == "settings" ? Visibility.Visible : Visibility.Collapsed;
 
         // Refresh page-local state on show.
