@@ -123,8 +123,8 @@
         <!-- Plain Border (not ui:Card): a Border is a decorator whose child always fills it,
              so the pane stretches to its container. ui:Card sizes to content / won't stretch. -->
         <Border Margin="3" Padding="12" CornerRadius="8"
-                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
           <Grid>
             <Grid.RowDefinitions>
               <RowDefinition Height="Auto" />
