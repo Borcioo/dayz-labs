@@ -504,7 +504,10 @@
                   <DataGridTemplateColumn Header="On" Width="44">
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
+                        <!-- MinWidth/Padding 0 so the Fluent CheckBox collapses to just the box
+                             (default reserves a wide content area → renders as an empty pill). -->
                         <CheckBox HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  MinWidth="0" Padding="0"
                                   IsChecked="{Binding Enabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
