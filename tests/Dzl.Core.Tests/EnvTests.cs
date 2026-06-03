@@ -40,4 +40,11 @@ public class EnvTests
     [Fact]
     public void ParseWorkDir_reads_quoted_value() =>
         EnvDetect.ParseWorkDir("Generic\n  WorkDirPath=\"C:\\Users\\m\\DayZ Projects\"\n").Should().Be(@"C:\Users\m\DayZ Projects");
+
+    [Fact]
+    public void InstallUri_builds_steam_protocol()
+    {
+        Dzl.Core.Env.SteamInstall.InstallUri(830640).Should().Be("steam://install/830640");
+        Dzl.Core.Env.SteamInstall.DayZServer.Should().Be(223350);
+    }
 }

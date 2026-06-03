@@ -229,6 +229,36 @@ public partial class SetupWizardWindow : FluentWindow
         SetFoundStatus(ServerPathStatus, ServerPathBox.Text, required: false);
     }
 
+    /// <summary>Re-run detection and fill any path Detect now finds, leaving user-typed values
+    /// that detection still can't locate untouched (so freshly-installed Tools/Server populate).</summary>
+    private void OnReDetect(object sender, RoutedEventArgs e)
+    {
+        var d = EnvDetect.Detect();
+        if (!string.IsNullOrWhiteSpace(d.DayzPath)) DayzPathBox.Text = d.DayzPath;
+        if (!string.IsNullOrWhiteSpace(d.ToolsPath)) ToolsPathBox.Text = d.ToolsPath;
+        if (!string.IsNullOrWhiteSpace(d.ServerPath)) ServerPathBox.Text = d.ServerPath;
+        RefreshPathStatuses();
+        UpdateNextEnabled();
+    }
+
+    private void OnInstallTools(object sender, RoutedEventArgs e)
+    {
+        bool ok = SteamInstall.Install(SteamInstall.DayZTools);
+        ToolsInstallHint.Visibility = Visibility.Visible;
+        ToolsInstallHint.Text = ok
+            ? "Steam is installing DayZ Tools — finish it there, then click Re-detect."
+            : "Couldn't launch Steam — is it installed?";
+    }
+
+    private void OnInstallServer(object sender, RoutedEventArgs e)
+    {
+        bool ok = SteamInstall.Install(SteamInstall.DayZServer);
+        ServerInstallHint.Visibility = Visibility.Visible;
+        ServerInstallHint.Text = ok
+            ? "Steam is installing DayZ Server — finish it there, then click Re-detect."
+            : "Couldn't launch Steam — is it installed?";
+    }
+
     private static void SetFoundStatus(TextBlock target, string? path, bool required)
     {
         var p = path?.Trim() ?? "";

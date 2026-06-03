@@ -173,11 +173,19 @@
         <!-- 3: PATHS -->
         <ScrollViewer x:Name="Page1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
           <StackPanel>
-            <TextBlock Text="Paths" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
-            <TextBlock Style="{StaticResource Blurb}"
-                       Text="Detected from your Steam libraries. Confirm or browse to the right folders. DayZ install is required." />
+            <Grid Margin="0,0,0,8">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0">
+                <TextBlock Text="Paths" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+                <TextBlock Style="{StaticResource Blurb}" Margin="0"
+                           Text="Detected from your Steam libraries. Confirm or browse to the right folders. DayZ install is required." />
+              </StackPanel>
+              <ui:Button Grid.Column="1" x:Name="ReDetectBtn" Content="Re-detect"
+                         Icon="{ui:SymbolIcon ArrowClockwise24}"
+                         Click="OnReDetect" VerticalAlignment="Top" HorizontalAlignment="Right" />
+            </Grid>
 
-            <TextBlock Text="DayZ install (required)" Style="{StaticResource FieldLabel}" />
+            <TextBlock Text="DayZ install (required)" Style="{StaticResource FieldLabel}" Margin="0,8,0,4" />
             <Grid Margin="0,0,0,4">
               <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
               <ui:TextBox x:Name="DayzPathBox" Grid.Column="0" TextChanged="OnDayzPathChanged" />
@@ -187,19 +195,33 @@
 
             <TextBlock Text="DayZ Tools (recommended)" Style="{StaticResource FieldLabel}" />
             <Grid Margin="0,0,0,4">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
               <ui:TextBox x:Name="ToolsPathBox" Grid.Column="0" TextChanged="OnToolsPathChanged" />
               <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="ToolsPathBox" Click="OnBrowseFolder" />
+              <ui:Button Grid.Column="2" x:Name="InstallToolsBtn" Content="Install via Steam"
+                         Icon="{ui:SymbolIcon ArrowDownload24}" Margin="8,0,0,0" Click="OnInstallTools" />
             </Grid>
-            <TextBlock x:Name="ToolsPathStatus" FontSize="12" Margin="0,0,0,16" />
+            <TextBlock x:Name="ToolsPathStatus" FontSize="12" Margin="0,0,0,4" />
+            <TextBlock x:Name="ToolsInstallHint" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,16"
+                       Visibility="Collapsed"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
 
             <TextBlock Text="DayZ Server (optional)" Style="{StaticResource FieldLabel}" />
             <Grid Margin="0,0,0,4">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
               <ui:TextBox x:Name="ServerPathBox" Grid.Column="0" TextChanged="OnServerPathChanged" />
               <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="ServerPathBox" Click="OnBrowseFolder" />
+              <ui:Button Grid.Column="2" x:Name="InstallServerBtn" Content="Install via Steam"
+                         Icon="{ui:SymbolIcon ArrowDownload24}" Margin="8,0,0,0" Click="OnInstallServer" />
             </Grid>
-            <TextBlock x:Name="ServerPathStatus" FontSize="12" Margin="0,0,0,8" />
+            <TextBlock x:Name="ServerPathStatus" FontSize="12" Margin="0,0,0,4" />
+            <TextBlock x:Name="ServerInstallHint" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"
+                       Visibility="Collapsed"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+
+            <TextBlock FontSize="12" TextWrapping="Wrap" Margin="0,4,0,8"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                       Text="Steam must be running and signed in. Installing DayZ Tools requires owning DayZ. DayZ Server is only needed for a dedicated production server." />
           </StackPanel>
         </ScrollViewer>
 
