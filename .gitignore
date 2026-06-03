@@ -5,3 +5,6 @@ obj/
 [Tt]est[Rr]esults/
 artifacts/
 *.nupkg
+.dzl-procs.json
+config.json
+presets/

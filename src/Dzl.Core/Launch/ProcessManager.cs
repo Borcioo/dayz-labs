@@ -50,9 +50,13 @@ public static class ProcessManager
         var info = StateFile.ReadRaw(configPath).GetValueOrDefault(target);
         if (info is not null)
         {
-            try { Process.GetProcessById(info.Pid).Kill(entireProcessTree: true); }
-            catch (ArgumentException) { /* already gone */ }
-            catch (InvalidOperationException) { /* already exited */ }
+            var img = ImageOf(info.Pid);
+            if (img is not null && string.Equals(img, info.Exe, StringComparison.OrdinalIgnoreCase))
+            {
+                try { Process.GetProcessById(info.Pid).Kill(entireProcessTree: true); }
+                catch (ArgumentException) { /* already gone */ }
+                catch (InvalidOperationException) { /* already exited */ }
+            }
         }
         StateFile.Clear(configPath, target);
     }
