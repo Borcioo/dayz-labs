@@ -100,7 +100,9 @@ public static class WorkDrive
     /// <summary><c>/ExtractGameData</c> with NO paths — exactly what DayZ Tools itself runs; it reads
     /// the game path + work-drive letter from settings.ini and unpacks vanilla PBOs to P:\ (under their
     /// PBO prefixes, e.g. P:\DZ\...). Passing an explicit dest caused property-file write errors.</summary>
-    public static List<string> ExtractArgs() => new(Silent) { "/ExtractGameData" };
+    // Extract drops /Silent (keeps /y /nowarnings: auto-confirm, no warning prompts) so WorkDrive
+    // shows its own progress console — extract is long and the user wants to see it working.
+    public static List<string> ExtractArgs() => new() { "/y", "/nowarnings", "/ExtractGameData" };
 
     // ---- process wrappers (manual; never throw) -------------------------
 
@@ -166,7 +168,8 @@ public static class WorkDrive
     public static (bool ok, string output) ExtractGameData(string exePath)
     {
         if (!File.Exists(exePath)) return (false, "");
-        var code = RunWorkDrive(exePath, ExtractArgs(), 20 * 60 * 1000);  // up to 20 min
+        // showWindow: let WorkDrive's progress console appear so the user can watch the long extract.
+        var code = RunWorkDrive(exePath, ExtractArgs(), 20 * 60 * 1000, showWindow: true);  // up to 20 min
         return (code == 0, "");
     }
 
@@ -175,10 +178,10 @@ public static class WorkDrive
     // it. Launching it elevated (runas) mounts P: in a separate admin session that the user session
     // can't see — which is exactly the "shows mounted but no P:" bug. Returns the exit code, or null
     // if it couldn't start / didn't exit within the timeout.
-    private static int? RunWorkDrive(string exePath, IEnumerable<string> args, int timeoutMs)
+    private static int? RunWorkDrive(string exePath, IEnumerable<string> args, int timeoutMs, bool showWindow = false)
     {
         return ProcessElevation.Run(exePath, args is IReadOnlyList<string> l ? l : new List<string>(args),
-                                    Path.GetDirectoryName(exePath) ?? "", timeoutMs, deElevateIfAdmin: true);
+                                    Path.GetDirectoryName(exePath) ?? "", timeoutMs, deElevateIfAdmin: true, showWindow);
     }
 
     private static void RunSubst(string drive, string source)

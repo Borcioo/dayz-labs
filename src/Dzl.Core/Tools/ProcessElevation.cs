@@ -14,22 +14,22 @@ public static class ProcessElevation
     /// <summary>Run exe+args, returning the exit code (null if it couldn't start / timed out).
     /// De-elevates to the user session when <paramref name="deElevateIfAdmin"/> and we're admin.</summary>
     public static int? Run(string exePath, IReadOnlyList<string> args, string workingDir, int timeoutMs,
-                           bool deElevateIfAdmin)
+                           bool deElevateIfAdmin, bool showWindow = false)
     {
         if (deElevateIfAdmin && OperatingSystem.IsWindows() && Dzl.Core.Env.EnvDetect.IsElevated())
         {
-            var code = TryRunDeElevated(exePath, args, workingDir, timeoutMs);
+            var code = TryRunDeElevated(exePath, args, workingDir, timeoutMs, showWindow);
             if (code is not null) return code;   // success; else fall through to normal launch
         }
-        return RunNormal(exePath, args, workingDir, timeoutMs);
+        return RunNormal(exePath, args, workingDir, timeoutMs, showWindow);
     }
 
-    private static int? RunNormal(string exePath, IReadOnlyList<string> args, string workingDir, int timeoutMs)
+    private static int? RunNormal(string exePath, IReadOnlyList<string> args, string workingDir, int timeoutMs, bool showWindow)
     {
         try
         {
             var psi = new ProcessStartInfo(exePath)
-            { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = workingDir };
+            { UseShellExecute = false, CreateNoWindow = !showWindow, WorkingDirectory = workingDir };
             foreach (var a in args) psi.ArgumentList.Add(a);
             using var p = Process.Start(psi);
             if (p is null) return null;
@@ -40,7 +40,7 @@ public static class ProcessElevation
 
     // ---- Win32: spawn as the linked (limited) user token --------------------
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
-    private static int? TryRunDeElevated(string exePath, IReadOnlyList<string> args, string workingDir, int timeoutMs)
+    private static int? TryRunDeElevated(string exePath, IReadOnlyList<string> args, string workingDir, int timeoutMs, bool showWindow)
     {
         IntPtr hProc = GetCurrentProcess();
         IntPtr hToken = IntPtr.Zero, hLinked = IntPtr.Zero, hPrimary = IntPtr.Zero;
@@ -70,7 +70,7 @@ public static class ProcessElevation
             var si = new STARTUPINFO { cb = Marshal.SizeOf<STARTUPINFO>() };
             var cmdLine = BuildCommandLine(exePath, args);   // mutable buffer
             if (!CreateProcessWithTokenW(hPrimary, LOGON_WITH_PROFILE, exePath, cmdLine,
-                    CREATE_NO_WINDOW, IntPtr.Zero, workingDir, ref si, out var pi))
+                    showWindow ? 0u : CREATE_NO_WINDOW, IntPtr.Zero, workingDir, ref si, out var pi))
                 return null;
 
             try
