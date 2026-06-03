@@ -29,7 +29,11 @@ namespace Dzl.Tray.ViewModels;
 public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly string _configPath;
-    private readonly string _savePath;
+    // NOT readonly: ResolveActive picks the file to save to (active preset's .json, or the base
+    // config when no preset is active). Switching presets changes that target, so Reload() must
+    // re-assign it — otherwise saves land in the previously-active file and the current preset's
+    // edits silently vanish on the next reload.
+    private string _savePath;
     private readonly Dispatcher _dispatcher;
     private readonly DispatcherTimer _statusTimer;
     private readonly CancellationTokenSource _cts = new();
@@ -542,8 +546,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public void Reload()
     {
-        var (cfg, _, active) = Profiles.ResolveActive(_configPath);
+        var (cfg, savePath, active) = Profiles.ResolveActive(_configPath);
         _cfg = cfg;
+        _savePath = savePath;   // active preset changed -> save target must follow it
         ActivePreset = active;
         Mode = string.IsNullOrEmpty(cfg.Mode) ? "debug" : cfg.Mode;
         _suppressPersist = true;

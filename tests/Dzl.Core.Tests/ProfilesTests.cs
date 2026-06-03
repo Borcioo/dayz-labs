@@ -70,6 +70,28 @@ public class ProfilesTests
     }
 
     [Fact]
+    public void Switching_active_preset_moves_the_save_target()
+    {
+        // Guards the contract the tray's Reload() relies on: after switching the active preset,
+        // ResolveActive's savePath must point at the NEW preset's file. (The tray bug was caching
+        // savePath once at construction, so edits to a switched-to preset were written to the old
+        // file and lost on reload.)
+        var path = TmpConfig();
+        Profiles.Save(DzlConfig.Default() with { Port = 1 }, "alpha", path);
+        Profiles.Save(DzlConfig.Default() with { Port = 2 }, "beta", path);
+
+        Profiles.SetActive("alpha", path);
+        var a = Profiles.ResolveActive(path);
+        a.savePath.Should().Be(Profiles.PresetFile("alpha", path));
+
+        Profiles.SetActive("beta", path);
+        var b = Profiles.ResolveActive(path);
+        b.savePath.Should().Be(Profiles.PresetFile("beta", path));
+        b.savePath.Should().NotBe(a.savePath);
+        b.cfg.Port.Should().Be(2);
+    }
+
+    [Fact]
     public void Delete_removes_preset()
     {
         var path = TmpConfig();
