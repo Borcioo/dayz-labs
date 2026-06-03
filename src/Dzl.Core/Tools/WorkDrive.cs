@@ -15,8 +15,18 @@ namespace Dzl.Core.Tools;
 /// </summary>
 public static class WorkDrive
 {
-    // P: is the conventional DayZ work drive. Mounted iff the path exists.
-    public static bool IsMounted(string drive = @"P:\") => Directory.Exists(drive);
+    // P: is the conventional DayZ work drive. "Mounted" means a real, accessible drive in THIS
+    // process's session — DriveInfo.IsReady, not just Directory.Exists (which can follow an orphan
+    // DOS-device mapping left in another session/elevation level that isn't actually usable here).
+    public static bool IsMounted(string drive = @"P:\")
+    {
+        try
+        {
+            var letter = drive.TrimEnd('\\', ':');
+            return new DriveInfo(letter).IsReady;
+        }
+        catch { return Directory.Exists(drive); }
+    }
 
     // ---- mount-target verification --------------------------------------
 

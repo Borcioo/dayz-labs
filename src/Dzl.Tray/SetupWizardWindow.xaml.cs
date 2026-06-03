@@ -337,8 +337,10 @@ public partial class SetupWizardWindow : FluentWindow
 
         // Mount enabled when Tools is initialized AND (P: not mounted OR mounted to the wrong folder
         // so we can re-point it). Re-label to make the re-point case obvious. Unmount only when mounted.
-        MountBtn.IsEnabled = registered && (!mounted || mismatch);
-        MountBtn.Content = mismatch ? "Re-mount P: here" : "Mount P: drive";
+        // Mount is always available once Tools is initialized — mounting is idempotent and the
+        // user may need to (re)mount even when a phantom/cross-session P: mapping is detected.
+        MountBtn.IsEnabled = registered;
+        MountBtn.Content = mounted ? "Re-mount P: here" : "Mount P: drive";
         UnmountBtn.IsEnabled = mounted;
         WdOpenToolsBtn.Appearance = registered
             ? Wpf.Ui.Controls.ControlAppearance.Secondary
