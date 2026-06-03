@@ -38,6 +38,18 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     [ObservableProperty] private string _mode = "debug";
     [ObservableProperty] private string _statusLine = "loading…";
+
+    // Structured status (drives the Fluent top-bar pills + dashboard summary).
+    [ObservableProperty] private int _port;
+    [ObservableProperty] private bool _serverUp;
+    [ObservableProperty] private bool _clientUp;
+    [ObservableProperty] private string _serverStatus = "down";
+    [ObservableProperty] private string _clientStatus = "down";
+
+    /// <summary>True when <see cref="Mode"/> is "normal" (drives the mode ToggleSwitch).</summary>
+    public bool IsNormalMode => Mode == "normal";
+
+    partial void OnModeChanged(string value) => OnPropertyChanged(nameof(IsNormalMode));
     [ObservableProperty] private string _serverArgv = "";
     [ObservableProperty] private string _clientArgv = "";
     [ObservableProperty] private string _activePreset = "";
@@ -176,6 +188,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             var cli = r.Client.State == "up"
                 ? $"up ({r.Client.Source}/{r.Client.Mode} pid {r.Client.Pid})"
                 : "down";
+            Port = r.Port;
+            ServerUp = r.Server.State == "up";
+            ClientUp = r.Client.State == "up";
+            ServerStatus = srv;
+            ClientStatus = cli;
             StatusLine = $"mode {r.Mode} · port {r.Port} · preset {(string.IsNullOrEmpty(r.ActivePreset) ? "—" : r.ActivePreset)} · server {srv} · client {cli}";
         }
         catch (Exception ex)

@@ -1,166 +1,321 @@
-<Window x:Class="Dzl.Tray.MainWindow"
+<ui:FluentWindow x:Class="Dzl.Tray.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Dzl.Tray"
         xmlns:vm="clr-namespace:Dzl.Tray.ViewModels"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
-        Title="dzl" Height="640" Width="1040">
-  <DockPanel>
-    <Menu DockPanel.Dock="Top">
-        <MenuItem Header="_Config">
-            <MenuItem Header="Settings…" Click="OnConfigSettings" />
-        </MenuItem>
-        <MenuItem Header="_Params">
-            <MenuItem Header="Server params…" Click="OnServerParams" />
-            <MenuItem Header="Client params…" Click="OnClientParams" />
-        </MenuItem>
-        <MenuItem Header="P_rofiles" x:Name="ProfilesMenu" SubmenuOpened="OnProfilesMenuOpened" />
-        <MenuItem Header="_Tools" x:Name="ToolsMenu" SubmenuOpened="OnToolsMenuOpened" />
-        <MenuItem Header="_Open">
-            <MenuItem Header="Config folder"   Click="OnOpenConfigFolder" />
-            <MenuItem Header="Server profiles"  Click="OnOpenServerProfiles" />
-            <MenuItem Header="Client profiles"  Click="OnOpenClientProfiles" />
-            <MenuItem Header="DayZ install"     Click="OnOpenDayzInstall" />
-        </MenuItem>
-        <MenuItem Header="_Rescan mods" Command="{Binding RescanCommand}" />
-        <MenuItem Header="{Binding Mode, StringFormat='_Mode: {0}'}" Click="OnToggleMode" />
-    </Menu>
+        Title="dzl — DayZ Dev Launcher"
+        MinWidth="1100" MinHeight="720"
+        Width="1240" Height="800"
+        WindowBackdropType="Mica"
+        ExtendsContentIntoTitleBar="True"
+        WindowStartupLocation="CenterScreen">
 
-    <Grid Margin="8">
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />  <!-- title bar -->
+      <RowDefinition Height="Auto" />  <!-- top action bar -->
+      <RowDefinition Height="*" />     <!-- nav + content -->
+    </Grid.RowDefinitions>
+    <Grid.Resources>
+      <local:StatusDotConverter x:Key="StatusDotConverter" />
+    </Grid.Resources>
+
+    <!-- ============ TITLE BAR ============ -->
+    <ui:TitleBar Grid.Row="0" Title="dzl — DayZ Dev Launcher" Margin="0">
+      <ui:TitleBar.Icon>
+        <ui:SymbolIcon Symbol="Gauge24" />
+      </ui:TitleBar.Icon>
+    </ui:TitleBar>
+
+    <!-- ============ TOP ACTION BAR ============ -->
+    <Border Grid.Row="1" Padding="16,8"
+            BorderThickness="0,0,0,1"
+            BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+      <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="380" />
-            <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />  <!-- app name -->
+          <ColumnDefinition Width="Auto" />  <!-- mode toggle -->
+          <ColumnDefinition Width="Auto" />  <!-- profile -->
+          <ColumnDefinition Width="*" />     <!-- spacer -->
+          <ColumnDefinition Width="Auto" />  <!-- status pills -->
         </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
 
-        <!-- LEFT: mod list + controls -->
-        <DockPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,0">
-            <TextBlock DockPanel.Dock="Top" Text="Mods" FontWeight="Bold" Margin="0,0,0,4" />
+        <!-- App name -->
+        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
+          <ui:SymbolIcon Symbol="Gauge24" FontSize="20" Margin="0,0,8,0"
+                         Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+          <TextBlock Text="dzl" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
+        </StackPanel>
 
-            <TextBox DockPanel.Dock="Top" Margin="0,0,0,4"
-                     Text="{Binding ModFilter, UpdateSourceTrigger=PropertyChanged}"
-                     VerticalContentAlignment="Center"
-                     ToolTip="filter mods…" />
+        <!-- Mode toggle: debug | normal -->
+        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
+          <TextBlock Text="Mode" VerticalAlignment="Center" Margin="0,0,8,0"
+                     Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+          <ui:ToggleSwitch IsChecked="{Binding IsNormalMode, Mode=OneWay}"
+                           Click="OnModeToggleClick"
+                           OffContent="debug" OnContent="normal"
+                           VerticalAlignment="Center" />
+        </StackPanel>
 
-            <WrapPanel DockPanel.Dock="Bottom" Margin="0,4,0,0">
-                <Button Content="Up"        Command="{Binding MoveUpCommand}"     Margin="0,0,4,4" Padding="6,2" />
-                <Button Content="Down"      Command="{Binding MoveDownCommand}"   Margin="0,0,4,4" Padding="6,2" />
-                <Button Content="Top"       Command="{Binding ToTopCommand}"      Margin="0,0,4,4" Padding="6,2" />
-                <Button Content="Bottom"    Command="{Binding ToBottomCommand}"   Margin="0,0,4,4" Padding="6,2" />
-                <Button Content="Cycle side" Command="{Binding CycleSideCommand}" Margin="0,0,4,4" Padding="6,2" />
-                <Button Content="Rescan"    Command="{Binding RescanCommand}"     Margin="0,0,4,4" Padding="6,2" />
-            </WrapPanel>
+        <!-- Profile selector -->
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+          <TextBlock Text="Profile" VerticalAlignment="Center" Margin="0,0,8,0"
+                     Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+          <ComboBox Width="160" VerticalAlignment="Center"
+                    ItemsSource="{Binding Presets}"
+                    SelectedItem="{Binding SelectedPreset, Mode=TwoWay}"
+                    SelectionChanged="OnProfileSelectionChanged" />
+          <ui:TextBox Width="130" Margin="8,0,0,0" VerticalAlignment="Center"
+                      PlaceholderText="new name…"
+                      Text="{Binding NewPresetName, UpdateSourceTrigger=PropertyChanged}"
+                      ToolTip="New preset name (blank = overwrite active)" />
+          <ui:Button Margin="8,0,0,0" VerticalAlignment="Center"
+                     Content="Save" Icon="{ui:SymbolIcon Save24}"
+                     Command="{Binding SavePresetCommand}" />
+        </StackPanel>
 
-            <ListBox ItemsSource="{Binding ModsView}"
-                     SelectedItem="{Binding SelectedMod, Mode=TwoWay}"
-                     HorizontalContentAlignment="Stretch"
-                     ScrollViewer.HorizontalScrollBarVisibility="Auto">
-                <ListBox.ItemTemplate>
-                    <DataTemplate DataType="{x:Type vm:ModRowVm}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <CheckBox Grid.Column="0"
-                                      IsChecked="{Binding Enabled, Mode=TwoWay}"
-                                      VerticalAlignment="Center" Margin="0,0,6,0" />
-                            <TextBlock Grid.Column="1" Text="{Binding Name}"
-                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                       ToolTip="{Binding Path}">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Missing}" Value="True">
-                                                <Setter Property="Foreground" Value="Gray" />
-                                                <Setter Property="TextDecorations" Value="Strikethrough" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                            <Border Grid.Column="2" Background="#E0E0E0" CornerRadius="3"
-                                    Padding="5,1" Margin="6,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding Side}" FontSize="10" Foreground="#333" />
-                            </Border>
-                        </Grid>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </DockPanel>
-
-        <!-- RIGHT: status + presets + log tabs -->
-        <DockPanel Grid.Row="0" Grid.Column="1">
-            <TextBlock DockPanel.Dock="Top" Text="{Binding StatusLine}"
-                       FontFamily="Consolas" TextWrapping="Wrap" Margin="0,0,0,6" />
-
-            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
-                <TextBlock Text="Profile:" VerticalAlignment="Center" Margin="0,0,6,0" />
-                <ComboBox Width="160"
-                          ItemsSource="{Binding Presets}"
-                          SelectedItem="{Binding SelectedPreset, Mode=TwoWay}" />
-                <Button Content="Switch" Command="{Binding SwitchPresetCommand}"
-                        Margin="6,0,0,0" Padding="8,2" />
-                <Button Content="Save" Command="{Binding SavePresetCommand}"
-                        DockPanel.Dock="Right" Padding="8,2" />
-                <TextBox Text="{Binding NewPresetName, UpdateSourceTrigger=PropertyChanged}"
-                         DockPanel.Dock="Right" Width="160" Margin="6,0,6,0"
-                         VerticalContentAlignment="Center"
-                         ToolTip="New preset name (blank = overwrite active)" />
-            </DockPanel>
-
-            <TabControl>
-                <TabItem Header="script">
-                    <TextBox Text="{Binding ScriptLog, Mode=OneWay}" IsReadOnly="True"
-                             FontFamily="Consolas" TextWrapping="NoWrap"
-                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
-                </TabItem>
-                <TabItem Header="rpt">
-                    <TextBox Text="{Binding RptLog, Mode=OneWay}" IsReadOnly="True"
-                             FontFamily="Consolas" TextWrapping="NoWrap"
-                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
-                </TabItem>
-                <TabItem Header="adm">
-                    <TextBox Text="{Binding AdmLog, Mode=OneWay}" IsReadOnly="True"
-                             FontFamily="Consolas" TextWrapping="NoWrap"
-                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
-                </TabItem>
-                <TabItem Header="client">
-                    <TextBox Text="{Binding ClientLog, Mode=OneWay}" IsReadOnly="True"
-                             FontFamily="Consolas" TextWrapping="NoWrap"
-                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
-                </TabItem>
-            </TabControl>
-        </DockPanel>
-
-        <!-- BOTTOM: argv preview + action buttons -->
-        <DockPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
-            <WrapPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
-                <Button Content="Start server"   Command="{Binding StartServerCommand}"   Margin="0,0,4,0" Padding="8,3" />
-                <Button Content="Stop server"    Command="{Binding StopServerCommand}"    Margin="0,0,4,0" Padding="8,3" />
-                <Button Content="Restart server" Command="{Binding RestartServerCommand}" Margin="0,0,4,0" Padding="8,3" />
-                <Button Content="Start client"   Command="{Binding StartClientCommand}"   Margin="0,0,4,0" Padding="8,3" />
-                <Button Content="Stop client"    Command="{Binding StopClientCommand}"    Margin="0,0,4,0" Padding="8,3" />
-                <Button Content="Restart client" Command="{Binding RestartClientCommand}" Margin="0,0,12,0" Padding="8,3" />
-                <Button Content="Toggle mode"    Command="{Binding ToggleModeCommand}"    Margin="0,0,4,0" Padding="8,3" />
-                <TextBlock Text="{Binding Mode}" VerticalAlignment="Center" FontWeight="Bold" Margin="6,0,0,0" />
-            </WrapPanel>
-            <StackPanel>
-                <TextBox Text="{Binding ServerArgv, Mode=OneWay, StringFormat='SERVER:  {0}'}" IsReadOnly="True"
-                         FontFamily="Consolas" TextWrapping="Wrap"
-                         VerticalScrollBarVisibility="Auto" MaxHeight="60" Margin="0,0,0,2" />
-                <TextBox Text="{Binding ClientArgv, Mode=OneWay, StringFormat='CLIENT:  {0}'}" IsReadOnly="True"
-                         FontFamily="Consolas" TextWrapping="Wrap"
-                         VerticalScrollBarVisibility="Auto" MaxHeight="60" />
+        <!-- Status pills -->
+        <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
+          <!-- SERVER pill -->
+          <Border CornerRadius="14" Padding="12,5" Margin="0,0,10,0"
+                  Background="{DynamicResource ControlFillColorDefaultBrush}"
+                  BorderThickness="1"
+                  BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <Ellipse Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center"
+                       Fill="{Binding ServerUp, Converter={StaticResource StatusDotConverter}}" />
+              <TextBlock Text="SERVER" FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" />
+              <TextBlock Text="{Binding ServerStatus}" FontSize="11" VerticalAlignment="Center"
+                         Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             </StackPanel>
-        </DockPanel>
+          </Border>
+          <!-- CLIENT pill -->
+          <Border CornerRadius="14" Padding="12,5"
+                  Background="{DynamicResource ControlFillColorDefaultBrush}"
+                  BorderThickness="1"
+                  BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <Ellipse Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center"
+                       Fill="{Binding ClientUp, Converter={StaticResource StatusDotConverter}}" />
+              <TextBlock Text="CLIENT" FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" />
+              <TextBlock Text="{Binding ClientStatus}" FontSize="11" VerticalAlignment="Center"
+                         Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- ============ NAVIGATION + CONTENT ============ -->
+    <Grid Grid.Row="2">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto" />  <!-- left nav rail -->
+        <ColumnDefinition Width="*" />     <!-- content -->
+      </Grid.ColumnDefinitions>
+
+      <!-- Left rail. We drive content ourselves via panel-visibility swap (robust; no Page/DI plumbing). -->
+      <ui:NavigationView x:Name="Nav" Grid.Column="0"
+                         PaneDisplayMode="Left"
+                         IsBackButtonVisible="Collapsed"
+                         IsPaneToggleVisible="True"
+                         OpenPaneLength="200"
+                         SelectionChanged="OnNavSelectionChanged">
+        <ui:NavigationView.MenuItems>
+          <ui:NavigationViewItem Content="Dashboard" Tag="dashboard">
+            <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="Gauge24" /></ui:NavigationViewItem.Icon>
+          </ui:NavigationViewItem>
+          <ui:NavigationViewItem Content="Mods" Tag="mods">
+            <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="Apps24" /></ui:NavigationViewItem.Icon>
+          </ui:NavigationViewItem>
+          <ui:NavigationViewItem Content="Logs" Tag="logs">
+            <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="TextBulletListLtr24" /></ui:NavigationViewItem.Icon>
+          </ui:NavigationViewItem>
+          <ui:NavigationViewItem Content="Tools" Tag="tools">
+            <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="Toolbox24" /></ui:NavigationViewItem.Icon>
+          </ui:NavigationViewItem>
+        </ui:NavigationView.MenuItems>
+        <ui:NavigationView.FooterMenuItems>
+          <ui:NavigationViewItem Content="Settings" Tag="settings">
+            <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="Settings24" /></ui:NavigationViewItem.Icon>
+          </ui:NavigationViewItem>
+        </ui:NavigationView.FooterMenuItems>
+      </ui:NavigationView>
+
+      <!-- Content host: five panels, one visible at a time (toggled in OnNavSelectionChanged). -->
+      <Grid Grid.Column="1" Margin="16">
+
+          <!-- ===== DASHBOARD ===== -->
+          <Grid x:Name="PageDashboard">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Summary strip -->
+            <ui:Card Grid.Row="0" Margin="0,0,0,12" Padding="16,12">
+              <StackPanel Orientation="Horizontal">
+                <StackPanel Margin="0,0,32,0">
+                  <TextBlock Text="MODE" FontSize="11" FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                  <TextBlock Text="{Binding Mode}" FontSize="18" FontWeight="SemiBold" />
+                </StackPanel>
+                <StackPanel Margin="0,0,32,0">
+                  <TextBlock Text="PORT" FontSize="11" FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                  <TextBlock Text="{Binding Port}" FontSize="18" FontWeight="SemiBold" />
+                </StackPanel>
+                <StackPanel>
+                  <TextBlock Text="ACTIVE PROFILE" FontSize="11" FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                  <TextBlock Text="{Binding ActivePreset}" FontSize="18" FontWeight="SemiBold" />
+                </StackPanel>
+              </StackPanel>
+            </ui:Card>
+
+            <!-- Server + Client control cards -->
+            <Grid Grid.Row="1" Margin="0,0,0,12">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+
+              <!-- SERVER card -->
+              <ui:Card Grid.Column="0" Margin="0,0,6,0" Padding="16">
+                <StackPanel>
+                  <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                    <ui:SymbolIcon Symbol="Server24" FontSize="20" Margin="0,0,8,0" VerticalAlignment="Center" />
+                    <TextBlock Text="Server" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <Border CornerRadius="10" Padding="8,2" Margin="12,0,0,0" VerticalAlignment="Center"
+                            Background="{DynamicResource ControlFillColorDefaultBrush}">
+                      <TextBlock Text="{Binding ServerStatus}" FontSize="11"
+                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </Border>
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal">
+                    <ui:Button Content="Start" Appearance="Success" Icon="{ui:SymbolIcon Play24}"
+                               MinWidth="90" Margin="0,0,8,0" Command="{Binding StartServerCommand}" />
+                    <ui:Button Content="Stop" Appearance="Danger" Icon="{ui:SymbolIcon Stop24}"
+                               MinWidth="90" Margin="0,0,8,0" Command="{Binding StopServerCommand}" />
+                    <ui:Button Content="Restart" Icon="{ui:SymbolIcon ArrowClockwise24}"
+                               MinWidth="90" Command="{Binding RestartServerCommand}" />
+                  </StackPanel>
+                </StackPanel>
+              </ui:Card>
+
+              <!-- CLIENT card -->
+              <ui:Card Grid.Column="1" Margin="6,0,0,0" Padding="16">
+                <StackPanel>
+                  <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                    <ui:SymbolIcon Symbol="Desktop24" FontSize="20" Margin="0,0,8,0" VerticalAlignment="Center" />
+                    <TextBlock Text="Client" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <Border CornerRadius="10" Padding="8,2" Margin="12,0,0,0" VerticalAlignment="Center"
+                            Background="{DynamicResource ControlFillColorDefaultBrush}">
+                      <TextBlock Text="{Binding ClientStatus}" FontSize="11"
+                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </Border>
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal">
+                    <ui:Button Content="Start" Appearance="Success" Icon="{ui:SymbolIcon Play24}"
+                               MinWidth="90" Margin="0,0,8,0" Command="{Binding StartClientCommand}" />
+                    <ui:Button Content="Stop" Appearance="Danger" Icon="{ui:SymbolIcon Stop24}"
+                               MinWidth="90" Margin="0,0,8,0" Command="{Binding StopClientCommand}" />
+                    <ui:Button Content="Restart" Icon="{ui:SymbolIcon ArrowClockwise24}"
+                               MinWidth="90" Command="{Binding RestartClientCommand}" />
+                  </StackPanel>
+                </StackPanel>
+              </ui:Card>
+            </Grid>
+
+            <!-- Launch command preview -->
+            <ui:Card Grid.Row="2" Padding="16">
+              <Grid>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto" />
+                  <RowDefinition Height="Auto" />
+                  <RowDefinition Height="*" />
+                  <RowDefinition Height="Auto" />
+                  <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="Launch command" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+
+                <TextBlock Grid.Row="1" Text="SERVER" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <Border Grid.Row="2" CornerRadius="4" Padding="10" Margin="0,0,0,12"
+                        Background="{DynamicResource ControlFillColorDefaultBrush}">
+                  <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="120">
+                    <TextBox Text="{Binding ServerArgv, Mode=OneWay}" IsReadOnly="True"
+                             BorderThickness="0" Background="Transparent"
+                             FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                             TextWrapping="Wrap" />
+                  </ScrollViewer>
+                </Border>
+
+                <TextBlock Grid.Row="3" Text="CLIENT" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <Border Grid.Row="4" CornerRadius="4" Padding="10"
+                        Background="{DynamicResource ControlFillColorDefaultBrush}">
+                  <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="120">
+                    <TextBox Text="{Binding ClientArgv, Mode=OneWay}" IsReadOnly="True"
+                             BorderThickness="0" Background="Transparent"
+                             FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                             TextWrapping="Wrap" />
+                  </ScrollViewer>
+                </Border>
+              </Grid>
+            </ui:Card>
+          </Grid>
+
+          <!-- ===== MODS (placeholder, filled in step 2) ===== -->
+          <Grid x:Name="PageMods" Visibility="Collapsed">
+            <ui:Card Padding="24" VerticalAlignment="Top">
+              <StackPanel>
+                <TextBlock Text="Mods" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,4" />
+                <TextBlock Text="Mod list, inline side switch, drag-reorder and search — coming in the next step."
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+              </StackPanel>
+            </ui:Card>
+          </Grid>
+
+          <!-- ===== LOGS (placeholder, filled in step 3) ===== -->
+          <Grid x:Name="PageLogs" Visibility="Collapsed">
+            <ui:Card Padding="24" VerticalAlignment="Top">
+              <StackPanel>
+                <TextBlock Text="Logs" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,4" />
+                <TextBlock Text="Live script / rpt / adm / client log panes — coming in the next step."
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+              </StackPanel>
+            </ui:Card>
+          </Grid>
+
+          <!-- ===== TOOLS (placeholder, filled in step 3) ===== -->
+          <Grid x:Name="PageTools" Visibility="Collapsed">
+            <ui:Card Padding="24" VerticalAlignment="Top">
+              <StackPanel>
+                <TextBlock Text="Tools" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,4" />
+                <TextBlock Text="DayZ Tools catalog, work-drive mount and converters — coming in the next step."
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+              </StackPanel>
+            </ui:Card>
+          </Grid>
+
+          <!-- ===== SETTINGS (placeholder, filled in step 3) ===== -->
+          <Grid x:Name="PageSettings" Visibility="Collapsed">
+            <ui:Card Padding="24" VerticalAlignment="Top">
+              <StackPanel>
+                <TextBlock Text="Settings" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,4" />
+                <TextBlock Text="Config paths, per-target launch params and presets — coming in the next step."
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+              </StackPanel>
+            </ui:Card>
+          </Grid>
+
+      </Grid>
     </Grid>
-  </DockPanel>
-</Window>
+  </Grid>
+</ui:FluentWindow>

@@ -1,22 +1,22 @@
 using System.Diagnostics;
 using System.IO;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using Dzl.Core.Config;
-using Dzl.Core.Tools;
 using Dzl.Tray.ViewModels;
+using Wpf.Ui.Controls;
 
 namespace Dzl.Tray;
 
 /// <summary>
-/// The launcher main window: top menu bar, mod checklist, server/client controls,
-/// profile switcher and live log panes. Construction resolves the config path the same
-/// way the tray does (<see cref="App.ConfigPath"/>) and wires a fresh
-/// <see cref="MainViewModel"/> as the DataContext. Menu handlers open the Params and
-/// Config dialogs and route their results back through the VM.
+/// The launcher main window: a Wpf.Ui <see cref="FluentWindow"/> with a title bar, a
+/// persistent top action bar (mode toggle, profile switcher, server/client status pills)
+/// and a left <see cref="NavigationView"/> rail that swaps between five content panels
+/// (Dashboard, Mods, Logs, Tools, Settings). The Dashboard is fully built; Mods/Logs/Tools/
+/// Settings are placeholders filled in later steps. Construction resolves the config path the
+/// same way the tray does (<see cref="App.ConfigPath"/>) and wires a fresh
+/// <see cref="MainViewModel"/> as the DataContext.
 /// </summary>
-public partial class MainWindow : Window
+public partial class MainWindow : FluentWindow
 {
     private readonly MainViewModel _vm;
 
@@ -26,9 +26,45 @@ public partial class MainWindow : Window
         _vm = new MainViewModel(App.ConfigPath());
         DataContext = _vm;
         Closed += (_, _) => _vm.Dispose();
+
+        // Show the Dashboard on load so a panel is always visible. The NavigationView
+        // highlights its first item automatically once templated.
+        Loaded += (_, _) => ShowPage("dashboard");
     }
 
-    // --- Config / Params dialogs ------------------------------------------
+    // --- Navigation: swap the visible content panel based on the selected rail item ---
+
+    private void OnNavSelectionChanged(NavigationView sender, RoutedEventArgs args)
+    {
+        if (Nav.SelectedItem is NavigationViewItem { Tag: string tag })
+            ShowPage(tag);
+    }
+
+    private void ShowPage(string tag)
+    {
+        if (PageDashboard is null) return; // not yet templated
+        PageDashboard.Visibility = tag == "dashboard" ? Visibility.Visible : Visibility.Collapsed;
+        PageMods.Visibility = tag == "mods" ? Visibility.Visible : Visibility.Collapsed;
+        PageLogs.Visibility = tag == "logs" ? Visibility.Visible : Visibility.Collapsed;
+        PageTools.Visibility = tag == "tools" ? Visibility.Visible : Visibility.Collapsed;
+        PageSettings.Visibility = tag == "settings" ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // --- Top action bar handlers ------------------------------------------
+
+    private void OnModeToggleClick(object sender, RoutedEventArgs e)
+    {
+        if (_vm.ToggleModeCommand.CanExecute(null))
+            _vm.ToggleModeCommand.Execute(null);
+    }
+
+    private void OnProfileSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_vm.SwitchPresetCommand.CanExecute(null))
+            _vm.SwitchPresetCommand.Execute(null);
+    }
+
+    // --- Config / Params dialogs (kept for the Settings page wired in a later step) ---
 
     private void OnConfigSettings(object sender, RoutedEventArgs e)
     {
@@ -51,60 +87,7 @@ public partial class MainWindow : Window
             _vm.ApplyParams(target, mode, dlg.Result);
     }
 
-    // --- Profiles menu (built dynamically on open) ------------------------
-
-    private void OnProfilesMenuOpened(object sender, RoutedEventArgs e)
-    {
-        ProfilesMenu.Items.Clear();
-        foreach (var name in _vm.Presets)
-        {
-            var item = new MenuItem
-            {
-                Header = name,
-                IsCheckable = true,
-                IsChecked = name == _vm.ActivePreset,
-            };
-            var captured = name;
-            item.Click += (_, _) => _vm.SwitchToPreset(captured);
-            ProfilesMenu.Items.Add(item);
-        }
-        ProfilesMenu.Items.Add(new Separator());
-        var save = new MenuItem { Header = "Save as current… (use the Save button)" };
-        save.Click += (_, _) =>
-        {
-            // Reuse the existing preset box + Save command on the main window.
-            if (_vm.SavePresetCommand.CanExecute(null))
-                _vm.SavePresetCommand.Execute(null);
-        };
-        ProfilesMenu.Items.Add(save);
-    }
-
-    // --- Tools menu (built dynamically from the DayZ Tools catalog) -------
-
-    private void OnToolsMenuOpened(object sender, RoutedEventArgs e)
-    {
-        ToolsMenu.Items.Clear();
-        var toolsPath = _vm.Cfg.DayzToolsPath;
-        var present = string.IsNullOrWhiteSpace(toolsPath)
-            ? new System.Collections.Generic.List<ToolEntry>()
-            : ToolCatalog.Discover(toolsPath)
-                .FindAll(t => t.Exists && t.Kind == ToolKind.LaunchOnly);
-
-        if (present.Count == 0)
-        {
-            ToolsMenu.Items.Add(new MenuItem { Header = "(no tools found)", IsEnabled = false });
-            return;
-        }
-        foreach (var tool in present)
-        {
-            var item = new MenuItem { Header = tool.DisplayName };
-            var captured = tool;
-            item.Click += (_, _) => Task.Run(() => ToolLauncher.Launch(captured));
-            ToolsMenu.Items.Add(item);
-        }
-    }
-
-    // --- Open folders ------------------------------------------------------
+    // --- Open folders (kept for the Settings/Tools pages wired in a later step) ---
 
     private void OnOpenConfigFolder(object sender, RoutedEventArgs e) =>
         OpenFolder(Path.GetDirectoryName(_vm.ConfigFilePath) ?? ".");
@@ -127,11 +110,5 @@ public partial class MainWindow : Window
             Process.Start(new ProcessStartInfo("explorer.exe", path) { UseShellExecute = true });
         }
         catch { /* best-effort; ignore */ }
-    }
-
-    private void OnToggleMode(object sender, RoutedEventArgs e)
-    {
-        if (_vm.ToggleModeCommand.CanExecute(null))
-            _vm.ToggleModeCommand.Execute(null);
     }
 }

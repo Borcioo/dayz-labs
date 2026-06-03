@@ -4,6 +4,7 @@ using System.Windows;
 using Dzl.Core.App;
 using Dzl.Core.Config;
 using Dzl.Core.Ipc;
+using Wpf.Ui.Appearance;
 
 namespace Dzl.Tray;
 
@@ -33,6 +34,9 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // Apply the dark Fluent theme app-wide (matches ThemesDictionary Theme="Dark").
+        ApplicationThemeManager.Apply(ApplicationTheme.Dark);
 
         // Single instance: bail out if another tray is already running.
         _singleton = new Mutex(initiallyOwned: true, "dzl-tray-singleton", out bool createdNew);
