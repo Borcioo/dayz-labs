@@ -30,11 +30,12 @@ root.AddGlobalOption(configOption);
 var modsCmd = new Command("mods", "List the current ordered mod selection.");
 modsCmd.SetHandler(ctx =>
 {
-    var (_, _, _, configPath) = Resolve(ctx);
-    foreach (var m in new LauncherService(configPath).Mods())
+    var (cfg, _, _, _) = Resolve(ctx);
+    foreach (var m in cfg.Mods)
     {
+        var box = m.Enabled ? "[x]" : "[ ]";
         var tag = m.Side == "both" ? "" : $"  ({m.Side})";
-        Console.WriteLine($"[x] {m.Path}{tag}");
+        Console.WriteLine($"{box} {m.Path}{tag}");
     }
 });
 root.AddCommand(modsCmd);
