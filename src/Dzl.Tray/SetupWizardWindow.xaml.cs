@@ -359,6 +359,13 @@ public partial class SetupWizardWindow : FluentWindow
     /// <summary>Prefill for the work folder: settings.ini WorkDirPath, else ~\Documents\DayZ Projects.</summary>
     private string DefaultWorkFolder()
     {
+        // If P: is already mounted, prefer the folder it ACTUALLY maps to — that's the live
+        // truth and avoids a mismatch with settings.ini's nominal [ProjectDrive] path.
+        if (WorkDrive.IsMounted())
+        {
+            var live = WorkDrive.MountTarget("P:");
+            if (!string.IsNullOrWhiteSpace(live)) return live;
+        }
         var tools = ToolsPathBox.Text?.Trim() ?? "";
         var fromIni = tools.Length > 0 ? EnvDetect.WorkDir(tools) : null;
         return !string.IsNullOrWhiteSpace(fromIni)
