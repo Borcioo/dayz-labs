@@ -79,26 +79,29 @@
           <Border x:Name="StepRow0" CornerRadius="6" Padding="12,8" Margin="0,1">
             <TextBlock Style="{StaticResource StepLabel}" Text="1  Welcome" />
           </Border>
+          <Border x:Name="StepRowCheck" CornerRadius="6" Padding="12,8" Margin="0,1">
+            <TextBlock Style="{StaticResource StepLabel}" Text="2  Environment check" />
+          </Border>
           <Border x:Name="StepRow1" CornerRadius="6" Padding="12,8" Margin="0,1">
-            <TextBlock Style="{StaticResource StepLabel}" Text="2  Paths" />
+            <TextBlock Style="{StaticResource StepLabel}" Text="3  Paths" />
           </Border>
           <Border x:Name="StepRow2" CornerRadius="6" Padding="12,8" Margin="0,1">
-            <TextBlock Style="{StaticResource StepLabel}" Text="3  Work drive (P:)" />
+            <TextBlock Style="{StaticResource StepLabel}" Text="4  Work drive (P:)" />
           </Border>
           <Border x:Name="StepRow3" CornerRadius="6" Padding="12,8" Margin="0,1">
-            <TextBlock Style="{StaticResource StepLabel}" Text="4  Game data" />
+            <TextBlock Style="{StaticResource StepLabel}" Text="5  Game data" />
           </Border>
           <Border x:Name="StepRow4" CornerRadius="6" Padding="12,8" Margin="0,1">
-            <TextBlock Style="{StaticResource StepLabel}" Text="5  Server instance" />
+            <TextBlock Style="{StaticResource StepLabel}" Text="6  Server instance" />
           </Border>
           <Border x:Name="StepRow5" CornerRadius="6" Padding="12,8" Margin="0,1">
-            <TextBlock Style="{StaticResource StepLabel}" Text="6  Server files" />
+            <TextBlock Style="{StaticResource StepLabel}" Text="7  Server files" />
           </Border>
           <Border x:Name="StepRow6" CornerRadius="6" Padding="12,8" Margin="0,1">
-            <TextBlock Style="{StaticResource StepLabel}" Text="7  Mods" />
+            <TextBlock Style="{StaticResource StepLabel}" Text="8  Mods" />
           </Border>
           <Border x:Name="StepRow7" CornerRadius="6" Padding="12,8" Margin="0,1">
-            <TextBlock Style="{StaticResource StepLabel}" Text="8  Finish" />
+            <TextBlock Style="{StaticResource StepLabel}" Text="9  Finish" />
           </Border>
         </StackPanel>
       </Border>
@@ -117,7 +120,57 @@
           </StackPanel>
         </ScrollViewer>
 
-        <!-- 2: PATHS -->
+        <!-- 2: ENVIRONMENT CHECK -->
+        <ScrollViewer x:Name="PageCheck" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock Text="Environment check" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock Style="{StaticResource Blurb}"
+                       Text="A quick scan of your local DayZ dev environment. Anything red or amber below — continue through the wizard steps to fix it (mount P:, scaffold the server, set mods, …)." />
+            <Grid Margin="0,0,0,12">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock x:Name="CheckSummary" Grid.Column="0" FontSize="14" FontWeight="SemiBold"
+                         VerticalAlignment="Center" />
+              <ui:Button Grid.Column="1" x:Name="ReCheckBtn" Content="Re-check"
+                         Icon="{ui:SymbolIcon ArrowClockwise24}"
+                         Click="OnReCheck" HorizontalAlignment="Right" />
+            </Grid>
+            <!-- Border (not ui:Card): a Border stretches its child; ui:Card sizes to content. -->
+            <Border CornerRadius="8" BorderThickness="1"
+                    BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    Padding="6" MaxHeight="360">
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="CheckList">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Grid Margin="6,5">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="Auto" />
+                          <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding Glyph}" FontSize="15"
+                                   FontWeight="Bold" Width="22"
+                                   VerticalAlignment="Top" TextAlignment="Center"
+                                   Foreground="{Binding Brush}" />
+                        <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                          <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="SemiBold"
+                                     Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                          <TextBlock Text="{Binding Detail}" FontSize="12" TextWrapping="Wrap"
+                                     Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                        </StackPanel>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 3: PATHS -->
         <ScrollViewer x:Name="Page1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
           <StackPanel>
             <TextBlock Text="Paths" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />

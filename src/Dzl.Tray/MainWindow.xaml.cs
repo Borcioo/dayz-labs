@@ -44,15 +44,59 @@ public partial class MainWindow : FluentWindow
 
     // --- Navigation: swap the visible content panel based on the selected rail item ---
 
+    /// <summary>True while we are programmatically restoring the rail selection (after the
+    /// "Setup" pseudo-item opened the wizard) so the resulting SelectionChanged is ignored.</summary>
+    private bool _restoringNav;
+
+    /// <summary>Tag of the last real content page shown, so "Setup" (a button-like item) can
+    /// restore the rail to it instead of becoming a sticky selection.</summary>
+    private string _currentPageTag = "dashboard";
+
     private void OnNavChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_restoringNav) return;
         if (sender is ListBox lb && lb.SelectedItem is ListBoxItem { Tag: string tag })
         {
+            // "Setup" is not a page: open the wizard, then bounce the selection back.
+            if (tag == "setup")
+            {
+                OpenSetupWizard();
+                RestoreNavToCurrentPage();
+                return;
+            }
+
             // Clear the other rail's selection so only one item looks active.
             if (ReferenceEquals(lb, NavTop)) NavBottom.SelectedItem = null;
             else NavTop.SelectedItem = null;
+            _currentPageTag = tag;
             ShowPage(tag);
         }
+    }
+
+    /// <summary>Reselect the rail item for <see cref="_currentPageTag"/> without re-running page
+    /// logic (guarded so the programmatic SelectionChanged is a no-op).</summary>
+    private void RestoreNavToCurrentPage()
+    {
+        _restoringNav = true;
+        try
+        {
+            NavTop.SelectedItem = null;
+            NavBottom.SelectedItem = null;
+            if (!TrySelect(NavTop, _currentPageTag))
+                TrySelect(NavBottom, _currentPageTag);
+        }
+        finally { _restoringNav = false; }
+    }
+
+    private static bool TrySelect(ListBox rail, string tag)
+    {
+        foreach (var obj in rail.Items)
+            if (obj is ListBoxItem { Tag: string t } item && t == tag)
+            {
+                rail.SelectedItem = item;
+                return true;
+            }
+        return false;
     }
 
     private void ShowPage(string tag)
@@ -419,9 +463,13 @@ public partial class MainWindow : FluentWindow
         _vm.ApplyParams(SelectedTarget, SelectedParamMode, lines);
     }
 
-    /// <summary>Re-open the environment setup wizard; on Finish, reload the VM so the new
-    /// config/profile takes effect immediately.</summary>
-    private void OnRunSetupWizard(object sender, RoutedEventArgs e)
+    /// <summary>Re-open the environment setup wizard (Settings button entry point).</summary>
+    private void OnRunSetupWizard(object sender, RoutedEventArgs e) => OpenSetupWizard();
+
+    /// <summary>Open the Setup Wizard modally; on Finish, reload the VM so the new
+    /// config/profile takes effect immediately. Shared by the Settings button and the
+    /// "Setup" nav-rail item.</summary>
+    private void OpenSetupWizard()
     {
         var wizard = new SetupWizardWindow(App.ConfigPath()) { Owner = this };
         if (wizard.ShowDialog() == true)

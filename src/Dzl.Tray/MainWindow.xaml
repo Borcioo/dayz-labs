@@ -396,6 +396,14 @@
                 <TextBlock Text="Tools" VerticalAlignment="Center" />
               </StackPanel>
             </ListBoxItem>
+            <!-- Setup: not a page — selecting it opens the Setup Wizard (modal), then the rail
+                 selection is restored to the previously-shown page (OnNavChanged). -->
+            <ListBoxItem Tag="setup">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:SymbolIcon Symbol="Wand24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                <TextBlock Text="Setup" VerticalAlignment="Center" />
+              </StackPanel>
+            </ListBoxItem>
             <!-- MCP setup guide: only shown when the automation server is running (ShowMcpTab). -->
             <ListBoxItem Tag="mcp" Visibility="{Binding ShowMcpTab, Converter={StaticResource BoolToVis}}">
               <StackPanel Orientation="Horizontal" VerticalAlignment="Center">

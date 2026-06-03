@@ -24,7 +24,9 @@ namespace Dzl.Tray;
 /// </summary>
 public partial class SetupWizardWindow : FluentWindow
 {
-    private const int LastStep = 7;
+    private const int LastStep = 8;
+    // Step 1 (0-based) is the Environment check inserted between Welcome (0) and Paths (2).
+    private const int CheckStep = 1;
     private readonly string _configPath;
     private int _step;
 
@@ -36,8 +38,9 @@ public partial class SetupWizardWindow : FluentWindow
         InitializeComponent();
         _configPath = configPath;
 
-        _stepRows = new[] { StepRow0, StepRow1, StepRow2, StepRow3, StepRow4, StepRow5, StepRow6, StepRow7 };
-        _pages = new UIElement[] { Page0, Page1, Page2, Page3, Page4, Page5, Page6, Page7 };
+        // Order matters: the array index IS the step number. Check sits at index 1.
+        _stepRows = new[] { StepRow0, StepRowCheck, StepRow1, StepRow2, StepRow3, StepRow4, StepRow5, StepRow6, StepRow7 };
+        _pages = new UIElement[] { Page0, PageCheck, Page1, Page2, Page3, Page4, Page5, Page6, Page7 };
 
         Loaded += (_, _) => ShowStep(0);
     }
@@ -71,7 +74,11 @@ public partial class SetupWizardWindow : FluentWindow
     {
         switch (step)
         {
-            case 1: // Paths — detect + prefill (only if still blank, so re-entry keeps edits)
+            case CheckStep: // Environment check — run diagnostics
+                RunEnvCheck();
+                break;
+
+            case 2: // Paths — detect + prefill (only if still blank, so re-entry keeps edits)
                 if (string.IsNullOrWhiteSpace(DayzPathBox.Text)
                     && string.IsNullOrWhiteSpace(ToolsPathBox.Text)
                     && string.IsNullOrWhiteSpace(ServerPathBox.Text))
@@ -84,45 +91,111 @@ public partial class SetupWizardWindow : FluentWindow
                 RefreshPathStatuses();
                 break;
 
-            case 2: // Work drive
+            case 3: // Work drive
                 RefreshWorkDrive();
                 break;
 
-            case 3: // Game data
+            case 4: // Game data
                 GameDataNote.Text = string.IsNullOrWhiteSpace(ToolsPathBox.Text)
-                    ? "DayZ Tools path not set (step 2) — set it to open the tools from here."
-                    : "Vanilla data extracts to P:\\ (mount it in step 3 first).";
+                    ? "DayZ Tools path not set (Paths step) — set it to open the tools from here."
+                    : "Vanilla data extracts to P:\\ (mount it on the Work drive step first).";
                 break;
 
-            case 4: // Server instance — default instance dir = DayZ path
+            case 5: // Server instance — default instance dir = DayZ path
                 if (string.IsNullOrWhiteSpace(InstanceDirBox.Text))
                     InstanceDirBox.Text = DayzPathBox.Text;
                 break;
 
-            case 5: // Server files — steamcmd line
+            case 6: // Server files — steamcmd line
                 SteamCmdBox.Text = SteamCmd.DownloadServerScript(ServerDirForSteamCmd());
                 break;
 
-            case 6: // Mods — prefill scan roots
+            case 7: // Mods — prefill scan roots
                 if (string.IsNullOrWhiteSpace(ScanRootsBox.Text))
                     ScanRootsBox.Text = string.Join("\r\n", DefaultScanRoots());
                 break;
 
-            case 7: // Finish — summary
+            case 8: // Finish — summary
                 SummaryBox.Text = BuildSummary();
                 break;
         }
     }
 
+    // ---- Step (Check): Environment check --------------------------------
+
+    /// <summary>One row in the environment-check list: glyph + color + label + detail.</summary>
+    public sealed record CheckRow(string Glyph, System.Windows.Media.Brush Brush, string Label, string Detail);
+
+    /// <summary>
+    /// Run <see cref="EnvCheck"/> against the wizard's working config and render a ✓/✗/⚠/ℹ
+    /// checklist. If the user has edited paths on the Paths step, those win over the saved config
+    /// so the doctor reflects what they're about to set.
+    /// </summary>
+    private void RunEnvCheck()
+    {
+        var cfg = CurrentWizardConfig();
+        var items = EnvCheck.Run(cfg, () => WorkDrive.IsMounted());
+
+        var rows = new List<CheckRow>();
+        int passed = 0;
+        bool anyError = false;
+        foreach (var it in items)
+        {
+            if (it.Ok) passed++;
+            else if (it.Severity == CheckSeverity.Error) anyError = true;
+
+            var (glyph, brush) = GlyphFor(it);
+            rows.Add(new CheckRow(glyph, brush, it.Label, it.Detail));
+        }
+
+        CheckList.ItemsSource = rows;
+        CheckSummary.Text = $"{passed} of {items.Count} checks passed";
+        CheckSummary.Foreground = anyError
+            ? System.Windows.Media.Brushes.IndianRed
+            : (passed == items.Count
+                ? System.Windows.Media.Brushes.MediumSeaGreen
+                : System.Windows.Media.Brushes.Goldenrod);
+    }
+
+    private static (string glyph, System.Windows.Media.Brush brush) GlyphFor(CheckItem it)
+    {
+        if (it.Ok) return ("✓", System.Windows.Media.Brushes.MediumSeaGreen);
+        return it.Severity switch
+        {
+            CheckSeverity.Error => ("✗", System.Windows.Media.Brushes.IndianRed),
+            CheckSeverity.Warning => ("⚠", System.Windows.Media.Brushes.Goldenrod),
+            _ => ("ℹ", System.Windows.Media.Brushes.Gray),
+        };
+    }
+
+    /// <summary>
+    /// The config the check runs against: the saved config on disk, but with any path the user
+    /// has already typed on the Paths step layered on top (those boxes may be empty before the
+    /// user reaches Paths, in which case the saved values are kept).
+    /// </summary>
+    private DzlConfig CurrentWizardConfig()
+    {
+        var cfg = ConfigStore.Load(_configPath);
+        var dayz = DayzPathBox.Text?.Trim();
+        var tools = ToolsPathBox.Text?.Trim();
+        if (!string.IsNullOrEmpty(dayz)) cfg = cfg with { DayzPath = dayz };
+        if (!string.IsNullOrEmpty(tools)) cfg = cfg with { DayzToolsPath = tools };
+        return cfg;
+    }
+
+    private void OnReCheck(object sender, RoutedEventArgs e) => RunEnvCheck();
+
     private void OnBack(object sender, RoutedEventArgs e) => ShowStep(_step - 1);
     private void OnNext(object sender, RoutedEventArgs e) => ShowStep(_step + 1);
     private void OnCancel(object sender, RoutedEventArgs e) { DialogResult = false; Close(); }
 
-    /// <summary>Next is gated only on step 2 (Paths): DayZ install must be a real directory.
+    private const int PathsStep = 2;
+
+    /// <summary>Next is gated only on the Paths step: DayZ install must be a real directory.
     /// Every later step is skippable, so Next stays enabled there.</summary>
     private void UpdateNextEnabled()
     {
-        NextBtn.IsEnabled = _step != 1 || Directory.Exists(DayzPathBox.Text?.Trim() ?? "");
+        NextBtn.IsEnabled = _step != PathsStep || Directory.Exists(DayzPathBox.Text?.Trim() ?? "");
     }
 
     // ---- Step 2: Paths --------------------------------------------------
