@@ -311,34 +311,35 @@ public partial class SetupWizardWindow : FluentWindow
         }
 
         bool mounted = WorkDrive.IsMounted();
+        var target = mounted ? WorkDrive.MountTarget("P:") : null;
+        // mismatch = P: is mounted but points somewhere other than the chosen work folder
+        bool mismatch = mounted && !string.IsNullOrWhiteSpace(target) && !WorkDrive.SamePath(target, workFolder);
         if (!mounted)
         {
             WorkDriveStatus.Text = "✗ P: is not mounted";
             WorkDriveStatus.Foreground = System.Windows.Media.Brushes.IndianRed;
         }
+        else if (string.IsNullOrWhiteSpace(target))
+        {
+            WorkDriveStatus.Text = "✓ P: is mounted (target unknown)";
+            WorkDriveStatus.Foreground = System.Windows.Media.Brushes.MediumSeaGreen;
+        }
+        else if (!mismatch)
+        {
+            WorkDriveStatus.Text = $"✓ P: → {target} (matches work folder)";
+            WorkDriveStatus.Foreground = System.Windows.Media.Brushes.MediumSeaGreen;
+        }
         else
         {
-            var target = WorkDrive.MountTarget("P:");
-            if (string.IsNullOrWhiteSpace(target))
-            {
-                WorkDriveStatus.Text = "✓ P: is mounted (target unknown)";
-                WorkDriveStatus.Foreground = System.Windows.Media.Brushes.MediumSeaGreen;
-            }
-            else if (WorkDrive.SamePath(target, workFolder))
-            {
-                WorkDriveStatus.Text = $"✓ P: → {target} (matches work folder)";
-                WorkDriveStatus.Foreground = System.Windows.Media.Brushes.MediumSeaGreen;
-            }
-            else
-            {
-                WorkDriveStatus.Text = $"✓ P: → {target} (maps to a DIFFERENT folder than above)";
-                WorkDriveStatus.Foreground = System.Windows.Media.Brushes.Goldenrod;
-            }
+            WorkDriveStatus.Text = $"⚠ P: → {target}  (a leftover/stale mount — NOT the folder above). Unmount it, or Re-mount P: to the folder above.";
+            WorkDriveStatus.Foreground = System.Windows.Media.Brushes.Goldenrod;
         }
 
-        // Soft requirement: until Tools is initialized, gate Mount and make
-        // "Open DayZ Tools" the highlighted primary action. Next stays enabled (step is optional).
-        MountBtn.IsEnabled = registered && !mounted;
+        // Mount enabled when Tools is initialized AND (P: not mounted OR mounted to the wrong folder
+        // so we can re-point it). Re-label to make the re-point case obvious. Unmount only when mounted.
+        MountBtn.IsEnabled = registered && (!mounted || mismatch);
+        MountBtn.Content = mismatch ? "Re-mount P: here" : "Mount P: drive";
+        UnmountBtn.IsEnabled = mounted;
         WdOpenToolsBtn.Appearance = registered
             ? Wpf.Ui.Controls.ControlAppearance.Secondary
             : Wpf.Ui.Controls.ControlAppearance.Primary;
@@ -386,7 +387,19 @@ public partial class SetupWizardWindow : FluentWindow
         try { Directory.CreateDirectory(workFolder); } catch { /* surfaced via mount failure */ }
 
         var exe = Path.Combine(tools, "Bin", "WorkDrive", "WorkDrive.exe");
+        // If P: is already mounted to a DIFFERENT folder, unmount first so we can re-point it
+        // (Mount() is a no-op when P: already exists).
+        if (WorkDrive.IsMounted() && !WorkDrive.SamePath(WorkDrive.MountTarget("P:"), workFolder))
+            WorkDrive.Unmount(exe);
         WorkDrive.Mount(exe, workFolder);
+        RefreshWorkDrive();
+    }
+
+    private void OnUnmountWorkDrive(object sender, RoutedEventArgs e)
+    {
+        var tools = ToolsPathBox.Text?.Trim() ?? "";
+        var exe = Path.Combine(tools, "Bin", "WorkDrive", "WorkDrive.exe");
+        WorkDrive.Unmount(exe);
         RefreshWorkDrive();
     }
 

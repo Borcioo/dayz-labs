@@ -250,10 +250,12 @@
                        Text="Prefilled from DayZ Tools' settings (its configured work drive). Clicking Mount creates this folder if it doesn't exist (empty), then mounts it as P:. Extract Game Data later fills it with vanilla data — an empty P: at first is normal." />
 
             <TextBlock x:Name="ToolsRegStatus" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,8" />
-            <TextBlock x:Name="WorkDriveStatus" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,12" />
+            <TextBlock x:Name="WorkDriveStatus" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,12" />
             <StackPanel Orientation="Horizontal">
               <ui:Button x:Name="MountBtn" Content="Mount P: drive" Icon="{ui:SymbolIcon HardDrive24}"
                          Click="OnMountWorkDrive" HorizontalAlignment="Left" />
+              <ui:Button x:Name="UnmountBtn" Content="Unmount P:" Icon="{ui:SymbolIcon Eject24}"
+                         Click="OnUnmountWorkDrive" HorizontalAlignment="Left" Margin="8,0,0,0" />
               <ui:Button x:Name="WdOpenToolsBtn" Content="Open DayZ Tools" Icon="{ui:SymbolIcon Toolbox24}"
                          Click="OnOpenToolsForWorkDrive" HorizontalAlignment="Left" Margin="8,0,0,0" />
               <ui:Button x:Name="WdReCheckBtn" Content="Re-check" Icon="{ui:SymbolIcon ArrowClockwise24}"
