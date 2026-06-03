@@ -4,12 +4,130 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Dzl.Tray"
+        xmlns:vm="clr-namespace:Dzl.Tray.ViewModels"
         mc:Ignorable="d"
-        Title="dzl" Height="450" Width="800">
-    <Grid>
-        <TextBlock Text="dzl launcher — main window (WIP)"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   FontSize="16" />
+        d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+        Title="dzl" Height="640" Width="1040">
+    <Grid Margin="8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="380" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- LEFT: mod list + controls -->
+        <DockPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,0">
+            <TextBlock DockPanel.Dock="Top" Text="Mods" FontWeight="Bold" Margin="0,0,0,4" />
+
+            <WrapPanel DockPanel.Dock="Bottom" Margin="0,4,0,0">
+                <Button Content="Up"        Command="{Binding MoveUpCommand}"     Margin="0,0,4,4" Padding="6,2" />
+                <Button Content="Down"      Command="{Binding MoveDownCommand}"   Margin="0,0,4,4" Padding="6,2" />
+                <Button Content="Top"       Command="{Binding ToTopCommand}"      Margin="0,0,4,4" Padding="6,2" />
+                <Button Content="Bottom"    Command="{Binding ToBottomCommand}"   Margin="0,0,4,4" Padding="6,2" />
+                <Button Content="Cycle side" Command="{Binding CycleSideCommand}" Margin="0,0,4,4" Padding="6,2" />
+                <Button Content="Rescan"    Command="{Binding RescanCommand}"     Margin="0,0,4,4" Padding="6,2" />
+            </WrapPanel>
+
+            <ListBox ItemsSource="{Binding Mods}"
+                     SelectedItem="{Binding SelectedMod, Mode=TwoWay}"
+                     HorizontalContentAlignment="Stretch"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:ModRowVm}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <CheckBox Grid.Column="0"
+                                      IsChecked="{Binding Enabled, Mode=TwoWay}"
+                                      VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBlock Grid.Column="1" Text="{Binding Name}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                       ToolTip="{Binding Path}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Missing}" Value="True">
+                                                <Setter Property="Foreground" Value="Gray" />
+                                                <Setter Property="TextDecorations" Value="Strikethrough" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <Border Grid.Column="2" Background="#E0E0E0" CornerRadius="3"
+                                    Padding="5,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Side}" FontSize="10" Foreground="#333" />
+                            </Border>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+
+        <!-- RIGHT: status + presets + log tabs -->
+        <DockPanel Grid.Row="0" Grid.Column="1">
+            <TextBlock DockPanel.Dock="Top" Text="{Binding StatusLine}"
+                       FontFamily="Consolas" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                <TextBlock Text="Profile:" VerticalAlignment="Center" Margin="0,0,6,0" />
+                <ComboBox Width="160"
+                          ItemsSource="{Binding Presets}"
+                          SelectedItem="{Binding SelectedPreset, Mode=TwoWay}" />
+                <Button Content="Switch" Command="{Binding SwitchPresetCommand}"
+                        Margin="6,0,0,0" Padding="8,2" />
+                <Button Content="Save" Command="{Binding SavePresetCommand}"
+                        DockPanel.Dock="Right" Padding="8,2" />
+                <TextBox Text="{Binding NewPresetName, UpdateSourceTrigger=PropertyChanged}"
+                         DockPanel.Dock="Right" Width="160" Margin="6,0,6,0"
+                         VerticalContentAlignment="Center"
+                         ToolTip="New preset name (blank = overwrite active)" />
+            </DockPanel>
+
+            <TabControl>
+                <TabItem Header="script">
+                    <TextBox Text="{Binding ScriptLog, Mode=OneWay}" IsReadOnly="True"
+                             FontFamily="Consolas" TextWrapping="NoWrap"
+                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
+                </TabItem>
+                <TabItem Header="rpt">
+                    <TextBox Text="{Binding RptLog, Mode=OneWay}" IsReadOnly="True"
+                             FontFamily="Consolas" TextWrapping="NoWrap"
+                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
+                </TabItem>
+                <TabItem Header="adm">
+                    <TextBox Text="{Binding AdmLog, Mode=OneWay}" IsReadOnly="True"
+                             FontFamily="Consolas" TextWrapping="NoWrap"
+                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
+                </TabItem>
+                <TabItem Header="client">
+                    <TextBox Text="{Binding ClientLog, Mode=OneWay}" IsReadOnly="True"
+                             FontFamily="Consolas" TextWrapping="NoWrap"
+                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
+                </TabItem>
+            </TabControl>
+        </DockPanel>
+
+        <!-- BOTTOM: argv preview + action buttons -->
+        <DockPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
+            <WrapPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
+                <Button Content="Start server"   Command="{Binding StartServerCommand}"   Margin="0,0,4,0" Padding="8,3" />
+                <Button Content="Stop server"    Command="{Binding StopServerCommand}"    Margin="0,0,4,0" Padding="8,3" />
+                <Button Content="Restart server" Command="{Binding RestartServerCommand}" Margin="0,0,4,0" Padding="8,3" />
+                <Button Content="Start client"   Command="{Binding StartClientCommand}"   Margin="0,0,4,0" Padding="8,3" />
+                <Button Content="Stop client"    Command="{Binding StopClientCommand}"    Margin="0,0,12,0" Padding="8,3" />
+                <Button Content="Toggle mode"    Command="{Binding ToggleModeCommand}"    Margin="0,0,4,0" Padding="8,3" />
+                <TextBlock Text="{Binding Mode}" VerticalAlignment="Center" FontWeight="Bold" Margin="6,0,0,0" />
+            </WrapPanel>
+            <TextBox Text="{Binding ArgvPreview, Mode=OneWay}" IsReadOnly="True"
+                     FontFamily="Consolas" TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Auto" MaxHeight="90" />
+        </DockPanel>
     </Grid>
 </Window>
