@@ -332,7 +332,7 @@ public partial class SetupWizardWindow : FluentWindow
             : "Couldn't launch Steam — is it installed and running?";
     }
 
-    private void OnOpenDayzTools(object sender, RoutedEventArgs e)
+    private void OnOpenToolsForWorkDrive(object sender, RoutedEventArgs e)
     {
         var tools = ToolsPathBox.Text?.Trim() ?? "";
         var launcher = Dzl.Core.Tools.ToolCatalog.Find(tools, "launcher")
