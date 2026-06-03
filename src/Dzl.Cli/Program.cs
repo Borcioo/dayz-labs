@@ -1,6 +1,7 @@
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Text.Json;
+using Dzl.Core.App;
 using Dzl.Core.Config;
 using Dzl.Core.Launch;
 using Dzl.Core.Logs;
@@ -29,12 +30,11 @@ root.AddGlobalOption(configOption);
 var modsCmd = new Command("mods", "List the current ordered mod selection.");
 modsCmd.SetHandler(ctx =>
 {
-    var (cfg, _, _, _) = Resolve(ctx);
-    foreach (var m in cfg.Mods)
+    var (_, _, _, configPath) = Resolve(ctx);
+    foreach (var m in new LauncherService(configPath).Mods())
     {
-        var mark = m.Enabled ? "[x]" : "[ ]";
         var tag = m.Side == "both" ? "" : $"  ({m.Side})";
-        Console.WriteLine($"{mark} {m.Path}{tag}");
+        Console.WriteLine($"[x] {m.Path}{tag}");
     }
 });
 root.AddCommand(modsCmd);
@@ -134,62 +134,34 @@ var statusJson = new Option<bool>("--json", "Print machine-readable JSON.");
 var statusCmd = new Command("status", "Show launcher status.") { statusJson };
 statusCmd.SetHandler(ctx =>
 {
-    var (cfg, _, active, configPath) = Resolve(ctx);
-    var live = StateFile.ReadLive(configPath, ProcessManager.ImageOf);
-
-    object StateFor(string target)
-    {
-        if (live.TryGetValue(target, out var info))
-            return new { state = "up", source = info.Source, mode = info.Mode, pid = info.Pid };
-        return new { state = "down", source = (string?)null, mode = (string?)null, pid = (int?)null };
-    }
-
-    var logs = LogResolver.Resolve(cfg.ProfilesPath, cfg.ClientProfilesPath);
-    var enabledMods = cfg.Mods.Where(m => m.Enabled)
-        .Select(m => new { path = m.Path, side = m.Side }).ToList();
-
-    var status = new
-    {
-        mode = cfg.Mode,
-        port = cfg.Port,
-        active_preset = string.IsNullOrEmpty(active) ? null : active,
-        server = StateFor("server"),
-        client = StateFor("client"),
-        paths = new
-        {
-            dayz_path = cfg.DayzPath,
-            profiles_path = cfg.ProfilesPath,
-            client_profiles_path = cfg.ClientProfilesPath,
-            config_dir = Path.GetDirectoryName(configPath),
-            presets_dir = Profiles.PresetsDir(configPath),
-        },
-        mods = enabledMods,
-        logs,
-    };
+    var (_, _, _, configPath) = Resolve(ctx);
+    var report = new LauncherService(configPath).Status();
 
     if (ctx.ParseResult.GetValueForOption(statusJson))
     {
-        Console.WriteLine(JsonSerializer.Serialize(status, ConfigStore.Json));
+        Console.WriteLine(JsonSerializer.Serialize(report, ConfigStore.Json));
         return;
     }
 
-    Console.WriteLine($"mode:          {status.mode}");
-    Console.WriteLine($"port:          {status.port}");
-    Console.WriteLine($"active preset: {status.active_preset ?? "(none)"}");
-    var s = live.GetValueOrDefault("server");
-    var c = live.GetValueOrDefault("client");
-    Console.WriteLine($"server:        {(s is null ? "down" : $"up (pid {s.Pid}, {s.Mode}, src {s.Source})")}");
-    Console.WriteLine($"client:        {(c is null ? "down" : $"up (pid {c.Pid}, {c.Mode}, src {c.Source})")}");
-    Console.WriteLine($"dayz:          {cfg.DayzPath}");
-    Console.WriteLine($"profiles:      {cfg.ProfilesPath}");
-    Console.WriteLine($"client prof:   {cfg.ClientProfilesPath}");
-    Console.WriteLine($"config dir:    {status.paths.config_dir}");
-    Console.WriteLine($"presets dir:   {status.paths.presets_dir}");
-    Console.WriteLine($"enabled mods:  {enabledMods.Count}");
-    foreach (var m in enabledMods)
-        Console.WriteLine($"  - {m.path}  ({m.side})");
+    string Line(TargetState t) => t.State == "down"
+        ? "down"
+        : $"up (pid {t.Pid}, {t.Mode}, src {t.Source})";
+
+    Console.WriteLine($"mode:          {report.Mode}");
+    Console.WriteLine($"port:          {report.Port}");
+    Console.WriteLine($"active preset: {report.ActivePreset ?? "(none)"}");
+    Console.WriteLine($"server:        {Line(report.Server)}");
+    Console.WriteLine($"client:        {Line(report.Client)}");
+    Console.WriteLine($"dayz:          {report.Paths.GetValueOrDefault("dayz_path")}");
+    Console.WriteLine($"profiles:      {report.Paths.GetValueOrDefault("profiles_path")}");
+    Console.WriteLine($"client prof:   {report.Paths.GetValueOrDefault("client_profiles_path")}");
+    Console.WriteLine($"config dir:    {report.Paths.GetValueOrDefault("config_dir")}");
+    Console.WriteLine($"presets dir:   {report.Paths.GetValueOrDefault("presets_dir")}");
+    Console.WriteLine($"enabled mods:  {report.Mods.Count}");
+    foreach (var m in report.Mods)
+        Console.WriteLine($"  - {m.Path}  ({m.Side})");
     Console.WriteLine("logs:");
-    foreach (var kv in logs)
+    foreach (var kv in report.Logs)
         Console.WriteLine($"  {kv.Key,-7} {kv.Value ?? "(none)"}");
 });
 root.AddCommand(statusCmd);
@@ -294,26 +266,25 @@ root.AddCommand(configCmd);
 var presetCmd = new Command("preset", "Save/load named config presets.");
 presetCmd.SetHandler(ctx =>
 {
-    var (_, _, active, configPath) = Resolve(ctx);
-    var presets = Profiles.List(configPath);
+    var (_, _, _, configPath) = Resolve(ctx);
+    var presets = new LauncherService(configPath).Presets();
     if (presets.Count == 0)
     {
         Console.WriteLine("(no presets)");
         return;
     }
-    foreach (var n in presets)
-        Console.WriteLine(n == active ? $"* {n}" : $"  {n}");
+    foreach (var p in presets)
+        Console.WriteLine(p.Active ? $"* {p.Name}" : $"  {p.Name}");
 });
 
 var presetSaveArg = new Argument<string>("name", "Preset name.");
 var presetSaveCmd = new Command("save", "Save the current config as a preset and activate it.") { presetSaveArg };
 presetSaveCmd.SetHandler(ctx =>
 {
-    var (cfg, _, _, configPath) = Resolve(ctx);
+    var (_, _, _, configPath) = Resolve(ctx);
     var name = ctx.ParseResult.GetValueForArgument(presetSaveArg);
-    Profiles.Save(cfg, name, configPath);
-    Profiles.SetActive(name, configPath);
-    Console.WriteLine($"saved preset '{name}' (now active)");
+    var res = new LauncherService(configPath).SaveActivePresetAs(name);
+    Console.WriteLine(res.Message);
 });
 presetCmd.AddCommand(presetSaveCmd);
 
@@ -323,16 +294,14 @@ presetLoadCmd.SetHandler(ctx =>
 {
     var (_, _, _, configPath) = Resolve(ctx);
     var name = ctx.ParseResult.GetValueForArgument(presetLoadArg);
-    var presets = Profiles.List(configPath);
-    if (!presets.Contains(name))
+    var res = new LauncherService(configPath).SetPreset(name);
+    if (!res.Ok)
     {
-        Console.Error.WriteLine(
-            $"no preset '{name}'. have: " + (presets.Count > 0 ? string.Join(", ", presets) : "(none)"));
+        Console.Error.WriteLine(res.Message);
         ctx.ExitCode = 1;
         return;
     }
-    Profiles.SetActive(name, configPath);
-    Console.WriteLine($"active preset -> '{name}'");
+    Console.WriteLine(res.Message);
 });
 presetCmd.AddCommand(presetLoadCmd);
 
