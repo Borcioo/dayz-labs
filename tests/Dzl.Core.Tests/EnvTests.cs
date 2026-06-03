@@ -61,4 +61,8 @@ public class EnvTests
     [Fact]
     public void ValidateUri_builds_steam_validate_protocol() =>
         Dzl.Core.Env.SteamInstall.ValidateUri(830640).Should().Be("steam://validate/830640");
+
+    [Fact]
+    public void RunUri_builds_steam_run_protocol() =>
+        Dzl.Core.Env.SteamInstall.RunUri(830640).Should().Be("steam://run/830640");
 }

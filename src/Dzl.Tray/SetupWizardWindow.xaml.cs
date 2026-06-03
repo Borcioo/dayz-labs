@@ -334,14 +334,14 @@ public partial class SetupWizardWindow : FluentWindow
 
     private void OnOpenToolsForWorkDrive(object sender, RoutedEventArgs e)
     {
-        var tools = ToolsPathBox.Text?.Trim() ?? "";
-        var launcher = Dzl.Core.Tools.ToolCatalog.Find(tools, "launcher")
-                       ?? Dzl.Core.Tools.ToolCatalog.Find(tools, "workbench");
-        var ok = launcher is not null && Dzl.Core.Tools.ToolLauncher.Launch(launcher);
+        // Launch THROUGH Steam (steam://run) — Steam sets the correct working dir + applies the
+        // install-script registry. Starting DayZToolsLauncher.exe directly crashes ("can't find
+        // e:\settings.ini") because it resolves settings.ini relative to its cwd.
+        var ok = SteamInstall.Run(SteamInstall.DayZTools);
         VerifyHint.Visibility = Visibility.Visible;
         VerifyHint.Text = ok
-            ? "DayZ Tools launched — let it finish first-run setup, close it, then click Mount again."
-            : "Couldn't find DayZ Tools at that path. Set the DayZ Tools path on the Paths step first.";
+            ? "Opening DayZ Tools via Steam — let it finish first-run setup, close it, then click Mount again."
+            : "Couldn't reach Steam — is it installed and running?";
     }
 
     // ---- Step 4: Game data ----------------------------------------------
@@ -384,17 +384,11 @@ public partial class SetupWizardWindow : FluentWindow
 
     private void OnOpenDayzTools(object sender, RoutedEventArgs e)
     {
-        var tools = ToolsPathBox.Text?.Trim() ?? "";
-        if (tools.Length == 0)
-        {
-            GameDataNote.Text = "Set the DayZ Tools path on the Paths step first.";
-            return;
-        }
-        var entry = ToolCatalog.Find(tools, "launcher") ?? ToolCatalog.Find(tools, "workbench");
-        bool ok = entry is not null && ToolLauncher.Launch(entry);
+        // Open via Steam (correct cwd + registry); starting the exe directly crashes on settings.ini.
+        bool ok = SteamInstall.Run(SteamInstall.DayZTools);
         GameDataNote.Text = ok
-            ? "DayZ Tools launched. Click 'Extract Game Data' there to unpack vanilla PBOs to P:."
-            : "Could not find the DayZ Tools launcher/Workbench under the configured Tools path.";
+            ? "Opening DayZ Tools via Steam. Click 'Extract Game Data' there to unpack vanilla PBOs to P:."
+            : "Couldn't reach Steam — is it installed and running?";
     }
 
     // ---- Step 5: Server instance ----------------------------------------
