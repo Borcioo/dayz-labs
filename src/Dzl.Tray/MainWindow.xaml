@@ -24,7 +24,49 @@
     </Grid.RowDefinitions>
     <Grid.Resources>
       <local:StatusDotConverter x:Key="StatusDotConverter" />
+      <local:BoolToOpacityConverter x:Key="BoolToOpacity" />
       <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+      <!-- Read-only monospace, dark, no-wrap log pane (script/rpt/adm/client). -->
+      <Style x:Key="LogTextBox" TargetType="TextBox">
+        <Setter Property="IsReadOnly" Value="True" />
+        <Setter Property="IsReadOnlyCaretVisible" Value="False" />
+        <Setter Property="FontFamily" Value="Cascadia Mono, Consolas" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+        <Setter Property="AcceptsReturn" Value="True" />
+        <Setter Property="Background" Value="{DynamicResource ApplicationBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+        <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+      </Style>
+
+      <!-- Small read-only mono output area for Tools (pack/paa/unbinarize results). -->
+      <Style x:Key="ToolOutputBox" TargetType="TextBox">
+        <Setter Property="IsReadOnly" Value="True" />
+        <Setter Property="FontFamily" Value="Cascadia Mono, Consolas" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+        <Setter Property="AcceptsReturn" Value="True" />
+        <Setter Property="Background" Value="{DynamicResource ApplicationBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+        <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+      </Style>
+
+      <!-- Settings field label. -->
+      <Style x:Key="FieldLabel" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Margin" Value="0,0,0,4" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+      </Style>
 
       <!-- Dark Fluent-friendly DataGrid style: the stock WPF DataGrid renders light/grey,
            so we restyle row height, gridlines, header and selection to match the theme. -->
@@ -448,37 +490,477 @@
             </Border>
           </Grid>
 
-          <!-- ===== LOGS (placeholder, filled in step 3) ===== -->
+          <!-- ===== LOGS ===== -->
           <Grid x:Name="PageLogs" Visibility="Collapsed">
-            <ui:Card Padding="24" VerticalAlignment="Top">
-              <StackPanel>
-                <TextBlock Text="Logs" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,4" />
-                <TextBlock Text="Live script / rpt / adm / client log panes — coming in the next step."
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-              </StackPanel>
-            </ui:Card>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="Logs" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12" />
+
+            <!-- 2×2 grid of live log panes -->
+            <Grid Grid.Row="1">
+              <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+              </Grid.RowDefinitions>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+
+              <!-- SCRIPT -->
+              <ui:Card Grid.Row="0" Grid.Column="0" Margin="0,0,6,6" Padding="12">
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                  </Grid.RowDefinitions>
+                  <Grid Grid.Row="0" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                      <ui:SymbolIcon Symbol="Document24" FontSize="16" Margin="0,0,8,0"
+                                     Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                      <TextBlock Text="script" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
+                      <TextBlock Text="{Binding ScriptLogPath}" FontSize="11" VerticalAlignment="Center"
+                                 TextTrimming="CharacterEllipsis"
+                                 Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                      <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open log folder"
+                                 Padding="6" Margin="0,0,6,0" Tag="script" Click="OnOpenLogFolder" />
+                      <ui:Button Icon="{ui:SymbolIcon Eraser24}" ToolTip="Clear view"
+                                 Padding="6" Tag="script" Click="OnClearLogView" />
+                    </StackPanel>
+                  </Grid>
+                  <TextBox Grid.Row="1" x:Name="ScriptLogBox" Text="{Binding ScriptLog, Mode=OneWay}"
+                           TextChanged="OnLogTextChanged"
+                           Style="{StaticResource LogTextBox}" />
+                </Grid>
+              </ui:Card>
+
+              <!-- RPT -->
+              <ui:Card Grid.Row="0" Grid.Column="1" Margin="6,0,0,6" Padding="12">
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                  </Grid.RowDefinitions>
+                  <Grid Grid.Row="0" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                      <ui:SymbolIcon Symbol="Document24" FontSize="16" Margin="0,0,8,0"
+                                     Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                      <TextBlock Text="rpt" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
+                      <TextBlock Text="{Binding RptLogPath}" FontSize="11" VerticalAlignment="Center"
+                                 TextTrimming="CharacterEllipsis"
+                                 Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                      <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open log folder"
+                                 Padding="6" Margin="0,0,6,0" Tag="rpt" Click="OnOpenLogFolder" />
+                      <ui:Button Icon="{ui:SymbolIcon Eraser24}" ToolTip="Clear view"
+                                 Padding="6" Tag="rpt" Click="OnClearLogView" />
+                    </StackPanel>
+                  </Grid>
+                  <TextBox Grid.Row="1" x:Name="RptLogBox" Text="{Binding RptLog, Mode=OneWay}"
+                           TextChanged="OnLogTextChanged"
+                           Style="{StaticResource LogTextBox}" />
+                </Grid>
+              </ui:Card>
+
+              <!-- ADM -->
+              <ui:Card Grid.Row="1" Grid.Column="0" Margin="0,6,6,0" Padding="12">
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                  </Grid.RowDefinitions>
+                  <Grid Grid.Row="0" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                      <ui:SymbolIcon Symbol="Document24" FontSize="16" Margin="0,0,8,0"
+                                     Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                      <TextBlock Text="adm" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
+                      <TextBlock Text="{Binding AdmLogPath}" FontSize="11" VerticalAlignment="Center"
+                                 TextTrimming="CharacterEllipsis"
+                                 Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                      <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open log folder"
+                                 Padding="6" Margin="0,0,6,0" Tag="adm" Click="OnOpenLogFolder" />
+                      <ui:Button Icon="{ui:SymbolIcon Eraser24}" ToolTip="Clear view"
+                                 Padding="6" Tag="adm" Click="OnClearLogView" />
+                    </StackPanel>
+                  </Grid>
+                  <TextBox Grid.Row="1" x:Name="AdmLogBox" Text="{Binding AdmLog, Mode=OneWay}"
+                           TextChanged="OnLogTextChanged"
+                           Style="{StaticResource LogTextBox}" />
+                </Grid>
+              </ui:Card>
+
+              <!-- CLIENT -->
+              <ui:Card Grid.Row="1" Grid.Column="1" Margin="6,6,0,0" Padding="12">
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                  </Grid.RowDefinitions>
+                  <Grid Grid.Row="0" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                      <ui:SymbolIcon Symbol="Document24" FontSize="16" Margin="0,0,8,0"
+                                     Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                      <TextBlock Text="client" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
+                      <TextBlock Text="{Binding ClientLogPath}" FontSize="11" VerticalAlignment="Center"
+                                 TextTrimming="CharacterEllipsis"
+                                 Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                      <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open log folder"
+                                 Padding="6" Margin="0,0,6,0" Tag="client" Click="OnOpenLogFolder" />
+                      <ui:Button Icon="{ui:SymbolIcon Eraser24}" ToolTip="Clear view"
+                                 Padding="6" Tag="client" Click="OnClearLogView" />
+                    </StackPanel>
+                  </Grid>
+                  <TextBox Grid.Row="1" x:Name="ClientLogBox" Text="{Binding ClientLog, Mode=OneWay}"
+                           TextChanged="OnLogTextChanged"
+                           Style="{StaticResource LogTextBox}" />
+                </Grid>
+              </ui:Card>
+            </Grid>
           </Grid>
 
-          <!-- ===== TOOLS (placeholder, filled in step 3) ===== -->
+          <!-- ===== TOOLS ===== -->
           <Grid x:Name="PageTools" Visibility="Collapsed">
-            <ui:Card Padding="24" VerticalAlignment="Top">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,12">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="Tools" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <ui:Button Grid.Column="1" Content="Refresh" Icon="{ui:SymbolIcon ArrowSync24}"
+                         Click="OnRefreshTools" />
+            </Grid>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
               <StackPanel>
-                <TextBlock Text="Tools" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,4" />
-                <TextBlock Text="DayZ Tools catalog, work-drive mount and converters — coming in the next step."
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+
+                <!-- DayZ Tools catalog -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="DayZ Tools" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <ItemsControl ItemsSource="{Binding Tools}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Button Width="190" Height="58" Margin="0,0,8,8" Padding="12,8"
+                                  HorizontalContentAlignment="Left"
+                                  IsEnabled="{Binding Exists}"
+                                  Opacity="{Binding Exists, Converter={StaticResource BoolToOpacity}}"
+                                  Click="OnLaunchTool" Tag="{Binding}"
+                                  ToolTip="{Binding ExePath}">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                              <ui:SymbolIcon Symbol="Open24" FontSize="18" Margin="0,0,10,0" VerticalAlignment="Center" />
+                              <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Kind}" FontSize="10"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                              </StackPanel>
+                            </StackPanel>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </ui:Card>
+
+                <!-- Work drive -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Work drive" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <StackPanel Orientation="Horizontal">
+                      <Ellipse Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center"
+                               Fill="{Binding WorkDriveMounted, Converter={StaticResource StatusDotConverter}}" />
+                      <TextBlock Text="{Binding WorkDriveStatus}" VerticalAlignment="Center" Margin="0,0,16,0" />
+                      <ui:Button Content="Mount" Appearance="Primary" Icon="{ui:SymbolIcon PlugConnected24}"
+                                 Margin="0,0,8,0" Click="OnMountWorkDrive" />
+                      <ui:Button Content="Unmount" Icon="{ui:SymbolIcon PlugDisconnected24}"
+                                 Margin="0,0,8,0" Click="OnUnmountWorkDrive" />
+                      <ui:Button Content="Refresh" Icon="{ui:SymbolIcon ArrowSync24}" Click="OnRefreshWorkDrive" />
+                    </StackPanel>
+                  </StackPanel>
+                </ui:Card>
+
+                <!-- Pack PBO -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Pack PBO" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <Grid Margin="0,0,0,8">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="PackSrcBox" Grid.Column="0" PlaceholderText="source folder…" />
+                      <ui:Button Grid.Column="1" Content="Browse" Icon="{ui:SymbolIcon FolderOpen24}"
+                                 Margin="8,0,0,0" Tag="packsrc" Click="OnBrowseFolderInto" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="PackDstBox" Grid.Column="0" PlaceholderText="output folder…" />
+                      <ui:Button Grid.Column="1" Content="Browse" Icon="{ui:SymbolIcon FolderOpen24}"
+                                 Margin="8,0,0,0" Tag="packdst" Click="OnBrowseFolderInto" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                      </Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="PackPrefixBox" Grid.Column="0" Margin="0,0,4,0" PlaceholderText="prefix (optional)" />
+                      <ui:TextBox x:Name="PackSignBox" Grid.Column="1" Margin="4,0,0,0" PlaceholderText="sign key path (optional)" />
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                      <ui:Button x:Name="PackButton" Content="Pack" Appearance="Primary"
+                                 Icon="{ui:SymbolIcon Box24}" Click="OnPackPbo" />
+                      <TextBlock x:Name="PackToolMissing" Text="Addon Builder not found"
+                                 VerticalAlignment="Center" Margin="12,0,0,0" Visibility="Collapsed"
+                                 Foreground="#FF6B6B" />
+                    </StackPanel>
+                    <TextBox x:Name="PackOutput" Height="110" Style="{StaticResource ToolOutputBox}" />
+                  </StackPanel>
+                </ui:Card>
+
+                <!-- Batch PAA -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Batch PAA" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <Grid Margin="0,0,0,8">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="PaaDirBox" Grid.Column="0" PlaceholderText="image folder (png/tga)…" />
+                      <ui:Button Grid.Column="1" Content="Browse" Icon="{ui:SymbolIcon FolderOpen24}"
+                                 Margin="8,0,0,0" Tag="paadir" Click="OnBrowseFolderInto" />
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                      <CheckBox x:Name="PaaRecursive" Content="Recursive" VerticalAlignment="Center" Margin="0,0,16,0" />
+                      <ui:Button x:Name="PaaButton" Content="Convert" Appearance="Primary"
+                                 Icon="{ui:SymbolIcon Image24}" Click="OnConvertPaa" />
+                      <TextBlock x:Name="PaaToolMissing" Text="ImageToPAA not found"
+                                 VerticalAlignment="Center" Margin="12,0,0,0" Visibility="Collapsed"
+                                 Foreground="#FF6B6B" />
+                    </StackPanel>
+                    <TextBox x:Name="PaaOutput" Height="110" Style="{StaticResource ToolOutputBox}" />
+                  </StackPanel>
+                </ui:Card>
+
+                <!-- Unbinarize -->
+                <ui:Card Margin="0,0,0,4" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Unbinarize config.bin" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <Grid Margin="0,0,0,8">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="BinFileBox" Grid.Column="0" PlaceholderText="config.bin file…" />
+                      <ui:Button Grid.Column="1" Content="Browse" Icon="{ui:SymbolIcon DocumentSearch24}"
+                                 Margin="8,0,0,0" Click="OnBrowseBinFile" />
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                      <ui:Button x:Name="UnbinButton" Content="Unbinarize" Appearance="Primary"
+                                 Icon="{ui:SymbolIcon DocumentArrowDown24}" Click="OnUnbinarize" />
+                      <TextBlock x:Name="UnbinToolMissing" Text="CfgConvert not found"
+                                 VerticalAlignment="Center" Margin="12,0,0,0" Visibility="Collapsed"
+                                 Foreground="#FF6B6B" />
+                    </StackPanel>
+                    <TextBox x:Name="UnbinOutput" Height="90" Style="{StaticResource ToolOutputBox}" />
+                  </StackPanel>
+                </ui:Card>
+
               </StackPanel>
-            </ui:Card>
+            </ScrollViewer>
           </Grid>
 
-          <!-- ===== SETTINGS (placeholder, filled in step 3) ===== -->
+          <!-- ===== SETTINGS ===== -->
           <Grid x:Name="PageSettings" Visibility="Collapsed">
-            <ui:Card Padding="24" VerticalAlignment="Top">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="Settings" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12" />
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
               <StackPanel>
-                <TextBlock Text="Settings" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,4" />
-                <TextBlock Text="Config paths, per-target launch params and presets — coming in the next step."
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+
+                <!-- Paths -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Paths" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+
+                    <TextBlock Text="DayZ install" Style="{StaticResource FieldLabel}" />
+                    <Grid Margin="0,0,0,10">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="CfgDayzPath" Grid.Column="0" />
+                      <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="dir:CfgDayzPath" Click="OnBrowseInto" />
+                    </Grid>
+
+                    <TextBlock Text="DayZ Tools" Style="{StaticResource FieldLabel}" />
+                    <Grid Margin="0,0,0,10">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="CfgDayzToolsPath" Grid.Column="0" />
+                      <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="dir:CfgDayzToolsPath" Click="OnBrowseInto" />
+                    </Grid>
+
+                    <TextBlock Text="Server profiles" Style="{StaticResource FieldLabel}" />
+                    <Grid Margin="0,0,0,10">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="CfgProfilesPath" Grid.Column="0" />
+                      <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="dir:CfgProfilesPath" Click="OnBrowseInto" />
+                    </Grid>
+
+                    <TextBlock Text="Client profiles" Style="{StaticResource FieldLabel}" />
+                    <Grid Margin="0,0,0,10">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="CfgClientProfilesPath" Grid.Column="0" />
+                      <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="dir:CfgClientProfilesPath" Click="OnBrowseInto" />
+                    </Grid>
+                  </StackPanel>
+                </ui:Card>
+
+                <!-- Executables -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Executables" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <Grid>
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                      <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                        <TextBlock Text="Server exe (debug)" Style="{StaticResource FieldLabel}" />
+                        <ui:TextBox x:Name="CfgExeDebug" Margin="0,0,0,10" />
+                        <TextBlock Text="Server exe (normal)" Style="{StaticResource FieldLabel}" />
+                        <ui:TextBox x:Name="CfgExeNormal" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                        <TextBlock Text="Client exe (debug)" Style="{StaticResource FieldLabel}" />
+                        <ui:TextBox x:Name="CfgClientExeDebug" Margin="0,0,0,10" />
+                        <TextBlock Text="Client exe (normal)" Style="{StaticResource FieldLabel}" />
+                        <ui:TextBox x:Name="CfgClientExeNormal" />
+                      </StackPanel>
+                    </Grid>
+                  </StackPanel>
+                </ui:Card>
+
+                <!-- Server / connection -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Server &amp; connection" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <Grid>
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                      <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                        <TextBlock Text="Port" Style="{StaticResource FieldLabel}" />
+                        <ui:TextBox x:Name="CfgPort" Margin="0,0,0,10" />
+                        <TextBlock Text="Mission" Style="{StaticResource FieldLabel}" />
+                        <ui:TextBox x:Name="CfgMission" Margin="0,0,0,10" />
+                        <TextBlock Text="Config name" Style="{StaticResource FieldLabel}" />
+                        <ui:TextBox x:Name="CfgConfigName" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                        <TextBlock Text="Player name" Style="{StaticResource FieldLabel}" />
+                        <ui:TextBox x:Name="CfgPlayerName" Margin="0,0,0,10" />
+                        <TextBlock Text="Connect IP" Style="{StaticResource FieldLabel}" />
+                        <ui:TextBox x:Name="CfgConnectIp" />
+                      </StackPanel>
+                    </Grid>
+                  </StackPanel>
+                </ui:Card>
+
+                <!-- Scan roots -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <Grid Margin="0,0,0,12">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <TextBlock Grid.Column="0" Text="Mod scan roots (one path per line)"
+                                 FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                      <ui:Button Grid.Column="1" Content="Add folder…" Icon="{ui:SymbolIcon FolderAdd24}"
+                                 Click="OnAddScanRoot" />
+                    </Grid>
+                    <TextBox x:Name="CfgScanRoots" Height="90" AcceptsReturn="True"
+                             FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                             VerticalScrollBarVisibility="Auto" />
+                  </StackPanel>
+                </ui:Card>
+
+                <!-- Save config -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                  <ui:Button Content="Save config" Appearance="Primary" Icon="{ui:SymbolIcon Save24}"
+                             Click="OnSaveConfig" />
+                  <ui:Button Content="Revert" Icon="{ui:SymbolIcon ArrowUndo24}" Margin="8,0,0,0"
+                             Click="OnRevertConfig" />
+                  <TextBlock x:Name="ConfigError" VerticalAlignment="Center" Margin="12,0,0,0"
+                             Foreground="#FF6B6B" Visibility="Collapsed" />
+                </StackPanel>
+
+                <!-- Launch params -->
+                <ui:Card Margin="0,0,0,4" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Launch params" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                      <TextBlock Text="Target" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                      <ComboBox x:Name="ParamTarget" Width="120" SelectedIndex="0"
+                                SelectionChanged="OnParamSlotChanged">
+                        <ComboBoxItem Content="server" />
+                        <ComboBoxItem Content="client" />
+                      </ComboBox>
+                      <TextBlock Text="Mode" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="16,0,8,0" />
+                      <ComboBox x:Name="ParamMode" Width="120" SelectedIndex="0"
+                                SelectionChanged="OnParamSlotChanged">
+                        <ComboBoxItem Content="debug" />
+                        <ComboBoxItem Content="normal" />
+                      </ComboBox>
+                    </StackPanel>
+                    <TextBlock Text="One flag per line" Style="{StaticResource FieldLabel}" />
+                    <TextBox x:Name="ParamsEditor" Height="120" AcceptsReturn="True"
+                             FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                             VerticalScrollBarVisibility="Auto" Margin="0,0,0,10" />
+                    <StackPanel Orientation="Horizontal">
+                      <ui:Button Content="Save params" Appearance="Primary" Icon="{ui:SymbolIcon Save24}"
+                                 Click="OnSaveParams" />
+                      <ui:Button Content="Reset to defaults" Icon="{ui:SymbolIcon ArrowReset24}" Margin="8,0,0,0"
+                                 Click="OnResetParams" />
+                    </StackPanel>
+                  </StackPanel>
+                </ui:Card>
+
               </StackPanel>
-            </ui:Card>
+            </ScrollViewer>
           </Grid>
 
       </Grid>
