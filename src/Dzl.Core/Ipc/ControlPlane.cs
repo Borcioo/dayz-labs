@@ -8,13 +8,15 @@ namespace Dzl.Core.Ipc;
 public sealed class ControlPlane
 {
     private readonly string _configPath;
-    public ControlPlane(string configPath) { _configPath = configPath; }
+    private readonly string? _pipeName;
+    // pipeName defaults to the shared pipe; tests pass a unique name to force the direct path.
+    public ControlPlane(string configPath, string? pipeName = null) { _configPath = configPath; _pipeName = pipeName; }
     private LauncherService Direct() => new(_configPath);
     private static string J(object o) => JsonSerializer.Serialize(o, ConfigStore.Json);
 
     private string Route(IpcRequest req, Func<LauncherService, object> direct)
     {
-        var resp = PipeClient.Send(req);
+        var resp = PipeClient.Send(req, pipeName: _pipeName);
         if (resp is not null && resp.Ok && resp.Json is not null) return resp.Json;
         return J(direct(Direct()));
     }
