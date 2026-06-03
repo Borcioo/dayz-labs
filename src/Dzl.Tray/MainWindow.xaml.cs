@@ -296,6 +296,53 @@ public partial class MainWindow : FluentWindow
         CfgScanRoots.Text = existing.Length == 0 ? dir : existing + "\n" + dir;
     }
 
+    /// <summary>Current edited-or-saved DayZ install dir (Settings field wins over the VM config).</summary>
+    private string CurrentDayzPath()
+    {
+        var p = CfgDayzPath?.Text?.Trim();
+        return string.IsNullOrEmpty(p) ? _vm.Cfg.DayzPath : p;
+    }
+
+    // Mission folder picker → write a rel-or-abs path (relative to DayzPath when under it).
+    private void OnBrowseMission(object sender, RoutedEventArgs e)
+    {
+        var dayz = CurrentDayzPath();
+        var mpmissions = Path.Combine(dayz, "mpmissions");
+        var dlg = new OpenFolderDialog
+        {
+            InitialDirectory = Directory.Exists(mpmissions) ? mpmissions : dayz,
+        };
+        if (dlg.ShowDialog(this) == true)
+            CfgMission.Text = RelOrAbs(dlg.FolderName, dayz);
+    }
+
+    // Server config (*.cfg) file picker → write a rel-or-abs path (relative to DayzPath when under it).
+    private void OnBrowseConfigName(object sender, RoutedEventArgs e)
+    {
+        var dayz = CurrentDayzPath();
+        var dlg = new OpenFileDialog
+        {
+            Filter = "Server config (*.cfg)|*.cfg|All files (*.*)|*.*",
+            InitialDirectory = dayz,
+        };
+        if (dlg.ShowDialog(this) == true)
+            CfgConfigName.Text = RelOrAbs(dlg.FileName, dayz);
+    }
+
+    /// <summary>
+    /// Store <paramref name="fullPath"/> relative to <paramref name="dayzPath"/> when it lives under
+    /// the DayZ install dir, else the absolute path. Mirrors how Core's ArgvBuilder resolves
+    /// profiles paths so -mission=/-config= stay portable against the DayZ working dir.
+    /// </summary>
+    private static string RelOrAbs(string fullPath, string dayzPath)
+    {
+        var full = Path.GetFullPath(fullPath);
+        var root = Path.GetFullPath(dayzPath);
+        return full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            ? Path.GetRelativePath(root, full)
+            : full;
+    }
+
     // --- Params editor: one editor that loads/saves the selected target+mode slot ---
 
     private string SelectedTarget =>

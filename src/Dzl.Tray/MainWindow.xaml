@@ -962,9 +962,17 @@
                         <TextBlock Text="Port" Style="{StaticResource FieldLabel}" />
                         <ui:TextBox x:Name="CfgPort" Margin="0,0,0,10" />
                         <TextBlock Text="Mission" Style="{StaticResource FieldLabel}" />
-                        <ui:TextBox x:Name="CfgMission" Margin="0,0,0,10" />
+                        <Grid Margin="0,0,0,10">
+                          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                          <ui:TextBox x:Name="CfgMission" Grid.Column="0" />
+                          <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Click="OnBrowseMission" />
+                        </Grid>
                         <TextBlock Text="Config name" Style="{StaticResource FieldLabel}" />
-                        <ui:TextBox x:Name="CfgConfigName" />
+                        <Grid>
+                          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                          <ui:TextBox x:Name="CfgConfigName" Grid.Column="0" />
+                          <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Click="OnBrowseConfigName" />
+                        </Grid>
                       </StackPanel>
                       <StackPanel Grid.Column="1" Margin="8,0,0,0">
                         <TextBlock Text="Player name" Style="{StaticResource FieldLabel}" />
