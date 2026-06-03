@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{4ACA6B80
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dzl.Core.Tests", "tests\Dzl.Core.Tests\Dzl.Core.Tests.csproj", "{BB8D2DB7-1591-4E0B-9A6C-E7F9C806D43A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dzl.Cli", "src\Dzl.Cli\Dzl.Cli.csproj", "{F1019F0F-7454-4027-AD7D-8C3E5F16FAC0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,9 +30,14 @@ Global
 		{BB8D2DB7-1591-4E0B-9A6C-E7F9C806D43A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BB8D2DB7-1591-4E0B-9A6C-E7F9C806D43A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BB8D2DB7-1591-4E0B-9A6C-E7F9C806D43A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F1019F0F-7454-4027-AD7D-8C3E5F16FAC0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1019F0F-7454-4027-AD7D-8C3E5F16FAC0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1019F0F-7454-4027-AD7D-8C3E5F16FAC0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1019F0F-7454-4027-AD7D-8C3E5F16FAC0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{4F6C0EED-CC5A-4C46-A3A2-9587E597338E} = {61058ED9-8C92-4654-8CFF-958484ED291F}
 		{BB8D2DB7-1591-4E0B-9A6C-E7F9C806D43A} = {4ACA6B80-CBA0-482E-9A5D-204C6767CC55}
+		{F1019F0F-7454-4027-AD7D-8C3E5F16FAC0} = {61058ED9-8C92-4654-8CFF-958484ED291F}
 	EndGlobalSection
 EndGlobal
