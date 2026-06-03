@@ -346,6 +346,16 @@ public partial class SetupWizardWindow : FluentWindow
             ? Wpf.Ui.Controls.ControlAppearance.Secondary
             : Wpf.Ui.Controls.ControlAppearance.Primary;
 
+        // The #1 cause of "shows mounted but no P:" — dzl running as admin sees admin-session
+        // drive maps that Explorer + the game (normal user) don't, and vice versa.
+        if (EnvDetect.IsElevated())
+        {
+            WorkDriveStatus.Text = "⚠ dzl is running as ADMINISTRATOR — it sees admin-session drives. "
+                + "A P: it shows here may NOT exist for Explorer or the game (and vice versa). "
+                + "Close it and run dzl normally (not as admin) so P: matches your normal session.";
+            WorkDriveStatus.Foreground = System.Windows.Media.Brushes.Goldenrod;
+        }
+
         WorkDriveNote.Text = string.IsNullOrWhiteSpace(ToolsPathBox.Text)
             ? "Set the DayZ Tools path on the Paths step to enable mounting."
             : @"Mounts via <Tools>\Bin\WorkDrive\WorkDrive.exe.";

@@ -7,6 +7,23 @@ public sealed record DetectedPaths(string? DayzPath, string? ToolsPath, string? 
 
 public static class EnvDetect
 {
+    /// <summary>
+    /// True if THIS process runs elevated (Administrator). Matters because mapped/subst drives
+    /// (like the P: work drive) are per-session AND per-elevation: an admin process sees drives
+    /// the normal user session (Explorer, the game) does not, and vice versa. Windows-only.
+    /// </summary>
+    public static bool IsElevated()
+    {
+        try
+        {
+            if (!OperatingSystem.IsWindows()) return false;
+            using var id = System.Security.Principal.WindowsIdentity.GetCurrent();
+            return new System.Security.Principal.WindowsPrincipal(id)
+                .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+        }
+        catch { return false; }
+    }
+
     // Matches    "path"   "<value>"   entries in libraryfolders.vdf, robust to tabs/spaces.
     private static readonly Regex PathEntry =
         new("\"path\"\\s*\"([^\"]*)\"", RegexOptions.Compiled);
