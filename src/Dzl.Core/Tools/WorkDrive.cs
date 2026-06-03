@@ -176,20 +176,8 @@ public static class WorkDrive
     // if it couldn't start / didn't exit within the timeout.
     private static int? RunWorkDrive(string exePath, IEnumerable<string> args, int timeoutMs)
     {
-        try
-        {
-            var psi = new ProcessStartInfo(exePath)
-            {
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                WorkingDirectory = Path.GetDirectoryName(exePath) ?? "",
-            };
-            foreach (var a in args) psi.ArgumentList.Add(a);
-            using var p = Process.Start(psi);
-            if (p is null) return null;
-            return p.WaitForExit(timeoutMs) ? p.ExitCode : (int?)null;
-        }
-        catch { return null; }
+        return ProcessElevation.Run(exePath, args is IReadOnlyList<string> l ? l : new List<string>(args),
+                                    Path.GetDirectoryName(exePath) ?? "", timeoutMs, deElevateIfAdmin: true);
     }
 
     private static void RunSubst(string drive, string source)
