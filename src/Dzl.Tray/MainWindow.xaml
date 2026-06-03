@@ -120,7 +120,11 @@
            mono read-only TextBox body. Reused by all four Logs view modes (grid/list/tabs/
            focus); the TextChanged autoscroll keeps the tail pinned to the bottom everywhere. -->
       <DataTemplate x:Key="LogPaneTemplate">
-        <ui:Card Margin="3" Padding="12">
+        <!-- Plain Border (not ui:Card): a Border is a decorator whose child always fills it,
+             so the pane stretches to its container. ui:Card sizes to content / won't stretch. -->
+        <Border Margin="3" Padding="12" CornerRadius="8"
+                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
           <Grid>
             <Grid.RowDefinitions>
               <RowDefinition Height="Auto" />
@@ -154,7 +158,7 @@
                      TextChanged="OnLogTextChanged"
                      Style="{StaticResource LogTextBox}" />
           </Grid>
-        </ui:Card>
+        </Border>
       </DataTemplate>
 
       <!-- Accordion pane for the List view: a collapsible Expander whose header (icon + Title +
