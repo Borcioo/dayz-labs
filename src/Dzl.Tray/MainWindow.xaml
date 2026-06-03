@@ -1258,6 +1258,11 @@
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
               <StackPanel>
 
+                <!-- Re-run the first-run environment wizard -->
+                <ui:Button Content="Run setup wizard…" Icon="{ui:SymbolIcon Wand24}"
+                           Appearance="Primary" Margin="0,0,0,12"
+                           HorizontalAlignment="Left" Click="OnRunSetupWizard" />
+
                 <!-- Profiles management -->
                 <ui:Card Margin="0,0,0,12" Padding="16">
                   <StackPanel>

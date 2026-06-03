@@ -1,0 +1,262 @@
+<ui:FluentWindow x:Class="Dzl.Tray.SetupWizardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Dzl.Tray"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        mc:Ignorable="d"
+        Title="dzl — Setup environment"
+        Width="900" Height="640"
+        MinWidth="780" MinHeight="560"
+        WindowBackdropType="Mica"
+        ExtendsContentIntoTitleBar="True"
+        WindowStartupLocation="CenterOwner">
+
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />  <!-- title bar -->
+      <RowDefinition Height="*" />     <!-- steps + content -->
+      <RowDefinition Height="Auto" />  <!-- bottom bar -->
+    </Grid.RowDefinitions>
+
+    <Grid.Resources>
+      <!-- A single step row in the left indicator list. -->
+      <Style x:Key="StepLabel" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Margin" Value="0,0,0,2" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+      </Style>
+      <Style x:Key="FieldLabel" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Margin" Value="0,0,0,4" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+      </Style>
+      <Style x:Key="Blurb" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Margin" Value="0,0,0,12" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+      </Style>
+      <!-- Mono read-only box (steamcmd / scaffold report). -->
+      <Style x:Key="MonoBox" TargetType="TextBox">
+        <Setter Property="IsReadOnly" Value="True" />
+        <Setter Property="FontFamily" Value="Cascadia Mono, Consolas" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="AcceptsReturn" Value="True" />
+        <Setter Property="Background" Value="{DynamicResource ApplicationBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+      </Style>
+    </Grid.Resources>
+
+    <!-- ============ TITLE BAR ============ -->
+    <ui:TitleBar Grid.Row="0" Title="dzl — Setup environment" Margin="0">
+      <ui:TitleBar.Icon>
+        <ui:SymbolIcon Symbol="Wand24" />
+      </ui:TitleBar.Icon>
+    </ui:TitleBar>
+
+    <!-- ============ STEP LIST + CONTENT ============ -->
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto" />  <!-- step indicator -->
+        <ColumnDefinition Width="*" />     <!-- content -->
+      </Grid.ColumnDefinitions>
+
+      <!-- Read-only step indicator. Each row's active state is driven from code-behind
+           (HighlightStep) by toggling the accent Border on the matching index. -->
+      <Border Grid.Column="0" Width="220"
+              BorderThickness="0,0,1,0"
+              BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+              Background="{DynamicResource ControlFillColorDefaultBrush}">
+        <StackPanel x:Name="StepList" Margin="12,16">
+          <Border x:Name="StepRow0" CornerRadius="6" Padding="12,8" Margin="0,1">
+            <TextBlock Style="{StaticResource StepLabel}" Text="1  Welcome" />
+          </Border>
+          <Border x:Name="StepRow1" CornerRadius="6" Padding="12,8" Margin="0,1">
+            <TextBlock Style="{StaticResource StepLabel}" Text="2  Paths" />
+          </Border>
+          <Border x:Name="StepRow2" CornerRadius="6" Padding="12,8" Margin="0,1">
+            <TextBlock Style="{StaticResource StepLabel}" Text="3  Work drive (P:)" />
+          </Border>
+          <Border x:Name="StepRow3" CornerRadius="6" Padding="12,8" Margin="0,1">
+            <TextBlock Style="{StaticResource StepLabel}" Text="4  Game data" />
+          </Border>
+          <Border x:Name="StepRow4" CornerRadius="6" Padding="12,8" Margin="0,1">
+            <TextBlock Style="{StaticResource StepLabel}" Text="5  Server instance" />
+          </Border>
+          <Border x:Name="StepRow5" CornerRadius="6" Padding="12,8" Margin="0,1">
+            <TextBlock Style="{StaticResource StepLabel}" Text="6  Server files" />
+          </Border>
+          <Border x:Name="StepRow6" CornerRadius="6" Padding="12,8" Margin="0,1">
+            <TextBlock Style="{StaticResource StepLabel}" Text="7  Mods" />
+          </Border>
+          <Border x:Name="StepRow7" CornerRadius="6" Padding="12,8" Margin="0,1">
+            <TextBlock Style="{StaticResource StepLabel}" Text="8  Finish" />
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- Content host: one panel per step, one visible at a time (ShowStep). -->
+      <Grid Grid.Column="1" Margin="24,20">
+
+        <!-- 1: WELCOME -->
+        <ScrollViewer x:Name="Page0" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock Text="Welcome" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,12" />
+            <TextBlock Style="{StaticResource Blurb}"
+                       Text="This sets up your local DayZ dev environment: paths, work drive, game data, a server instance, mods." />
+            <TextBlock Style="{StaticResource Blurb}"
+                       Text="Each step after Paths can be skipped — you can re-run this wizard anytime from Settings. When you Finish, your dzl config is written and the launcher reloads." />
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 2: PATHS -->
+        <ScrollViewer x:Name="Page1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock Text="Paths" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock Style="{StaticResource Blurb}"
+                       Text="Detected from your Steam libraries. Confirm or browse to the right folders. DayZ install is required." />
+
+            <TextBlock Text="DayZ install (required)" Style="{StaticResource FieldLabel}" />
+            <Grid Margin="0,0,0,4">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <ui:TextBox x:Name="DayzPathBox" Grid.Column="0" TextChanged="OnDayzPathChanged" />
+              <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="DayzPathBox" Click="OnBrowseFolder" />
+            </Grid>
+            <TextBlock x:Name="DayzPathStatus" FontSize="12" Margin="0,0,0,16" />
+
+            <TextBlock Text="DayZ Tools (recommended)" Style="{StaticResource FieldLabel}" />
+            <Grid Margin="0,0,0,4">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <ui:TextBox x:Name="ToolsPathBox" Grid.Column="0" TextChanged="OnToolsPathChanged" />
+              <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="ToolsPathBox" Click="OnBrowseFolder" />
+            </Grid>
+            <TextBlock x:Name="ToolsPathStatus" FontSize="12" Margin="0,0,0,16" />
+
+            <TextBlock Text="DayZ Server (optional)" Style="{StaticResource FieldLabel}" />
+            <Grid Margin="0,0,0,4">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <ui:TextBox x:Name="ServerPathBox" Grid.Column="0" TextChanged="OnServerPathChanged" />
+              <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="ServerPathBox" Click="OnBrowseFolder" />
+            </Grid>
+            <TextBlock x:Name="ServerPathStatus" FontSize="12" Margin="0,0,0,8" />
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 3: WORK DRIVE -->
+        <ScrollViewer x:Name="Page2" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock Text="Work drive (P:)" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock Style="{StaticResource Blurb}"
+                       Text="DayZ tooling expects vanilla game data on the P: work drive. Mount it with DayZ Tools' WorkDrive.exe. Needs DayZ Tools. This step is optional." />
+            <TextBlock x:Name="WorkDriveStatus" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,12" />
+            <ui:Button x:Name="MountBtn" Content="Mount P: drive" Icon="{ui:SymbolIcon HardDrive24}"
+                       Click="OnMountWorkDrive" HorizontalAlignment="Left" />
+            <TextBlock x:Name="WorkDriveNote" FontSize="12" Margin="0,12,0,0"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 4: GAME DATA -->
+        <ScrollViewer x:Name="Page3" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock Text="Game data" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock Style="{StaticResource Blurb}"
+                       Text="Unpacking vanilla PBOs to P: lets you reference base-game configs and assets from your mods. This step is optional." />
+            <ui:Button x:Name="OpenToolsBtn" Content="Open DayZ Tools…" Icon="{ui:SymbolIcon Toolbox24}"
+                       Click="OnOpenDayzTools" HorizontalAlignment="Left" Margin="0,0,0,12" />
+            <TextBlock Style="{StaticResource Blurb}"
+                       Text="In DayZ Tools click 'Extract Game Data' to unpack vanilla PBOs to P:. This can take a while; you can continue setup meanwhile." />
+            <TextBlock x:Name="GameDataNote" FontSize="12"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 5: SERVER INSTANCE -->
+        <ScrollViewer x:Name="Page4" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock Text="Server instance" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock Style="{StaticResource Blurb}"
+                       Text="Scaffold a dev serverDZ.cfg, profiles + profiles_client folders, and copy the vanilla mission. Optional but encouraged." />
+            <TextBlock Text="Instance directory" Style="{StaticResource FieldLabel}" />
+            <Grid Margin="0,0,0,12">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <ui:TextBox x:Name="InstanceDirBox" Grid.Column="0" />
+              <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="InstanceDirBox" Click="OnBrowseFolder" />
+            </Grid>
+            <ui:Button x:Name="ScaffoldBtn" Content="Scaffold" Icon="{ui:SymbolIcon WrenchScrewdriver24}"
+                       Click="OnScaffold" HorizontalAlignment="Left" Margin="0,0,0,12" />
+            <TextBox x:Name="ScaffoldReportBox" Height="120" Style="{StaticResource MonoBox}" />
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 6: SERVER FILES (PROD) -->
+        <ScrollViewer x:Name="Page5" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock Text="Server files (optional)" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock Style="{StaticResource Blurb}"
+                       Text="For dev you don't need a separate server — DayZDiag runs as the server. For a dedicated/production server, use SteamCMD:" />
+            <TextBox x:Name="SteamCmdBox" Height="80" Style="{StaticResource MonoBox}" Margin="0,0,0,8" />
+            <ui:Button x:Name="CopySteamCmdBtn" Content="Copy" Icon="{ui:SymbolIcon Copy24}"
+                       Click="OnCopySteamCmd" HorizontalAlignment="Left" />
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 7: MODS -->
+        <ScrollViewer x:Name="Page6" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock Text="Mods" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock Style="{StaticResource Blurb}"
+                       Text="Scan roots are folders searched for mods (one per line). Preview counts how many mods are found." />
+            <TextBox x:Name="ScanRootsBox" Height="140" AcceptsReturn="True"
+                     FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                     VerticalScrollBarVisibility="Auto" Margin="0,0,0,12" />
+            <ui:Button x:Name="PreviewModsBtn" Content="Preview" Icon="{ui:SymbolIcon Search24}"
+                       Click="OnPreviewMods" HorizontalAlignment="Left" />
+            <TextBlock x:Name="ModsPreviewStatus" FontSize="13" Margin="0,12,0,0" />
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 8: FINISH -->
+        <ScrollViewer x:Name="Page7" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock Text="Finish" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock Style="{StaticResource Blurb}"
+                       Text="Review your choices. Finish writes the dzl config and a default profile." />
+            <TextBox x:Name="SummaryBox" Height="280" Style="{StaticResource MonoBox}" />
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
+    </Grid>
+
+    <!-- ============ BOTTOM BAR ============ -->
+    <Border Grid.Row="2" Padding="16,12"
+            BorderThickness="0,1,0,0"
+            BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <ui:Button Grid.Column="0" Content="Cancel" Click="OnCancel" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal">
+          <ui:Button x:Name="BackBtn" Content="Back" Icon="{ui:SymbolIcon ArrowLeft24}"
+                     Margin="0,0,8,0" Click="OnBack" />
+          <ui:Button x:Name="NextBtn" Content="Next" Icon="{ui:SymbolIcon ArrowRight24}"
+                     Appearance="Primary" Margin="0,0,8,0" Click="OnNext" />
+          <ui:Button x:Name="FinishBtn" Content="Finish" Icon="{ui:SymbolIcon Checkmark24}"
+                     Appearance="Success" Click="OnFinish" />
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</ui:FluentWindow>

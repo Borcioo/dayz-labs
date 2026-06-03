@@ -419,6 +419,18 @@ public partial class MainWindow : FluentWindow
         _vm.ApplyParams(SelectedTarget, SelectedParamMode, lines);
     }
 
+    /// <summary>Re-open the environment setup wizard; on Finish, reload the VM so the new
+    /// config/profile takes effect immediately.</summary>
+    private void OnRunSetupWizard(object sender, RoutedEventArgs e)
+    {
+        var wizard = new SetupWizardWindow(App.ConfigPath()) { Owner = this };
+        if (wizard.ShowDialog() == true)
+        {
+            _vm.Reload();
+            LoadSettingsFields();
+        }
+    }
+
     // === Shared pickers / folder open =====================================
 
     /// <summary>Show a folder picker (OpenFolderDialog on .NET 8 WPF); null if cancelled.</summary>

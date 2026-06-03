@@ -55,6 +55,13 @@ public partial class App : Application
         }
 
         var configPath = ConfigPath();
+
+        // First run (no config file yet): walk the setup wizard before anything else.
+        // The single-instance mutex is already held; a modal ShowDialog is safe here.
+        // Whether the user finishes or cancels we then EnsureDefault so a config always exists.
+        if (!File.Exists(configPath))
+            new SetupWizardWindow(configPath).ShowDialog();
+
         Profiles.EnsureDefault(configPath);
 
         // Host the IPC server in the background ONLY when automation is enabled; the tray
