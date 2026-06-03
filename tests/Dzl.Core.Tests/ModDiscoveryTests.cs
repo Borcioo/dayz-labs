@@ -52,4 +52,36 @@ public class ModDiscoveryTests
         merged[0].Enabled.Should().BeTrue();  // selection preserved even if missing
         merged[0].Name.Should().Be("@Gone");
     }
+
+    [Fact]
+    public void ResolveName_prefers_meta_then_mod_then_folder()
+    {
+        var root = Directory.CreateTempSubdirectory().FullName;
+
+        // 1) meta.cpp wins (Workshop name) even when mod.cpp is also present.
+        var withMeta = Path.Combine(root, "1559212036");
+        Directory.CreateDirectory(withMeta);
+        File.WriteAllText(Path.Combine(withMeta, "meta.cpp"),
+            "protocol = 1;\npublishedid = 1559212036;\nname = \"Community Framework\";\ntimestamp = 0;\n");
+        File.WriteAllText(Path.Combine(withMeta, "mod.cpp"), "name = \"CF presentation\";\n");
+        ModDiscovery.ResolveName(withMeta).Should().Be("Community Framework");
+
+        // 2) mod.cpp used when there's no meta.cpp.
+        var withMod = Path.Combine(root, "2545327648");
+        Directory.CreateDirectory(withMod);
+        File.WriteAllText(Path.Combine(withMod, "mod.cpp"),
+            "name = \"GameLabs\";\npicture = \"x.edds\";\nauthor = \"CFTools\";\n");
+        ModDiscovery.ResolveName(withMod).Should().Be("GameLabs");
+
+        // 3) folder name when neither file exists.
+        var bare = Path.Combine(root, "@LocalDev");
+        Directory.CreateDirectory(bare);
+        ModDiscovery.ResolveName(bare).Should().Be("@LocalDev");
+
+        // 4) blank/garbage name falls through to folder.
+        var blank = Path.Combine(root, "3171576913");
+        Directory.CreateDirectory(blank);
+        File.WriteAllText(Path.Combine(blank, "meta.cpp"), "publishedid = 3171576913;\nname = \"\";\n");
+        ModDiscovery.ResolveName(blank).Should().Be("3171576913");
+    }
 }
