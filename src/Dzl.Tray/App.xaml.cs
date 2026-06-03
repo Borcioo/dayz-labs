@@ -1,3 +1,4 @@
+using System.Linq;
 using System.IO;
 using System.Threading;
 using System.Windows;
@@ -88,6 +89,14 @@ public partial class App : Application
         }
 
         _tray = new TrayIcon(configPath);
+
+        // Show the main window on launch so it's visible immediately. Pass --tray (or --minimized)
+        // to start hidden to the tray instead — used by login auto-start.
+        bool startHidden = e.Args.Any(a =>
+            a.Equals("--tray", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("--minimized", StringComparison.OrdinalIgnoreCase));
+        if (!startHidden)
+            _tray.ShowMainWindow();
     }
 
     private static void LogCrash(Exception ex)

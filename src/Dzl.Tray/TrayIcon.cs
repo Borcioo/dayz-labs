@@ -153,7 +153,11 @@ public sealed class TrayIcon : IDisposable
         });
     }
 
-    private void OpenMainWindow(object sender, RoutedEventArgs e)
+    private void OpenMainWindow(object sender, RoutedEventArgs e) => ShowMainWindow();
+
+    /// <summary>Show (create if needed) and focus the single main window. Reused by the tray
+    /// menu and by startup so the window can be visible immediately.</summary>
+    public void ShowMainWindow()
     {
         if (_window is null)
         {
