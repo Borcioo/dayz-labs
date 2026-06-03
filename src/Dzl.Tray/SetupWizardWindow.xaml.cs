@@ -25,7 +25,7 @@ namespace Dzl.Tray;
 /// </summary>
 public partial class SetupWizardWindow : FluentWindow
 {
-    private const int LastStep = 8;
+    private const int LastStep = 7;
     // Step 1 (0-based) is the Environment check inserted between Welcome (0) and Paths (2).
     private const int CheckStep = 1;
     private readonly string _configPath;
@@ -40,8 +40,8 @@ public partial class SetupWizardWindow : FluentWindow
         _configPath = configPath;
 
         // Order matters: the array index IS the step number. Check sits at index 1.
-        _stepRows = new[] { StepRow0, StepRowCheck, StepRow1, StepRow2, StepRow3, StepRow4, StepRow5, StepRow6, StepRow7 };
-        _pages = new UIElement[] { Page0, PageCheck, Page1, Page2, Page3, Page4, Page5, Page6, Page7 };
+        _stepRows = new[] { StepRow0, StepRowCheck, StepRow1, StepRow2, StepRow3, StepRow4, StepRow6, StepRow7 };
+        _pages = new UIElement[] { Page0, PageCheck, Page1, Page2, Page3, Page4, Page6, Page7 };
 
         Loaded += (_, _) => ShowStep(0);
     }
@@ -90,6 +90,7 @@ public partial class SetupWizardWindow : FluentWindow
                     ServerPathBox.Text = d.ServerPath ?? "";
                 }
                 RefreshPathStatuses();
+                SteamCmdBox.Text = SteamCmd.DownloadServerScript(ServerDirForSteamCmd());  // advanced expander
                 break;
 
             case 3: // Work drive — prefill the work folder (becomes P:)
@@ -109,16 +110,12 @@ public partial class SetupWizardWindow : FluentWindow
                     InstanceDirBox.Text = DayzPathBox.Text;
                 break;
 
-            case 6: // Server files — steamcmd line
-                SteamCmdBox.Text = SteamCmd.DownloadServerScript(ServerDirForSteamCmd());
-                break;
-
-            case 7: // Mods — prefill scan roots
+            case 6: // Mods — prefill scan roots
                 if (string.IsNullOrWhiteSpace(ScanRootsBox.Text))
                     ScanRootsBox.Text = string.Join("\r\n", DefaultScanRoots());
                 break;
 
-            case 8: // Finish — summary
+            case 7: // Finish — summary
                 SummaryBox.Text = BuildSummary();
                 break;
         }
@@ -220,6 +217,8 @@ public partial class SetupWizardWindow : FluentWindow
     {
         if (ServerPathStatus is null) return;
         SetFoundStatus(ServerPathStatus, ServerPathBox.Text, required: false);
+        if (SteamCmdBox is not null)   // keep the advanced SteamCMD command in sync with the server dir
+            SteamCmdBox.Text = SteamCmd.DownloadServerScript(ServerDirForSteamCmd());
     }
 
     private void RefreshPathStatuses()

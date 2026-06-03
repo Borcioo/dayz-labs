@@ -94,14 +94,11 @@
           <Border x:Name="StepRow4" CornerRadius="6" Padding="12,8" Margin="0,1">
             <TextBlock Style="{StaticResource StepLabel}" Text="6  Server instance" />
           </Border>
-          <Border x:Name="StepRow5" CornerRadius="6" Padding="12,8" Margin="0,1">
-            <TextBlock Style="{StaticResource StepLabel}" Text="7  Server files" />
-          </Border>
           <Border x:Name="StepRow6" CornerRadius="6" Padding="12,8" Margin="0,1">
-            <TextBlock Style="{StaticResource StepLabel}" Text="8  Mods" />
+            <TextBlock Style="{StaticResource StepLabel}" Text="7  Mods" />
           </Border>
           <Border x:Name="StepRow7" CornerRadius="6" Padding="12,8" Margin="0,1">
-            <TextBlock Style="{StaticResource StepLabel}" Text="9  Finish" />
+            <TextBlock Style="{StaticResource StepLabel}" Text="8  Finish" />
           </Border>
         </StackPanel>
       </Border>
@@ -225,6 +222,23 @@
             <TextBlock FontSize="12" TextWrapping="Wrap" Margin="0,4,0,8"
                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                        Text="Steam must be running and signed in. Installing DayZ Tools requires owning DayZ. DayZ Server is only needed for a dedicated production server." />
+
+            <!-- Advanced: dedicated/production server files via SteamCMD (no Steam GUI / custom dir / headless box). -->
+            <ui:CardExpander Margin="0,8,0,0" IsExpanded="False">
+              <ui:CardExpander.Header>
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Text="Dedicated server via SteamCMD (advanced)" VerticalAlignment="Center" />
+                  <local:InfoTip Text="{x:Static local:HelpText.DiagServer}" />
+                </StackPanel>
+              </ui:CardExpander.Header>
+              <StackPanel>
+                <TextBlock Style="{StaticResource Blurb}"
+                           Text="For dev you don't need this — DayZDiag runs as the server, and 'Install via Steam' above covers a local server. SteamCMD is for a headless/production box or a custom install dir. It tracks the DayZ Server directory above." />
+                <TextBox x:Name="SteamCmdBox" Height="80" Style="{StaticResource MonoBox}" Margin="0,0,0,8" />
+                <ui:Button x:Name="CopySteamCmdBtn" Content="Copy" Icon="{ui:SymbolIcon Copy24}"
+                           Click="OnCopySteamCmd" HorizontalAlignment="Left" />
+              </StackPanel>
+            </ui:CardExpander>
           </StackPanel>
         </ScrollViewer>
 
@@ -321,21 +335,6 @@
             <ui:Button x:Name="ScaffoldBtn" Content="Scaffold" Icon="{ui:SymbolIcon WrenchScrewdriver24}"
                        Click="OnScaffold" HorizontalAlignment="Left" Margin="0,0,0,12" />
             <TextBox x:Name="ScaffoldReportBox" Height="120" Style="{StaticResource MonoBox}" />
-          </StackPanel>
-        </ScrollViewer>
-
-        <!-- 6: SERVER FILES (PROD) -->
-        <ScrollViewer x:Name="Page5" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
-          <StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-              <TextBlock Text="Server files (optional)" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
-              <local:InfoTip Text="{x:Static local:HelpText.DiagServer}" />
-            </StackPanel>
-            <TextBlock Style="{StaticResource Blurb}"
-                       Text="For dev you don't need a separate server — DayZDiag runs as the server. For a dedicated/production server, use SteamCMD:" />
-            <TextBox x:Name="SteamCmdBox" Height="80" Style="{StaticResource MonoBox}" Margin="0,0,0,8" />
-            <ui:Button x:Name="CopySteamCmdBtn" Content="Copy" Icon="{ui:SymbolIcon Copy24}"
-                       Click="OnCopySteamCmd" HorizontalAlignment="Left" />
           </StackPanel>
         </ScrollViewer>
 
