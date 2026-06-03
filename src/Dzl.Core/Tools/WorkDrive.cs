@@ -111,23 +111,22 @@ public static class WorkDrive
     /// <summary>Dismount via <c>WorkDrive.exe /Dismount</c> if present, else <c>subst {drive} /D</c>.</summary>
     public static void Unmount(string exePath, string drive = "P:")
     {
-        try
-        {
-            if (File.Exists(exePath))
-                RunElevated(exePath, new[] { "/Dismount" }, 30000);   // elevated, like the mount
-            else
-            {
-                var psi = new ProcessStartInfo("subst") { UseShellExecute = false, CreateNoWindow = true };
-                psi.ArgumentList.Add(drive);
-                psi.ArgumentList.Add("/D");
-                using var p = Process.Start(psi);
-                p?.WaitForExit(30000);
-            }
-        }
-        catch
-        {
-            // best-effort
-        }
+        // 1) DayZ Tools' own dismount (elevated), if the exe is there.
+        try { if (File.Exists(exePath)) RunElevated(exePath, new[] { "/Dismount" }, 30000); }
+        catch { /* best-effort */ }
+        // 2) ALWAYS also clear a plain subst — an earlier (pre-elevation) fallback may have left a
+        //    `subst P: <dir>` that WorkDrive /Dismount doesn't remove and that DayZ Tools ignores.
+        try { RunSubstDelete(drive); } catch { /* best-effort */ }
+    }
+
+    private static void RunSubstDelete(string drive)
+    {
+        if (!Directory.Exists(drive.TrimEnd(':') + ":\\")) return;   // nothing mapped
+        var psi = new ProcessStartInfo("subst") { UseShellExecute = false, CreateNoWindow = true };
+        psi.ArgumentList.Add(drive.TrimEnd('\\', ':') + ":");
+        psi.ArgumentList.Add("/D");
+        using var p = Process.Start(psi);
+        p?.WaitForExit(10000);
     }
 
     /// <summary>
