@@ -12,6 +12,7 @@ using Dzl.Core.Ipc;
 using Dzl.Core.Launch;
 using Dzl.Core.Logs;
 using Dzl.Core.Mods;
+using Dzl.Tray;
 
 namespace Dzl.Tray.ViewModels;
 
@@ -66,6 +67,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<ModRowVm> Mods { get; } = new();
     public ObservableCollection<string> Presets { get; } = new();
 
+    /// <summary>Allowed values for the inline Side combo column (both|server|client).</summary>
+    public static IReadOnlyList<string> Sides { get; } = new[] { "both", "server", "client" };
+
+    /// <summary>Summary for the Mods toolbar count label ("N mods, M enabled").</summary>
+    public string ModsSummary => $"{Mods.Count} mods, {Mods.Count(m => m.Enabled)} enabled";
+
     /// <summary>Snapshot of the current config (for the Settings/Params dialogs).</summary>
     public DzlConfig Cfg => _cfg;
 
@@ -78,6 +85,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Filtered view over <see cref="Mods"/> bound by the ListBox; reorder
     /// commands still mutate the underlying collection.</summary>
     public ICollectionView ModsView { get; }
+
+    /// <summary>gong-wpf-dragdrop drop handler for the Mods DataGrid (maps view drops back
+    /// onto the underlying <see cref="Mods"/> collection). Bound by the grid in XAML.</summary>
+    public ModsDropHandler ModsDropHandler { get; }
 
     public MainViewModel(string configPath)
     {
@@ -95,6 +106,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         ModsView = CollectionViewSource.GetDefaultView(Mods);
         ModsView.Filter = FilterMod;
+        ModsDropHandler = new ModsDropHandler(this);
 
         LoadMods();
         LoadPresets();
@@ -126,6 +138,26 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             row.Changed += OnModChanged;
             Mods.Add(row);
         }
+        RenumberOrder();
+        OnPropertyChanged(nameof(ModsSummary));
+    }
+
+    /// <summary>Rewrites each row's 1-based <see cref="ModRowVm.Order"/> from its position
+    /// in the underlying <see cref="Mods"/> collection. Called after load and every reorder
+    /// so the grid's "#" column matches the real load order.</summary>
+    private void RenumberOrder()
+    {
+        for (int i = 0; i < Mods.Count; i++) Mods[i].Order = i + 1;
+    }
+
+    /// <summary>Move a mod within the underlying collection (used by drag-reorder), then
+    /// renumber + persist. Indices are into <see cref="Mods"/>, not the filtered view.</summary>
+    public void MoveMod(int from, int to)
+    {
+        if (from < 0 || from >= Mods.Count) return;
+        if (to < 0 || to >= Mods.Count || to == from) return;
+        Mods.Move(from, to);
+        Persist();
     }
 
     private void LoadPresets()
@@ -153,9 +185,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }).ToList();
         _cfg = _cfg with { Mods = entries, Mode = Mode };
         ConfigStore.Save(_cfg, _savePath);
-        // Reorder commands mutate the ObservableCollection via Move(); refresh the
-        // filtered view so its ordering stays in sync with the underlying list.
+        // Reorder commands mutate the ObservableCollection via Move(); renumber the
+        // "#" column and refresh the filtered view so its ordering stays in sync.
+        RenumberOrder();
         ModsView.Refresh();
+        OnPropertyChanged(nameof(ModsSummary));
         RefreshPreview();
     }
 

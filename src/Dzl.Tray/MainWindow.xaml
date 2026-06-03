@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:Dzl.Tray"
         xmlns:vm="clr-namespace:Dzl.Tray.ViewModels"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:dd="urn:gong-wpf-dragdrop"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
         Title="dzl — DayZ Dev Launcher"
@@ -23,6 +24,62 @@
     </Grid.RowDefinitions>
     <Grid.Resources>
       <local:StatusDotConverter x:Key="StatusDotConverter" />
+      <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+      <!-- Dark Fluent-friendly DataGrid style: the stock WPF DataGrid renders light/grey,
+           so we restyle row height, gridlines, header and selection to match the theme. -->
+      <Style x:Key="DarkDataGrid" TargetType="DataGrid">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="RowBackground" Value="Transparent" />
+        <Setter Property="AlternatingRowBackground" Value="Transparent" />
+        <Setter Property="GridLinesVisibility" Value="Horizontal" />
+        <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
+        <Setter Property="RowHeight" Value="32" />
+        <Setter Property="ColumnHeaderHeight" Value="34" />
+        <Setter Property="CanUserResizeRows" Value="False" />
+      </Style>
+
+      <Style x:Key="DarkDataGridColumnHeader" TargetType="DataGridColumnHeader">
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
+      </Style>
+
+      <Style x:Key="DarkDataGridRow" TargetType="DataGridRow">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Style.Triggers>
+          <Trigger Property="IsSelected" Value="True">
+            <Setter Property="Background" Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
+          </Trigger>
+          <Trigger Property="IsMouseOver" Value="True">
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+          </Trigger>
+        </Style.Triggers>
+      </Style>
+
+      <Style x:Key="DarkDataGridCell" TargetType="DataGridCell">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="DataGridCell">
+              <Border Background="{TemplateBinding Background}" Padding="8,0">
+                <ContentPresenter VerticalAlignment="Center" />
+              </Border>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
     </Grid.Resources>
 
     <!-- ============ TITLE BAR ============ -->
@@ -271,15 +328,124 @@
             </ui:Card>
           </Grid>
 
-          <!-- ===== MODS (placeholder, filled in step 2) ===== -->
+          <!-- ===== MODS ===== -->
           <Grid x:Name="PageMods" Visibility="Collapsed">
-            <ui:Card Padding="24" VerticalAlignment="Top">
-              <StackPanel>
-                <TextBlock Text="Mods" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,4" />
-                <TextBlock Text="Mod list, inline side switch, drag-reorder and search — coming in the next step."
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />  <!-- header + search -->
+              <RowDefinition Height="Auto" />  <!-- toolbar -->
+              <RowDefinition Height="*" />     <!-- grid -->
+            </Grid.RowDefinitions>
+
+            <!-- Header + search -->
+            <Grid Grid.Row="0" Margin="0,0,0,12">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                <TextBlock Text="Mods" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding ModsSummary}" FontSize="12"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
               </StackPanel>
-            </ui:Card>
+              <ui:TextBox Grid.Column="1" Width="260" VerticalAlignment="Center"
+                          PlaceholderText="filter mods…"
+                          Icon="{ui:SymbolIcon Search24}"
+                          Text="{Binding ModFilter, UpdateSourceTrigger=PropertyChanged}" />
+            </Grid>
+
+            <!-- Toolbar -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+              <ui:Button Content="Rescan" Icon="{ui:SymbolIcon ArrowSync24}"
+                         Margin="0,0,8,0" Command="{Binding RescanCommand}" />
+              <Border Width="1" Margin="4,2,12,2" Background="{DynamicResource ControlElevationBorderBrush}" />
+              <ui:Button Icon="{ui:SymbolIcon ArrowUpload24}" ToolTip="Move to top"
+                         Margin="0,0,8,0" Command="{Binding ToTopCommand}" />
+              <ui:Button Icon="{ui:SymbolIcon ArrowUp24}" ToolTip="Move up"
+                         Margin="0,0,8,0" Command="{Binding MoveUpCommand}" />
+              <ui:Button Icon="{ui:SymbolIcon ArrowDown24}" ToolTip="Move down"
+                         Margin="0,0,8,0" Command="{Binding MoveDownCommand}" />
+              <ui:Button Icon="{ui:SymbolIcon ArrowDownload24}" ToolTip="Move to bottom"
+                         Command="{Binding ToBottomCommand}" />
+            </StackPanel>
+
+            <!-- DataGrid -->
+            <Border Grid.Row="2" CornerRadius="6" BorderThickness="1"
+                    BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}">
+              <DataGrid x:Name="ModsGrid"
+                        Style="{StaticResource DarkDataGrid}"
+                        ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeader}"
+                        RowStyle="{StaticResource DarkDataGridRow}"
+                        CellStyle="{StaticResource DarkDataGridCell}"
+                        ItemsSource="{Binding ModsView}"
+                        SelectedItem="{Binding SelectedMod, Mode=TwoWay}"
+                        AutoGenerateColumns="False"
+                        CanUserAddRows="False"
+                        CanUserDeleteRows="False"
+                        HeadersVisibility="Column"
+                        SelectionMode="Single"
+                        SelectionUnit="FullRow"
+                        IsReadOnly="False"
+                        dd:DragDrop.IsDragSource="True"
+                        dd:DragDrop.IsDropTarget="True"
+                        dd:DragDrop.DropHandler="{Binding ModsDropHandler}">
+                <DataGrid.Columns>
+                  <!-- Enabled -->
+                  <DataGridCheckBoxColumn Header="On" Width="44"
+                                          Binding="{Binding Enabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                  <!-- Load order # -->
+                  <DataGridTextColumn Header="#" Width="40" IsReadOnly="True"
+                                      Binding="{Binding Order}" />
+                  <!-- Name (prominent) -->
+                  <DataGridTextColumn Header="Name" Width="*" IsReadOnly="True"
+                                      Binding="{Binding Name}">
+                    <DataGridTextColumn.ElementStyle>
+                      <Style TargetType="TextBlock">
+                        <Setter Property="VerticalAlignment" Value="Center" />
+                        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                        <Setter Property="FontWeight" Value="Medium" />
+                      </Style>
+                    </DataGridTextColumn.ElementStyle>
+                  </DataGridTextColumn>
+                  <!-- Side (inline edit) -->
+                  <DataGridTemplateColumn Header="Side" Width="110">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <ComboBox ItemsSource="{x:Static vm:MainViewModel.Sides}"
+                                  SelectedItem="{Binding Side, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  BorderThickness="0" Background="Transparent"
+                                  VerticalAlignment="Center" />
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <!-- Path (dimmed) -->
+                  <DataGridTextColumn Header="Path" Width="2*" IsReadOnly="True"
+                                      Binding="{Binding Path}">
+                    <DataGridTextColumn.ElementStyle>
+                      <Style TargetType="TextBlock">
+                        <Setter Property="VerticalAlignment" Value="Center" />
+                        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                        <Setter Property="FontSize" Value="12" />
+                      </Style>
+                    </DataGridTextColumn.ElementStyle>
+                  </DataGridTextColumn>
+                  <!-- Missing badge -->
+                  <DataGridTemplateColumn Header="" Width="80">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <Border CornerRadius="9" Padding="8,2" Background="#5A1F1F"
+                                HorizontalAlignment="Left" VerticalAlignment="Center"
+                                Visibility="{Binding Missing, Converter={StaticResource BoolToVis}}">
+                          <TextBlock Text="missing" FontSize="11" FontWeight="SemiBold"
+                                     Foreground="#FF6B6B" />
+                        </Border>
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                </DataGrid.Columns>
+              </DataGrid>
+            </Border>
           </Grid>
 
           <!-- ===== LOGS (placeholder, filled in step 3) ===== -->
