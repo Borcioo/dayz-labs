@@ -33,8 +33,13 @@ public partial class MainWindow : FluentWindow
         Closed += (_, _) => _vm.Dispose();
 
         // Select Dashboard on load so a panel is always visible; selecting the first
-        // NavTop item raises OnNavChanged, which calls ShowPage("dashboard").
-        Loaded += (_, _) => NavTop.SelectedIndex = 0;
+        // NavTop item raises OnNavChanged, which calls ShowPage("dashboard"). Also seed the
+        // Logs list-view row heights from the panes' initial IsExpanded state.
+        Loaded += (_, _) =>
+        {
+            NavTop.SelectedIndex = 0;
+            UpdateLogListRowHeights();
+        };
     }
 
     // --- Navigation: swap the visible content panel based on the selected rail item ---
@@ -60,6 +65,7 @@ public partial class MainWindow : FluentWindow
         PageSettings.Visibility = tag == "settings" ? Visibility.Visible : Visibility.Collapsed;
 
         // Refresh page-local state on show.
+        if (tag == "logs") UpdateLogListRowHeights();
         if (tag == "tools") RefreshToolsPage();
         if (tag == "settings") { LoadSettingsFields(); LoadParamsEditor(); }
     }
@@ -119,6 +125,26 @@ public partial class MainWindow : FluentWindow
     private void OnLogTextChanged(object sender, TextChangedEventArgs e)
     {
         if (sender is TextBox tb) tb.ScrollToEnd();
+    }
+
+    /// <summary>
+    /// List view (fit-to-window): recompute the four row heights so expanded panes share the
+    /// available page height equally (Star) and collapsed panes shrink to their header (Auto).
+    /// Wired to each CardExpander's Expanded/Collapsed events and called once after load / when
+    /// switching to list view so the initial layout is correct. No outer scroll — the grid
+    /// exactly fills PageLogs row 1; each pane's TextBox scrolls internally.
+    /// </summary>
+    private void OnLogExpanderToggled(object sender, RoutedEventArgs e) => UpdateLogListRowHeights();
+
+    private void UpdateLogListRowHeights()
+    {
+        if (LogsListGrid is null) return; // not yet templated
+
+        var star = new GridLength(1, GridUnitType.Star);
+        LogListRow0.Height = LogExp0.IsExpanded ? star : GridLength.Auto;
+        LogListRow1.Height = LogExp1.IsExpanded ? star : GridLength.Auto;
+        LogListRow2.Height = LogExp2.IsExpanded ? star : GridLength.Auto;
+        LogListRow3.Height = LogExp3.IsExpanded ? star : GridLength.Auto;
     }
 
     // Open-folder and clear are now VM commands (OpenLogFolderCommand/ClearLogCommand) bound
