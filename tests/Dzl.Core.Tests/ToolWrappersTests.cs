@@ -32,4 +32,31 @@ public class ToolWrappersTests
         plan.Should().Contain(i => i.Input.EndsWith("rock_co.png") && i.SuffixOk);
         plan.Should().Contain(i => i.Input.EndsWith("bad.png") && !i.SuffixOk);
     }
+
+    [Fact]
+    public void AddonBuilder_pack_args_assembled()
+    {
+        var args = AddonBuilder.PackArgs(@"P:\Mod\src", @"P:\out", clear: true, packOnly: true, prefix: "MyMod", signKey: null);
+        args.Should().ContainInOrder(@"P:\Mod\src", @"P:\out", "-clear", "-packonly", "-prefix=MyMod");
+        args.Should().NotContain(a => a.StartsWith("-sign"));
+    }
+
+    [Fact]
+    public void AddonBuilder_pack_args_include_sign_when_key_given()
+        => AddonBuilder.PackArgs(@"s", @"o", false, false, null, @"P:\keys\my.biprivatekey")
+            .Should().Contain("-sign=P:\\keys\\my.biprivatekey");
+
+    [Fact]
+    public void CfgConvert_unbinarize_args()
+        => CfgConvert.UnbinarizeArgs(@"P:\m\config.bin", @"P:\m\config.cpp")
+            .Should().ContainInOrder("-txt", "-dst", @"P:\m\config.cpp", @"P:\m\config.bin");
+
+    [Fact]
+    public void WorkDrive_is_mounted_checks_directory()
+    {
+        // a path that exists stands in for a mounted drive
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        WorkDrive.IsMounted(dir).Should().BeTrue();
+        WorkDrive.IsMounted(@"X:\definitely\not\there").Should().BeFalse();
+    }
 }
