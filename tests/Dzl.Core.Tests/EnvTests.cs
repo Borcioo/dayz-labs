@@ -47,4 +47,8 @@ public class EnvTests
         Dzl.Core.Env.SteamInstall.InstallUri(830640).Should().Be("steam://install/830640");
         Dzl.Core.Env.SteamInstall.DayZServer.Should().Be(223350);
     }
+
+    [Fact]
+    public void ValidateUri_builds_steam_validate_protocol() =>
+        Dzl.Core.Env.SteamInstall.ValidateUri(830640).Should().Be("steam://validate/830640");
 }

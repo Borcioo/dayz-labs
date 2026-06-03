@@ -323,6 +323,15 @@ public partial class SetupWizardWindow : FluentWindow
         RefreshWorkDrive();
     }
 
+    private void OnVerifyTools(object sender, RoutedEventArgs e)
+    {
+        var ok = SteamInstall.Validate(SteamInstall.DayZTools);
+        VerifyHint.Visibility = Visibility.Visible;
+        VerifyHint.Text = ok
+            ? "Steam is verifying DayZ Tools — let it finish, then click Mount again."
+            : "Couldn't launch Steam — is it installed and running?";
+    }
+
     // ---- Step 4: Game data ----------------------------------------------
 
     private async void OnExtractGameData(object sender, RoutedEventArgs e)
