@@ -3,6 +3,7 @@ using System.CommandLine.Invocation;
 using System.Text.Json;
 using Dzl.Core.App;
 using Dzl.Core.Config;
+using Dzl.Core.Ipc;
 using Dzl.Core.Launch;
 using Dzl.Core.Logs;
 
@@ -54,11 +55,11 @@ startCmd.SetHandler(ctx =>
     var mode = normal ? "normal" : "debug";
     var client = ctx.ParseResult.GetValueForOption(startClient);
     var dryRun = ctx.ParseResult.GetValueForOption(startDryRun);
-    var targets = new List<string> { "server" };
-    if (client) targets.Add("client");
-    foreach (var target in targets)
+    if (dryRun)
     {
-        if (dryRun)
+        var targets = new List<string> { "server" };
+        if (client) targets.Add("client");
+        foreach (var target in targets)
         {
             var exe = target == "server"
                 ? ProcessManager.ServerExe(cfg, mode)
@@ -66,12 +67,10 @@ startCmd.SetHandler(ctx =>
             var args = ArgvBuilder.Build(mode, target, cfg);
             Console.WriteLine($"{exe} {string.Join(' ', args)}");
         }
-        else
-        {
-            ProcessManager.Spawn(mode, target, cfg, "cli", configPath);
-            Console.WriteLine($"started {target} ({mode})");
-        }
+        return;
     }
+    new ControlPlane(configPath).StartJson(mode, client, "cli");
+    Console.WriteLine($"started server{(client ? " + client" : "")} ({mode})");
 });
 root.AddCommand(startCmd);
 
@@ -80,14 +79,10 @@ var stopClient = new Option<bool>("--client", "Also stop the client.");
 var stopCmd = new Command("stop", "Stop server (and client with --client).") { stopClient };
 stopCmd.SetHandler(ctx =>
 {
-    var (cfg, _, _, configPath) = Resolve(ctx);
-    ProcessManager.Stop("server", cfg, configPath);
-    Console.WriteLine("stopped server");
-    if (ctx.ParseResult.GetValueForOption(stopClient))
-    {
-        ProcessManager.Stop("client", cfg, configPath);
-        Console.WriteLine("stopped client");
-    }
+    var (_, _, _, configPath) = Resolve(ctx);
+    var client = ctx.ParseResult.GetValueForOption(stopClient);
+    new ControlPlane(configPath).StopJson(client);
+    Console.WriteLine($"stopped server{(client ? " + client" : "")}");
 });
 root.AddCommand(stopCmd);
 
@@ -97,9 +92,9 @@ var restartNormal = new Option<bool>("--normal", "Normal (release) mode.");
 var restartCmd = new Command("restart", "Restart the server.") { restartDebug, restartNormal };
 restartCmd.SetHandler(ctx =>
 {
-    var (cfg, _, _, configPath) = Resolve(ctx);
+    var (_, _, _, configPath) = Resolve(ctx);
     var mode = ctx.ParseResult.GetValueForOption(restartNormal) ? "normal" : "debug";
-    ProcessManager.Restart(mode, cfg, configPath, "cli");
+    new ControlPlane(configPath).RestartJson(mode, "cli");
     Console.WriteLine("restarted server");
 });
 root.AddCommand(restartCmd);
