@@ -374,7 +374,7 @@ public partial class SetupWizardWindow : FluentWindow
             : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "DayZ Projects");
     }
 
-    private void OnMountWorkDrive(object sender, RoutedEventArgs e)
+    private async void OnMountWorkDrive(object sender, RoutedEventArgs e)
     {
         var tools = ToolsPathBox.Text?.Trim() ?? "";
         if (tools.Length == 0)
@@ -387,20 +387,32 @@ public partial class SetupWizardWindow : FluentWindow
         try { Directory.CreateDirectory(workFolder); } catch { /* surfaced via mount failure */ }
 
         var exe = Path.Combine(tools, "Bin", "WorkDrive", "WorkDrive.exe");
-        // If P: is already mounted to a DIFFERENT folder, unmount first so we can re-point it
-        // (Mount() is a no-op when P: already exists).
-        if (WorkDrive.IsMounted() && !WorkDrive.SamePath(WorkDrive.MountTarget("P:"), workFolder))
-            WorkDrive.Unmount(exe);
-        WorkDrive.Mount(exe, workFolder);
-        RefreshWorkDrive();
+        await RunWorkDriveOp("Mounting…", () =>
+        {
+            // If P: is already mounted to a DIFFERENT folder, unmount first so we can re-point it.
+            if (WorkDrive.IsMounted() && !WorkDrive.SamePath(WorkDrive.MountTarget("P:"), workFolder))
+                WorkDrive.Unmount(exe);
+            WorkDrive.Mount(exe, workFolder);
+        });
     }
 
-    private void OnUnmountWorkDrive(object sender, RoutedEventArgs e)
+    private async void OnUnmountWorkDrive(object sender, RoutedEventArgs e)
     {
         var tools = ToolsPathBox.Text?.Trim() ?? "";
         var exe = Path.Combine(tools, "Bin", "WorkDrive", "WorkDrive.exe");
-        WorkDrive.Unmount(exe);
-        RefreshWorkDrive();
+        await RunWorkDriveOp("Unmounting…", () => WorkDrive.Unmount(exe));
+    }
+
+    // Run a WorkDrive.exe operation OFF the UI thread (its WaitForExit can block) so the window
+    // never freezes; disable the buttons + show a note while it runs, then refresh.
+    private async Task RunWorkDriveOp(string busyNote, Action op)
+    {
+        MountBtn.IsEnabled = false;
+        UnmountBtn.IsEnabled = false;
+        WorkDriveNote.Text = busyNote;
+        try { await Task.Run(op); }
+        catch (Exception ex) { WorkDriveNote.Text = "Work drive op failed: " + ex.Message; }
+        RefreshWorkDrive();   // re-evaluates state + re-enables buttons appropriately
     }
 
     private void OnVerifyTools(object sender, RoutedEventArgs e)

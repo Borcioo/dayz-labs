@@ -108,7 +108,7 @@ public static class WorkDrive
             }
 
             using var p = Process.Start(psi);
-            p?.WaitForExit();
+            p?.WaitForExit(30000);   // bounded: mount shouldn't take long; never block forever
         }
         catch
         {
@@ -135,7 +135,7 @@ public static class WorkDrive
                 psi.ArgumentList.Add("/D");
             }
             using var p = Process.Start(psi);
-            p?.WaitForExit();
+            p?.WaitForExit(30000);   // bounded: never freeze the caller
         }
         catch
         {
