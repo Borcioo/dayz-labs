@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Linq;
 
 namespace Dzl.Core.Tools;
 
@@ -16,6 +17,51 @@ public static class WorkDrive
 {
     // P: is the conventional DayZ work drive. Mounted iff the path exists.
     public static bool IsMounted(string drive = @"P:\") => Directory.Exists(drive);
+
+    // ---- mount-target verification --------------------------------------
+
+    // Strip the NT object-manager prefix from a QueryDosDevice result: "\??\D:\DayZWorkDrive" -> "D:\DayZWorkDrive".
+    // Returns null for empty/whitespace. Pure — TESTED.
+    public static string? ParseDosDeviceTarget(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        var s = raw.Trim();
+        if (s.StartsWith(@"\??\")) s = s.Substring(4);
+        return s.Length == 0 ? null : s;
+    }
+
+    // The real filesystem path a drive letter maps to (subst/mount), or null if unmapped.
+    // Uses QueryDosDevice. Windows-only / manual (not unit-tested).
+    public static string? MountTarget(string drive = "P:")
+    {
+        try
+        {
+            if (!OperatingSystem.IsWindows()) return null;
+            var name = drive.TrimEnd('\\', ':') + ":";   // normalize to "P:"
+            var buf = new char[1024];
+            uint n = QueryDosDevice(name, buf, (uint)buf.Length);
+            if (n == 0) return null;
+            // QueryDosDevice returns a double-null-terminated list; take the first entry.
+            var raw = new string(buf, 0, (int)n).Split('\0').FirstOrDefault(x => x.Length > 0);
+            return ParseDosDeviceTarget(raw);
+        }
+        catch { return null; }
+    }
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    private static extern uint QueryDosDevice(string lpDeviceName, char[] lpTargetPath, uint ucchMax);
+
+    // True if two paths point at the same folder (case-insensitive, trailing-slash-insensitive). Pure — TESTED.
+    public static bool SamePath(string? a, string? b)
+    {
+        if (string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b)) return false;
+        try
+        {
+            string N(string p) => Path.TrimEndingDirectorySeparator(Path.GetFullPath(p));
+            return string.Equals(N(a), N(b), StringComparison.OrdinalIgnoreCase);
+        }
+        catch { return false; }
+    }
 
     // ---- pure arg-builders (tested) -------------------------------------
 

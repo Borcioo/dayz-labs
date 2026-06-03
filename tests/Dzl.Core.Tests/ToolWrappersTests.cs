@@ -71,4 +71,18 @@ public class ToolWrappersTests
     [Fact]
     public void ExtractArgs_builds_game_and_dest() =>
         WorkDrive.ExtractArgs(@"E:\DayZ", @"P:\").Should().Equal("/extractGameData", @"E:\DayZ", @"P:\");
+
+    [Fact] public void ParseDosDeviceTarget_strips_nt_prefix() =>
+        WorkDrive.ParseDosDeviceTarget(@"\??\D:\DayZWorkDrive").Should().Be(@"D:\DayZWorkDrive");
+    [Fact] public void ParseDosDeviceTarget_passthrough_and_empty()
+    {
+        WorkDrive.ParseDosDeviceTarget(@"D:\X").Should().Be(@"D:\X");
+        WorkDrive.ParseDosDeviceTarget("").Should().BeNull();
+    }
+    [Fact] public void SamePath_ignores_case_and_trailing_slash()
+    {
+        WorkDrive.SamePath(@"D:\Work", @"d:\work\").Should().BeTrue();
+        WorkDrive.SamePath(@"D:\Work", @"D:\Other").Should().BeFalse();
+        WorkDrive.SamePath(@"D:\Work", null).Should().BeFalse();
+    }
 }

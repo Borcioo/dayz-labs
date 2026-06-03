@@ -298,11 +298,43 @@ public partial class SetupWizardWindow : FluentWindow
             ToolsRegStatus.Foreground = System.Windows.Media.Brushes.Goldenrod;
         }
 
+        // Does the chosen work folder exist on disk yet?
+        var workFolder = WorkFolderBox.Text?.Trim() ?? "";
+        bool folderExists = workFolder.Length > 0 && Directory.Exists(workFolder);
+        if (WorkFolderStatus is not null)
+        {
+            WorkFolderStatus.Text = folderExists ? "✓ folder exists" : "• will be created on Mount";
+            WorkFolderStatus.Foreground = folderExists
+                ? System.Windows.Media.Brushes.MediumSeaGreen
+                : (System.Windows.Media.Brush?)TryFindResource("TextFillColorTertiaryBrush")
+                    ?? System.Windows.Media.Brushes.Gray;
+        }
+
         bool mounted = WorkDrive.IsMounted();
-        WorkDriveStatus.Text = mounted ? "✓ P: is mounted" : "✗ P: is not mounted";
-        WorkDriveStatus.Foreground = mounted
-            ? System.Windows.Media.Brushes.MediumSeaGreen
-            : System.Windows.Media.Brushes.IndianRed;
+        if (!mounted)
+        {
+            WorkDriveStatus.Text = "✗ P: is not mounted";
+            WorkDriveStatus.Foreground = System.Windows.Media.Brushes.IndianRed;
+        }
+        else
+        {
+            var target = WorkDrive.MountTarget("P:");
+            if (string.IsNullOrWhiteSpace(target))
+            {
+                WorkDriveStatus.Text = "✓ P: is mounted (target unknown)";
+                WorkDriveStatus.Foreground = System.Windows.Media.Brushes.MediumSeaGreen;
+            }
+            else if (WorkDrive.SamePath(target, workFolder))
+            {
+                WorkDriveStatus.Text = $"✓ P: → {target} (matches work folder)";
+                WorkDriveStatus.Foreground = System.Windows.Media.Brushes.MediumSeaGreen;
+            }
+            else
+            {
+                WorkDriveStatus.Text = $"✓ P: → {target} (maps to a DIFFERENT folder than above)";
+                WorkDriveStatus.Foreground = System.Windows.Media.Brushes.Goldenrod;
+            }
+        }
 
         // Soft requirement: until Tools is initialized, gate Mount and make
         // "Open DayZ Tools" the highlighted primary action. Next stays enabled (step is optional).
@@ -317,6 +349,12 @@ public partial class SetupWizardWindow : FluentWindow
     }
 
     private void OnReCheckWorkDrive(object sender, RoutedEventArgs e) => RefreshWorkDrive();
+
+    private void OnWorkFolderChanged(object sender, TextChangedEventArgs e)
+    {
+        if (WorkDriveStatus is null) return; // pre-template
+        RefreshWorkDrive();
+    }
 
     /// <summary>Prefill for the work folder: settings.ini WorkDirPath, else ~\Documents\DayZ Projects.</summary>
     private string DefaultWorkFolder()
