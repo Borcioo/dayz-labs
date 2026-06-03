@@ -86,15 +86,15 @@ public sealed class LauncherService
         return new LogsResult(which, path, tail);
     }
 
-    public OpResult Start(string mode, bool client)
+    public OpResult Start(string mode, bool client, string source = "cli")
     {
         var (cfg, _, _) = Resolve();
-        ProcessManager.Spawn(mode, "server", cfg, "mcp", _configPath);
-        if (client) ProcessManager.Spawn(mode, "client", cfg, "mcp", _configPath);
+        ProcessManager.Spawn(mode, "server", cfg, source, _configPath);
+        if (client) ProcessManager.Spawn(mode, "client", cfg, source, _configPath);
         return new OpResult(true, $"started server{(client ? " + client" : "")} ({mode})");
     }
 
-    public OpResult Stop(bool client)
+    public OpResult Stop(bool client, string source = "cli")  // source unused by Stop; keep for symmetry
     {
         var (cfg, _, _) = Resolve();
         ProcessManager.Stop("server", cfg, _configPath);
@@ -102,10 +102,10 @@ public sealed class LauncherService
         return new OpResult(true, $"stopped server{(client ? " + client" : "")}");
     }
 
-    public OpResult Restart(string mode)
+    public OpResult Restart(string mode, string source = "cli")
     {
         var (cfg, _, _) = Resolve();
-        ProcessManager.Restart(mode, cfg, _configPath, "mcp");
+        ProcessManager.Restart(mode, cfg, _configPath, source);
         return new OpResult(true, $"restarted server ({mode})");
     }
 }

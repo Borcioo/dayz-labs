@@ -36,11 +36,11 @@ public static class DzlMcpTools
     [McpServerTool, Description("Start the server (and optionally the client). mode = debug|normal.")]
     public static string Start([Description("debug|normal")] string mode = "debug",
                                [Description("also start the client")] bool client = false)
-        => J(Svc().Start(mode, client));
+        => J(Svc().Start(mode, client, "mcp"));
 
     [McpServerTool, Description("Stop the server (and optionally the client).")]
-    public static string Stop([Description("also stop the client")] bool client = false) => J(Svc().Stop(client));
+    public static string Stop([Description("also stop the client")] bool client = false) => J(Svc().Stop(client, "mcp"));
 
     [McpServerTool, Description("Restart the server. mode = debug|normal.")]
-    public static string Restart([Description("debug|normal")] string mode = "debug") => J(Svc().Restart(mode));
+    public static string Restart([Description("debug|normal")] string mode = "debug") => J(Svc().Restart(mode, "mcp"));
 }
