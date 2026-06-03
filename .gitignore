@@ -1,0 +1,7 @@
+bin/
+obj/
+*.user
+.vs/
+[Tt]est[Rr]esults/
+artifacts/
+*.nupkg
