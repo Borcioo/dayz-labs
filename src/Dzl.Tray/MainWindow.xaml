@@ -28,6 +28,7 @@
       <BooleanToVisibilityConverter x:Key="BoolToVis" />
       <local:StringEqualsConverter x:Key="StringEquals" />
       <local:StringEqualsVisibilityConverter x:Key="StringEqualsVis" />
+      <local:StringMatchVisibilityConverter x:Key="StringMatchVis" />
 
       <!-- ===== Nav rail (plain-WPF ListBox; deterministic page switching) ===== -->
       <!-- A transparent ListBox whose items are pill-shaped rows with an icon + label.
@@ -273,21 +274,15 @@
                            VerticalAlignment="Center" />
         </StackPanel>
 
-        <!-- Profile selector -->
+        <!-- Profile quick switcher (full management lives on the Settings page) -->
         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
           <TextBlock Text="Profile" VerticalAlignment="Center" Margin="0,0,8,0"
                      Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-          <ComboBox Width="160" VerticalAlignment="Center"
+          <ComboBox Width="180" VerticalAlignment="Center"
+                    ToolTip="Switch active profile (manage profiles in Settings)"
                     ItemsSource="{Binding Presets}"
                     SelectedItem="{Binding SelectedPreset, Mode=TwoWay}"
                     SelectionChanged="OnProfileSelectionChanged" />
-          <ui:TextBox Width="130" Margin="8,0,0,0" VerticalAlignment="Center"
-                      PlaceholderText="new name…"
-                      Text="{Binding NewPresetName, UpdateSourceTrigger=PropertyChanged}"
-                      ToolTip="New preset name (blank = overwrite active)" />
-          <ui:Button Margin="8,0,0,0" VerticalAlignment="Center"
-                     Content="Save" Icon="{ui:SymbolIcon Save24}"
-                     Command="{Binding SavePresetCommand}" />
         </StackPanel>
 
         <!-- Status pills -->
@@ -943,6 +938,60 @@
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
               <StackPanel>
+
+                <!-- Profiles management -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Profiles" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,4" />
+                    <TextBlock FontSize="12" Margin="0,0,0,12"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="Saved snapshots of mods, mode and params. The active profile is marked." />
+
+                    <!-- Existing profiles list (active one is highlighted) -->
+                    <ListBox MaxHeight="160" Margin="0,0,0,12"
+                             Background="Transparent" BorderThickness="1"
+                             BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                             ItemsSource="{Binding Presets}"
+                             SelectedItem="{Binding SelectedPreset, Mode=TwoWay}">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="●" Margin="0,0,8,0" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource SystemAccentColorSecondaryBrush}">
+                              <TextBlock.Visibility>
+                                <MultiBinding Converter="{StaticResource StringMatchVis}">
+                                  <Binding />
+                                  <Binding Path="DataContext.ActivePreset"
+                                           RelativeSource="{RelativeSource AncestorType=ui:FluentWindow}" />
+                                </MultiBinding>
+                              </TextBlock.Visibility>
+                            </TextBlock>
+                            <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                          </StackPanel>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- Actions: switch / delete the selected profile -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                      <ui:Button Content="Switch to selected" Icon="{ui:SymbolIcon ArrowSwap24}"
+                                 Margin="0,0,8,0" Command="{Binding SwitchPresetCommand}" />
+                      <ui:Button Content="Delete" Appearance="Danger" Icon="{ui:SymbolIcon Delete24}"
+                                 Command="{Binding DeletePresetCommand}" />
+                    </StackPanel>
+
+                    <!-- Save current state as a (new or existing) profile -->
+                    <TextBlock Text="Save current state as" Style="{StaticResource FieldLabel}" />
+                    <StackPanel Orientation="Horizontal">
+                      <ui:TextBox Width="200" VerticalAlignment="Center"
+                                  PlaceholderText="profile name… (blank = active)"
+                                  Text="{Binding NewPresetName, UpdateSourceTrigger=PropertyChanged}" />
+                      <ui:Button Margin="8,0,0,0" VerticalAlignment="Center"
+                                 Content="Save as" Appearance="Primary" Icon="{ui:SymbolIcon Save24}"
+                                 Command="{Binding SavePresetCommand}" />
+                    </StackPanel>
+                  </StackPanel>
+                </ui:Card>
 
                 <!-- Paths -->
                 <ui:Card Margin="0,0,0,12" Padding="16">

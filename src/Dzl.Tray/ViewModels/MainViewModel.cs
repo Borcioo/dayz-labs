@@ -10,7 +10,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Dzl.Core.App;
 using Dzl.Core.Config;
-using Dzl.Core.Ipc;
 using Dzl.Core.Launch;
 using Dzl.Core.Logs;
 using Dzl.Core.Mods;
@@ -348,40 +347,56 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     // --- Presets -----------------------------------------------------------
+    //
+    // All preset ops run DIRECTLY against Profiles/Core (quick file I/O). The tray
+    // process is the IPC authority, so routing through ControlPlane/PipeClient here
+    // would block on a synchronous named-pipe round-trip to our OWN PipeServer and
+    // deadlock the UI thread. Never reintroduce a ControlPlane call in these paths.
+
+    /// <summary>Set true while <see cref="Reload"/> repopulates <see cref="Presets"/> so the
+    /// ComboBox's SelectionChanged doesn't fire a re-switch during programmatic refresh.</summary>
+    public bool SuppressPresetSwitch { get; private set; }
 
     [RelayCommand]
-    private void SwitchPreset()
-    {
-        var name = SelectedPreset;
-        if (string.IsNullOrEmpty(name) || name == ActivePreset) return;
-        try
-        {
-            new ControlPlane(_configPath).SetPresetJson(name);
-            Reload();
-        }
-        catch { /* ignore; status keeps polling */ }
-    }
+    private void SwitchPreset() => SwitchToPreset(SelectedPreset);
 
     [RelayCommand]
     private void SavePreset()
     {
         var name = string.IsNullOrWhiteSpace(NewPresetName) ? ActivePreset : NewPresetName.Trim();
         if (string.IsNullOrEmpty(name)) return;
-        new ControlPlane(_configPath).SavePresetJson(name);
+        // Make sure the live UI state (mods/order/mode) is in _cfg before snapshotting.
+        Persist();
+        Profiles.Save(_cfg, name, _configPath);
+        Profiles.SetActive(name, _configPath);
         NewPresetName = "";
         Reload();
     }
 
-    /// <summary>Switch to a named preset (used by the menu's per-preset items).</summary>
-    public void SwitchToPreset(string name)
+    /// <summary>Switch to a named preset (used by the top-bar combo and menu items).</summary>
+    public void SwitchToPreset(string? name)
     {
+        if (SuppressPresetSwitch) return;
         if (string.IsNullOrEmpty(name) || name == ActivePreset) return;
-        try
-        {
-            new ControlPlane(_configPath).SetPresetJson(name);
-            Reload();
-        }
-        catch { /* ignore; status keeps polling */ }
+        Profiles.SetActive(name, _configPath);
+        Reload();
+    }
+
+    /// <summary>Delete a preset (the top-bar combo's current selection if none given), with
+    /// confirmation. If it was active, clears the active marker so the default reseeds.</summary>
+    [RelayCommand]
+    private void DeletePreset(string? name)
+    {
+        name = string.IsNullOrWhiteSpace(name) ? SelectedPreset : name.Trim();
+        if (string.IsNullOrEmpty(name)) return;
+        var ok = System.Windows.MessageBox.Show(
+            $"Delete preset \"{name}\"? This cannot be undone.",
+            "Delete preset", System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning) == System.Windows.MessageBoxResult.Yes;
+        if (!ok) return;
+        Profiles.Delete(name, _configPath);
+        if (ActivePreset == name) Profiles.SetActive("", _configPath);
+        Reload();
     }
 
     // --- Params / Config dialogs (called from MainWindow menu handlers) ----
@@ -437,12 +452,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         ActivePreset = active;
         Mode = string.IsNullOrEmpty(cfg.Mode) ? "debug" : cfg.Mode;
         _suppressPersist = true;
+        SuppressPresetSwitch = true;
         try
         {
             LoadMods();
             LoadPresets();
         }
-        finally { _suppressPersist = false; }
+        finally
+        {
+            _suppressPersist = false;
+            SuppressPresetSwitch = false;
+        }
         RefreshPreview();
     }
 

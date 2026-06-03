@@ -33,3 +33,18 @@ public sealed class StringEqualsVisibilityConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
 }
+
+/// <summary>
+/// Multi-value converter: Visible when the two bound strings are equal, else Collapsed.
+/// Used to mark the active profile (item name vs. ActivePreset) in the Profiles list.
+/// </summary>
+public sealed class StringMatchVisibilityConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object? parameter, CultureInfo culture)
+        => values.Length == 2 && string.Equals(values[0] as string, values[1] as string, StringComparison.Ordinal)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
