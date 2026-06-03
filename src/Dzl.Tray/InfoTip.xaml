@@ -6,15 +6,19 @@
   <!-- Tiny inline ⓘ icon with a wrapped tooltip. Used to teach DayZ-modding
        concepts next to options across the UI. Text comes from the Text DP
        (usually a HelpText const). -->
+  <!-- Text is mirrored onto the icon's Tag (resolves in the main tree); the ToolTip
+       reads it via PlacementTarget.Tag, because a ToolTip lives in its own popup
+       namescope where ElementName/AncestorType=UserControl bindings don't resolve. -->
   <ui:SymbolIcon Symbol="Info24" FontSize="14"
                  Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                  Cursor="Help" VerticalAlignment="Center" Margin="6,0,0,0"
+                 Tag="{Binding Text, ElementName=Root}"
                  ToolTipService.InitialShowDelay="200"
                  ToolTipService.ShowDuration="60000">
     <ui:SymbolIcon.ToolTip>
       <ToolTip>
         <TextBlock MaxWidth="380" TextWrapping="Wrap"
-                   Text="{Binding Text, ElementName=Root}" />
+                   Text="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ToolTip}}" />
       </ToolTip>
     </ui:SymbolIcon.ToolTip>
   </ui:SymbolIcon>

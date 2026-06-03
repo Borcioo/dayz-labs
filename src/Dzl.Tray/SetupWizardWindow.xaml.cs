@@ -332,6 +332,18 @@ public partial class SetupWizardWindow : FluentWindow
             : "Couldn't launch Steam — is it installed and running?";
     }
 
+    private void OnOpenDayzTools(object sender, RoutedEventArgs e)
+    {
+        var tools = ToolsPathBox.Text?.Trim() ?? "";
+        var launcher = Dzl.Core.Tools.ToolCatalog.Find(tools, "launcher")
+                       ?? Dzl.Core.Tools.ToolCatalog.Find(tools, "workbench");
+        var ok = launcher is not null && Dzl.Core.Tools.ToolLauncher.Launch(launcher);
+        VerifyHint.Visibility = Visibility.Visible;
+        VerifyHint.Text = ok
+            ? "DayZ Tools launched — let it finish first-run setup, close it, then click Mount again."
+            : "Couldn't find DayZ Tools at that path. Set the DayZ Tools path on the Paths step first.";
+    }
+
     // ---- Step 4: Game data ----------------------------------------------
 
     private async void OnExtractGameData(object sender, RoutedEventArgs e)

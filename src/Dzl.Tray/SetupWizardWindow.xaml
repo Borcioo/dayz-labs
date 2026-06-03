@@ -251,14 +251,16 @@
             <StackPanel Orientation="Horizontal">
               <ui:Button x:Name="MountBtn" Content="Mount P: drive" Icon="{ui:SymbolIcon HardDrive24}"
                          Click="OnMountWorkDrive" HorizontalAlignment="Left" />
-              <ui:Button x:Name="VerifyToolsBtn" Content="Verify DayZ Tools (Steam)" Icon="{ui:SymbolIcon CheckmarkCircle24}"
+              <ui:Button x:Name="OpenToolsBtn" Content="Open DayZ Tools" Icon="{ui:SymbolIcon Toolbox24}"
+                         Click="OnOpenDayzTools" HorizontalAlignment="Left" Margin="8,0,0,0" />
+              <ui:Button x:Name="VerifyToolsBtn" Content="Verify (Steam)" Icon="{ui:SymbolIcon CheckmarkCircle24}"
                          Click="OnVerifyTools" HorizontalAlignment="Left" Margin="8,0,0,0" />
             </StackPanel>
             <TextBlock x:Name="VerifyHint" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap" Visibility="Collapsed"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             <TextBlock FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap" MaxWidth="620" HorizontalAlignment="Left"
                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                       Text="If WorkDrive says the install is corrupted, click 'Verify DayZ Tools (Steam)' to let Steam repair it (or launch DayZ Tools once from Steam to finish first-run setup), then Mount again." />
+                       Text="WorkDrive says 'install corrupted'? Most often DayZ Tools just needs its first-run setup: click 'Open DayZ Tools', let it launch once (it configures the work drive + registry), close it, then Mount again. If that fails, 'Verify (Steam)' repairs the install." />
             <TextBlock x:Name="WorkDriveNote" FontSize="12" Margin="0,12,0,0"
                        TextWrapping="Wrap"
                        Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
