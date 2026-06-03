@@ -247,12 +247,15 @@
             <TextBlock Text="This folder will be mounted as P:." FontSize="12" Margin="0,0,0,16"
                        Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
 
+            <TextBlock x:Name="ToolsRegStatus" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,8" />
             <TextBlock x:Name="WorkDriveStatus" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,12" />
             <StackPanel Orientation="Horizontal">
               <ui:Button x:Name="MountBtn" Content="Mount P: drive" Icon="{ui:SymbolIcon HardDrive24}"
                          Click="OnMountWorkDrive" HorizontalAlignment="Left" />
               <ui:Button x:Name="WdOpenToolsBtn" Content="Open DayZ Tools" Icon="{ui:SymbolIcon Toolbox24}"
                          Click="OnOpenToolsForWorkDrive" HorizontalAlignment="Left" Margin="8,0,0,0" />
+              <ui:Button x:Name="WdReCheckBtn" Content="Re-check" Icon="{ui:SymbolIcon ArrowClockwise24}"
+                         Click="OnReCheckWorkDrive" HorizontalAlignment="Left" Margin="8,0,0,0" />
               <ui:Button x:Name="VerifyToolsBtn" Content="Verify (Steam)" Icon="{ui:SymbolIcon CheckmarkCircle24}"
                          Click="OnVerifyTools" HorizontalAlignment="Left" Margin="8,0,0,0" />
             </StackPanel>

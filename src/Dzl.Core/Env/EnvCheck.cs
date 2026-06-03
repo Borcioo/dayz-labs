@@ -15,7 +15,8 @@ public static class EnvCheck
     /// any per-check exception is reported as a failed item with the message in Detail.
     /// </summary>
     /// <param name="workdriveMounted">Stub for the P: check; defaults to the real WorkDrive.IsMounted().</param>
-    public static List<CheckItem> Run(DzlConfig cfg, Func<bool>? workdriveMounted = null)
+    /// <param name="toolsRegistered">Stub for the DayZ Tools registry check; defaults to EnvDetect.ToolsRegistered().</param>
+    public static List<CheckItem> Run(DzlConfig cfg, Func<bool>? workdriveMounted = null, Func<bool>? toolsRegistered = null)
     {
         var items = new List<CheckItem>();
         Func<bool> isMounted = workdriveMounted ?? (() => WorkDrive.IsMounted());
@@ -52,6 +53,15 @@ public static class EnvCheck
             if (folderOk && wbOk) return (true, wb);
             if (folderOk) return (false, $"folder exists but Workbench missing: {Show(wb)}");
             return (false, $"not found: {Show(cfg.DayzToolsPath)}");
+        }));
+
+        // 4b. DayZ Tools initialized (Steam install-script wrote the registry config)
+        items.Add(Check("tools_registered", "DayZ Tools initialized", CheckSeverity.Warning, () =>
+        {
+            var ok = (toolsRegistered ?? EnvDetect.ToolsRegistered)();
+            return (ok, ok
+                ? "registry config present"
+                : "Not initialized — open DayZ Tools once via Steam so its install setup runs (writes the registry).");
         }));
 
         // 5. P: work drive

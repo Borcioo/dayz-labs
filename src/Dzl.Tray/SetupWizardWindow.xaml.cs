@@ -285,16 +285,38 @@ public partial class SetupWizardWindow : FluentWindow
 
     private void RefreshWorkDrive()
     {
+        bool registered = EnvDetect.ToolsRegistered();
+        if (registered)
+        {
+            ToolsRegStatus.Text = "✓ DayZ Tools initialized";
+            ToolsRegStatus.Foreground = System.Windows.Media.Brushes.MediumSeaGreen;
+        }
+        else
+        {
+            ToolsRegStatus.Text =
+                "⚠ DayZ Tools not initialized — open it once via Steam (writes the registry it needs), then Re-check.";
+            ToolsRegStatus.Foreground = System.Windows.Media.Brushes.Goldenrod;
+        }
+
         bool mounted = WorkDrive.IsMounted();
         WorkDriveStatus.Text = mounted ? "✓ P: is mounted" : "✗ P: is not mounted";
         WorkDriveStatus.Foreground = mounted
             ? System.Windows.Media.Brushes.MediumSeaGreen
             : System.Windows.Media.Brushes.IndianRed;
-        MountBtn.IsEnabled = !mounted;
+
+        // Soft requirement: until Tools is initialized, gate Mount and make
+        // "Open DayZ Tools" the highlighted primary action. Next stays enabled (step is optional).
+        MountBtn.IsEnabled = registered && !mounted;
+        WdOpenToolsBtn.Appearance = registered
+            ? Wpf.Ui.Controls.ControlAppearance.Secondary
+            : Wpf.Ui.Controls.ControlAppearance.Primary;
+
         WorkDriveNote.Text = string.IsNullOrWhiteSpace(ToolsPathBox.Text)
             ? "Set the DayZ Tools path on the Paths step to enable mounting."
             : @"Mounts via <Tools>\Bin\WorkDrive\WorkDrive.exe.";
     }
+
+    private void OnReCheckWorkDrive(object sender, RoutedEventArgs e) => RefreshWorkDrive();
 
     /// <summary>Prefill for the work folder: settings.ini WorkDirPath, else ~\Documents\DayZ Projects.</summary>
     private string DefaultWorkFolder()
@@ -330,6 +352,7 @@ public partial class SetupWizardWindow : FluentWindow
         VerifyHint.Text = ok
             ? "Steam is verifying DayZ Tools — let it finish, then click Mount again."
             : "Couldn't launch Steam — is it installed and running?";
+        RefreshWorkDrive();
     }
 
     private void OnOpenToolsForWorkDrive(object sender, RoutedEventArgs e)
@@ -340,8 +363,9 @@ public partial class SetupWizardWindow : FluentWindow
         var ok = SteamInstall.Run(SteamInstall.DayZTools);
         VerifyHint.Visibility = Visibility.Visible;
         VerifyHint.Text = ok
-            ? "Opening DayZ Tools via Steam — let it finish first-run setup, close it, then click Mount again."
+            ? "Opening DayZ Tools via Steam — let it finish first-run setup, close it, then click Re-check."
             : "Couldn't reach Steam — is it installed and running?";
+        RefreshWorkDrive();
     }
 
     // ---- Step 4: Game data ----------------------------------------------

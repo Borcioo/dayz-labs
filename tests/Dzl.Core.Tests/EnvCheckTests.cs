@@ -44,6 +44,14 @@ public class EnvCheckTests
     }
 
     [Fact]
+    public void Reports_tools_registered_from_injected_func()
+    {
+        var cfg = CfgIn(Directory.CreateTempSubdirectory().FullName);
+        EnvCheck.Run(cfg, () => true, () => false).Should().Contain(i => i.Key == "tools_registered" && !i.Ok);
+        EnvCheck.Run(cfg, () => true, () => true ).Should().Contain(i => i.Key == "tools_registered" && i.Ok);
+    }
+
+    [Fact]
     public void Run_never_throws_on_bad_paths()
     {
         var act = () => EnvCheck.Run(DzlConfig.Default() with { DayzPath = "", ScanRoots = new() { "" } }, () => false);

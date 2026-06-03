@@ -87,6 +87,22 @@ public static class EnvDetect
         return null;
     }
 
+    /// <summary>
+    /// True if DayZ Tools' registry config exists (HKCU\SOFTWARE\Bohemia Interactive\Dayz Tools
+    /// with a non-empty `path`), i.e. Steam's install script ran. WorkDrive needs this; when it's
+    /// missing WorkDrive reports "install corrupted". Windows-only / not unit-tested.
+    /// </summary>
+    public static bool ToolsRegistered()
+    {
+        try
+        {
+            if (!OperatingSystem.IsWindows()) return false;
+            using var k = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Bohemia Interactive\Dayz Tools");
+            return !string.IsNullOrWhiteSpace(k?.GetValue("path") as string);
+        }
+        catch { return false; }
+    }
+
     /// <summary>Steam install path from registry (Windows-only); null if not found.</summary>
     public static string? SteamPath()
     {
