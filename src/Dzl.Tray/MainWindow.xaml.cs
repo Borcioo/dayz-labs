@@ -91,6 +91,11 @@ public partial class MainWindow : FluentWindow
             ParamTarget.SelectedIndex = target == "client" ? 1 : 0; // 0=server, 1=client
             LoadParamsEditor();
         }
+
+        // Scroll the Params card into view. Layout/visibility just changed (page switch),
+        // so defer until after render or BringIntoView runs against stale layout.
+        Dispatcher.BeginInvoke(new Action(() => ParamsCard?.BringIntoView()),
+            System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     /// <summary>Select the NavTop rail item whose Tag matches (raises OnNavChanged).</summary>
