@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,8 +28,6 @@ namespace Dzl.Tray.ViewModels;
 /// </summary>
 public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
-    private const int MaxLogLines = 500;
-
     private readonly string _configPath;
     private readonly string _savePath;
     private readonly Dispatcher _dispatcher;
@@ -61,16 +60,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _modFilter = "";
     [ObservableProperty] private ModRowVm? _selectedMod;
 
-    [ObservableProperty] private string _scriptLog = "";
-    [ObservableProperty] private string _rptLog = "";
-    [ObservableProperty] private string _admLog = "";
-    [ObservableProperty] private string _clientLog = "";
+    // --- Logs page state --------------------------------------------------
+    // The four live log panes (script/rpt/adm/client) modeled as a reorderable collection
+    // so every view mode binds the same items. Order is presentation-only (not persisted).
+    public ObservableCollection<LogPaneVm> LogPanes { get; } = new();
 
-    // Resolved log file names (headers on each Logs pane). "(none)" when unresolved.
-    [ObservableProperty] private string _scriptLogPath = "(none)";
-    [ObservableProperty] private string _rptLogPath = "(none)";
-    [ObservableProperty] private string _admLogPath = "(none)";
-    [ObservableProperty] private string _clientLogPath = "(none)";
+    /// <summary>Active Logs layout: "grid" | "list" | "tabs" | "focus".</summary>
+    [ObservableProperty] private string _logsViewMode = "grid";
+
+    /// <summary>The pane shown in Focus mode (and a quick-jump in other modes).</summary>
+    [ObservableProperty] private LogPaneVm? _selectedLogPane;
+
+    /// <summary>gong-wpf-dragdrop drop handler for reordering <see cref="LogPanes"/>.</summary>
+    public LogsDropHandler LogsDropHandler { get; }
 
     public ObservableCollection<ModRowVm> Mods { get; } = new();
     public ObservableCollection<string> Presets { get; } = new();
@@ -115,6 +117,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         ModsView = CollectionViewSource.GetDefaultView(Mods);
         ModsView.Filter = FilterMod;
         ModsDropHandler = new ModsDropHandler(this);
+        LogsDropHandler = new LogsDropHandler(this);
+
+        LogPanes.Add(new LogPaneVm("script", "Script"));
+        LogPanes.Add(new LogPaneVm("rpt", "RPT"));
+        LogPanes.Add(new LogPaneVm("adm", "ADM"));
+        LogPanes.Add(new LogPaneVm("client", "Client"));
+        SelectedLogPane = LogPanes[0];
 
         LoadMods();
         LoadPresets();
@@ -442,63 +451,46 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void StartLogTails()
     {
         var paths = LogResolver.Resolve(_cfg.ProfilesPath, _cfg.ClientProfilesPath);
-        var script = paths.GetValueOrDefault("script");
-        var rpt = paths.GetValueOrDefault("rpt");
-        var adm = paths.GetValueOrDefault("adm");
-        var client = paths.GetValueOrDefault("client");
-        ScriptLogPath = NameOf(script);
-        RptLogPath = NameOf(rpt);
-        AdmLogPath = NameOf(adm);
-        ClientLogPath = NameOf(client);
-        Tail(script, s => ScriptLog = s, () => ScriptLog);
-        Tail(rpt, s => RptLog = s, () => RptLog);
-        Tail(adm, s => AdmLog = s, () => AdmLog);
-        Tail(client, s => ClientLog = s, () => ClientLog);
+        foreach (var pane in LogPanes)
+        {
+            var path = paths.GetValueOrDefault(pane.Key);
+            pane.Path = path;
+            pane.FileName = string.IsNullOrEmpty(path) ? "(none)" : Path.GetFileName(path);
+            Tail(pane, path);
+        }
     }
 
-    /// <summary>The four resolved log file paths (for "open in explorer"), or null.</summary>
-    public IReadOnlyDictionary<string, string?> ResolvedLogPaths() =>
-        LogResolver.Resolve(_cfg.ProfilesPath, _cfg.ClientProfilesPath);
-
-    private static string NameOf(string? path) =>
-        string.IsNullOrEmpty(path) ? "(none)" : Path.GetFileName(path);
-
-    private void Tail(string? path, Action<string> setter, Func<string> getter)
+    private void Tail(LogPaneVm pane, string? path)
     {
         if (string.IsNullOrEmpty(path)) return;
         // Seed with the existing tail so the pane isn't empty.
-        foreach (var line in LogTail.LastLines(path, 200)) Append(setter, getter, line);
-        _ = LogTail.Follow(path, line => _dispatcher.BeginInvoke(() => Append(setter, getter, line)), _cts.Token);
+        foreach (var line in LogTail.LastLines(path, 200)) pane.Append(line);
+        _ = LogTail.Follow(path, line => _dispatcher.BeginInvoke(() => pane.Append(line)), _cts.Token);
     }
 
-    private static void Append(Action<string> setter, Func<string> getter, string line)
+    /// <summary>Switch the Logs page layout (grid/list/tabs/focus).</summary>
+    [RelayCommand]
+    private void SetLogsView(string mode) => LogsViewMode = mode;
+
+    /// <summary>Open the folder containing a pane's resolved log file in Explorer.</summary>
+    [RelayCommand]
+    private void OpenLogFolder(LogPaneVm? pane)
     {
-        var text = getter();
-        text = text.Length == 0 ? line : text + "\n" + line;
-        // Cap to ~MaxLogLines to keep memory bounded.
-        var nl = CountLines(text);
-        if (nl > MaxLogLines)
+        var path = pane?.Path;
+        if (string.IsNullOrEmpty(path)) return;
+        var dir = Path.GetDirectoryName(path);
+        if (string.IsNullOrEmpty(dir)) return;
+        try
         {
-            var idx = 0;
-            var drop = nl - MaxLogLines;
-            for (int i = 0; i < drop; i++)
-            {
-                idx = text.IndexOf('\n', idx);
-                if (idx < 0) break;
-                idx++;
-            }
-            if (idx > 0) text = text[idx..];
+            Directory.CreateDirectory(dir);
+            Process.Start(new ProcessStartInfo("explorer.exe", dir) { UseShellExecute = true });
         }
-        setter(text);
+        catch { /* best-effort; ignore */ }
     }
 
-    private static int CountLines(string s)
-    {
-        if (s.Length == 0) return 0;
-        var n = 1;
-        foreach (var c in s) if (c == '\n') n++;
-        return n;
-    }
+    /// <summary>Clear a pane's in-memory view (the underlying file is untouched).</summary>
+    [RelayCommand]
+    private void ClearLog(LogPaneVm? pane) => pane?.Clear();
 
     // --- Tools page --------------------------------------------------------
 

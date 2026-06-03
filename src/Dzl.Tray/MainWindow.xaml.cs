@@ -80,33 +80,15 @@ public partial class MainWindow : FluentWindow
 
     // === LOGS page ========================================================
 
-    /// <summary>Auto-scroll a log pane to the end whenever new lines arrive.</summary>
+    /// <summary>Auto-scroll a log pane to the end whenever new lines arrive. Wired from the
+    /// log TextBox inside <c>LogPaneTemplate</c>, so it works in every view mode.</summary>
     private void OnLogTextChanged(object sender, TextChangedEventArgs e)
     {
         if (sender is TextBox tb) tb.ScrollToEnd();
     }
 
-    private void OnOpenLogFolder(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string key }) return;
-        var path = _vm.ResolvedLogPaths().GetValueOrDefault(key);
-        if (string.IsNullOrEmpty(path)) return;
-        var dir = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(dir)) OpenFolder(dir);
-    }
-
-    private void OnClearLogView(object sender, RoutedEventArgs e)
-    {
-        // Clear just the in-memory view (the underlying file is untouched).
-        if (sender is not FrameworkElement { Tag: string key }) return;
-        switch (key)
-        {
-            case "script": ScriptLogBox.Clear(); break;
-            case "rpt": RptLogBox.Clear(); break;
-            case "adm": AdmLogBox.Clear(); break;
-            case "client": ClientLogBox.Clear(); break;
-        }
-    }
+    // Open-folder and clear are now VM commands (OpenLogFolderCommand/ClearLogCommand) bound
+    // directly from LogPaneTemplate with the pane as CommandParameter.
 
     // === TOOLS page =======================================================
 
@@ -387,16 +369,5 @@ public partial class MainWindow : FluentWindow
         var dir = PickFolder();
         if (dir is null) return;
         if (FindName(parts[1]) is TextBox tb) tb.Text = dir;
-    }
-
-    private static void OpenFolder(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path)) return;
-        try
-        {
-            Directory.CreateDirectory(path);
-            Process.Start(new ProcessStartInfo("explorer.exe", path) { UseShellExecute = true });
-        }
-        catch { /* best-effort; ignore */ }
     }
 }

@@ -26,6 +26,8 @@
       <local:StatusDotConverter x:Key="StatusDotConverter" />
       <local:BoolToOpacityConverter x:Key="BoolToOpacity" />
       <BooleanToVisibilityConverter x:Key="BoolToVis" />
+      <local:StringEqualsConverter x:Key="StringEquals" />
+      <local:StringEqualsVisibilityConverter x:Key="StringEqualsVis" />
 
       <!-- ===== Nav rail (plain-WPF ListBox; deterministic page switching) ===== -->
       <!-- A transparent ListBox whose items are pill-shaped rows with an icon + label.
@@ -81,6 +83,78 @@
         <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
         <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
       </Style>
+
+      <!-- Segmented-control-style radio for the Logs view-mode selector. Looks like a flat
+           pill that fills with accent when checked. RadioButtons in one GroupName behave
+           as a mutually-exclusive segment group. -->
+      <Style x:Key="LogsViewSegment" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Padding" Value="10,5" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="GroupName" Value="LogsView" />
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="RadioButton">
+              <Border x:Name="Bd" CornerRadius="6" Padding="{TemplateBinding Padding}"
+                      Background="Transparent">
+                <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center" />
+              </Border>
+              <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                  <Setter TargetName="Bd" Property="Background" Value="#22FFFFFF" />
+                </Trigger>
+                <Trigger Property="IsChecked" Value="True">
+                  <Setter TargetName="Bd" Property="Background" Value="#332D7DD2" />
+                  <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                  <Setter Property="FontWeight" Value="SemiBold" />
+                </Trigger>
+              </ControlTemplate.Triggers>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+
+      <!-- One log pane: card with header (icon + Title + dimmed FileName + open/clear) and a
+           mono read-only TextBox body. Reused by all four Logs view modes (grid/list/tabs/
+           focus); the TextChanged autoscroll keeps the tail pinned to the bottom everywhere. -->
+      <DataTemplate x:Key="LogPaneTemplate">
+        <ui:Card Margin="3" Padding="12">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0" Margin="0,0,0,8">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:SymbolIcon Symbol="Document24" FontSize="16" Margin="0,0,8,0"
+                               Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <TextBlock Text="{Binding FileName}" FontSize="11" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open log folder"
+                           Padding="6" Margin="0,0,6,0"
+                           Command="{Binding DataContext.OpenLogFolderCommand, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}"
+                           CommandParameter="{Binding}" />
+                <ui:Button Icon="{ui:SymbolIcon Eraser24}" ToolTip="Clear view"
+                           Padding="6"
+                           Command="{Binding DataContext.ClearLogCommand, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}"
+                           CommandParameter="{Binding}" />
+              </StackPanel>
+            </Grid>
+            <TextBox Grid.Row="1" Text="{Binding Text, Mode=OneWay}"
+                     TextChanged="OnLogTextChanged"
+                     Style="{StaticResource LogTextBox}" />
+          </Grid>
+        </ui:Card>
+      </DataTemplate>
 
       <!-- Small read-only mono output area for Tools (pack/paa/unbinarize results). -->
       <Style x:Key="ToolOutputBox" TargetType="TextBox">
@@ -574,150 +648,122 @@
               <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <TextBlock Grid.Row="0" Text="Logs" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12" />
-
-            <!-- 2×2 grid of live log panes -->
-            <Grid Grid.Row="1">
-              <Grid.RowDefinitions>
-                <RowDefinition Height="*" />
-                <RowDefinition Height="*" />
-              </Grid.RowDefinitions>
+            <!-- Toolbar: title, view-mode segmented control, log selector -->
+            <Grid Grid.Row="0" Margin="0,0,0,12">
               <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
 
-              <!-- SCRIPT -->
-              <ui:Card Grid.Row="0" Grid.Column="0" Margin="0,0,6,6" Padding="12">
-                <Grid>
-                  <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                  </Grid.RowDefinitions>
-                  <Grid Grid.Row="0" Margin="0,0,0,8">
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="*" />
-                      <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                      <ui:SymbolIcon Symbol="Document24" FontSize="16" Margin="0,0,8,0"
-                                     Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
-                      <TextBlock Text="script" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
-                      <TextBlock Text="{Binding ScriptLogPath}" FontSize="11" VerticalAlignment="Center"
-                                 TextTrimming="CharacterEllipsis"
-                                 Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                      <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open log folder"
-                                 Padding="6" Margin="0,0,6,0" Tag="script" Click="OnOpenLogFolder" />
-                      <ui:Button Icon="{ui:SymbolIcon Eraser24}" ToolTip="Clear view"
-                                 Padding="6" Tag="script" Click="OnClearLogView" />
-                    </StackPanel>
-                  </Grid>
-                  <TextBox Grid.Row="1" x:Name="ScriptLogBox" Text="{Binding ScriptLog, Mode=OneWay}"
-                           TextChanged="OnLogTextChanged"
-                           Style="{StaticResource LogTextBox}" />
-                </Grid>
-              </ui:Card>
+              <TextBlock Grid.Column="0" Text="Logs" FontSize="20" FontWeight="SemiBold"
+                         VerticalAlignment="Center" />
 
-              <!-- RPT -->
-              <ui:Card Grid.Row="0" Grid.Column="1" Margin="6,0,0,6" Padding="12">
-                <Grid>
-                  <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                  </Grid.RowDefinitions>
-                  <Grid Grid.Row="0" Margin="0,0,0,8">
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="*" />
-                      <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                      <ui:SymbolIcon Symbol="Document24" FontSize="16" Margin="0,0,8,0"
-                                     Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
-                      <TextBlock Text="rpt" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
-                      <TextBlock Text="{Binding RptLogPath}" FontSize="11" VerticalAlignment="Center"
-                                 TextTrimming="CharacterEllipsis"
-                                 Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+              <!-- View-mode segmented control (grid/list/tabs/focus) -->
+              <Border Grid.Column="1" HorizontalAlignment="Left" Margin="20,0,0,0"
+                      CornerRadius="8" Padding="3"
+                      Background="{DynamicResource ControlFillColorDefaultBrush}"
+                      BorderThickness="1"
+                      BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+                <StackPanel Orientation="Horizontal">
+                  <RadioButton Style="{StaticResource LogsViewSegment}"
+                               IsChecked="{Binding LogsViewMode, Converter={StaticResource StringEquals}, ConverterParameter=grid, Mode=OneWay}"
+                               Command="{Binding SetLogsViewCommand}" CommandParameter="grid">
+                    <StackPanel Orientation="Horizontal">
+                      <ui:SymbolIcon Symbol="Grid24" FontSize="14" Margin="0,0,6,0" />
+                      <TextBlock Text="Grid" />
                     </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                      <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open log folder"
-                                 Padding="6" Margin="0,0,6,0" Tag="rpt" Click="OnOpenLogFolder" />
-                      <ui:Button Icon="{ui:SymbolIcon Eraser24}" ToolTip="Clear view"
-                                 Padding="6" Tag="rpt" Click="OnClearLogView" />
+                  </RadioButton>
+                  <RadioButton Style="{StaticResource LogsViewSegment}"
+                               IsChecked="{Binding LogsViewMode, Converter={StaticResource StringEquals}, ConverterParameter=list, Mode=OneWay}"
+                               Command="{Binding SetLogsViewCommand}" CommandParameter="list">
+                    <StackPanel Orientation="Horizontal">
+                      <ui:SymbolIcon Symbol="AppsList24" FontSize="14" Margin="0,0,6,0" />
+                      <TextBlock Text="List" />
                     </StackPanel>
-                  </Grid>
-                  <TextBox Grid.Row="1" x:Name="RptLogBox" Text="{Binding RptLog, Mode=OneWay}"
-                           TextChanged="OnLogTextChanged"
-                           Style="{StaticResource LogTextBox}" />
-                </Grid>
-              </ui:Card>
+                  </RadioButton>
+                  <RadioButton Style="{StaticResource LogsViewSegment}"
+                               IsChecked="{Binding LogsViewMode, Converter={StaticResource StringEquals}, ConverterParameter=tabs, Mode=OneWay}"
+                               Command="{Binding SetLogsViewCommand}" CommandParameter="tabs">
+                    <StackPanel Orientation="Horizontal">
+                      <ui:SymbolIcon Symbol="TabDesktop24" FontSize="14" Margin="0,0,6,0" />
+                      <TextBlock Text="Tabs" />
+                    </StackPanel>
+                  </RadioButton>
+                  <RadioButton Style="{StaticResource LogsViewSegment}"
+                               IsChecked="{Binding LogsViewMode, Converter={StaticResource StringEquals}, ConverterParameter=focus, Mode=OneWay}"
+                               Command="{Binding SetLogsViewCommand}" CommandParameter="focus">
+                    <StackPanel Orientation="Horizontal">
+                      <ui:SymbolIcon Symbol="Maximize24" FontSize="14" Margin="0,0,6,0" />
+                      <TextBlock Text="Focus" />
+                    </StackPanel>
+                  </RadioButton>
+                </StackPanel>
+              </Border>
 
-              <!-- ADM -->
-              <ui:Card Grid.Row="1" Grid.Column="0" Margin="0,6,6,0" Padding="12">
-                <Grid>
-                  <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                  </Grid.RowDefinitions>
-                  <Grid Grid.Row="0" Margin="0,0,0,8">
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="*" />
-                      <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                      <ui:SymbolIcon Symbol="Document24" FontSize="16" Margin="0,0,8,0"
-                                     Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
-                      <TextBlock Text="adm" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
-                      <TextBlock Text="{Binding AdmLogPath}" FontSize="11" VerticalAlignment="Center"
-                                 TextTrimming="CharacterEllipsis"
-                                 Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                      <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open log folder"
-                                 Padding="6" Margin="0,0,6,0" Tag="adm" Click="OnOpenLogFolder" />
-                      <ui:Button Icon="{ui:SymbolIcon Eraser24}" ToolTip="Clear view"
-                                 Padding="6" Tag="adm" Click="OnClearLogView" />
-                    </StackPanel>
-                  </Grid>
-                  <TextBox Grid.Row="1" x:Name="AdmLogBox" Text="{Binding AdmLog, Mode=OneWay}"
-                           TextChanged="OnLogTextChanged"
-                           Style="{StaticResource LogTextBox}" />
-                </Grid>
-              </ui:Card>
+              <!-- Log selector (drives Focus mode; quick-jump elsewhere) -->
+              <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Show:" VerticalAlignment="Center" Margin="0,0,8,0"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <ComboBox MinWidth="120"
+                          ItemsSource="{Binding LogPanes}"
+                          DisplayMemberPath="Title"
+                          SelectedItem="{Binding SelectedLogPane, Mode=TwoWay}" />
+              </StackPanel>
+            </Grid>
 
-              <!-- CLIENT -->
-              <ui:Card Grid.Row="1" Grid.Column="1" Margin="6,6,0,0" Padding="12">
-                <Grid>
-                  <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                  </Grid.RowDefinitions>
-                  <Grid Grid.Row="0" Margin="0,0,0,8">
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="*" />
-                      <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                      <ui:SymbolIcon Symbol="Document24" FontSize="16" Margin="0,0,8,0"
-                                     Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
-                      <TextBlock Text="client" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
-                      <TextBlock Text="{Binding ClientLogPath}" FontSize="11" VerticalAlignment="Center"
-                                 TextTrimming="CharacterEllipsis"
-                                 Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                      <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open log folder"
-                                 Padding="6" Margin="0,0,6,0" Tag="client" Click="OnOpenLogFolder" />
-                      <ui:Button Icon="{ui:SymbolIcon Eraser24}" ToolTip="Clear view"
-                                 Padding="6" Tag="client" Click="OnClearLogView" />
-                    </StackPanel>
-                  </Grid>
-                  <TextBox Grid.Row="1" x:Name="ClientLogBox" Text="{Binding ClientLog, Mode=OneWay}"
-                           TextChanged="OnLogTextChanged"
-                           Style="{StaticResource LogTextBox}" />
-                </Grid>
-              </ui:Card>
+            <Grid Grid.Row="1">
+              <!-- GRID: 2-up UniformGrid, drag-reorderable -->
+              <ItemsControl ItemsSource="{Binding LogPanes}"
+                            ItemTemplate="{StaticResource LogPaneTemplate}"
+                            Visibility="{Binding LogsViewMode, Converter={StaticResource StringEqualsVis}, ConverterParameter=grid}"
+                            dd:DragDrop.IsDragSource="True"
+                            dd:DragDrop.IsDropTarget="True"
+                            dd:DragDrop.DropHandler="{Binding LogsDropHandler}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <UniformGrid Columns="2" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+              </ItemsControl>
+
+              <!-- LIST: vertical stack of full-width panes, drag-reorderable, scrollable -->
+              <ScrollViewer VerticalScrollBarVisibility="Auto"
+                            Visibility="{Binding LogsViewMode, Converter={StaticResource StringEqualsVis}, ConverterParameter=list}">
+                <ItemsControl ItemsSource="{Binding LogPanes}"
+                              dd:DragDrop.IsDragSource="True"
+                              dd:DragDrop.IsDropTarget="True"
+                              dd:DragDrop.DropHandler="{Binding LogsDropHandler}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Orientation="Vertical" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <ContentControl Content="{Binding}" MinHeight="220"
+                                      ContentTemplate="{StaticResource LogPaneTemplate}" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+
+              <!-- TABS: one tab per pane -->
+              <TabControl ItemsSource="{Binding LogPanes}"
+                          Background="Transparent" BorderThickness="0"
+                          ContentTemplate="{StaticResource LogPaneTemplate}"
+                          Visibility="{Binding LogsViewMode, Converter={StaticResource StringEqualsVis}, ConverterParameter=tabs}">
+                <TabControl.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Title}" />
+                  </DataTemplate>
+                </TabControl.ItemTemplate>
+              </TabControl>
+
+              <!-- FOCUS: one big pane chosen by the selector -->
+              <ContentControl Content="{Binding SelectedLogPane}"
+                              ContentTemplate="{StaticResource LogPaneTemplate}"
+                              Visibility="{Binding LogsViewMode, Converter={StaticResource StringEqualsVis}, ConverterParameter=focus}" />
             </Grid>
           </Grid>
 

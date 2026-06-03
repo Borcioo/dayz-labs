@@ -1,0 +1,35 @@
+using System.Globalization;
+using System.Windows;
+using System.Windows.Data;
+
+namespace Dzl.Tray;
+
+/// <summary>
+/// Compares the bound string to the ConverterParameter. Returns <c>true</c> when equal
+/// (for RadioButton/ToggleButton IsChecked), used to drive the Logs view-mode selector.
+/// </summary>
+public sealed class StringEqualsConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object? parameter, CultureInfo culture)
+        => string.Equals(value as string, parameter as string, StringComparison.Ordinal);
+
+    public object? ConvertBack(object value, Type targetType, object? parameter, CultureInfo culture)
+        // Only the checked radio reports back; map it to its mode string.
+        => value is true ? parameter : Binding.DoNothing;
+}
+
+/// <summary>
+/// Like <see cref="StringEqualsConverter"/> but yields a <see cref="Visibility"/>:
+/// Visible when the bound string equals the parameter, else Collapsed. Drives which of the
+/// four Logs layout hosts is shown.
+/// </summary>
+public sealed class StringEqualsVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object? parameter, CultureInfo culture)
+        => string.Equals(value as string, parameter as string, StringComparison.Ordinal)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+    public object ConvertBack(object value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
