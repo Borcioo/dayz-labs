@@ -54,6 +54,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<ModRowVm> Mods { get; } = new();
     public ObservableCollection<string> Presets { get; } = new();
 
+    /// <summary>Snapshot of the current config (for the Settings/Params dialogs).</summary>
+    public DzlConfig Cfg => _cfg;
+
+    /// <summary>The active profile save path (where edits persist).</summary>
+    public string SavePath => _savePath;
+
+    /// <summary>The config path the window/VM resolved (for opening folders, presets).</summary>
+    public string ConfigFilePath => _configPath;
+
     /// <summary>Filtered view over <see cref="Mods"/> bound by the ListBox; reorder
     /// commands still mutate the underlying collection.</summary>
     public ICollectionView ModsView { get; }
@@ -295,7 +304,65 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Reload();
     }
 
-    private void Reload()
+    /// <summary>Switch to a named preset (used by the menu's per-preset items).</summary>
+    public void SwitchToPreset(string name)
+    {
+        if (string.IsNullOrEmpty(name) || name == ActivePreset) return;
+        try
+        {
+            new ControlPlane(_configPath).SetPresetJson(name);
+            Reload();
+        }
+        catch { /* ignore; status keeps polling */ }
+    }
+
+    // --- Params / Config dialogs (called from MainWindow menu handlers) ----
+
+    /// <summary>Current per-target/per-mode params list for the given target.</summary>
+    public List<string> CurrentParams(string target, string mode) =>
+        (target, mode) switch
+        {
+            ("server", "normal") => _cfg.ServerParamsNormal,
+            ("server", _) => _cfg.ServerParamsDebug,
+            ("client", "normal") => _cfg.ClientParamsNormal,
+            _ => _cfg.ClientParamsDebug,
+        };
+
+    /// <summary>Defaults for the given target/mode params list (for the Reset button).</summary>
+    public static List<string> DefaultParams(string target, string mode)
+    {
+        var d = DzlConfig.Default();
+        return (target, mode) switch
+        {
+            ("server", "normal") => d.ServerParamsNormal,
+            ("server", _) => d.ServerParamsDebug,
+            ("client", "normal") => d.ClientParamsNormal,
+            _ => d.ClientParamsDebug,
+        };
+    }
+
+    /// <summary>Apply an edited params list to the matching cfg slot, save, refresh preview.</summary>
+    public void ApplyParams(string target, string mode, List<string> values)
+    {
+        _cfg = (target, mode) switch
+        {
+            ("server", "normal") => _cfg with { ServerParamsNormal = values },
+            ("server", _) => _cfg with { ServerParamsDebug = values },
+            ("client", "normal") => _cfg with { ClientParamsNormal = values },
+            _ => _cfg with { ClientParamsDebug = values },
+        };
+        ConfigStore.Save(_cfg, _savePath);
+        RefreshPreview();
+    }
+
+    /// <summary>Apply an edited config (from the Settings dialog): save then full reload.</summary>
+    public void ApplyConfig(DzlConfig edited)
+    {
+        ConfigStore.Save(edited, _savePath);
+        Reload();
+    }
+
+    public void Reload()
     {
         var (cfg, _, active) = Profiles.ResolveActive(_configPath);
         _cfg = cfg;

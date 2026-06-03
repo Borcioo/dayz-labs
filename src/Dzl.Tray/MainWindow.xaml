@@ -8,6 +8,27 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
         Title="dzl" Height="640" Width="1040">
+  <DockPanel>
+    <Menu DockPanel.Dock="Top">
+        <MenuItem Header="_Config">
+            <MenuItem Header="Settings…" Click="OnConfigSettings" />
+        </MenuItem>
+        <MenuItem Header="_Params">
+            <MenuItem Header="Server params…" Click="OnServerParams" />
+            <MenuItem Header="Client params…" Click="OnClientParams" />
+        </MenuItem>
+        <MenuItem Header="P_rofiles" x:Name="ProfilesMenu" SubmenuOpened="OnProfilesMenuOpened" />
+        <MenuItem Header="_Tools" x:Name="ToolsMenu" SubmenuOpened="OnToolsMenuOpened" />
+        <MenuItem Header="_Open">
+            <MenuItem Header="Config folder"   Click="OnOpenConfigFolder" />
+            <MenuItem Header="Server profiles"  Click="OnOpenServerProfiles" />
+            <MenuItem Header="Client profiles"  Click="OnOpenClientProfiles" />
+            <MenuItem Header="DayZ install"     Click="OnOpenDayzInstall" />
+        </MenuItem>
+        <MenuItem Header="_Rescan mods" Command="{Binding RescanCommand}" />
+        <MenuItem Header="{Binding Mode, StringFormat='_Mode: {0}'}" Click="OnToggleMode" />
+    </Menu>
+
     <Grid Margin="8">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="380" />
@@ -141,4 +162,5 @@
             </StackPanel>
         </DockPanel>
     </Grid>
+  </DockPanel>
 </Window>
