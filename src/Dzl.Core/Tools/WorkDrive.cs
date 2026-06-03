@@ -90,25 +90,16 @@ public static class WorkDrive
             if (!string.IsNullOrWhiteSpace(source))
                 Directory.CreateDirectory(source);
 
-            ProcessStartInfo psi;
+            // WorkDrive.exe must run ELEVATED to actually map the drive + set its mounted flag
+            // (so DayZ Tools recognizes it). Steam/DayZ Tools launch it as admin; we do the same
+            // via the runas verb (UAC prompt). subst is only a last-resort fallback when the exe
+            // is missing — note the tools won't see a plain subst as their work drive.
             if (File.Exists(exePath))
-            {
-                psi = new ProcessStartInfo(exePath) { UseShellExecute = false, CreateNoWindow = true };
-                foreach (var a in MountArgs(source)) psi.ArgumentList.Add(a);
-            }
+                RunElevated(exePath, MountArgs(source), 60000);
             else if (!string.IsNullOrWhiteSpace(source))
-            {
-                psi = new ProcessStartInfo("subst") { UseShellExecute = false, CreateNoWindow = true };
-                psi.ArgumentList.Add(drive);
-                psi.ArgumentList.Add(source);
-            }
+                RunSubst(drive, source);
             else
-            {
-                return false; // no exe and nothing to subst
-            }
-
-            using var p = Process.Start(psi);
-            p?.WaitForExit(30000);   // bounded: mount shouldn't take long; never block forever
+                return false;
         }
         catch
         {
@@ -122,20 +113,16 @@ public static class WorkDrive
     {
         try
         {
-            ProcessStartInfo psi;
             if (File.Exists(exePath))
-            {
-                psi = new ProcessStartInfo(exePath) { UseShellExecute = false, CreateNoWindow = true };
-                psi.ArgumentList.Add("/Dismount");
-            }
+                RunElevated(exePath, new[] { "/Dismount" }, 30000);   // elevated, like the mount
             else
             {
-                psi = new ProcessStartInfo("subst") { UseShellExecute = false, CreateNoWindow = true };
+                var psi = new ProcessStartInfo("subst") { UseShellExecute = false, CreateNoWindow = true };
                 psi.ArgumentList.Add(drive);
                 psi.ArgumentList.Add("/D");
+                using var p = Process.Start(psi);
+                p?.WaitForExit(30000);
             }
-            using var p = Process.Start(psi);
-            p?.WaitForExit(30000);   // bounded: never freeze the caller
         }
         catch
         {
@@ -151,28 +138,34 @@ public static class WorkDrive
     public static (bool ok, string output) ExtractGameData(string exePath, string gamePath, string dest)
     {
         if (!File.Exists(exePath)) return (false, "");
+        // Elevated (like mount) — WorkDrive needs admin. UseShellExecute=true means we can't
+        // capture stdout, so the caller verifies success by checking P:\ on disk afterwards.
+        var code = RunElevated(exePath, ExtractArgs(gamePath, dest), 20 * 60 * 1000);  // up to 20 min
+        return (code == 0, "");
+    }
+
+    // Run WorkDrive.exe elevated (UAC via the runas verb). Returns the exit code, or null if it
+    // couldn't start / the user declined the UAC prompt / it didn't exit within the timeout.
+    private static int? RunElevated(string exePath, IEnumerable<string> args, int timeoutMs)
+    {
         try
         {
-            var psi = new ProcessStartInfo(exePath)
-            {
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            };
-            foreach (var a in ExtractArgs(gamePath, dest)) psi.ArgumentList.Add(a);
-
+            var psi = new ProcessStartInfo(exePath) { UseShellExecute = true, Verb = "runas" };
+            foreach (var a in args) psi.ArgumentList.Add(a);
             using var p = Process.Start(psi);
-            if (p is null) return (false, "");
-            string stdout = p.StandardOutput.ReadToEnd();
-            string stderr = p.StandardError.ReadToEnd();
-            p.WaitForExit();
-            var output = string.Concat(stdout, stderr).Trim();
-            return (p.ExitCode == 0, output);
+            if (p is null) return null;
+            return p.WaitForExit(timeoutMs) ? p.ExitCode : (int?)null;
         }
-        catch
-        {
-            return (false, "");
-        }
+        catch (System.ComponentModel.Win32Exception) { return null; }  // UAC declined (1223) or shell error
+        catch { return null; }
+    }
+
+    private static void RunSubst(string drive, string source)
+    {
+        var psi = new ProcessStartInfo("subst") { UseShellExecute = false, CreateNoWindow = true };
+        psi.ArgumentList.Add(drive);
+        psi.ArgumentList.Add(source);
+        using var p = Process.Start(psi);
+        p?.WaitForExit(30000);
     }
 }
