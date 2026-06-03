@@ -43,6 +43,19 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // Never hard-crash on an unhandled UI exception: log it + show it, keep running.
+        DispatcherUnhandledException += (_, ex) =>
+        {
+            LogCrash(ex.Exception);
+            MessageBox.Show(ex.Exception.Message, "dzl — something went wrong",
+                            MessageBoxButton.OK, MessageBoxImage.Error);
+            ex.Handled = true;
+        };
+        AppDomain.CurrentDomain.UnhandledException += (_, ex) =>
+        {
+            if (ex.ExceptionObject is Exception x) LogCrash(x);
+        };
+
         // Apply the dark Fluent theme app-wide (matches ThemesDictionary Theme="Dark").
         ApplicationThemeManager.Apply(ApplicationTheme.Dark);
 
@@ -75,6 +88,17 @@ public partial class App : Application
         }
 
         _tray = new TrayIcon(configPath);
+    }
+
+    private static void LogCrash(Exception ex)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(ConfigPath())!;
+            Directory.CreateDirectory(dir);
+            File.AppendAllText(Path.Combine(dir, "crash.log"), $"{DateTime.Now:O}  {ex}\n\n");
+        }
+        catch { /* logging must never throw */ }
     }
 
     protected override void OnExit(ExitEventArgs e)

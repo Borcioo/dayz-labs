@@ -61,7 +61,9 @@ public static class EnvDetect
         foreach (var lib in libraries)
         {
             var candidate = Path.Combine(lib, "steamapps", "common", relFolder);
-            if (Directory.Exists(candidate)) return candidate;
+            // Steam's libraryfolders.vdf can yield forward-slash roots; normalize so the
+            // path uses consistent backslashes (a mixed path also crashes OpenFolderDialog).
+            if (Directory.Exists(candidate)) return Path.GetFullPath(candidate);
         }
         return null;
     }

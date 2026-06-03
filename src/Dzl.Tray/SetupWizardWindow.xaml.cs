@@ -505,11 +505,24 @@ public partial class SetupWizardWindow : FluentWindow
     private void OnBrowseFolder(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string name }) return;
-        var dlg = new OpenFolderDialog();
-        var current = (FindName(name) as TextBox)?.Text?.Trim();
-        if (!string.IsNullOrEmpty(current) && Directory.Exists(current))
-            dlg.InitialDirectory = current;
-        if (dlg.ShowDialog(this) == true && FindName(name) is TextBox tb)
-            tb.Text = dlg.FolderName;
+        try
+        {
+            var dlg = new OpenFolderDialog();
+            var current = (FindName(name) as TextBox)?.Text?.Trim();
+            if (!string.IsNullOrEmpty(current))
+            {
+                // OpenFolderDialog throws on a mixed/forward-slash InitialDirectory — normalize.
+                try { current = Path.GetFullPath(current); } catch { current = null; }
+                if (!string.IsNullOrEmpty(current) && Directory.Exists(current))
+                    dlg.InitialDirectory = current;
+            }
+            if (dlg.ShowDialog(this) == true && FindName(name) is TextBox tb)
+                tb.Text = dlg.FolderName;
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show("Couldn't open the folder picker:\n" + ex.Message, "dzl",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+        }
     }
 }

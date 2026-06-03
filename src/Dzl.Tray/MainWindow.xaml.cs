@@ -397,14 +397,26 @@ public partial class MainWindow : FluentWindow
         return string.IsNullOrEmpty(p) ? _vm.Cfg.DayzPath : p;
     }
 
+    // A normalized, existing directory safe to hand to a dialog's InitialDirectory
+    // (forward-slash / mixed-separator paths crash OpenFolderDialog/OpenFileDialog). "" = use default.
+    private static string SafeInitialDir(params string?[] candidates)
+    {
+        foreach (var c in candidates)
+        {
+            if (string.IsNullOrWhiteSpace(c)) continue;
+            try { var full = Path.GetFullPath(c); if (Directory.Exists(full)) return full; }
+            catch { /* skip bad path */ }
+        }
+        return "";
+    }
+
     // Mission folder picker → write a rel-or-abs path (relative to DayzPath when under it).
     private void OnBrowseMission(object sender, RoutedEventArgs e)
     {
         var dayz = CurrentDayzPath();
-        var mpmissions = Path.Combine(dayz, "mpmissions");
         var dlg = new OpenFolderDialog
         {
-            InitialDirectory = Directory.Exists(mpmissions) ? mpmissions : dayz,
+            InitialDirectory = SafeInitialDir(Path.Combine(dayz, "mpmissions"), dayz),
         };
         if (dlg.ShowDialog(this) == true)
             CfgMission.Text = RelOrAbs(dlg.FolderName, dayz);
@@ -417,7 +429,7 @@ public partial class MainWindow : FluentWindow
         var dlg = new OpenFileDialog
         {
             Filter = "Server config (*.cfg)|*.cfg|All files (*.*)|*.*",
-            InitialDirectory = dayz,
+            InitialDirectory = SafeInitialDir(dayz),
         };
         if (dlg.ShowDialog(this) == true)
             CfgConfigName.Text = RelOrAbs(dlg.FileName, dayz);
