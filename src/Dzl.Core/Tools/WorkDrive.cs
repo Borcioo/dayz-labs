@@ -100,12 +100,11 @@ public static class WorkDrive
             if (!string.IsNullOrWhiteSpace(source))
                 Directory.CreateDirectory(source);
 
-            // WorkDrive.exe must run ELEVATED to actually map the drive + set its mounted flag
-            // (so DayZ Tools recognizes it). Steam/DayZ Tools launch it as admin; we do the same
-            // via the runas verb (UAC prompt). subst is only a last-resort fallback when the exe
-            // is missing — note the tools won't see a plain subst as their work drive.
+            // Run WorkDrive.exe /Mount [source] in the user session so the resulting P: is visible
+            // here and in Explorer (NOT runas — that mounts in a separate admin session). subst is
+            // a last-resort fallback when the exe is missing (DayZ Tools won't see a plain subst).
             if (File.Exists(exePath))
-                RunElevated(exePath, MountArgs(source), 60000);
+                RunWorkDrive(exePath, MountArgs(source), 60000);
             else if (!string.IsNullOrWhiteSpace(source))
                 RunSubst(drive, source);
             else
@@ -122,7 +121,7 @@ public static class WorkDrive
     public static void Unmount(string exePath, string drive = "P:")
     {
         // 1) DayZ Tools' own dismount (elevated), if the exe is there.
-        try { if (File.Exists(exePath)) RunElevated(exePath, new[] { "/Dismount" }, 30000); }
+        try { if (File.Exists(exePath)) RunWorkDrive(exePath, new[] { "/Dismount" }, 30000); }
         catch { /* best-effort */ }
         // 2) ALWAYS also clear a plain subst — an earlier (pre-elevation) fallback may have left a
         //    `subst P: <dir>` that WorkDrive /Dismount doesn't remove and that DayZ Tools ignores.
@@ -147,25 +146,31 @@ public static class WorkDrive
     public static (bool ok, string output) ExtractGameData(string exePath, string gamePath, string dest)
     {
         if (!File.Exists(exePath)) return (false, "");
-        // Elevated (like mount) — WorkDrive needs admin. UseShellExecute=true means we can't
-        // capture stdout, so the caller verifies success by checking P:\ on disk afterwards.
-        var code = RunElevated(exePath, ExtractArgs(gamePath, dest), 20 * 60 * 1000);  // up to 20 min
+        // Same user session as mount; caller also verifies success by checking P:\ on disk after.
+        var code = RunWorkDrive(exePath, ExtractArgs(gamePath, dest), 20 * 60 * 1000);  // up to 20 min
         return (code == 0, "");
     }
 
-    // Run WorkDrive.exe elevated (UAC via the runas verb). Returns the exit code, or null if it
-    // couldn't start / the user declined the UAC prompt / it didn't exit within the timeout.
-    private static int? RunElevated(string exePath, IEnumerable<string> args, int timeoutMs)
+    // Run WorkDrive.exe IN THE SAME session (no runas). WorkDrive has no requireAdministrator
+    // manifest, so a normal launch maps P: into the user session where Explorer + this app can see
+    // it. Launching it elevated (runas) mounts P: in a separate admin session that the user session
+    // can't see — which is exactly the "shows mounted but no P:" bug. Returns the exit code, or null
+    // if it couldn't start / didn't exit within the timeout.
+    private static int? RunWorkDrive(string exePath, IEnumerable<string> args, int timeoutMs)
     {
         try
         {
-            var psi = new ProcessStartInfo(exePath) { UseShellExecute = true, Verb = "runas" };
+            var psi = new ProcessStartInfo(exePath)
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WorkingDirectory = Path.GetDirectoryName(exePath) ?? "",
+            };
             foreach (var a in args) psi.ArgumentList.Add(a);
             using var p = Process.Start(psi);
             if (p is null) return null;
             return p.WaitForExit(timeoutMs) ? p.ExitCode : (int?)null;
         }
-        catch (System.ComponentModel.Win32Exception) { return null; }  // UAC declined (1223) or shell error
         catch { return null; }
     }
 
