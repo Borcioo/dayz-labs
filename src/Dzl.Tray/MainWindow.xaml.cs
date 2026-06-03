@@ -230,6 +230,7 @@ public partial class MainWindow : FluentWindow
         CfgConfigName.Text = c.ConfigName;
         CfgConnectIp.Text = c.ConnectIp;
         CfgScanRoots.Text = string.Join("\n", c.ScanRoots);
+        CfgEnableAutomationServer.IsChecked = c.EnableAutomationServer;
         ConfigError.Visibility = Visibility.Collapsed;
     }
 
@@ -264,6 +265,7 @@ public partial class MainWindow : FluentWindow
             ConfigName = CfgConfigName.Text.Trim(),
             ConnectIp = CfgConnectIp.Text.Trim(),
             ScanRoots = roots,
+            EnableAutomationServer = CfgEnableAutomationServer.IsChecked == true,
         };
         _vm.ApplyConfig(edited);
         LoadSettingsFields();

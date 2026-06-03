@@ -1098,6 +1098,17 @@
                   </StackPanel>
                 </ui:Card>
 
+                <!-- Automation -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Automation" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <ui:ToggleSwitch x:Name="CfgEnableAutomationServer"
+                                     Content="Enable automation server (MCP / CLI control)" />
+                    <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" FontSize="12" Opacity="0.7"
+                               Text="Lets the dzl CLI and the Claude MCP integration start/stop/inspect this server. Off = no background pipe. Takes effect on next launch." />
+                  </StackPanel>
+                </ui:Card>
+
                 <!-- Save config -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
                   <ui:Button Content="Save config" Appearance="Primary" Icon="{ui:SymbolIcon Save24}"

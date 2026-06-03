@@ -49,9 +49,12 @@ public partial class App : Application
         var configPath = ConfigPath();
         Profiles.EnsureDefault(configPath);
 
-        // Host the IPC server in the background; tray becomes the live authority.
+        // Host the IPC server in the background ONLY when automation is enabled; the tray
+        // becomes the live authority for CLI/MCP. Off (default) = no background pipe listener.
         _cts = new CancellationTokenSource();
-        _ = new PipeServer(() => new LauncherService(configPath)).RunAsync(_cts.Token);
+        var (cfg, _, _) = Profiles.ResolveActive(configPath);
+        if (cfg.EnableAutomationServer)
+            _ = new PipeServer(() => new LauncherService(configPath)).RunAsync(_cts.Token);
 
         _tray = new TrayIcon(configPath);
     }

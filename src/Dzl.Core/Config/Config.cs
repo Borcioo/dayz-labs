@@ -26,6 +26,13 @@ public sealed record DzlConfig
     public List<string> ClientParamsDebug { get; init; } = new() { "-window", "-nosplash", "-filePatching", "-doLogs", "-scriptDebug=true" };
     public List<string> ClientParamsNormal { get; init; } = new() { "-window", "-nosplash" };
 
+    /// <summary>
+    /// When true the tray hosts the named-pipe automation server so the dzl CLI and the
+    /// Claude MCP integration can drive this process. Off by default (opt-in); when off no
+    /// background pipe listener is started. .NET-only field (snake_case: enable_automation_server).
+    /// </summary>
+    public bool EnableAutomationServer { get; init; } = false;
+
     public static DzlConfig Default() => new();
 }
 
