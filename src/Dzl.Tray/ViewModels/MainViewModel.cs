@@ -76,6 +76,22 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<ModRowVm> Mods { get; } = new();
     public ObservableCollection<string> Presets { get; } = new();
 
+    /// <summary>Enabled mods that run on the SERVER (side in {both, server}), formatted as the
+    /// mod Name with a "(side)" suffix when the side isn't "both" (e.g. "@Admin (server)").
+    /// Drives the Dashboard left column's active-mods card. Refreshed by <see cref="RefreshActiveMods"/>.</summary>
+    public ObservableCollection<string> ServerMods { get; } = new();
+
+    /// <summary>Enabled mods that run on the CLIENT (side in {both, client}), formatted as the
+    /// mod Name with a "(side)" suffix when the side isn't "both" (e.g. "@UI (client)").
+    /// Drives the Dashboard right column's active-mods card. Refreshed by <see cref="RefreshActiveMods"/>.</summary>
+    public ObservableCollection<string> ClientMods { get; } = new();
+
+    /// <summary>Count of <see cref="ServerMods"/> (for the "Active mods (N)" header).</summary>
+    public int ServerModsCount => ServerMods.Count;
+
+    /// <summary>Count of <see cref="ClientMods"/> (for the "Active mods (N)" header).</summary>
+    public int ClientModsCount => ClientMods.Count;
+
     /// <summary>Allowed values for the inline Side combo column (both|server|client).</summary>
     public static IReadOnlyList<string> Sides { get; } = new[] { "both", "server", "client" };
 
@@ -213,6 +229,31 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         ServerArgv = ProcessManager.ServerExe(_cfg, Mode) + " " + string.Join(" ", ArgvBuilder.Build(Mode, "server", _cfg));
         ClientArgv = ProcessManager.ClientExe(_cfg, Mode) + " " + string.Join(" ", ArgvBuilder.Build(Mode, "client", _cfg));
+        RefreshActiveMods();
+    }
+
+    /// <summary>Rebuild the per-target active-mod lists from the live <see cref="Mods"/> rows
+    /// (enabled + side). Server runs side in {both, server}; client runs side in {both, client}.
+    /// A "(side)" suffix is appended when the side isn't "both". Clears+repopulates on the UI thread.</summary>
+    private void RefreshActiveMods()
+    {
+        void Rebuild()
+        {
+            ServerMods.Clear();
+            ClientMods.Clear();
+            foreach (var m in Mods)
+            {
+                if (!m.Enabled) continue;
+                var label = m.Side == "both" ? m.Name : $"{m.Name} ({m.Side})";
+                if (m.Side is "both" or "server") ServerMods.Add(label);
+                if (m.Side is "both" or "client") ClientMods.Add(label);
+            }
+            OnPropertyChanged(nameof(ServerModsCount));
+            OnPropertyChanged(nameof(ClientModsCount));
+        }
+
+        if (_dispatcher.CheckAccess()) Rebuild();
+        else _dispatcher.BeginInvoke(Rebuild);
     }
 
     // --- Mod filter --------------------------------------------------------

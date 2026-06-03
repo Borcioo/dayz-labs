@@ -64,6 +64,40 @@ public partial class MainWindow : FluentWindow
         if (tag == "settings") { LoadSettingsFields(); LoadParamsEditor(); }
     }
 
+    // --- Dashboard shortcut handlers --------------------------------------
+
+    /// <summary>"Edit mods" shortcut → select the Mods rail item (Tag=="mods"), which
+    /// raises OnNavChanged → ShowPage("mods").</summary>
+    private void OnEditMods(object sender, RoutedEventArgs e) => SelectNavTop("mods");
+
+    /// <summary>"Edit params" shortcut → navigate to Settings and pre-select the params
+    /// target (Server/Client) for the column whose button was clicked (Tag).</summary>
+    private void OnEditParams(object sender, RoutedEventArgs e)
+    {
+        // Navigate to Settings (NavBottom holds the Settings item; selecting it raises
+        // OnNavChanged → ShowPage("settings"), which also loads the params editor).
+        if (NavBottom.Items.Count > 0) NavBottom.SelectedIndex = 0;
+
+        // Pre-select the params Target combo for the clicked column, then reload the editor.
+        var target = (sender as FrameworkElement)?.Tag as string;
+        if (ParamTarget is not null && target is "server" or "client")
+        {
+            ParamTarget.SelectedIndex = target == "client" ? 1 : 0; // 0=server, 1=client
+            LoadParamsEditor();
+        }
+    }
+
+    /// <summary>Select the NavTop rail item whose Tag matches (raises OnNavChanged).</summary>
+    private void SelectNavTop(string tag)
+    {
+        foreach (var obj in NavTop.Items)
+            if (obj is ListBoxItem { Tag: string t } item && t == tag)
+            {
+                NavTop.SelectedItem = item;
+                return;
+            }
+    }
+
     // --- Top action bar handlers ------------------------------------------
 
     private void OnModeToggleClick(object sender, RoutedEventArgs e)

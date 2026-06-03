@@ -384,15 +384,16 @@
       <!-- Content host: five panels, one visible at a time (toggled in OnNavChanged → ShowPage). -->
       <Grid Grid.Column="1" Margin="16">
 
-          <!-- ===== DASHBOARD ===== -->
+          <!-- ===== DASHBOARD =====
+               Two target-scoped columns: LEFT = everything SERVER, RIGHT = everything CLIENT.
+               Each column stacks control card → launch command → active mods → edit shortcuts. -->
           <Grid x:Name="PageDashboard">
             <Grid.RowDefinitions>
-              <RowDefinition Height="Auto" />
-              <RowDefinition Height="Auto" />
-              <RowDefinition Height="*" />
+              <RowDefinition Height="Auto" />  <!-- summary strip -->
+              <RowDefinition Height="*" />     <!-- two columns -->
             </Grid.RowDefinitions>
 
-            <!-- Summary strip -->
+            <!-- Compact summary strip: mode / port / active profile -->
             <ui:Card Grid.Row="0" Margin="0,0,0,12" Padding="16,12">
               <StackPanel Orientation="Horizontal">
                 <StackPanel Margin="0,0,32,0">
@@ -413,97 +414,204 @@
               </StackPanel>
             </ui:Card>
 
-            <!-- Server + Client control cards -->
-            <Grid Grid.Row="1" Margin="0,0,0,12">
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-              </Grid.ColumnDefinitions>
-
-              <!-- SERVER card -->
-              <ui:Card Grid.Column="0" Margin="0,0,6,0" Padding="16">
-                <StackPanel>
-                  <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                    <ui:SymbolIcon Symbol="Server24" FontSize="20" Margin="0,0,8,0" VerticalAlignment="Center" />
-                    <TextBlock Text="Server" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    <Border CornerRadius="10" Padding="8,2" Margin="12,0,0,0" VerticalAlignment="Center"
-                            Background="{DynamicResource ControlFillColorDefaultBrush}">
-                      <TextBlock Text="{Binding ServerStatus}" FontSize="11"
-                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                    </Border>
-                  </StackPanel>
-                  <StackPanel Orientation="Horizontal">
-                    <ui:Button Content="Start" Appearance="Success" Icon="{ui:SymbolIcon Play24}"
-                               MinWidth="90" Margin="0,0,8,0" Command="{Binding StartServerCommand}" />
-                    <ui:Button Content="Stop" Appearance="Danger" Icon="{ui:SymbolIcon Stop24}"
-                               MinWidth="90" Margin="0,0,8,0" Command="{Binding StopServerCommand}" />
-                    <ui:Button Content="Restart" Icon="{ui:SymbolIcon ArrowClockwise24}"
-                               MinWidth="90" Command="{Binding RestartServerCommand}" />
-                  </StackPanel>
-                </StackPanel>
-              </ui:Card>
-
-              <!-- CLIENT card -->
-              <ui:Card Grid.Column="1" Margin="6,0,0,0" Padding="16">
-                <StackPanel>
-                  <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                    <ui:SymbolIcon Symbol="Desktop24" FontSize="20" Margin="0,0,8,0" VerticalAlignment="Center" />
-                    <TextBlock Text="Client" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    <Border CornerRadius="10" Padding="8,2" Margin="12,0,0,0" VerticalAlignment="Center"
-                            Background="{DynamicResource ControlFillColorDefaultBrush}">
-                      <TextBlock Text="{Binding ClientStatus}" FontSize="11"
-                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                    </Border>
-                  </StackPanel>
-                  <StackPanel Orientation="Horizontal">
-                    <ui:Button Content="Start" Appearance="Success" Icon="{ui:SymbolIcon Play24}"
-                               MinWidth="90" Margin="0,0,8,0" Command="{Binding StartClientCommand}" />
-                    <ui:Button Content="Stop" Appearance="Danger" Icon="{ui:SymbolIcon Stop24}"
-                               MinWidth="90" Margin="0,0,8,0" Command="{Binding StopClientCommand}" />
-                    <ui:Button Content="Restart" Icon="{ui:SymbolIcon ArrowClockwise24}"
-                               MinWidth="90" Command="{Binding RestartClientCommand}" />
-                  </StackPanel>
-                </StackPanel>
-              </ui:Card>
-            </Grid>
-
-            <!-- Launch command preview -->
-            <ui:Card Grid.Row="2" Padding="16">
+            <!-- Two columns (server | client). Scrolls if the stacks get tall. -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
               <Grid>
-                <Grid.RowDefinitions>
-                  <RowDefinition Height="Auto" />
-                  <RowDefinition Height="Auto" />
-                  <RowDefinition Height="*" />
-                  <RowDefinition Height="Auto" />
-                  <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Text="Launch command" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="16" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Row="1" Text="SERVER" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                <Border Grid.Row="2" CornerRadius="4" Padding="10" Margin="0,0,0,12"
-                        Background="{DynamicResource ControlFillColorDefaultBrush}">
-                  <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="120">
-                    <TextBox Text="{Binding ServerArgv, Mode=OneWay}" IsReadOnly="True"
-                             BorderThickness="0" Background="Transparent"
-                             FontFamily="Cascadia Mono, Consolas" FontSize="12"
-                             TextWrapping="Wrap" />
-                  </ScrollViewer>
-                </Border>
+                <!-- ===== LEFT: SERVER ===== -->
+                <StackPanel Grid.Column="0" VerticalAlignment="Top">
+                  <!-- Control card -->
+                  <ui:Card Margin="0,0,0,12" Padding="16">
+                    <StackPanel>
+                      <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <ui:SymbolIcon Symbol="Server24" FontSize="20" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Server" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <Border CornerRadius="10" Padding="8,2" Margin="12,0,0,0" VerticalAlignment="Center"
+                                Background="{DynamicResource ControlFillColorDefaultBrush}">
+                          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse Width="9" Height="9" Margin="0,0,6,0" VerticalAlignment="Center"
+                                     Fill="{Binding ServerUp, Converter={StaticResource StatusDotConverter}}" />
+                            <TextBlock Text="{Binding ServerStatus}" FontSize="11" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                          </StackPanel>
+                        </Border>
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal">
+                        <ui:Button Content="Start" Appearance="Success" Icon="{ui:SymbolIcon Play24}"
+                                   MinWidth="90" Margin="0,0,8,0" Command="{Binding StartServerCommand}" />
+                        <ui:Button Content="Stop" Appearance="Danger" Icon="{ui:SymbolIcon Stop24}"
+                                   MinWidth="90" Margin="0,0,8,0" Command="{Binding StopServerCommand}" />
+                        <ui:Button Content="Restart" Icon="{ui:SymbolIcon ArrowClockwise24}"
+                                   MinWidth="90" Command="{Binding RestartServerCommand}" />
+                      </StackPanel>
+                    </StackPanel>
+                  </ui:Card>
 
-                <TextBlock Grid.Row="3" Text="CLIENT" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                <Border Grid.Row="4" CornerRadius="4" Padding="10"
-                        Background="{DynamicResource ControlFillColorDefaultBrush}">
-                  <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="120">
-                    <TextBox Text="{Binding ClientArgv, Mode=OneWay}" IsReadOnly="True"
-                             BorderThickness="0" Background="Transparent"
-                             FontFamily="Cascadia Mono, Consolas" FontSize="12"
-                             TextWrapping="Wrap" />
-                  </ScrollViewer>
-                </Border>
+                  <!-- Launch command card -->
+                  <ui:Card Margin="0,0,0,12" Padding="16">
+                    <StackPanel>
+                      <TextBlock Text="Launch command" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8" />
+                      <Border CornerRadius="4" Padding="10"
+                              Background="{DynamicResource ControlFillColorDefaultBrush}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="140">
+                          <TextBox Text="{Binding ServerArgv, Mode=OneWay}" IsReadOnly="True"
+                                   BorderThickness="0" Background="Transparent"
+                                   FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                                   TextWrapping="Wrap" />
+                        </ScrollViewer>
+                      </Border>
+                    </StackPanel>
+                  </ui:Card>
+
+                  <!-- Active mods card -->
+                  <ui:Card Margin="0,0,0,12" Padding="16">
+                    <StackPanel>
+                      <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="Active mods" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding ServerModsCount, StringFormat=' ({0})'}" FontSize="14"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                      </StackPanel>
+                      <Border CornerRadius="4" Padding="4"
+                              Background="{DynamicResource ControlFillColorDefaultBrush}">
+                        <Grid>
+                          <TextBlock Text="(none enabled)" Margin="8,6" FontSize="12"
+                                     Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                            <TextBlock.Style>
+                              <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding ServerModsCount}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </TextBlock.Style>
+                          </TextBlock>
+                          <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="200">
+                            <ItemsControl ItemsSource="{Binding ServerMods}">
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                  <TextBlock Text="{Binding}" Margin="8,3" FontSize="13"
+                                             TextTrimming="CharacterEllipsis" />
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                          </ScrollViewer>
+                        </Grid>
+                      </Border>
+                    </StackPanel>
+                  </ui:Card>
+
+                  <!-- Shortcuts -->
+                  <StackPanel Orientation="Horizontal">
+                    <ui:Button Content="Edit mods" Icon="{ui:SymbolIcon Apps24}"
+                               Margin="0,0,8,0" Click="OnEditMods" />
+                    <ui:Button Content="Edit params" Icon="{ui:SymbolIcon Settings24}"
+                               Tag="server" Click="OnEditParams" />
+                  </StackPanel>
+                </StackPanel>
+
+                <!-- ===== RIGHT: CLIENT ===== -->
+                <StackPanel Grid.Column="2" VerticalAlignment="Top">
+                  <!-- Control card -->
+                  <ui:Card Margin="0,0,0,12" Padding="16">
+                    <StackPanel>
+                      <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <ui:SymbolIcon Symbol="Desktop24" FontSize="20" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Client" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <Border CornerRadius="10" Padding="8,2" Margin="12,0,0,0" VerticalAlignment="Center"
+                                Background="{DynamicResource ControlFillColorDefaultBrush}">
+                          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse Width="9" Height="9" Margin="0,0,6,0" VerticalAlignment="Center"
+                                     Fill="{Binding ClientUp, Converter={StaticResource StatusDotConverter}}" />
+                            <TextBlock Text="{Binding ClientStatus}" FontSize="11" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                          </StackPanel>
+                        </Border>
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal">
+                        <ui:Button Content="Start" Appearance="Success" Icon="{ui:SymbolIcon Play24}"
+                                   MinWidth="90" Margin="0,0,8,0" Command="{Binding StartClientCommand}" />
+                        <ui:Button Content="Stop" Appearance="Danger" Icon="{ui:SymbolIcon Stop24}"
+                                   MinWidth="90" Margin="0,0,8,0" Command="{Binding StopClientCommand}" />
+                        <ui:Button Content="Restart" Icon="{ui:SymbolIcon ArrowClockwise24}"
+                                   MinWidth="90" Command="{Binding RestartClientCommand}" />
+                      </StackPanel>
+                    </StackPanel>
+                  </ui:Card>
+
+                  <!-- Launch command card -->
+                  <ui:Card Margin="0,0,0,12" Padding="16">
+                    <StackPanel>
+                      <TextBlock Text="Launch command" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8" />
+                      <Border CornerRadius="4" Padding="10"
+                              Background="{DynamicResource ControlFillColorDefaultBrush}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="140">
+                          <TextBox Text="{Binding ClientArgv, Mode=OneWay}" IsReadOnly="True"
+                                   BorderThickness="0" Background="Transparent"
+                                   FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                                   TextWrapping="Wrap" />
+                        </ScrollViewer>
+                      </Border>
+                    </StackPanel>
+                  </ui:Card>
+
+                  <!-- Active mods card -->
+                  <ui:Card Margin="0,0,0,12" Padding="16">
+                    <StackPanel>
+                      <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="Active mods" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding ClientModsCount, StringFormat=' ({0})'}" FontSize="14"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                      </StackPanel>
+                      <Border CornerRadius="4" Padding="4"
+                              Background="{DynamicResource ControlFillColorDefaultBrush}">
+                        <Grid>
+                          <TextBlock Text="(none enabled)" Margin="8,6" FontSize="12"
+                                     Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                            <TextBlock.Style>
+                              <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding ClientModsCount}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </TextBlock.Style>
+                          </TextBlock>
+                          <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="200">
+                            <ItemsControl ItemsSource="{Binding ClientMods}">
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                  <TextBlock Text="{Binding}" Margin="8,3" FontSize="13"
+                                             TextTrimming="CharacterEllipsis" />
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                          </ScrollViewer>
+                        </Grid>
+                      </Border>
+                    </StackPanel>
+                  </ui:Card>
+
+                  <!-- Shortcuts -->
+                  <StackPanel Orientation="Horizontal">
+                    <ui:Button Content="Edit mods" Icon="{ui:SymbolIcon Apps24}"
+                               Margin="0,0,8,0" Click="OnEditMods" />
+                    <ui:Button Content="Edit params" Icon="{ui:SymbolIcon Settings24}"
+                               Tag="client" Click="OnEditParams" />
+                  </StackPanel>
+                </StackPanel>
               </Grid>
-            </ui:Card>
+            </ScrollViewer>
           </Grid>
 
           <!-- ===== MODS ===== -->
