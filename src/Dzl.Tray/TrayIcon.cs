@@ -1,0 +1,184 @@
+using System.Diagnostics;
+using System.Drawing;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Threading;
+using Dzl.Core.Ipc;
+using Dzl.Core.Launch;
+using H.NotifyIcon;
+
+namespace Dzl.Tray;
+
+/// <summary>
+/// Wraps an H.NotifyIcon <see cref="TaskbarIcon"/>: a context menu wired to
+/// <see cref="ControlPlane"/> and a 1.5s status poll that recolours the icon and
+/// tooltip based on whether the server is live in the launcher state file.
+/// </summary>
+public sealed class TrayIcon : IDisposable
+{
+    private readonly string _configPath;
+    private readonly string _configDir;
+    private readonly TaskbarIcon _icon;
+    private readonly DispatcherTimer _timer;
+
+    // Runtime-generated fallback icons (no packaged .ico asset).
+    private readonly Icon _iconUp;
+    private readonly Icon _iconDown;
+
+    private MainWindow? _window;
+    private bool _lastUp;
+    private bool _disposed;
+
+    public TrayIcon(string configPath)
+    {
+        _configPath = configPath;
+        _configDir = Path.GetDirectoryName(configPath) ?? ".";
+
+        _iconUp = MakeDot(Color.FromArgb(76, 175, 80));   // green
+        _iconDown = MakeDot(Color.FromArgb(120, 120, 120)); // grey
+
+        _icon = new TaskbarIcon
+        {
+            ToolTipText = "dzl — server down",
+            Icon = _iconDown,
+            ContextMenu = BuildMenu(),
+        };
+        _icon.ForceCreate();
+
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
+        _timer.Tick += (_, _) => Poll();
+        _timer.Start();
+        Poll();
+    }
+
+    private ContextMenu BuildMenu()
+    {
+        var menu = new ContextMenu();
+
+        menu.Items.Add(MenuItem("Start server (debug)", StartServer));
+        menu.Items.Add(MenuItem("Stop server", StopServer));
+        menu.Items.Add(MenuItem("Restart server", RestartServer));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(MenuItem("Open main window", OpenMainWindow));
+        menu.Items.Add(MenuItem("Open config folder", OpenConfigFolder));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(MenuItem("Quit", Quit));
+
+        return menu;
+    }
+
+    private static MenuItem MenuItem(string header, RoutedEventHandler onClick)
+    {
+        var item = new MenuItem { Header = header };
+        item.Click += onClick;
+        return item;
+    }
+
+    // --- Server ops: run off the UI thread, report via balloon. ---
+
+    private void StartServer(object sender, RoutedEventArgs e) =>
+        RunOp(() => new ControlPlane(_configPath).StartJson("debug", false, "tui"));
+
+    private void StopServer(object sender, RoutedEventArgs e) =>
+        RunOp(() => new ControlPlane(_configPath).StopJson(false));
+
+    private void RestartServer(object sender, RoutedEventArgs e) =>
+        RunOp(() => new ControlPlane(_configPath).RestartJson("debug", "tui"));
+
+    private void RunOp(Func<string> op)
+    {
+        Task.Run(() =>
+        {
+            string msg;
+            try { msg = op(); }
+            catch (Exception ex) { msg = "error: " + ex.Message; }
+            _icon.Dispatcher.BeginInvoke(() =>
+                _icon.ShowNotification("dzl", msg));
+        });
+    }
+
+    private void OpenMainWindow(object sender, RoutedEventArgs e)
+    {
+        if (_window is null)
+        {
+            _window = new MainWindow();
+            _window.Closed += (_, _) => _window = null;
+        }
+        _window.Show();
+        if (_window.WindowState == WindowState.Minimized)
+            _window.WindowState = WindowState.Normal;
+        _window.Activate();
+    }
+
+    private void OpenConfigFolder(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Directory.CreateDirectory(_configDir);
+            Process.Start(new ProcessStartInfo("explorer.exe", _configDir) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            _icon.ShowNotification("dzl", "could not open folder: " + ex.Message);
+        }
+    }
+
+    private void Quit(object sender, RoutedEventArgs e) =>
+        Application.Current.Shutdown();
+
+    // --- Status poll ---
+
+    private void Poll()
+    {
+        bool up;
+        try
+        {
+            var live = StateFile.ReadLive(_configPath, ProcessManager.ImageOf);
+            up = live.ContainsKey("server");
+        }
+        catch
+        {
+            up = false;
+        }
+
+        if (up == _lastUp && _icon.Icon is not null) return;
+        _lastUp = up;
+        _icon.ToolTipText = up ? "dzl — server UP" : "dzl — server down";
+        _icon.Icon = up ? _iconUp : _iconDown;
+    }
+
+    /// <summary>Generates a tiny 16x16 status-dot icon at runtime (no .ico asset needed).</summary>
+    private static Icon MakeDot(Color color)
+    {
+        using var bmp = new Bitmap(16, 16);
+        using (var g = Graphics.FromImage(bmp))
+        {
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            g.Clear(Color.Transparent);
+            using var brush = new SolidBrush(color);
+            g.FillEllipse(brush, 2, 2, 12, 12);
+        }
+        var hicon = bmp.GetHicon();
+        // Clone so we own a managed copy independent of the GDI handle.
+        using var tmp = Icon.FromHandle(hicon);
+        var icon = (Icon)tmp.Clone();
+        NativeDestroyIcon(hicon);
+        return icon;
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "DestroyIcon")]
+    private static extern bool NativeDestroyIcon(IntPtr handle);
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _timer.Stop();
+        _icon.Dispose();
+        _iconUp.Dispose();
+        _iconDown.Dispose();
+    }
+}
