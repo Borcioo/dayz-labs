@@ -16,7 +16,7 @@ namespace Dzl.Tray;
 /// <summary>
 /// The launcher main window: a Wpf.Ui <see cref="FluentWindow"/> with a title bar, a
 /// persistent top action bar (mode toggle, profile switcher, server/client status pills)
-/// and a left <see cref="NavigationView"/> rail that swaps between five content panels
+/// and a left ListBox-based nav rail that swaps between five content panels
 /// (Dashboard, Mods, Logs, Tools, Settings). All five panels are fully built; the Logs,
 /// Tools and Settings pages own their interaction logic here (auto-scroll, file/folder
 /// pickers, background tool runs and inline config/params editing — no modal dialogs).
@@ -32,17 +32,22 @@ public partial class MainWindow : FluentWindow
         DataContext = _vm;
         Closed += (_, _) => _vm.Dispose();
 
-        // Show the Dashboard on load so a panel is always visible. The NavigationView
-        // highlights its first item automatically once templated.
-        Loaded += (_, _) => ShowPage("dashboard");
+        // Select Dashboard on load so a panel is always visible; selecting the first
+        // NavTop item raises OnNavChanged, which calls ShowPage("dashboard").
+        Loaded += (_, _) => NavTop.SelectedIndex = 0;
     }
 
     // --- Navigation: swap the visible content panel based on the selected rail item ---
 
-    private void OnNavSelectionChanged(NavigationView sender, RoutedEventArgs args)
+    private void OnNavChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (Nav.SelectedItem is NavigationViewItem { Tag: string tag })
+        if (sender is ListBox lb && lb.SelectedItem is ListBoxItem { Tag: string tag })
+        {
+            // Clear the other rail's selection so only one item looks active.
+            if (ReferenceEquals(lb, NavTop)) NavBottom.SelectedItem = null;
+            else NavTop.SelectedItem = null;
             ShowPage(tag);
+        }
     }
 
     private void ShowPage(string tag)

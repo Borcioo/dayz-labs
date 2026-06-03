@@ -27,6 +27,44 @@
       <local:BoolToOpacityConverter x:Key="BoolToOpacity" />
       <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
+      <!-- ===== Nav rail (plain-WPF ListBox; deterministic page switching) ===== -->
+      <!-- A transparent ListBox whose items are pill-shaped rows with an icon + label.
+           IsSelected drives an accent-tinted background; IsMouseOver a subtle hover.
+           Used by both NavTop and NavBottom so they look like one continuous rail. -->
+      <Style x:Key="NavListBox" TargetType="ListBox">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="6,4" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      </Style>
+
+      <Style x:Key="NavListBoxItem" TargetType="ListBoxItem">
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="ListBoxItem">
+              <Border x:Name="Bd" CornerRadius="6" Padding="12,8" Margin="4,2"
+                      Background="Transparent">
+                <ContentPresenter VerticalAlignment="Center" />
+              </Border>
+              <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                  <Setter TargetName="Bd" Property="Background" Value="#22FFFFFF" />
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                  <Setter TargetName="Bd" Property="Background" Value="#332D7DD2" />
+                  <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                  <Setter Property="FontWeight" Value="SemiBold" />
+                </Trigger>
+              </ControlTemplate.Triggers>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+
       <!-- Read-only monospace, dark, no-wrap log pane (script/rpt/adm/client). -->
       <Style x:Key="LogTextBox" TargetType="TextBox">
         <Setter Property="IsReadOnly" Value="True" />
@@ -217,35 +255,64 @@
         <ColumnDefinition Width="*" />     <!-- content -->
       </Grid.ColumnDefinitions>
 
-      <!-- Left rail. We drive content ourselves via panel-visibility swap (robust; no Page/DI plumbing). -->
-      <ui:NavigationView x:Name="Nav" Grid.Column="0"
-                         PaneDisplayMode="Left"
-                         IsBackButtonVisible="Collapsed"
-                         IsPaneToggleVisible="True"
-                         OpenPaneLength="200"
-                         SelectionChanged="OnNavSelectionChanged">
-        <ui:NavigationView.MenuItems>
-          <ui:NavigationViewItem Content="Dashboard" Tag="dashboard">
-            <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="Gauge24" /></ui:NavigationViewItem.Icon>
-          </ui:NavigationViewItem>
-          <ui:NavigationViewItem Content="Mods" Tag="mods">
-            <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="Apps24" /></ui:NavigationViewItem.Icon>
-          </ui:NavigationViewItem>
-          <ui:NavigationViewItem Content="Logs" Tag="logs">
-            <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="TextBulletListLtr24" /></ui:NavigationViewItem.Icon>
-          </ui:NavigationViewItem>
-          <ui:NavigationViewItem Content="Tools" Tag="tools">
-            <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="Toolbox24" /></ui:NavigationViewItem.Icon>
-          </ui:NavigationViewItem>
-        </ui:NavigationView.MenuItems>
-        <ui:NavigationView.FooterMenuItems>
-          <ui:NavigationViewItem Content="Settings" Tag="settings">
-            <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="Settings24" /></ui:NavigationViewItem.Icon>
-          </ui:NavigationViewItem>
-        </ui:NavigationView.FooterMenuItems>
-      </ui:NavigationView>
+      <!-- Left rail. Plain-WPF ListBox-based nav: deterministic page switching via
+           SelectionChanged (the Wpf.Ui NavigationView is page-navigation oriented and
+           swallowed clicks when used as a bare rail). Top sections + pinned Settings. -->
+      <Border Grid.Column="0" Width="220"
+              BorderThickness="0,0,1,0"
+              BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+              Background="{DynamicResource ControlFillColorDefaultBrush}">
+        <DockPanel LastChildFill="True">
+          <!-- Pinned Settings at the bottom -->
+          <ListBox x:Name="NavBottom" DockPanel.Dock="Bottom"
+                   Style="{StaticResource NavListBox}"
+                   ItemContainerStyle="{StaticResource NavListBoxItem}"
+                   Margin="0,0,0,8"
+                   SelectionChanged="OnNavChanged">
+            <ListBoxItem Tag="settings">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:SymbolIcon Symbol="Settings24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                <TextBlock Text="Settings" VerticalAlignment="Center" />
+              </StackPanel>
+            </ListBoxItem>
+          </ListBox>
 
-      <!-- Content host: five panels, one visible at a time (toggled in OnNavSelectionChanged). -->
+          <!-- Main sections -->
+          <ListBox x:Name="NavTop"
+                   Style="{StaticResource NavListBox}"
+                   ItemContainerStyle="{StaticResource NavListBoxItem}"
+                   Margin="0,8,0,0"
+                   VerticalAlignment="Top"
+                   SelectionChanged="OnNavChanged">
+            <ListBoxItem Tag="dashboard">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:SymbolIcon Symbol="Gauge24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                <TextBlock Text="Dashboard" VerticalAlignment="Center" />
+              </StackPanel>
+            </ListBoxItem>
+            <ListBoxItem Tag="mods">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:SymbolIcon Symbol="Apps24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                <TextBlock Text="Mods" VerticalAlignment="Center" />
+              </StackPanel>
+            </ListBoxItem>
+            <ListBoxItem Tag="logs">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:SymbolIcon Symbol="TextBulletListLtr24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                <TextBlock Text="Logs" VerticalAlignment="Center" />
+              </StackPanel>
+            </ListBoxItem>
+            <ListBoxItem Tag="tools">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:SymbolIcon Symbol="Toolbox24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                <TextBlock Text="Tools" VerticalAlignment="Center" />
+              </StackPanel>
+            </ListBoxItem>
+          </ListBox>
+        </DockPanel>
+      </Border>
+
+      <!-- Content host: five panels, one visible at a time (toggled in OnNavChanged → ShowPage). -->
       <Grid Grid.Column="1" Margin="16">
 
           <!-- ===== DASHBOARD ===== -->
