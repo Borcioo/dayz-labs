@@ -291,6 +291,8 @@
                          Appearance="Primary" Click="OnExtractGameData" />
               <ui:Button x:Name="OpenToolsBtn" Content="Open DayZ Tools…" Icon="{ui:SymbolIcon Toolbox24}"
                          Click="OnOpenDayzTools" Margin="8,0,0,0" />
+              <ui:Button x:Name="GameDataReCheckBtn" Content="Re-check" Icon="{ui:SymbolIcon ArrowClockwise24}"
+                         Click="OnReCheckGameData" Margin="8,0,0,0" />
               <ui:ProgressRing x:Name="ExtractRing" IsIndeterminate="True" Visibility="Collapsed"
                                Width="22" Height="22" Margin="12,0,0,0" VerticalAlignment="Center" />
             </StackPanel>

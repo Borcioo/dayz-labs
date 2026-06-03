@@ -497,15 +497,15 @@ public partial class SetupWizardWindow : FluentWindow
                           + "The spinner stays until it finishes.";
         try
         {
-            var (ok, output) = await Task.Run(() => WorkDrive.ExtractGameData(exe, dayz, @"P:\"));
-            // Confirm against the disk: vanilla data lands in P:\dz (don't trust exit code alone —
-            // WorkDrive may hand off to its own window).
-            var present = Directory.Exists(@"P:\dz") || Directory.Exists(@"P:\DZ");
-            GameDataNote.Text = present
-                ? "Done — vanilla game data is in P:\\."
-                : ok
-                    ? "WorkDrive finished, but P:\\dz isn't there yet. If a DayZ Tools window is still extracting, wait for it to finish, then this step is done."
-                    : "Extraction didn't complete." + (string.IsNullOrWhiteSpace(output) ? "" : "\r\n" + output);
+            await Task.Run(() => WorkDrive.ExtractGameData(exe, dayz, @"P:\"));
+            // WorkDrive exits while it keeps unpacking in the BACKGROUND (its log says
+            // "completing some operations in the background"), so don't treat a not-yet-present
+            // P:\DZ as failure — it can take several minutes. Verify on disk, else say "in progress".
+            GameDataNote.Text = GameDataPresent()
+                ? "Done — vanilla game data is in P:\\ (P:\\DZ)."
+                : "Extraction started — DayZ Tools keeps unpacking to P:\\ in the BACKGROUND (several "
+                  + "minutes). Click Re-check once it settles. If it never appears, run 'Extract Game Data' "
+                  + "inside DayZ Tools ('Open DayZ Tools…') to watch its progress directly.";
         }
         finally
         {
@@ -513,6 +513,14 @@ public partial class SetupWizardWindow : FluentWindow
             ExtractBtn.IsEnabled = true;
         }
     }
+
+    private static bool GameDataPresent() => Directory.Exists(@"P:\DZ") || Directory.Exists(@"P:\dz");
+
+    private void OnReCheckGameData(object sender, RoutedEventArgs e) =>
+        GameDataNote.Text = GameDataPresent()
+            ? "✓ Vanilla game data present in P:\\ (P:\\DZ)."
+            : "P:\\DZ not there yet. Extraction may still be running in the background — wait a bit and "
+              + "Re-check, or extract via 'Open DayZ Tools…' to watch progress.";
 
     private void OnOpenDayzTools(object sender, RoutedEventArgs e)
     {
