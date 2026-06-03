@@ -27,7 +27,10 @@ public class EnvTests
     public void DefaultServerCfg_is_dev_friendly_and_has_mission()
     {
         var cfg = ServerScaffold.DefaultServerCfg("dayzOffline.chernarusplus");
-        cfg.Should().Contain("hostname").And.Contain("verifySignatures = 0").And.Contain("dayzOffline.chernarusplus");
+        cfg.Should().Contain("hostname").And.Contain("verifySignatures = 0");
+        cfg.Should().Contain("allowFilePatching = 1");                 // dev clients use -filePatching
+        cfg.Should().Contain("template = \"dayzOffline.chernarusplus\"");  // exact folder name, no doubled .map
+        cfg.Should().NotContain("chernarusplus.chernarusplus");        // regression: no double suffix
     }
 
     [Fact]

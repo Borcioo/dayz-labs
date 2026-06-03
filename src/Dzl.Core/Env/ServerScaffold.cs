@@ -8,9 +8,6 @@ public static class ServerScaffold
     /// <summary>A minimal, dev-friendly serverDZ.cfg (unsigned mods allowed, single mission).</summary>
     public static string DefaultServerCfg(string missionName = "dayzOffline.chernarusplus")
     {
-        var map = missionName.Contains('.', StringComparison.Ordinal)
-            ? missionName[(missionName.IndexOf('.', StringComparison.Ordinal) + 1)..]
-            : "chernarusplus";
         return
 $$"""
 hostname = "dzl dev server";
@@ -21,6 +18,7 @@ maxPlayers = 60;
 
 verifySignatures = 0;        // dev: allow unsigned mods
 forceSameBuild = 0;
+allowFilePatching = 1;       // dev: accept clients launched with -filePatching (1 = with or without)
 
 disableVoN = 0;
 vonCodecQuality = 20;
@@ -40,7 +38,7 @@ class Missions
 {
     class DayZ
     {
-        template = "{{missionName}}.{{map}}";
+        template = "{{missionName}}";
     };
 };
 """;
