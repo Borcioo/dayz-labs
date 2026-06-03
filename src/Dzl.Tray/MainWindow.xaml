@@ -499,9 +499,16 @@
                         dd:DragDrop.IsDropTarget="True"
                         dd:DragDrop.DropHandler="{Binding ModsDropHandler}">
                 <DataGrid.Columns>
-                  <!-- Enabled -->
-                  <DataGridCheckBoxColumn Header="On" Width="44"
-                                          Binding="{Binding Enabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                  <!-- Enabled (TemplateColumn so the checkbox is interactive on a single click;
+                       DataGridCheckBoxColumn needs the cell to enter edit mode first = two clicks) -->
+                  <DataGridTemplateColumn Header="On" Width="44">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <CheckBox HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  IsChecked="{Binding Enabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
                   <!-- Load order # -->
                   <DataGridTextColumn Header="#" Width="40" IsReadOnly="True"
                                       Binding="{Binding Order}" />
