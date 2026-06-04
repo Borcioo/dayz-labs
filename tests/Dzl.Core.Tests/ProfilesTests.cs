@@ -65,8 +65,8 @@ public class ProfilesTests
         var path = TmpConfig();
         Profiles.SetActive("ghost", path);
         var (_, savePath, name) = Profiles.ResolveActive(path);
-        name.Should().Be("");
-        savePath.Should().Be(path);
+        name.Should().Be("");                                       // dangling → treated as no-active
+        savePath.Should().Be(Profiles.PresetFile("default", path)); // a save would land in the default instance
     }
 
     [Fact]

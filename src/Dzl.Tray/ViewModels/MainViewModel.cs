@@ -152,6 +152,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>The active profile save path (where edits persist).</summary>
     public string SavePath => _savePath;
 
+    /// <summary>Active instance name with a safe fallback (server instances can't be named "").</summary>
+    private string ActiveName => string.IsNullOrEmpty(ActivePreset) ? "default" : ActivePreset;
+
     /// <summary>The config path the window/VM resolved (for opening folders, presets).</summary>
     public string ConfigFilePath => _configPath;
 
@@ -267,7 +270,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             Side = m.Side,
         }).ToList();
         _cfg = _cfg with { Mods = entries, Mode = Mode };
-        ConfigStore.Save(_cfg, _savePath);
+        Profiles.Save(_cfg, ActiveName, _configPath);   // mods + mode are per-server
         // Reorder commands mutate the ObservableCollection via Move(); renumber the
         // "#" column and refresh the filtered view so its ordering stays in sync.
         RenumberOrder();
@@ -535,14 +538,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             ("client", "normal") => _cfg with { ClientParamsNormal = values },
             _ => _cfg with { ClientParamsDebug = values },
         };
-        ConfigStore.Save(_cfg, _savePath);
+        Profiles.Save(_cfg, ActiveName, _configPath);   // launch params are per-server
         RefreshPreview();
     }
 
     /// <summary>Apply an edited config (from the Settings dialog): save then full reload.</summary>
     public void ApplyConfig(DzlConfig edited)
     {
-        ConfigStore.Save(edited, _savePath);
+        // Settings edits global fields; persist both slices so per-server values (still shown on the
+        // Settings page for now) also survive. Globals → config.json, per-server → active instance.
+        GlobalStore.Save(edited.GlobalPart(ActiveName), _configPath);
+        Profiles.Save(edited, ActiveName, _configPath);
         Reload();
     }
 

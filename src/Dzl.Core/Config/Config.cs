@@ -25,7 +25,6 @@ public sealed record DzlConfig
     public List<string> LogsShown { get; init; } = new() { "script", "rpt", "adm", "client" };
     public string Mode { get; init; } = "debug";
     public int ModWidthIdx { get; init; }
-    public string ActivePreset { get; init; } = "";
     public List<string> ServerParamsDebug { get; init; } = new() { "-filePatching", "-dologs", "-adminLog", "-freezecheck" };
     public List<string> ServerParamsNormal { get; init; } = new() { "-dologs", "-adminLog", "-freezecheck" };
     public List<string> ClientParamsDebug { get; init; } = new() { "-window", "-nosplash", "-filePatching", "-doLogs", "-scriptDebug=true" };
@@ -43,6 +42,76 @@ public sealed record DzlConfig
     public bool AutoLaunchTray { get; init; } = true;
 
     public static DzlConfig Default() => new();
+
+    // --- two-tier split: global (machine env) vs per-server instance ---
+    // DzlConfig stays the runtime composite every consumer uses; persistence + editing split
+    // into GlobalConfig (config.json) and InstanceConfig (instances/<name>.json).
+
+    /// <summary>Extract the machine-global slice (with the given active instance name).</summary>
+    public GlobalConfig GlobalPart(string activeInstance = "") => new()
+    {
+        DayzPath = DayzPath,
+        DayzToolsPath = DayzToolsPath,
+        ProjectsRoot = ProjectsRoot,
+        ExeDebug = ExeDebug,
+        ExeNormal = ExeNormal,
+        ClientExeDebug = ClientExeDebug,
+        ClientExeNormal = ClientExeNormal,
+        ScanRoots = ScanRoots,
+        LogsShown = LogsShown,
+        ModWidthIdx = ModWidthIdx,
+        EnableAutomationServer = EnableAutomationServer,
+        AutoLaunchTray = AutoLaunchTray,
+        ActiveInstance = activeInstance,
+    };
+
+    /// <summary>Extract the per-server slice.</summary>
+    public InstanceConfig InstancePart() => new()
+    {
+        ProfilesPath = ProfilesPath,
+        ClientProfilesPath = ClientProfilesPath,
+        Port = Port,
+        Mission = Mission,
+        PlayerName = PlayerName,
+        ConfigName = ConfigName,
+        ConnectIp = ConnectIp,
+        Mods = Mods,
+        Mode = Mode,
+        ServerParamsDebug = ServerParamsDebug,
+        ServerParamsNormal = ServerParamsNormal,
+        ClientParamsDebug = ClientParamsDebug,
+        ClientParamsNormal = ClientParamsNormal,
+    };
+
+    /// <summary>Compose the runtime config from the global slice + one server instance.</summary>
+    public static DzlConfig Compose(GlobalConfig g, InstanceConfig i) => new()
+    {
+        DayzPath = g.DayzPath,
+        DayzToolsPath = g.DayzToolsPath,
+        ProjectsRoot = g.ProjectsRoot,
+        ExeDebug = g.ExeDebug,
+        ExeNormal = g.ExeNormal,
+        ClientExeDebug = g.ClientExeDebug,
+        ClientExeNormal = g.ClientExeNormal,
+        ScanRoots = g.ScanRoots,
+        LogsShown = g.LogsShown,
+        ModWidthIdx = g.ModWidthIdx,
+        EnableAutomationServer = g.EnableAutomationServer,
+        AutoLaunchTray = g.AutoLaunchTray,
+        ProfilesPath = i.ProfilesPath,
+        ClientProfilesPath = i.ClientProfilesPath,
+        Port = i.Port,
+        Mission = i.Mission,
+        PlayerName = i.PlayerName,
+        ConfigName = i.ConfigName,
+        ConnectIp = i.ConnectIp,
+        Mods = i.Mods,
+        Mode = i.Mode,
+        ServerParamsDebug = i.ServerParamsDebug,
+        ServerParamsNormal = i.ServerParamsNormal,
+        ClientParamsDebug = i.ClientParamsDebug,
+        ClientParamsNormal = i.ClientParamsNormal,
+    };
 }
 
 public sealed record ModEntry

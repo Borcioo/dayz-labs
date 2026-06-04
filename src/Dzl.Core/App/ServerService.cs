@@ -12,10 +12,23 @@ public sealed class ServerService
     private readonly string _configPath;
     public ServerService(string configPath) { _configPath = configPath; }
 
+    /// <summary>All server instances = the per-server configs under instances/ (after SP8, an
+    /// instance IS the profile). Each entry's Dir/CfgPath come from its serverDZ.cfg path.</summary>
     public IReadOnlyList<ServerInstance> List()
     {
-        var (cfg, _, _) = Profiles.ResolveActive(_configPath);
-        return ServerInstances.Discover(ProjectPaths.Root(cfg));
+        var list = new List<ServerInstance>();
+        foreach (var name in Profiles.List(_configPath))
+        {
+            try
+            {
+                var cfg = Profiles.Load(name, _configPath);
+                var cfgPath = cfg.ConfigName;
+                var dir = Path.GetDirectoryName(cfgPath) ?? "";
+                list.Add(new ServerInstance(name, dir, cfgPath));
+            }
+            catch { /* skip unreadable instance */ }
+        }
+        return list;
     }
 
     /// <summary>Scaffold a new server instance and save it as a preset (atomically), optionally activating it.</summary>

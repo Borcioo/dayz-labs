@@ -12,7 +12,6 @@ public class ConfigStoreTests
         c.Port.Should().Be(2302);
         c.Mode.Should().Be("debug");
         c.ConnectIp.Should().Be("127.0.0.1");
-        c.ActivePreset.Should().Be("");
         c.ServerParamsDebug.Should().Contain("-filePatching");
         c.ClientParamsDebug.Should().Contain("-window");
     }
@@ -36,7 +35,7 @@ public class ConfigStoreTests
         var path = Path.Combine(dir.FullName, "config.json");
         ConfigStore.Save(DzlConfig.Default(), path);
         var json = File.ReadAllText(path);
-        json.Should().Contain("\"dayz_path\"").And.Contain("\"server_params_debug\"").And.Contain("\"active_preset\"");
+        json.Should().Contain("\"dayz_path\"").And.Contain("\"server_params_debug\"");
     }
 
     [Fact]

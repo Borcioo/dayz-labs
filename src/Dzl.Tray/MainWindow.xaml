@@ -279,12 +279,12 @@
           <local:InfoTip Text="{x:Static local:HelpText.Mode}" />
         </StackPanel>
 
-        <!-- Profile quick switcher (full management lives on the Settings page) -->
+        <!-- Server quick switcher (manage on the Servers page) -->
         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-          <TextBlock Text="Profile" VerticalAlignment="Center" Margin="0,0,8,0"
+          <TextBlock Text="Server" VerticalAlignment="Center" Margin="0,0,8,0"
                      Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
           <ComboBox Width="180" VerticalAlignment="Center"
-                    ToolTip="Switch active profile (manage profiles in Settings)"
+                    ToolTip="Switch active server instance (manage on the Servers page)"
                     ItemsSource="{Binding Presets}"
                     SelectedItem="{Binding SelectedPreset, Mode=TwoWay}"
                     SelectionChanged="OnProfileSelectionChanged" />

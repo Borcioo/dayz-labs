@@ -633,8 +633,10 @@ public partial class SetupWizardWindow : FluentWindow
             ScanRoots = roots.Count > 0 ? roots : defaults.ScanRoots,
         };
 
-        ConfigStore.Save(cfg, _configPath);
-        Profiles.EnsureDefault(_configPath); // seed a default profile holding this config
+        // Two-tier persist: globals → config.json, per-server slice → the "default" instance (active).
+        GlobalStore.Save(cfg.GlobalPart("default"), _configPath);
+        Profiles.Save(cfg, "default", _configPath);
+        Profiles.SetActive("default", _configPath);
 
         DialogResult = true;
         Close();

@@ -167,14 +167,14 @@ statusCmd.SetHandler(ctx =>
 
     Console.WriteLine($"mode:          {report.Mode}");
     Console.WriteLine($"port:          {report.Port}");
-    Console.WriteLine($"active preset: {report.ActivePreset ?? "(none)"}");
+    Console.WriteLine($"active server: {report.ActivePreset ?? "(none)"}");
     Console.WriteLine($"server:        {Line(report.Server)}");
     Console.WriteLine($"client:        {Line(report.Client)}");
     Console.WriteLine($"dayz:          {report.Paths.GetValueOrDefault("dayz_path")}");
     Console.WriteLine($"profiles:      {report.Paths.GetValueOrDefault("profiles_path")}");
     Console.WriteLine($"client prof:   {report.Paths.GetValueOrDefault("client_profiles_path")}");
     Console.WriteLine($"config dir:    {report.Paths.GetValueOrDefault("config_dir")}");
-    Console.WriteLine($"presets dir:   {report.Paths.GetValueOrDefault("presets_dir")}");
+    Console.WriteLine($"instances dir: {report.Paths.GetValueOrDefault("presets_dir")}");
     Console.WriteLine($"projects root: {report.Paths.GetValueOrDefault("projects_root")}");
     Console.WriteLine($"enabled mods:  {report.Mods.Count}");
     foreach (var m in report.Mods)
@@ -205,12 +205,12 @@ var addRootArg = new Argument<string>("folder", "Folder to scan for mods.");
 var addRootCmd = new Command("add-root", "Add a folder to scan for mods.") { addRootArg };
 addRootCmd.SetHandler(ctx =>
 {
-    var (cfg, savePath, _, _) = Resolve(ctx);
+    var (cfg, _, active, configPath) = Resolve(ctx);
     var folder = ctx.ParseResult.GetValueForArgument(addRootArg);
     var roots = new List<string>(cfg.ScanRoots);
     if (!roots.Contains(folder)) roots.Add(folder);
     cfg = cfg with { ScanRoots = roots };
-    ConfigStore.Save(cfg, savePath);
+    GlobalStore.Save(cfg.GlobalPart(active), configPath);   // scan-roots are global
     foreach (var r in cfg.ScanRoots) Console.WriteLine(r);
 });
 configCmd.AddCommand(addRootCmd);
@@ -219,11 +219,11 @@ var rmRootArg = new Argument<string>("folder", "Folder to stop scanning.");
 var rmRootCmd = new Command("rm-root", "Remove a mod scan-root folder.") { rmRootArg };
 rmRootCmd.SetHandler(ctx =>
 {
-    var (cfg, savePath, _, _) = Resolve(ctx);
+    var (cfg, _, active, configPath) = Resolve(ctx);
     var folder = ctx.ParseResult.GetValueForArgument(rmRootArg);
     var roots = cfg.ScanRoots.Where(r => !string.Equals(r, folder, StringComparison.OrdinalIgnoreCase)).ToList();
     cfg = cfg with { ScanRoots = roots };
-    ConfigStore.Save(cfg, savePath);
+    GlobalStore.Save(cfg.GlobalPart(active), configPath);   // scan-roots are global
     foreach (var r in cfg.ScanRoots) Console.WriteLine(r);
 });
 configCmd.AddCommand(rmRootCmd);
@@ -233,7 +233,7 @@ var setValArg = new Argument<string>("value", "New value.");
 var setCmd = new Command("set", "Set a scalar key, e.g. dzl config set port 2402.") { setKeyArg, setValArg };
 setCmd.SetHandler(ctx =>
 {
-    var (cfg, savePath, _, _) = Resolve(ctx);
+    var (cfg, _, active, configPath) = Resolve(ctx);
     var key = ctx.ParseResult.GetValueForArgument(setKeyArg);
     var value = ctx.ParseResult.GetValueForArgument(setValArg);
     DzlConfig updated;
@@ -264,7 +264,9 @@ setCmd.SetHandler(ctx =>
             ctx.ExitCode = 1;
             return;
     }
-    ConfigStore.Save(updated, savePath);
+    // Write both slices: globals to config.json, per-server to the active instance file.
+    GlobalStore.Save(updated.GlobalPart(active), configPath);
+    Profiles.Save(updated, string.IsNullOrEmpty(active) ? "default" : active, configPath);
     var shown = key switch
     {
         "port" => updated.Port.ToString(),
