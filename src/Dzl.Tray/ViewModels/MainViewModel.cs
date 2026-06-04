@@ -15,6 +15,8 @@ using Dzl.Core.Logs;
 using Dzl.Core.Mods;
 using Dzl.Core.Env;
 using Dzl.Core.Tools;
+using Dzl.Core.Projects;
+using Dzl.Core.Servers;
 using Dzl.Tray;
 
 namespace Dzl.Tray.ViewModels;
@@ -681,6 +683,100 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Unbinarize a .bin via CfgConvert on a background task.</summary>
     public Task<(bool ok, string output)> UnbinarizeAsync(string cfgExe, string binPath, string outCpp) =>
         Task.Run(() => CfgConvert.Unbinarize(cfgExe, binPath, outCpp));
+
+    // === My Mods (source projects) page ===================================
+
+    /// <summary>Mod source projects discovered under the ProjectsRoot (drives the My Mods page).</summary>
+    public ObservableCollection<ModProject> ModProjects { get; } = new();
+
+    /// <summary>Resolved ProjectsRoot (configured value or the %USERPROFILE% fallback). Shown on
+    /// the My Mods / Servers pages so the user knows where dzl creates things.</summary>
+    public string ProjectsRoot => ProjectPaths.Root(_cfg);
+
+    /// <summary>The config directory (author cache lives here, next to config.json).</summary>
+    private string ConfigDir => Path.GetDirectoryName(_configPath) ?? ".";
+
+    /// <summary>Cached author handle (for prefilling the New mod form), or "".</summary>
+    public string CachedAuthor => ModScaffold.CachedAuthor(ConfigDir) ?? "";
+
+    /// <summary>Re-enumerate mod source projects. Called on My Mods page show + after create/import/link.</summary>
+    public void RefreshModProjects()
+    {
+        ModProjects.Clear();
+        foreach (var p in Dzl.Core.Projects.ModProjects.Discover(ProjectsRoot)) ModProjects.Add(p);
+        OnPropertyChanged(nameof(ProjectsRoot));
+    }
+
+    /// <summary>Scaffold a new mod project + link P:\&lt;Mod&gt;. Caches the author. Returns a status line.</summary>
+    public string CreateModProject(string name, string author)
+    {
+        var root = ProjectsRoot;
+        var res = ModScaffold.Scaffold(root, name, author);
+        if (!res.Ok) return $"✗ {res.Message}";
+        if (!string.IsNullOrWhiteSpace(author)) ModScaffold.SaveAuthor(ConfigDir, author);
+        var link = Junction.Ensure(ProjectPaths.WorkDriveLink(name), ProjectPaths.ModDir(root, name));
+        RefreshModProjects();
+        return link.Ok
+            ? $"✓ created {name} + linked P:\\{name}"
+            : $"✓ created {name}  (⚠ P:\\ link: {link.Detail})";
+    }
+
+    /// <summary>Import an external mod source folder as a project (non-invasive link). Returns a status line.</summary>
+    public string ImportModProject(string source, string? name)
+    {
+        var res = ModImport.Import(ProjectsRoot, source, string.IsNullOrWhiteSpace(name) ? null : name.Trim());
+        RefreshModProjects();
+        return res.Ok ? $"✓ imported → {res.ModDir}" : $"✗ {res.Message}";
+    }
+
+    /// <summary>(Re)create the P:\&lt;Mod&gt; junction for a project. Returns a status line.</summary>
+    public string QuickJunction(string name)
+    {
+        var link = Junction.Ensure(ProjectPaths.WorkDriveLink(name), ProjectPaths.ModDir(ProjectsRoot, name));
+        RefreshModProjects();
+        return link.Ok ? $"✓ {name}: {link.Detail}" : $"✗ {name}: {link.Detail}";
+    }
+
+    // === Servers (instances) page =========================================
+
+    /// <summary>Server instances discovered under &lt;ProjectsRoot&gt;\servers (drives the Servers page).</summary>
+    public ObservableCollection<ServerInstance> Servers { get; } = new();
+
+    /// <summary>Map choices for the New server form (aliases the Core resolves to mission templates).</summary>
+    public static IReadOnlyList<string> Maps { get; } = new[] { "chernarus", "livonia", "sakhal" };
+
+    public void RefreshServers()
+    {
+        Servers.Clear();
+        foreach (var s in new ServerService(_configPath).List()) Servers.Add(s);
+        OnPropertyChanged(nameof(ProjectsRoot));
+    }
+
+    /// <summary>Create a new server instance (scaffold + atomic preset) and reload so it's active.
+    /// Returns a status line.</summary>
+    public string CreateServer(string name, string map, int? port)
+    {
+        var res = new ServerService(_configPath).Create(name, map, port);
+        Reload();              // active preset changed → refresh mods/paths/preset list
+        RefreshServers();
+        return res.Ok ? $"✓ {res.Message}  (port {res.Port})" : $"✗ {res.Message}";
+    }
+
+    /// <summary>Switch the active preset to a server instance's preset (by name).</summary>
+    public string UseServer(string name)
+    {
+        var res = SetPresetByName(name);
+        return res ? $"✓ active server → {name}" : $"✗ no preset '{name}'";
+    }
+
+    /// <summary>Activate a preset by name + reload; false if it doesn't exist.</summary>
+    private bool SetPresetByName(string name)
+    {
+        if (!Profiles.List(_configPath).Contains(name)) return false;
+        Profiles.SetActive(name, _configPath);
+        Reload();
+        return true;
+    }
 
     public void Dispose()
     {

@@ -386,6 +386,18 @@
                 <TextBlock Text="Mods" VerticalAlignment="Center" />
               </StackPanel>
             </ListBoxItem>
+            <ListBoxItem Tag="mymods">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:SymbolIcon Symbol="FolderOpen24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                <TextBlock Text="My Mods" VerticalAlignment="Center" />
+              </StackPanel>
+            </ListBoxItem>
+            <ListBoxItem Tag="servers">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:SymbolIcon Symbol="Server24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                <TextBlock Text="Servers" VerticalAlignment="Center" />
+              </StackPanel>
+            </ListBoxItem>
             <ListBoxItem Tag="logs">
               <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <ui:SymbolIcon Symbol="TextBulletListLtr24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
@@ -828,6 +840,251 @@
                 </DataGrid.Columns>
               </DataGrid>
             </Border>
+          </Grid>
+
+          <!-- ===== MY MODS (source projects) ===== -->
+          <Grid x:Name="PageMyMods" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Margin="0,0,0,12">
+              <TextBlock Text="My Mods" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                <Run Text="Source projects under " /><Run Text="{Binding ProjectsRoot, Mode=OneWay}" FontWeight="SemiBold" />
+              </TextBlock>
+            </StackPanel>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+              <StackPanel>
+
+                <!-- New mod -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="New mod" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <Grid Margin="0,0,0,8">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="NewModNameBox" Grid.Column="0" Margin="0,0,4,0"
+                                  PlaceholderText="ModName (letters, digits, _)" />
+                      <ui:TextBox x:Name="NewModAuthorBox" Grid.Column="1" Margin="4,0,4,0"
+                                  PlaceholderText="author" />
+                      <ui:Button x:Name="NewModButton" Grid.Column="2" Content="Create" Appearance="Primary"
+                                 Icon="{ui:SymbolIcon Add24}" Click="OnCreateMod" />
+                    </Grid>
+                    <TextBlock x:Name="NewModStatus" FontSize="12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                  </StackPanel>
+                </ui:Card>
+
+                <!-- Import existing -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Import existing mod folder" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <Grid Margin="0,0,0,8">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="ImportPathBox" Grid.Column="0" PlaceholderText="path to existing mod source…" />
+                      <ui:Button Grid.Column="1" Content="Browse" Icon="{ui:SymbolIcon FolderOpen24}"
+                                 Margin="8,0,0,0" Tag="dir:ImportPathBox" Click="OnBrowseInto" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="ImportNameBox" Grid.Column="0"
+                                  PlaceholderText="name (optional — defaults to folder name)" />
+                      <ui:Button Grid.Column="1" Content="Import" Appearance="Primary"
+                                 Icon="{ui:SymbolIcon ArrowImport24}" Margin="8,0,0,0" Click="OnImportMod" />
+                    </Grid>
+                    <TextBlock x:Name="ImportStatus" FontSize="12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                  </StackPanel>
+                </ui:Card>
+
+                <!-- Projects list -->
+                <ui:Card Margin="0,0,0,4" Padding="16">
+                  <StackPanel>
+                    <Grid Margin="0,0,0,12">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Grid.Column="0" Text="Projects" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                      <ui:Button Grid.Column="1" Content="Refresh" Icon="{ui:SymbolIcon ArrowSync24}" Click="OnRefreshMyMods" />
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding ModProjects}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border Margin="0,0,0,8" Padding="12" CornerRadius="6"
+                                  Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                  BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
+                            <Grid>
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                              </Grid.ColumnDefinitions>
+                              <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Path}" FontSize="11" TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                              </StackPanel>
+                              <Border Grid.Column="1" CornerRadius="9" Padding="8,2" Margin="0,0,8,0" VerticalAlignment="Center">
+                                <Border.Style>
+                                  <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#5A1F1F" />
+                                    <Style.Triggers>
+                                      <DataTrigger Binding="{Binding Linked}" Value="True">
+                                        <Setter Property="Background" Value="#1F4D2E" />
+                                      </DataTrigger>
+                                    </Style.Triggers>
+                                  </Style>
+                                </Border.Style>
+                                <TextBlock FontSize="11" FontWeight="SemiBold">
+                                  <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                      <Setter Property="Text" Value="unlinked" />
+                                      <Setter Property="Foreground" Value="#FF6B6B" />
+                                      <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Linked}" Value="True">
+                                          <Setter Property="Text" Value="linked" />
+                                          <Setter Property="Foreground" Value="#7CE3A1" />
+                                        </DataTrigger>
+                                      </Style.Triggers>
+                                    </Style>
+                                  </TextBlock.Style>
+                                </TextBlock>
+                              </Border>
+                              <ui:Button Grid.Column="2" Content="Quick junction" Icon="{ui:SymbolIcon Link24}"
+                                         Tag="{Binding Name}" Click="OnQuickJunction" VerticalAlignment="Center" />
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="(no mod projects yet — create or import one above)" FontSize="12"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                      <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                          <Setter Property="Visibility" Value="Collapsed" />
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding ModProjects.Count}" Value="0">
+                              <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </TextBlock.Style>
+                    </TextBlock>
+                  </StackPanel>
+                </ui:Card>
+
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+
+          <!-- ===== SERVERS (instances) ===== -->
+          <Grid x:Name="PageServers" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Margin="0,0,0,12">
+              <TextBlock Text="Servers" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                <Run Text="Instances under " /><Run Text="{Binding ProjectsRoot, Mode=OneWay}" FontWeight="SemiBold" /><Run Text="\servers — each is its own preset (serverDZ.cfg + profiles + port)." />
+              </TextBlock>
+            </StackPanel>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+              <StackPanel>
+
+                <!-- New server -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="New server" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <Grid Margin="0,0,0,8">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="NewServerNameBox" Grid.Column="0" Margin="0,0,8,0"
+                                  PlaceholderText="instance name (e.g. pvp, hardcore)" />
+                      <ComboBox x:Name="NewServerMapBox" Grid.Column="1" Width="130" Margin="0,0,8,0"
+                                VerticalAlignment="Center"
+                                ItemsSource="{Binding Maps}" SelectedIndex="0" />
+                      <ui:TextBox x:Name="NewServerPortBox" Grid.Column="2" Width="90" Margin="0,0,8,0"
+                                  PlaceholderText="port (auto)" />
+                      <ui:Button x:Name="NewServerButton" Grid.Column="3" Content="Create" Appearance="Primary"
+                                 Icon="{ui:SymbolIcon Add24}" Click="OnCreateServer" />
+                    </Grid>
+                    <TextBlock x:Name="NewServerStatus" FontSize="12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                  </StackPanel>
+                </ui:Card>
+
+                <!-- Instances list -->
+                <ui:Card Margin="0,0,0,4" Padding="16">
+                  <StackPanel>
+                    <Grid Margin="0,0,0,12">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Grid.Column="0" Text="Instances" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                      <ui:Button Grid.Column="1" Content="Refresh" Icon="{ui:SymbolIcon ArrowSync24}" Click="OnRefreshServers" />
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Servers}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border Margin="0,0,0,8" Padding="12" CornerRadius="6"
+                                  Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                  BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
+                            <Grid>
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                              </Grid.ColumnDefinitions>
+                              <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Dir}" FontSize="11" TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                              </StackPanel>
+                              <ui:Button Grid.Column="1" Content="Use" Icon="{ui:SymbolIcon Checkmark24}"
+                                         Tag="{Binding Name}" Click="OnUseServer" VerticalAlignment="Center" />
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="(no server instances yet — create one above)" FontSize="12"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                      <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                          <Setter Property="Visibility" Value="Collapsed" />
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding Servers.Count}" Value="0">
+                              <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </TextBlock.Style>
+                    </TextBlock>
+                  </StackPanel>
+                </ui:Card>
+
+              </StackPanel>
+            </ScrollViewer>
           </Grid>
 
           <!-- ===== LOGS ===== -->
@@ -1403,6 +1660,14 @@
                       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                       <ui:TextBox x:Name="CfgClientProfilesPath" Grid.Column="0" />
                       <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="dir:CfgClientProfilesPath" Click="OnBrowseInto" />
+                    </Grid>
+
+                    <TextBlock Text="Projects root (mod sources + server instances)" Style="{StaticResource FieldLabel}" />
+                    <Grid>
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="CfgProjectsRoot" Grid.Column="0"
+                                  PlaceholderText="blank = %USERPROFILE%\DayZProjects" />
+                      <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="dir:CfgProjectsRoot" Click="OnBrowseInto" />
                     </Grid>
                   </StackPanel>
                 </ui:Card>

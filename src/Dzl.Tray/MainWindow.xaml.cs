@@ -104,6 +104,8 @@ public partial class MainWindow : FluentWindow
         if (PageDashboard is null) return; // not yet templated
         PageDashboard.Visibility = tag == "dashboard" ? Visibility.Visible : Visibility.Collapsed;
         PageMods.Visibility = tag == "mods" ? Visibility.Visible : Visibility.Collapsed;
+        PageMyMods.Visibility = tag == "mymods" ? Visibility.Visible : Visibility.Collapsed;
+        PageServers.Visibility = tag == "servers" ? Visibility.Visible : Visibility.Collapsed;
         PageLogs.Visibility = tag == "logs" ? Visibility.Visible : Visibility.Collapsed;
         PageTools.Visibility = tag == "tools" ? Visibility.Visible : Visibility.Collapsed;
         PageMcp.Visibility = tag == "mcp" ? Visibility.Visible : Visibility.Collapsed;
@@ -112,6 +114,8 @@ public partial class MainWindow : FluentWindow
         // Refresh page-local state on show.
         if (tag == "logs") UpdateLogListRowHeights();
         if (tag == "tools") RefreshToolsPage();
+        if (tag == "mymods") { _vm.RefreshModProjects(); if (NewModAuthorBox.Text.Length == 0) NewModAuthorBox.Text = _vm.CachedAuthor; }
+        if (tag == "servers") _vm.RefreshServers();
         if (tag == "settings") { LoadSettingsFields(); LoadParamsEditor(); }
     }
 
@@ -330,6 +334,7 @@ public partial class MainWindow : FluentWindow
         CfgDayzToolsPath.Text = c.DayzToolsPath;
         CfgProfilesPath.Text = c.ProfilesPath;
         CfgClientProfilesPath.Text = c.ClientProfilesPath;
+        CfgProjectsRoot.Text = c.ProjectsRoot;
         CfgExeDebug.Text = c.ExeDebug;
         CfgExeNormal.Text = c.ExeNormal;
         CfgClientExeDebug.Text = c.ClientExeDebug;
@@ -365,6 +370,7 @@ public partial class MainWindow : FluentWindow
             DayzToolsPath = CfgDayzToolsPath.Text.Trim(),
             ProfilesPath = CfgProfilesPath.Text.Trim(),
             ClientProfilesPath = CfgClientProfilesPath.Text.Trim(),
+            ProjectsRoot = CfgProjectsRoot.Text.Trim(),
             ExeDebug = CfgExeDebug.Text.Trim(),
             ExeNormal = CfgExeNormal.Text.Trim(),
             ClientExeDebug = CfgClientExeDebug.Text.Trim(),
@@ -489,6 +495,57 @@ public partial class MainWindow : FluentWindow
             _vm.Reload();
             LoadSettingsFields();
         }
+    }
+
+    // === MY MODS page =====================================================
+
+    private void OnRefreshMyMods(object sender, RoutedEventArgs e) => _vm.RefreshModProjects();
+
+    private void OnCreateMod(object sender, RoutedEventArgs e)
+    {
+        var name = NewModNameBox.Text.Trim();
+        var author = NewModAuthorBox.Text.Trim();
+        if (name.Length == 0) { NewModStatus.Text = "Enter a mod name."; return; }
+        NewModButton.IsEnabled = false;
+        try { NewModStatus.Text = _vm.CreateModProject(name, author); }
+        finally { NewModButton.IsEnabled = true; }
+        if (NewModStatus.Text.StartsWith('✓')) NewModNameBox.Text = "";
+    }
+
+    private void OnImportMod(object sender, RoutedEventArgs e)
+    {
+        var path = ImportPathBox.Text.Trim();
+        if (path.Length == 0) { ImportStatus.Text = "Pick a mod source folder."; return; }
+        ImportStatus.Text = _vm.ImportModProject(path, ImportNameBox.Text);
+        if (ImportStatus.Text.StartsWith('✓')) { ImportPathBox.Text = ""; ImportNameBox.Text = ""; }
+    }
+
+    private void OnQuickJunction(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string name })
+            NewModStatus.Text = _vm.QuickJunction(name);
+    }
+
+    // === SERVERS page =====================================================
+
+    private void OnRefreshServers(object sender, RoutedEventArgs e) => _vm.RefreshServers();
+
+    private void OnCreateServer(object sender, RoutedEventArgs e)
+    {
+        var name = NewServerNameBox.Text.Trim();
+        if (name.Length == 0) { NewServerStatus.Text = "Enter an instance name."; return; }
+        var map = (NewServerMapBox.SelectedItem as string) ?? "chernarus";
+        int? port = int.TryParse(NewServerPortBox.Text.Trim(), out var p) ? p : null;
+        NewServerButton.IsEnabled = false;
+        try { NewServerStatus.Text = _vm.CreateServer(name, map, port); }
+        finally { NewServerButton.IsEnabled = true; }
+        if (NewServerStatus.Text.StartsWith('✓')) { NewServerNameBox.Text = ""; NewServerPortBox.Text = ""; }
+    }
+
+    private void OnUseServer(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string name })
+            NewServerStatus.Text = _vm.UseServer(name);
     }
 
     // === Shared pickers / folder open =====================================
