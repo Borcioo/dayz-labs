@@ -10,7 +10,7 @@ public static partial class ProjectPaths
     private static partial Regex NameRx();
 
     /// <summary>A valid mod / instance name: starts with a letter, then letters/digits/underscores, max 64.</summary>
-    public static bool IsValidName(string name) => !string.IsNullOrEmpty(name) && NameRx().IsMatch(name);
+    public static bool IsValidName(string? name) => !string.IsNullOrEmpty(name) && NameRx().IsMatch(name);
 
     /// <summary>Pure: configured root if set, else <paramref name="userProfile"/>\DayZProjects.</summary>
     public static string Root(string? configured, string userProfile) =>

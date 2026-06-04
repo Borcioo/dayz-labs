@@ -15,6 +15,9 @@ public class ProjectPathsTests
         => ProjectPaths.IsValidName(name).Should().Be(ok);
 
     [Fact]
+    public void Name_validation_null_is_false() => ProjectPaths.IsValidName(null).Should().BeFalse();
+
+    [Fact]
     public void Root_falls_back_to_userprofile_when_unset()
         => ProjectPaths.Root("", @"C:\Users\me").Should().Be(@"C:\Users\me\DayZProjects");
 
