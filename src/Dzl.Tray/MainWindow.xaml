@@ -1016,6 +1016,8 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                               </Grid.ColumnDefinitions>
                               <!-- active marker -->
                               <TextBlock Grid.Column="0" Text="●" Margin="0,0,10,0" FontSize="14" VerticalAlignment="Center"
@@ -1033,9 +1035,13 @@
                                 <TextBlock Text="{Binding Dir}" FontSize="11" TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                               </StackPanel>
-                              <ui:Button Grid.Column="2" Content="Use" Icon="{ui:SymbolIcon Checkmark24}"
+                              <ui:Button Grid.Column="2" Content="Settings" Icon="{ui:SymbolIcon Settings24}"
+                                         Tag="{Binding Name}" Click="OnOpenServerSettings" VerticalAlignment="Center" Margin="0,0,8,0" />
+                              <ui:Button Grid.Column="3" Content="Mods" Icon="{ui:SymbolIcon Apps24}"
+                                         Tag="{Binding Name}" Click="OnOpenServerMods" VerticalAlignment="Center" Margin="0,0,8,0" />
+                              <ui:Button Grid.Column="4" Content="Use" Icon="{ui:SymbolIcon Checkmark24}"
                                          Tag="{Binding Name}" Click="OnUseServer" VerticalAlignment="Center" Margin="0,0,8,0" />
-                              <ui:Button Grid.Column="3" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" ToolTip="Delete instance"
+                              <ui:Button Grid.Column="5" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" ToolTip="Delete instance"
                                          Tag="{Binding Name}" Click="OnDeleteServer" VerticalAlignment="Center" />
                             </Grid>
                           </Border>
@@ -1055,235 +1061,6 @@
                         </Style>
                       </TextBlock.Style>
                     </TextBlock>
-                  </StackPanel>
-                </ui:Card>
-
-                <!-- ACTIVE SERVER: settings editor -->
-                <ui:Card Margin="0,0,0,12" Padding="16">
-                  <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                      <TextBlock Text="Active server settings" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
-                      <TextBlock Text="{Binding ActivePreset}" FontSize="16" FontWeight="SemiBold" Margin="8,0,0,0"
-                                 VerticalAlignment="Center" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
-                    </StackPanel>
-
-                    <!-- rename / clone -->
-                    <Grid Margin="0,0,0,12">
-                      <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="16" />
-                        <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
-                      </Grid.ColumnDefinitions>
-                      <ui:TextBox x:Name="SrvRenameBox" Grid.Column="0" Margin="0,0,8,0" PlaceholderText="rename to…" />
-                      <ui:Button Grid.Column="1" Content="Rename" Icon="{ui:SymbolIcon Rename24}" Click="OnRenameServer" />
-                      <ui:TextBox x:Name="SrvCloneBox" Grid.Column="3" Margin="0,0,8,0" PlaceholderText="clone as…" />
-                      <ui:Button Grid.Column="4" Content="Clone" Icon="{ui:SymbolIcon Copy24}" Click="OnCloneServer" />
-                    </Grid>
-
-                    <Grid>
-                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                      <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal">
-                          <TextBlock Text="Port" Style="{StaticResource FieldLabel}" />
-                          <local:InfoTip Text="{x:Static local:HelpText.Port}" />
-                        </StackPanel>
-                        <ui:TextBox x:Name="CfgPort" Margin="0,0,0,10" />
-                        <StackPanel Orientation="Horizontal">
-                          <TextBlock Text="Mission" Style="{StaticResource FieldLabel}" />
-                          <local:InfoTip Text="{x:Static local:HelpText.Mission}" />
-                        </StackPanel>
-                        <Grid Margin="0,0,0,10">
-                          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                          <ui:TextBox x:Name="CfgMission" Grid.Column="0" />
-                          <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Click="OnBrowseMission" />
-                        </Grid>
-                        <StackPanel Orientation="Horizontal">
-                          <TextBlock Text="Config name (serverDZ.cfg)" Style="{StaticResource FieldLabel}" />
-                          <local:InfoTip Text="{x:Static local:HelpText.ConfigName}" />
-                        </StackPanel>
-                        <Grid Margin="0,0,0,10">
-                          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                          <ui:TextBox x:Name="CfgConfigName" Grid.Column="0" />
-                          <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Click="OnBrowseConfigName" />
-                        </Grid>
-                        <TextBlock Text="Mode" Style="{StaticResource FieldLabel}" />
-                        <ComboBox x:Name="SrvMode" SelectedIndex="0">
-                          <ComboBoxItem Content="debug" />
-                          <ComboBoxItem Content="normal" />
-                        </ComboBox>
-                      </StackPanel>
-                      <StackPanel Grid.Column="1" Margin="8,0,0,0">
-                        <StackPanel Orientation="Horizontal">
-                          <TextBlock Text="Player name" Style="{StaticResource FieldLabel}" />
-                          <local:InfoTip Text="{x:Static local:HelpText.PlayerName}" />
-                        </StackPanel>
-                        <ui:TextBox x:Name="CfgPlayerName" Margin="0,0,0,10" />
-                        <StackPanel Orientation="Horizontal">
-                          <TextBlock Text="Connect IP" Style="{StaticResource FieldLabel}" />
-                          <local:InfoTip Text="{x:Static local:HelpText.ConnectIp}" />
-                        </StackPanel>
-                        <ui:TextBox x:Name="CfgConnectIp" Margin="0,0,0,10" />
-                        <StackPanel Orientation="Horizontal">
-                          <TextBlock Text="Server profiles" Style="{StaticResource FieldLabel}" />
-                          <local:InfoTip Text="{x:Static local:HelpText.ProfilesDir}" />
-                        </StackPanel>
-                        <Grid Margin="0,0,0,10">
-                          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                          <ui:TextBox x:Name="CfgProfilesPath" Grid.Column="0" />
-                          <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="dir:CfgProfilesPath" Click="OnBrowseInto" />
-                        </Grid>
-                        <TextBlock Text="Client profiles" Style="{StaticResource FieldLabel}" />
-                        <Grid>
-                          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                          <ui:TextBox x:Name="CfgClientProfilesPath" Grid.Column="0" />
-                          <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="dir:CfgClientProfilesPath" Click="OnBrowseInto" />
-                        </Grid>
-                      </StackPanel>
-                    </Grid>
-
-                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                      <ui:Button Content="Save server settings" Appearance="Primary" Icon="{ui:SymbolIcon Save24}"
-                                 Click="OnSaveServer" />
-                      <ui:Button Content="Revert" Icon="{ui:SymbolIcon ArrowUndo24}" Margin="8,0,0,0" Click="OnRevertServer" />
-                      <TextBlock x:Name="SrvError" VerticalAlignment="Center" Margin="12,0,0,0"
-                                 Foreground="#FF6B6B" Visibility="Collapsed" />
-                    </StackPanel>
-                  </StackPanel>
-                </ui:Card>
-
-                <!-- ACTIVE SERVER: launch params (moved from Settings) -->
-                <ui:Card x:Name="ParamsCard" Margin="0,0,0,12" Padding="16">
-                  <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                      <TextBlock Text="Launch params" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
-                      <local:InfoTip Text="{x:Static local:HelpText.PerModeParams}" />
-                      <local:InfoTip Text="{x:Static local:HelpText.Flags}" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                      <TextBlock Text="Target" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                      <ComboBox x:Name="ParamTarget" Width="120" SelectedIndex="0" SelectionChanged="OnParamSlotChanged">
-                        <ComboBoxItem Content="server" />
-                        <ComboBoxItem Content="client" />
-                      </ComboBox>
-                      <TextBlock Text="Mode" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="16,0,8,0" />
-                      <ComboBox x:Name="ParamMode" Width="120" SelectedIndex="0" SelectionChanged="OnParamSlotChanged">
-                        <ComboBoxItem Content="debug" />
-                        <ComboBoxItem Content="normal" />
-                      </ComboBox>
-                    </StackPanel>
-                    <TextBlock Text="One flag per line" Style="{StaticResource FieldLabel}" />
-                    <TextBox x:Name="ParamsEditor" Height="120" AcceptsReturn="True"
-                             FontFamily="Cascadia Mono, Consolas" FontSize="12"
-                             VerticalScrollBarVisibility="Auto" Margin="0,0,0,10" />
-                    <StackPanel Orientation="Horizontal">
-                      <ui:Button Content="Save params" Appearance="Primary" Icon="{ui:SymbolIcon Save24}" Click="OnSaveParams" />
-                      <ui:Button Content="Reset to defaults" Icon="{ui:SymbolIcon ArrowReset24}" Margin="8,0,0,0" Click="OnResetParams" />
-                    </StackPanel>
-                  </StackPanel>
-                </ui:Card>
-
-                <!-- ACTIVE SERVER: mod loadout (moved from Mods page) -->
-                <ui:Card Margin="0,0,0,4" Padding="16">
-                  <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                      <TextBlock Text="Mod loadout" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
-                      <local:InfoTip Text="{x:Static local:HelpText.ModSide}" />
-                      <TextBlock Text="{Binding ModsSummary}" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center"
-                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                      <ui:Button Content="Rescan" Icon="{ui:SymbolIcon ArrowSync24}" Margin="0,0,8,0" Command="{Binding RescanCommand}" />
-                      <Border Width="1" Margin="4,2,12,2" Background="{DynamicResource ControlElevationBorderBrush}" />
-                      <ui:Button Icon="{ui:SymbolIcon ArrowUpload24}" ToolTip="Move to top" Margin="0,0,8,0" Command="{Binding ToTopCommand}" />
-                      <ui:Button Icon="{ui:SymbolIcon ArrowUp24}" ToolTip="Move up" Margin="0,0,8,0" Command="{Binding MoveUpCommand}" />
-                      <ui:Button Icon="{ui:SymbolIcon ArrowDown24}" ToolTip="Move down" Margin="0,0,8,0" Command="{Binding MoveDownCommand}" />
-                      <ui:Button Icon="{ui:SymbolIcon ArrowDownload24}" ToolTip="Move to bottom" Command="{Binding ToBottomCommand}" />
-                    </StackPanel>
-                    <Border CornerRadius="6" BorderThickness="1" Height="340"
-                            BorderBrush="{DynamicResource ControlElevationBorderBrush}"
-                            Background="{DynamicResource ControlFillColorDefaultBrush}">
-                      <DataGrid x:Name="ModsGrid"
-                                Style="{StaticResource DarkDataGrid}"
-                                ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeader}"
-                                RowStyle="{StaticResource DarkDataGridRow}"
-                                CellStyle="{StaticResource DarkDataGridCell}"
-                                ItemsSource="{Binding ModsView}"
-                                SelectedItem="{Binding SelectedMod, Mode=TwoWay}"
-                                AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
-                                HeadersVisibility="Column" SelectionMode="Single" SelectionUnit="FullRow" IsReadOnly="False"
-                                dd:DragDrop.IsDragSource="True" dd:DragDrop.IsDropTarget="True"
-                                dd:DragDrop.DropHandler="{Binding ModsDropHandler}">
-                        <DataGrid.Columns>
-                          <DataGridTemplateColumn Width="44">
-                            <DataGridTemplateColumn.Header>
-                              <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="On" VerticalAlignment="Center" />
-                                <local:InfoTip Text="{x:Static local:HelpText.ModEnabled}" />
-                              </StackPanel>
-                            </DataGridTemplateColumn.Header>
-                            <DataGridTemplateColumn.CellTemplate>
-                              <DataTemplate>
-                                <CheckBox HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="0" Padding="0"
-                                          IsChecked="{Binding Enabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                              </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                          </DataGridTemplateColumn>
-                          <DataGridTextColumn Width="40" IsReadOnly="True" Binding="{Binding Order}">
-                            <DataGridTextColumn.Header>
-                              <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="#" VerticalAlignment="Center" />
-                                <local:InfoTip Text="{x:Static local:HelpText.ModOrder}" />
-                              </StackPanel>
-                            </DataGridTextColumn.Header>
-                          </DataGridTextColumn>
-                          <DataGridTextColumn Header="Name" Width="*" IsReadOnly="True" Binding="{Binding Name}">
-                            <DataGridTextColumn.ElementStyle>
-                              <Style TargetType="TextBlock">
-                                <Setter Property="VerticalAlignment" Value="Center" />
-                                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
-                                <Setter Property="FontWeight" Value="Medium" />
-                              </Style>
-                            </DataGridTextColumn.ElementStyle>
-                          </DataGridTextColumn>
-                          <DataGridTemplateColumn Width="110">
-                            <DataGridTemplateColumn.Header>
-                              <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Side" VerticalAlignment="Center" />
-                                <local:InfoTip Text="{x:Static local:HelpText.ModSide}" />
-                              </StackPanel>
-                            </DataGridTemplateColumn.Header>
-                            <DataGridTemplateColumn.CellTemplate>
-                              <DataTemplate>
-                                <ComboBox ItemsSource="{x:Static vm:MainViewModel.Sides}"
-                                          SelectedItem="{Binding Side, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                          BorderThickness="0" Background="Transparent" VerticalAlignment="Center" />
-                              </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                          </DataGridTemplateColumn>
-                          <DataGridTextColumn Header="Path" Width="2*" IsReadOnly="True" Binding="{Binding Path}">
-                            <DataGridTextColumn.ElementStyle>
-                              <Style TargetType="TextBlock">
-                                <Setter Property="VerticalAlignment" Value="Center" />
-                                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
-                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
-                                <Setter Property="FontSize" Value="12" />
-                              </Style>
-                            </DataGridTextColumn.ElementStyle>
-                          </DataGridTextColumn>
-                          <DataGridTemplateColumn Header="" Width="80">
-                            <DataGridTemplateColumn.CellTemplate>
-                              <DataTemplate>
-                                <Border CornerRadius="9" Padding="8,2" Background="#5A1F1F"
-                                        HorizontalAlignment="Left" VerticalAlignment="Center"
-                                        Visibility="{Binding Missing, Converter={StaticResource BoolToVis}}">
-                                  <TextBlock Text="missing" FontSize="11" FontWeight="SemiBold" Foreground="#FF6B6B" />
-                                </Border>
-                              </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                          </DataGridTemplateColumn>
-                        </DataGrid.Columns>
-                      </DataGrid>
-                    </Border>
                   </StackPanel>
                 </ui:Card>
 

@@ -115,31 +115,17 @@ public partial class MainWindow : FluentWindow
         if (tag == "logs") UpdateLogListRowHeights();
         if (tag == "tools") RefreshToolsPage();
         if (tag == "mymods") { _vm.RefreshModProjects(); if (NewModAuthorBox.Text.Length == 0) NewModAuthorBox.Text = _vm.CachedAuthor; }
-        if (tag == "servers") { _vm.RefreshServers(); LoadServerEditor(); LoadParamsEditor(); }
+        if (tag == "servers") _vm.RefreshServers();
         if (tag == "settings") LoadSettingsFields();
     }
 
     // --- Dashboard shortcut handlers --------------------------------------
 
-    /// <summary>"Edit mods" shortcut → the Servers page (the active server's mod loadout lives there).</summary>
-    private void OnEditMods(object sender, RoutedEventArgs e) => SelectNavTop("servers");
+    /// <summary>"Edit mods" shortcut → open the active server's editor on the Mods tab.</summary>
+    private void OnEditMods(object sender, RoutedEventArgs e) => OpenServerEditor(1);
 
-    /// <summary>"Edit params" shortcut → the Servers page; pre-select the params target
-    /// (Server/Client) for the column whose button was clicked (Tag), then scroll to it.</summary>
-    private void OnEditParams(object sender, RoutedEventArgs e)
-    {
-        SelectNavTop("servers");   // raises OnNavChanged → ShowPage("servers") → loads editor + params
-
-        var target = (sender as FrameworkElement)?.Tag as string;
-        if (ParamTarget is not null && target is "server" or "client")
-        {
-            ParamTarget.SelectedIndex = target == "client" ? 1 : 0; // 0=server, 1=client
-            LoadParamsEditor();
-        }
-
-        Dispatcher.BeginInvoke(new Action(() => ParamsCard?.BringIntoView()),
-            System.Windows.Threading.DispatcherPriority.Loaded);
-    }
+    /// <summary>"Edit params" shortcut → open the active server's editor on the Params tab.</summary>
+    private void OnEditParams(object sender, RoutedEventArgs e) => OpenServerEditor(2);
 
     /// <summary>Select the NavTop rail item whose Tag matches (raises OnNavChanged).</summary>
     private void SelectNavTop(string tag)
@@ -361,51 +347,26 @@ public partial class MainWindow : FluentWindow
         LoadSettingsFields();
     }
 
-    // === SERVERS page: active-instance settings editor ====================
+    // === SERVERS page: open the per-server modal editor ===================
 
-    private void LoadServerEditor()
+    /// <summary>Open the modal editor for the active server on a given tab (0=Settings,1=Mods,2=Params).</summary>
+    private void OpenServerEditor(int tab)
     {
-        var c = _vm.Cfg;
-        CfgPort.Text = c.Port.ToString();
-        CfgMission.Text = c.Mission;
-        CfgConfigName.Text = c.ConfigName;
-        CfgPlayerName.Text = c.PlayerName;
-        CfgConnectIp.Text = c.ConnectIp;
-        CfgProfilesPath.Text = c.ProfilesPath;
-        CfgClientProfilesPath.Text = c.ClientProfilesPath;
-        SrvMode.SelectedIndex = c.Mode == "normal" ? 1 : 0;
-        SrvRenameBox.Text = "";
-        SrvCloneBox.Text = "";
-        SrvError.Visibility = Visibility.Collapsed;
+        var dlg = new ServerEditorWindow(_vm, tab) { Owner = this };
+        dlg.ShowDialog();
+        _vm.RefreshServers();   // name/active may have changed (rename/clone)
     }
 
-    private void OnRevertServer(object sender, RoutedEventArgs e) => LoadServerEditor();
-
-    private void OnSaveServer(object sender, RoutedEventArgs e)
+    /// <summary>Servers row "Settings"/"Mods": activate the clicked server, then open its modal editor.</summary>
+    private void OpenServerForRow(object sender, int tab)
     {
-        if (!int.TryParse(CfgPort.Text.Trim(), out var port))
-        {
-            SrvError.Text = "Port must be an integer.";
-            SrvError.Visibility = Visibility.Visible;
-            return;
-        }
-        SrvError.Visibility = Visibility.Collapsed;
-        var mode = (SrvMode.SelectedItem as ComboBoxItem)?.Content as string ?? "debug";
-        var edited = _vm.Cfg with
-        {
-            Port = port,
-            Mission = CfgMission.Text.Trim(),
-            ConfigName = CfgConfigName.Text.Trim(),
-            PlayerName = CfgPlayerName.Text.Trim(),
-            ConnectIp = CfgConnectIp.Text.Trim(),
-            ProfilesPath = CfgProfilesPath.Text.Trim(),
-            ClientProfilesPath = CfgClientProfilesPath.Text.Trim(),
-            Mode = mode,
-        };
-        _vm.SaveActiveInstance(edited);
-        LoadServerEditor();
-        LoadParamsEditor();
+        if (sender is not FrameworkElement { Tag: string name }) return;
+        _vm.UseServer(name);
+        OpenServerEditor(tab);
     }
+
+    private void OnOpenServerSettings(object sender, RoutedEventArgs e) => OpenServerForRow(sender, 0);
+    private void OnOpenServerMods(object sender, RoutedEventArgs e) => OpenServerForRow(sender, 1);
 
     private void OnDeleteServer(object sender, RoutedEventArgs e)
     {
@@ -416,23 +377,6 @@ public partial class MainWindow : FluentWindow
             System.Windows.MessageBoxImage.Warning) == System.Windows.MessageBoxResult.Yes;
         if (!ok) return;
         NewServerStatus.Text = _vm.DeleteServer(name);
-        LoadServerEditor();
-    }
-
-    private void OnCloneServer(object sender, RoutedEventArgs e)
-    {
-        var name = SrvCloneBox.Text.Trim();
-        if (name.Length == 0) { SrvError.Text = "Enter a name to clone as."; SrvError.Visibility = Visibility.Visible; return; }
-        NewServerStatus.Text = _vm.CloneActive(name);
-        LoadServerEditor();
-    }
-
-    private void OnRenameServer(object sender, RoutedEventArgs e)
-    {
-        var name = SrvRenameBox.Text.Trim();
-        if (name.Length == 0) { SrvError.Text = "Enter a new name."; SrvError.Visibility = Visibility.Visible; return; }
-        NewServerStatus.Text = _vm.RenameActive(name);
-        LoadServerEditor();
     }
 
     private void OnAddScanRoot(object sender, RoutedEventArgs e)
@@ -443,90 +387,8 @@ public partial class MainWindow : FluentWindow
         CfgScanRoots.Text = existing.Length == 0 ? dir : existing + "\n" + dir;
     }
 
-    /// <summary>Current edited-or-saved DayZ install dir (Settings field wins over the VM config).</summary>
-    private string CurrentDayzPath()
-    {
-        var p = CfgDayzPath?.Text?.Trim();
-        return string.IsNullOrEmpty(p) ? _vm.Cfg.DayzPath : p;
-    }
-
-    // A normalized, existing directory safe to hand to a dialog's InitialDirectory
-    // (forward-slash / mixed-separator paths crash OpenFolderDialog/OpenFileDialog). "" = use default.
-    private static string SafeInitialDir(params string?[] candidates)
-    {
-        foreach (var c in candidates)
-        {
-            if (string.IsNullOrWhiteSpace(c)) continue;
-            try { var full = Path.GetFullPath(c); if (Directory.Exists(full)) return full; }
-            catch { /* skip bad path */ }
-        }
-        return "";
-    }
-
-    // Mission folder picker → write a rel-or-abs path (relative to DayzPath when under it).
-    private void OnBrowseMission(object sender, RoutedEventArgs e)
-    {
-        var dayz = CurrentDayzPath();
-        var dlg = new OpenFolderDialog
-        {
-            InitialDirectory = SafeInitialDir(Path.Combine(dayz, "mpmissions"), dayz),
-        };
-        if (dlg.ShowDialog(this) == true)
-            CfgMission.Text = RelOrAbs(dlg.FolderName, dayz);
-    }
-
-    // Server config (*.cfg) file picker → write a rel-or-abs path (relative to DayzPath when under it).
-    private void OnBrowseConfigName(object sender, RoutedEventArgs e)
-    {
-        var dayz = CurrentDayzPath();
-        var dlg = new OpenFileDialog
-        {
-            Filter = "Server config (*.cfg)|*.cfg|All files (*.*)|*.*",
-            InitialDirectory = SafeInitialDir(dayz),
-        };
-        if (dlg.ShowDialog(this) == true)
-            CfgConfigName.Text = RelOrAbs(dlg.FileName, dayz);
-    }
-
-    /// <summary>
-    /// Store <paramref name="fullPath"/> relative to <paramref name="dayzPath"/> when it lives under
-    /// the DayZ install dir, else the absolute path. Mirrors how Core's ArgvBuilder resolves
-    /// profiles paths so -mission=/-config= stay portable against the DayZ working dir.
-    /// </summary>
-    private static string RelOrAbs(string fullPath, string dayzPath)
-    {
-        var full = Path.GetFullPath(fullPath);
-        var root = Path.GetFullPath(dayzPath);
-        return full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-            ? Path.GetRelativePath(root, full)
-            : full;
-    }
-
-    // --- Params editor: one editor that loads/saves the selected target+mode slot ---
-
-    private string SelectedTarget =>
-        (ParamTarget.SelectedItem as ComboBoxItem)?.Content as string ?? "server";
-
-    private string SelectedParamMode =>
-        (ParamMode.SelectedItem as ComboBoxItem)?.Content as string ?? "debug";
-
-    private void OnParamSlotChanged(object sender, SelectionChangedEventArgs e) => LoadParamsEditor();
-
-    private void LoadParamsEditor()
-    {
-        if (ParamsEditor is null) return; // not yet templated
-        ParamsEditor.Text = string.Join("\n", _vm.CurrentParams(SelectedTarget, SelectedParamMode));
-    }
-
-    private void OnResetParams(object sender, RoutedEventArgs e) =>
-        ParamsEditor.Text = string.Join("\n", MainViewModel.DefaultParams(SelectedTarget, SelectedParamMode));
-
-    private void OnSaveParams(object sender, RoutedEventArgs e)
-    {
-        var lines = ParamsEditor.Text.Replace("\r\n", "\n").Split('\n')
-            .Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
-        _vm.ApplyParams(SelectedTarget, SelectedParamMode, lines);
-    }
+    // (Per-server settings, mission/config pickers and the launch-params editor now live in
+    //  ServerEditorWindow — opened from the Servers page. Removed from the main window.)
 
     /// <summary>Re-open the environment setup wizard (Settings button entry point).</summary>
     private void OnRunSetupWizard(object sender, RoutedEventArgs e) => OpenSetupWizard();
