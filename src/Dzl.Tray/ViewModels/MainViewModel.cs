@@ -784,6 +784,52 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return true;
     }
 
+    /// <summary>Persist edited per-server settings to the active instance, then reload.</summary>
+    public void SaveActiveInstance(DzlConfig edited)
+    {
+        Profiles.Save(edited, ActiveName, _configPath);
+        Reload();
+        RefreshServers();
+    }
+
+    /// <summary>Delete a server instance. If it was active, fall back to another (or a fresh default).</summary>
+    public string DeleteServer(string name)
+    {
+        if (!Profiles.Delete(name, _configPath)) return $"✗ no server '{name}'";
+        if (ActivePreset == name) Profiles.SetActive("", _configPath);
+        Profiles.EnsureDefault(_configPath);          // guarantee an active instance still exists
+        Reload();
+        RefreshServers();
+        return $"✓ deleted '{name}'";
+    }
+
+    /// <summary>Clone the active instance's config to a new name and activate it.</summary>
+    public string CloneActive(string newName)
+    {
+        if (!ProjectPaths.IsValidName(newName)) return $"✗ invalid name: {newName}";
+        if (Profiles.List(_configPath).Contains(newName)) return $"✗ '{newName}' already exists";
+        Profiles.Save(_cfg, newName, _configPath);    // _cfg = the active composed config
+        Profiles.SetActive(newName, _configPath);
+        Reload();
+        RefreshServers();
+        return $"✓ cloned active → '{newName}' (now active)";
+    }
+
+    /// <summary>Rename the active instance (copy → new name, delete old, activate new).</summary>
+    public string RenameActive(string newName)
+    {
+        var old = ActiveName;
+        if (!ProjectPaths.IsValidName(newName)) return $"✗ invalid name: {newName}";
+        if (string.Equals(newName, old, StringComparison.OrdinalIgnoreCase)) return "✗ same name";
+        if (Profiles.List(_configPath).Contains(newName)) return $"✗ '{newName}' already exists";
+        Profiles.Save(_cfg, newName, _configPath);
+        Profiles.Delete(old, _configPath);
+        Profiles.SetActive(newName, _configPath);
+        Reload();
+        RefreshServers();
+        return $"✓ renamed '{old}' → '{newName}'";
+    }
+
     public void Dispose()
     {
         if (_disposed) return;

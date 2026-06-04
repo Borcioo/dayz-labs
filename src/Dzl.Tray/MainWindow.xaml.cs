@@ -115,25 +115,21 @@ public partial class MainWindow : FluentWindow
         if (tag == "logs") UpdateLogListRowHeights();
         if (tag == "tools") RefreshToolsPage();
         if (tag == "mymods") { _vm.RefreshModProjects(); if (NewModAuthorBox.Text.Length == 0) NewModAuthorBox.Text = _vm.CachedAuthor; }
-        if (tag == "servers") _vm.RefreshServers();
-        if (tag == "settings") { LoadSettingsFields(); LoadParamsEditor(); }
+        if (tag == "servers") { _vm.RefreshServers(); LoadServerEditor(); LoadParamsEditor(); }
+        if (tag == "settings") LoadSettingsFields();
     }
 
     // --- Dashboard shortcut handlers --------------------------------------
 
-    /// <summary>"Edit mods" shortcut → select the Mods rail item (Tag=="mods"), which
-    /// raises OnNavChanged → ShowPage("mods").</summary>
-    private void OnEditMods(object sender, RoutedEventArgs e) => SelectNavTop("mods");
+    /// <summary>"Edit mods" shortcut → the Servers page (the active server's mod loadout lives there).</summary>
+    private void OnEditMods(object sender, RoutedEventArgs e) => SelectNavTop("servers");
 
-    /// <summary>"Edit params" shortcut → navigate to Settings and pre-select the params
-    /// target (Server/Client) for the column whose button was clicked (Tag).</summary>
+    /// <summary>"Edit params" shortcut → the Servers page; pre-select the params target
+    /// (Server/Client) for the column whose button was clicked (Tag), then scroll to it.</summary>
     private void OnEditParams(object sender, RoutedEventArgs e)
     {
-        // Navigate to Settings (NavBottom holds the Settings item; selecting it raises
-        // OnNavChanged → ShowPage("settings"), which also loads the params editor).
-        if (NavBottom.Items.Count > 0) NavBottom.SelectedIndex = 0;
+        SelectNavTop("servers");   // raises OnNavChanged → ShowPage("servers") → loads editor + params
 
-        // Pre-select the params Target combo for the clicked column, then reload the editor.
         var target = (sender as FrameworkElement)?.Tag as string;
         if (ParamTarget is not null && target is "server" or "client")
         {
@@ -141,8 +137,6 @@ public partial class MainWindow : FluentWindow
             LoadParamsEditor();
         }
 
-        // Scroll the Params card into view. Layout/visibility just changed (page switch),
-        // so defer until after render or BringIntoView runs against stale layout.
         Dispatcher.BeginInvoke(new Action(() => ParamsCard?.BringIntoView()),
             System.Windows.Threading.DispatcherPriority.Loaded);
     }
@@ -327,23 +321,17 @@ public partial class MainWindow : FluentWindow
 
     // === SETTINGS page ====================================================
 
+    // Settings = machine-global only. Per-server fields live on the Servers page (LoadServerEditor).
     private void LoadSettingsFields()
     {
         var c = _vm.Cfg;
         CfgDayzPath.Text = c.DayzPath;
         CfgDayzToolsPath.Text = c.DayzToolsPath;
-        CfgProfilesPath.Text = c.ProfilesPath;
-        CfgClientProfilesPath.Text = c.ClientProfilesPath;
         CfgProjectsRoot.Text = c.ProjectsRoot;
         CfgExeDebug.Text = c.ExeDebug;
         CfgExeNormal.Text = c.ExeNormal;
         CfgClientExeDebug.Text = c.ClientExeDebug;
         CfgClientExeNormal.Text = c.ClientExeNormal;
-        CfgPort.Text = c.Port.ToString();
-        CfgMission.Text = c.Mission;
-        CfgPlayerName.Text = c.PlayerName;
-        CfgConfigName.Text = c.ConfigName;
-        CfgConnectIp.Text = c.ConnectIp;
         CfgScanRoots.Text = string.Join("\n", c.ScanRoots);
         CfgEnableAutomationServer.IsChecked = c.EnableAutomationServer;
         ConfigError.Visibility = Visibility.Collapsed;
@@ -353,14 +341,7 @@ public partial class MainWindow : FluentWindow
 
     private void OnSaveConfig(object sender, RoutedEventArgs e)
     {
-        if (!int.TryParse(CfgPort.Text.Trim(), out var port))
-        {
-            ConfigError.Text = "Port must be an integer.";
-            ConfigError.Visibility = Visibility.Visible;
-            return;
-        }
         ConfigError.Visibility = Visibility.Collapsed;
-
         var roots = CfgScanRoots.Text.Replace("\r\n", "\n").Split('\n')
             .Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
 
@@ -368,24 +349,90 @@ public partial class MainWindow : FluentWindow
         {
             DayzPath = CfgDayzPath.Text.Trim(),
             DayzToolsPath = CfgDayzToolsPath.Text.Trim(),
-            ProfilesPath = CfgProfilesPath.Text.Trim(),
-            ClientProfilesPath = CfgClientProfilesPath.Text.Trim(),
             ProjectsRoot = CfgProjectsRoot.Text.Trim(),
             ExeDebug = CfgExeDebug.Text.Trim(),
             ExeNormal = CfgExeNormal.Text.Trim(),
             ClientExeDebug = CfgClientExeDebug.Text.Trim(),
             ClientExeNormal = CfgClientExeNormal.Text.Trim(),
-            Port = port,
-            Mission = CfgMission.Text.Trim(),
-            PlayerName = CfgPlayerName.Text.Trim(),
-            ConfigName = CfgConfigName.Text.Trim(),
-            ConnectIp = CfgConnectIp.Text.Trim(),
             ScanRoots = roots,
             EnableAutomationServer = CfgEnableAutomationServer.IsChecked == true,
         };
         _vm.ApplyConfig(edited);
         LoadSettingsFields();
+    }
+
+    // === SERVERS page: active-instance settings editor ====================
+
+    private void LoadServerEditor()
+    {
+        var c = _vm.Cfg;
+        CfgPort.Text = c.Port.ToString();
+        CfgMission.Text = c.Mission;
+        CfgConfigName.Text = c.ConfigName;
+        CfgPlayerName.Text = c.PlayerName;
+        CfgConnectIp.Text = c.ConnectIp;
+        CfgProfilesPath.Text = c.ProfilesPath;
+        CfgClientProfilesPath.Text = c.ClientProfilesPath;
+        SrvMode.SelectedIndex = c.Mode == "normal" ? 1 : 0;
+        SrvRenameBox.Text = "";
+        SrvCloneBox.Text = "";
+        SrvError.Visibility = Visibility.Collapsed;
+    }
+
+    private void OnRevertServer(object sender, RoutedEventArgs e) => LoadServerEditor();
+
+    private void OnSaveServer(object sender, RoutedEventArgs e)
+    {
+        if (!int.TryParse(CfgPort.Text.Trim(), out var port))
+        {
+            SrvError.Text = "Port must be an integer.";
+            SrvError.Visibility = Visibility.Visible;
+            return;
+        }
+        SrvError.Visibility = Visibility.Collapsed;
+        var mode = (SrvMode.SelectedItem as ComboBoxItem)?.Content as string ?? "debug";
+        var edited = _vm.Cfg with
+        {
+            Port = port,
+            Mission = CfgMission.Text.Trim(),
+            ConfigName = CfgConfigName.Text.Trim(),
+            PlayerName = CfgPlayerName.Text.Trim(),
+            ConnectIp = CfgConnectIp.Text.Trim(),
+            ProfilesPath = CfgProfilesPath.Text.Trim(),
+            ClientProfilesPath = CfgClientProfilesPath.Text.Trim(),
+            Mode = mode,
+        };
+        _vm.SaveActiveInstance(edited);
+        LoadServerEditor();
         LoadParamsEditor();
+    }
+
+    private void OnDeleteServer(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string name }) return;
+        var ok = System.Windows.MessageBox.Show(
+            $"Delete server instance \"{name}\"?\n\nThis removes its config + preset (the serverDZ.cfg / mission files on disk are left in place).",
+            "Delete server", System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning) == System.Windows.MessageBoxResult.Yes;
+        if (!ok) return;
+        NewServerStatus.Text = _vm.DeleteServer(name);
+        LoadServerEditor();
+    }
+
+    private void OnCloneServer(object sender, RoutedEventArgs e)
+    {
+        var name = SrvCloneBox.Text.Trim();
+        if (name.Length == 0) { SrvError.Text = "Enter a name to clone as."; SrvError.Visibility = Visibility.Visible; return; }
+        NewServerStatus.Text = _vm.CloneActive(name);
+        LoadServerEditor();
+    }
+
+    private void OnRenameServer(object sender, RoutedEventArgs e)
+    {
+        var name = SrvRenameBox.Text.Trim();
+        if (name.Length == 0) { SrvError.Text = "Enter a new name."; SrvError.Visibility = Visibility.Visible; return; }
+        NewServerStatus.Text = _vm.RenameActive(name);
+        LoadServerEditor();
     }
 
     private void OnAddScanRoot(object sender, RoutedEventArgs e)
