@@ -449,6 +449,86 @@ derapCmd.SetHandler(ctx =>
 });
 root.AddCommand(derapCmd);
 
+// ---- server ----
+var serverCmd = new Command("server", "Manage server instances.");
+
+var serverNewNameArg = new Argument<string>("name", "Instance name.");
+var serverNewMap = new Option<string>("--map", () => "chernarus", "Map name (e.g. chernarus, livonia).");
+var serverNewPort = new Option<int?>("--port", () => null, "UDP port (auto-assigned if omitted).");
+var serverNewNoActivate = new Option<bool>("--no-activate", "Don't activate the new instance preset.");
+var serverNewCmd = new Command("new", "Scaffold a new server instance.") { serverNewNameArg, serverNewMap, serverNewPort, serverNewNoActivate };
+serverNewCmd.SetHandler(ctx =>
+{
+    var (_, _, _, configPath) = Resolve(ctx);
+    var name = ctx.ParseResult.GetValueForArgument(serverNewNameArg);
+    var map = ctx.ParseResult.GetValueForOption(serverNewMap)!;
+    var port = ctx.ParseResult.GetValueForOption(serverNewPort);
+    var noActivate = ctx.ParseResult.GetValueForOption(serverNewNoActivate);
+    var r = new ServerService(configPath).Create(name, map, port, activate: !noActivate);
+    if (!r.Ok)
+    {
+        Console.Error.WriteLine(r.Message);
+        ctx.ExitCode = 1;
+        return;
+    }
+    Console.WriteLine($"{r.Message}  (port {r.Port}, {r.Dir})");
+});
+serverCmd.AddCommand(serverNewCmd);
+
+var serverLsCmd = new Command("ls", "List server instances.");
+serverLsCmd.SetHandler(ctx =>
+{
+    var (_, _, _, configPath) = Resolve(ctx);
+    var list = new ServerService(configPath).List();
+    if (list.Count == 0)
+    {
+        Console.WriteLine("(no servers)");
+        return;
+    }
+    foreach (var i in list)
+        Console.WriteLine($"{i.Name}  {i.Dir}");
+});
+serverCmd.AddCommand(serverLsCmd);
+
+var serverUseNameArg = new Argument<string>("name", "Instance / preset name.");
+var serverUseCmd = new Command("use", "Activate a server instance preset.") { serverUseNameArg };
+serverUseCmd.SetHandler(ctx =>
+{
+    var (_, _, _, configPath) = Resolve(ctx);
+    var name = ctx.ParseResult.GetValueForArgument(serverUseNameArg);
+    var res = new LauncherService(configPath).SetPreset(name);
+    if (!res.Ok)
+    {
+        Console.Error.WriteLine(res.Message);
+        ctx.ExitCode = 1;
+        return;
+    }
+    Console.WriteLine(res.Message);
+});
+serverCmd.AddCommand(serverUseCmd);
+
+var serverRmNameArg = new Argument<string>("name", "Instance / preset name.");
+var serverRmCmd = new Command("rm", "Remove a server preset (instance files stay on disk).") { serverRmNameArg };
+serverRmCmd.SetHandler(ctx =>
+{
+    var (_, _, active, configPath) = Resolve(ctx);
+    var name = ctx.ParseResult.GetValueForArgument(serverRmNameArg);
+    if (Profiles.Delete(name, configPath))
+    {
+        if (active == name) Profiles.SetActive("", configPath);
+        var (baseCfg, _, _) = Profiles.ResolveActive(configPath);
+        var serversDir = Path.Combine(baseCfg.ProjectsRoot, "servers", name);
+        Console.WriteLine($"removed preset '{name}' (instance files left on disk at {serversDir})");
+    }
+    else
+    {
+        Console.Error.WriteLine($"no preset '{name}'");
+        ctx.ExitCode = 1;
+    }
+});
+serverCmd.AddCommand(serverRmCmd);
+root.AddCommand(serverCmd);
+
 // ---- workdrive ----
 var workdriveActionArg = new Argument<string>("action", "status|mount|unmount")
     .FromAmong("status", "mount", "unmount");

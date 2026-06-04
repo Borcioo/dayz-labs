@@ -91,6 +91,21 @@ public static class DzlMcpTools
         return J(new { ok, output });
     }
 
+    // --- Server instances ---
+
+    [McpServerTool, Description("Scaffold a new server instance and save it as a preset. Returns Ok, Name, Dir, Port, Message.")]
+    public static string NewServer([Description("Instance name")] string name,
+                                   [Description("Map name, e.g. chernarus or livonia")] string map = "chernarus",
+                                   [Description("UDP port (auto-assigned if null)")] int? port = null)
+        => J(new ServerService(ConfigPath()).Create(name, map, port));
+
+    [McpServerTool, Description("List all scaffolded server instances (Name, Dir, CfgPath).")]
+    public static string ListServers() => J(new ServerService(ConfigPath()).List());
+
+    [McpServerTool, Description("Activate a server instance by name (switches the active preset).")]
+    public static string UseServer([Description("Server instance / preset name")] string name)
+        => J(Svc().SetPreset(name));
+
     [McpServerTool, Description("Check/mount/unmount the P: work drive. action = status|mount|unmount.")]
     public static string WorkDriveAction([Description("status|mount|unmount")] string action)
     {
