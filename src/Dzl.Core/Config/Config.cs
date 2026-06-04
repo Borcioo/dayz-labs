@@ -6,6 +6,11 @@ public sealed record DzlConfig
     public string DayzToolsPath { get; init; } = @"E:\Steam\steamapps\common\DayZ Tools";
     public string ProfilesPath { get; init; } = @"E:\Steam\steamapps\common\DayZ\profiles";
     public string ClientProfilesPath { get; init; } = @"E:\Steam\steamapps\common\DayZ\profiles_client";
+
+    /// <summary>Single home for everything dzl creates — mod source projects at
+    /// <c>&lt;ProjectsRoot&gt;\&lt;Mod&gt;</c> and server instances at <c>&lt;ProjectsRoot&gt;\servers\&lt;instance&gt;</c>.
+    /// Empty = resolve to <c>%USERPROFILE%\DayZProjects</c> (see <c>ProjectPaths.Root</c>). snake_case: projects_root.</summary>
+    public string ProjectsRoot { get; init; } = "";
     public string ExeDebug { get; init; } = "DayZDiag_x64.exe";
     public string ExeNormal { get; init; } = "DayZServer_x64.exe";
     public string ClientExeDebug { get; init; } = "DayZDiag_x64.exe";
