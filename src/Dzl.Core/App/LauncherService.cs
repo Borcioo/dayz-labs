@@ -91,6 +91,8 @@ public sealed class LauncherService
     public OpResult Start(string mode, bool client, string source = "cli")
     {
         var (cfg, _, _) = Resolve();
+        if (source is "cli" or "mcp" && cfg.AutoLaunchTray && !Dzl.Core.Launch.TrayLauncher.IsTrayRunning())
+            Dzl.Core.Launch.TrayLauncher.LaunchMonitor(AppContext.BaseDirectory);
         ProcessManager.Spawn(mode, "server", cfg, source, _configPath);
         if (client) ProcessManager.Spawn(mode, "client", cfg, source, _configPath);
         return new OpResult(true, $"started server{(client ? " + client" : "")} ({mode})");
@@ -114,6 +116,8 @@ public sealed class LauncherService
     public OpResult StartTarget(string target, string mode, string source = "tui")
     {
         var (cfg, _, _) = Resolve();
+        if (source is "cli" or "mcp" && cfg.AutoLaunchTray && !Dzl.Core.Launch.TrayLauncher.IsTrayRunning())
+            Dzl.Core.Launch.TrayLauncher.LaunchMonitor(AppContext.BaseDirectory);
         ProcessManager.Spawn(mode, target, cfg, source, _configPath);
         return new OpResult(true, $"started {target} ({mode})");
     }
