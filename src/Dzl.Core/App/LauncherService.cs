@@ -2,6 +2,7 @@ using Dzl.Core.Config;
 using Dzl.Core.Launch;
 using Dzl.Core.Logs;
 using Dzl.Core.Mods;
+using Dzl.Core.Projects;
 
 namespace Dzl.Core.App;
 
@@ -45,7 +46,7 @@ public sealed class LauncherService
             ["client_profiles_path"] = cfg.ClientProfilesPath,
             ["config_dir"] = Path.GetDirectoryName(_configPath) ?? ".",
             ["presets_dir"] = Profiles.PresetsDir(_configPath),
-            ["projects_root"] = Dzl.Core.Projects.ProjectPaths.Root(cfg),
+            ["projects_root"] = ProjectPaths.Root(cfg),
         };
         var mods = cfg.Mods.Where(m => m.Enabled).Select(m => new ModView(m.Path, m.Side)).ToList();
         return new StatusReport(cfg.Mode, cfg.Port, string.IsNullOrEmpty(active) ? null : active,
