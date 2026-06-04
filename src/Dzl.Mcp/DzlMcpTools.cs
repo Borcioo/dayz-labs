@@ -3,6 +3,7 @@ using System.Text.Json;
 using Dzl.Core.App;
 using Dzl.Core.Config;
 using Dzl.Core.Env;
+using Dzl.Core.Projects;
 using Dzl.Core.Tools;
 using ModelContextProtocol.Server;
 
@@ -107,4 +108,40 @@ public static class DzlMcpTools
         }
         return J(new { mounted = WorkDrive.IsMounted() });
     }
+
+    // --- Mod projects ---
+
+    private static string ProjectsRoot() => ProjectPaths.Root(Profiles.ResolveActive(ConfigPath()).cfg);
+
+    [McpServerTool, Description("Scaffold a new DayZ mod source project. Caches the author handle for future calls.")]
+    public static string NewMod([Description("Mod name (letters/digits/underscores, start with letter)")] string name,
+                                [Description("Author handle (cached when provided)")] string? author = null)
+    {
+        var configDir = Path.GetDirectoryName(ConfigPath())!;
+        var resolvedAuthor = author ?? ModScaffold.CachedAuthor(configDir);
+        if (resolvedAuthor is null)
+            return J(new { ok = false, error = "no author" });
+        var root = ProjectsRoot();
+        var scaffold = ModScaffold.Scaffold(root, name, resolvedAuthor);
+        if (author is not null) ModScaffold.SaveAuthor(configDir, author);
+        var link = scaffold.Ok
+            ? Junction.Ensure(ProjectPaths.WorkDriveLink(name), ProjectPaths.ModDir(root, name))
+            : null;
+        return J(new { scaffold, link });
+    }
+
+    [McpServerTool, Description("Import an existing mod source folder into ProjectsRoot and link it on P:.")]
+    public static string ImportMod([Description("Path to the existing mod source folder")] string path,
+                                   [Description("Override the mod name (defaults to folder name)")] string? name = null)
+        => J(ModImport.Import(ProjectsRoot(), path, name));
+
+    [McpServerTool, Description("Create or repair the P:\\ junction for a mod source project.")]
+    public static string LinkMod([Description("Mod name")] string name)
+    {
+        var root = ProjectsRoot();
+        return J(Junction.Ensure(ProjectPaths.WorkDriveLink(name), ProjectPaths.ModDir(root, name)));
+    }
+
+    [McpServerTool, Description("List mod source projects under ProjectsRoot with their P: link state.")]
+    public static string ListModProjects() => J(ModProjects.Discover(ProjectsRoot()));
 }

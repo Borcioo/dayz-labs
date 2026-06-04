@@ -7,6 +7,7 @@ using Dzl.Core.Env;
 using Dzl.Core.Ipc;
 using Dzl.Core.Launch;
 using Dzl.Core.Logs;
+using Dzl.Core.Projects;
 using Dzl.Core.Tools;
 
 // Global --config option (shared instance read inside handlers).
@@ -41,6 +42,25 @@ modsCmd.SetHandler(ctx =>
         Console.WriteLine($"{box} {m.Path}{tag}");
     }
 });
+
+var modsProjectsCmd = new Command("projects", "List mod source projects under ProjectsRoot.");
+modsProjectsCmd.SetHandler(ctx =>
+{
+    var (cfg, _, _, _) = Resolve(ctx);
+    var root2 = ProjectPaths.Root(cfg);
+    var projects = ModProjects.Discover(root2);
+    if (projects.Count == 0)
+    {
+        Console.WriteLine("(no mod projects)");
+        return;
+    }
+    foreach (var p in projects)
+    {
+        var linked = p.Linked ? "linked" : "unlinked";
+        Console.WriteLine($"{p.Name}  [{linked}]  {p.Path}");
+    }
+});
+modsCmd.AddCommand(modsProjectsCmd);
 root.AddCommand(modsCmd);
 
 // ---- start ----
@@ -475,5 +495,70 @@ workdriveCmd.SetHandler(ctx =>
     }
 });
 root.AddCommand(workdriveCmd);
+
+// ---- new ----
+var newModArg = new Argument<string>("Mod", "Mod name (letters, digits, underscores; start with letter).");
+var newAuthorOpt = new Option<string?>("--author", () => null, "Author handle (cached for future use).");
+var newCmd = new Command("new", "Scaffold a new DayZ mod source project.") { newModArg, newAuthorOpt };
+newCmd.SetHandler(ctx =>
+{
+    var (cfg, _, _, configPath) = Resolve(ctx);
+    var mod = ctx.ParseResult.GetValueForArgument(newModArg);
+    var authorOpt = ctx.ParseResult.GetValueForOption(newAuthorOpt);
+    var configDir = Path.GetDirectoryName(configPath)!;
+    var author = authorOpt ?? ModScaffold.CachedAuthor(configDir);
+    if (author is null)
+    {
+        Console.Error.WriteLine("no author; pass --author <handle> once to cache it");
+        ctx.ExitCode = 1;
+        return;
+    }
+    var projectsRoot = ProjectPaths.Root(cfg);
+    var result = ModScaffold.Scaffold(projectsRoot, mod, author);
+    Console.WriteLine(result.Message);
+    if (authorOpt is not null) ModScaffold.SaveAuthor(configDir, authorOpt);
+    if (result.Ok)
+    {
+        var linkResult = Junction.Ensure(ProjectPaths.WorkDriveLink(mod), ProjectPaths.ModDir(projectsRoot, mod));
+        if (!linkResult.Ok)
+            Console.WriteLine($"warning: link {linkResult.Action}: {linkResult.Detail}");
+        else
+            Console.WriteLine($"{linkResult.Action}: {linkResult.Detail}");
+    }
+    else
+    {
+        ctx.ExitCode = 1;
+    }
+});
+root.AddCommand(newCmd);
+
+// ---- import ----
+var importPathArg = new Argument<string>("path", "Path to an existing mod source folder.");
+var importNameOpt = new Option<string?>("--name", () => null, "Override the mod name (defaults to folder name).");
+var importCmd = new Command("import", "Import an existing mod source folder into ProjectsRoot.") { importPathArg, importNameOpt };
+importCmd.SetHandler(ctx =>
+{
+    var (cfg, _, _, _) = Resolve(ctx);
+    var path = ctx.ParseResult.GetValueForArgument(importPathArg);
+    var name = ctx.ParseResult.GetValueForOption(importNameOpt);
+    var result = ModImport.Import(ProjectPaths.Root(cfg), path, name);
+    Console.WriteLine(result.Message);
+    if (!result.Ok) ctx.ExitCode = 1;
+});
+root.AddCommand(importCmd);
+
+// ---- link ----
+var linkModArg = new Argument<string>("Mod", "Mod name to link on P:.");
+var linkCmd = new Command("link", "Create or repair the P:\\ junction for a mod.") { linkModArg };
+linkCmd.SetHandler(ctx =>
+{
+    var (cfg, _, _, _) = Resolve(ctx);
+    var mod = ctx.ParseResult.GetValueForArgument(linkModArg);
+    var projectsRoot = ProjectPaths.Root(cfg);
+    var result = Junction.Ensure(ProjectPaths.WorkDriveLink(mod), ProjectPaths.ModDir(projectsRoot, mod));
+    Console.WriteLine($"{result.Action}: {result.Detail}");
+    if (!result.Ok) ctx.ExitCode = 1;
+});
+root.AddCommand(linkCmd);
 
 return await root.InvokeAsync(args);
