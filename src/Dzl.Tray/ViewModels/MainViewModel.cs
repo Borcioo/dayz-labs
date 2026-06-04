@@ -617,7 +617,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var old = _logCts;
         _logCts = new CancellationTokenSource();
         old.Cancel();
-        old.Dispose();
+        // Don't Dispose() the old CTS here: background Follow tasks may still hold its token for a
+        // moment (Task.Delay/registrations) and disposing under them races into ObjectDisposedException.
+        // Cancellation stops the loops; the orphaned CTS is collected by GC.
         foreach (var pane in LogPanes) pane.Clear();
         StartLogTails();
     }
@@ -627,7 +629,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (string.IsNullOrEmpty(path)) return;
         // Seed with the existing tail so the pane isn't empty.
         foreach (var line in LogTail.LastLines(path, 200)) pane.Append(line);
-        _ = LogTail.Follow(path, line => _dispatcher.BeginInvoke(() => pane.Append(line)), _logCts.Token);
+        // Run the follow loop on a background thread (Task.Run) so file reads never touch the UI
+        // thread — a server's startup log spew would otherwise freeze the window. Only the per-line
+        // append is marshalled back to the UI via the dispatcher.
+        var token = _logCts.Token;
+        _ = Task.Run(() => LogTail.Follow(path, line => _dispatcher.BeginInvoke(() => pane.Append(line)), token));
     }
 
     /// <summary>Switch the Logs page layout (grid/list/tabs/focus).</summary>

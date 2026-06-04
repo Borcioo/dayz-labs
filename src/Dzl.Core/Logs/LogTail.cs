@@ -32,9 +32,11 @@ public static class LogTail
                     fs.Seek(pos, SeekOrigin.Begin);
                     using var sr = new StreamReader(fs);
                     string? line;
-                    while ((line = await sr.ReadLineAsync()) is not null)
+                    // ConfigureAwait(false): never resume on a captured (UI) context — the read loop
+                    // must stay off the UI thread, or a fast-growing log (server startup) freezes it.
+                    while ((line = await sr.ReadLineAsync().ConfigureAwait(false)) is not null)
                     {
-                        ct.ThrowIfCancellationRequested();
+                        if (ct.IsCancellationRequested) return;
                         onLine(line);
                     }
                     pos = fs.Length;
@@ -44,7 +46,7 @@ public static class LogTail
 
             try
             {
-                await Task.Delay(500, ct);
+                await Task.Delay(500, ct).ConfigureAwait(false);
             }
             catch (TaskCanceledException)
             {
