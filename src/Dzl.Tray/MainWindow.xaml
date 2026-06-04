@@ -1083,8 +1083,12 @@
                 <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
 
-              <TextBlock Grid.Column="0" Text="Logs" FontSize="20" FontWeight="SemiBold"
-                         VerticalAlignment="Center" />
+              <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                <TextBlock Text="Logs" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                  <Run Text="server: " /><Run Text="{Binding ActivePreset, Mode=OneWay}" FontWeight="SemiBold" />
+                </TextBlock>
+              </StackPanel>
 
               <!-- View-mode segmented control (grid/list/tabs/focus) -->
               <Border Grid.Column="1" HorizontalAlignment="Left" Margin="20,0,0,0"

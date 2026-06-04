@@ -39,6 +39,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private readonly Dispatcher _dispatcher;
     private readonly DispatcherTimer _statusTimer;
     private readonly CancellationTokenSource _cts = new();
+    // Separate token for the live log tails so they can be cancelled + restarted when the active
+    // server changes (each server has its own profiles dirs → its own logs). Recreated by RetailLogs.
+    private CancellationTokenSource _logCts = new();
     private readonly LauncherService _svc;
     private DzlConfig _cfg;
     private bool _suppressPersist;
@@ -572,9 +575,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             SuppressPresetSwitch = false;
         }
         RefreshPreview();
+        RetailLogs();   // logs follow the active server's profiles
     }
 
     // --- Live log tailing --------------------------------------------------
+    // Logs are per-server: they come from the active instance's ProfilesPath/ClientProfilesPath.
+    // Switching the active server re-points them via RetailLogs() (called from Reload()).
 
     private void StartLogTails()
     {
@@ -588,12 +594,24 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>Cancel the current log follows and restart them against the active server's profiles
+    /// (clears each pane first so you don't see the previous server's lines).</summary>
+    private void RetailLogs()
+    {
+        var old = _logCts;
+        _logCts = new CancellationTokenSource();
+        old.Cancel();
+        old.Dispose();
+        foreach (var pane in LogPanes) pane.Clear();
+        StartLogTails();
+    }
+
     private void Tail(LogPaneVm pane, string? path)
     {
         if (string.IsNullOrEmpty(path)) return;
         // Seed with the existing tail so the pane isn't empty.
         foreach (var line in LogTail.LastLines(path, 200)) pane.Append(line);
-        _ = LogTail.Follow(path, line => _dispatcher.BeginInvoke(() => pane.Append(line)), _cts.Token);
+        _ = LogTail.Follow(path, line => _dispatcher.BeginInvoke(() => pane.Append(line)), _logCts.Token);
     }
 
     /// <summary>Switch the Logs page layout (grid/list/tabs/focus).</summary>
@@ -837,5 +855,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _statusTimer.Stop();
         _cts.Cancel();
         _cts.Dispose();
+        _logCts.Cancel();
+        _logCts.Dispose();
     }
 }
