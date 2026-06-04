@@ -202,7 +202,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         RefreshPreview();
 
         _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
-        _statusTimer.Tick += (_, _) => RefreshStatus();
+        _statusTimer.Tick += (_, _) => { RefreshStatus(); RefreshLogPaths(); };
         _statusTimer.Start();
         RefreshStatus();
 
@@ -591,6 +591,22 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             pane.Path = path;
             pane.FileName = string.IsNullOrEmpty(path) ? "(none)" : Path.GetFileName(path);
             Tail(pane, path);
+        }
+    }
+
+    /// <summary>
+    /// Poll (from the status timer) for the newest log file changing — e.g. a server just started and
+    /// wrote a fresh script/RPT/ADM, or the active server changed. When any pane's resolved newest
+    /// file differs from what it's tailing, re-tail so the panes follow the live files. No-op otherwise.
+    /// </summary>
+    private void RefreshLogPaths()
+    {
+        if (_disposed) return;
+        var paths = LogResolver.Resolve(_cfg.ProfilesPath, _cfg.ClientProfilesPath);
+        foreach (var pane in LogPanes)
+        {
+            var p = paths.GetValueOrDefault(pane.Key);
+            if (!string.Equals(p, pane.Path, StringComparison.OrdinalIgnoreCase)) { RetailLogs(); return; }
         }
     }
 
