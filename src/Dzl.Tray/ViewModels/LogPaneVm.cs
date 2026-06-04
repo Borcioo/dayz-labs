@@ -21,6 +21,10 @@ public sealed partial class LogPaneVm : ObservableObject
     [ObservableProperty] private string _fileName = "(none)";
     [ObservableProperty] private string _text = "";
 
+    // Bounded ring buffer of the last MaxLines lines. Text is rebuilt once per AppendBatch (not per
+    // line) so a burst of thousands of lines is O(MaxLines) per flush instead of O(N²) per line.
+    private readonly Queue<string> _lines = new();
+
     /// <summary>Accordion (List view) expand state; default expanded so the tail is visible.</summary>
     [ObservableProperty] private bool _isExpanded = true;
 
@@ -33,34 +37,20 @@ public sealed partial class LogPaneVm : ObservableObject
         Title = title;
     }
 
-    /// <summary>Append one line, trimming to the last <see cref="MaxLines"/> lines.</summary>
-    public void Append(string line)
+    /// <summary>Append a batch of lines (trim to the last <see cref="MaxLines"/>), rebuilding
+    /// <see cref="Text"/> once. Call on the UI thread. Empty batches are a no-op.</summary>
+    public void AppendBatch(IReadOnlyList<string> lines)
     {
-        var text = Text.Length == 0 ? line : Text + "\n" + line;
-        var nl = CountLines(text);
-        if (nl > MaxLines)
-        {
-            var idx = 0;
-            var drop = nl - MaxLines;
-            for (int i = 0; i < drop; i++)
-            {
-                idx = text.IndexOf('\n', idx);
-                if (idx < 0) break;
-                idx++;
-            }
-            if (idx > 0) text = text[idx..];
-        }
-        Text = text;
+        if (lines.Count == 0) return;
+        foreach (var l in lines) _lines.Enqueue(l);
+        while (_lines.Count > MaxLines) _lines.Dequeue();
+        Text = string.Join("\n", _lines);
     }
 
     /// <summary>Clear the in-memory view (the underlying file is untouched).</summary>
-    public void Clear() => Text = "";
-
-    private static int CountLines(string s)
+    public void Clear()
     {
-        if (s.Length == 0) return 0;
-        var n = 1;
-        foreach (var c in s) if (c == '\n') n++;
-        return n;
+        _lines.Clear();
+        Text = "";
     }
 }

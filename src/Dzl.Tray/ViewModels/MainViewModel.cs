@@ -627,13 +627,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void Tail(LogPaneVm pane, string? path)
     {
         if (string.IsNullOrEmpty(path)) return;
-        // Seed with the existing tail so the pane isn't empty.
-        foreach (var line in LogTail.LastLines(path, 200)) pane.Append(line);
+        // Seed with the existing tail so the pane isn't empty (one batch).
+        pane.AppendBatch(LogTail.LastLines(path, 200));
         // Run the follow loop on a background thread (Task.Run) so file reads never touch the UI
-        // thread — a server's startup log spew would otherwise freeze the window. Only the per-line
-        // append is marshalled back to the UI via the dispatcher.
+        // thread. New lines arrive BATCHED per poll cycle → one dispatcher hop per cycle (not per
+        // line), so a server's startup spew can't flood/freeze the UI.
         var token = _logCts.Token;
-        _ = Task.Run(() => LogTail.Follow(path, line => _dispatcher.BeginInvoke(() => pane.Append(line)), token));
+        _ = Task.Run(() => LogTail.Follow(path,
+            batch => _dispatcher.BeginInvoke(() => pane.AppendBatch(batch)), token));
     }
 
     /// <summary>Switch the Logs page layout (grid/list/tabs/focus).</summary>

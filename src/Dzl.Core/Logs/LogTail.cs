@@ -17,8 +17,9 @@ public static class LogTail
         return buf.ToList();
     }
 
-    // Best-effort follow: emit new lines as they're appended. Manual-verify only.
-    public static async Task Follow(string path, Action<string> onLine, CancellationToken ct)
+    // Best-effort follow: emit new lines as they're appended, BATCHED per poll cycle (so a burst of
+    // thousands of lines is one callback, not thousands). Runs off the UI thread. Manual-verify only.
+    public static async Task Follow(string path, Action<IReadOnlyList<string>> onLines, CancellationToken ct)
     {
         long pos = File.Exists(path) ? new FileInfo(path).Length : 0;
         while (!ct.IsCancellationRequested)
@@ -31,15 +32,17 @@ public static class LogTail
                     if (fs.Length < pos) pos = 0; // file rotated/truncated
                     fs.Seek(pos, SeekOrigin.Begin);
                     using var sr = new StreamReader(fs);
+                    var batch = new List<string>();
                     string? line;
                     // ConfigureAwait(false): never resume on a captured (UI) context — the read loop
                     // must stay off the UI thread, or a fast-growing log (server startup) freezes it.
                     while ((line = await sr.ReadLineAsync().ConfigureAwait(false)) is not null)
                     {
                         if (ct.IsCancellationRequested) return;
-                        onLine(line);
+                        batch.Add(line);
                     }
                     pos = fs.Length;
+                    if (batch.Count > 0) onLines(batch);
                 }
             }
             catch (IOException) { /* transient; retry next tick */ }
