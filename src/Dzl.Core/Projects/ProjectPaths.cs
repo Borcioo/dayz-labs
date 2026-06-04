@@ -20,8 +20,13 @@ public static partial class ProjectPaths
     public static string Root(DzlConfig cfg) =>
         Root(cfg.ProjectsRoot, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 
+    /// <summary>The source-project folder for a mod under the projects root.</summary>
     public static string ModDir(string root, string mod) => Path.Combine(root, mod);
+
+    /// <summary>The folder holding all server instances under the projects root.</summary>
     public static string ServersDir(string root) => Path.Combine(root, "servers");
+
+    /// <summary>The folder for one server instance under the projects root.</summary>
     public static string ServerDir(string root, string instance) => Path.Combine(root, "servers", instance);
 
     /// <summary>The P: junction path for a mod (where AddonBuilder/engine expect to see the source).</summary>

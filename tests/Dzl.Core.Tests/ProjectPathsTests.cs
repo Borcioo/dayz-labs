@@ -1,3 +1,4 @@
+using Xunit;
 using Dzl.Core.Projects;
 using FluentAssertions;
 
@@ -16,6 +17,14 @@ public class ProjectPathsTests
 
     [Fact]
     public void Name_validation_null_is_false() => ProjectPaths.IsValidName(null).Should().BeFalse();
+
+    [Fact]
+    public void Name_validation_64_chars_ok()
+        => ProjectPaths.IsValidName("A" + new string('a', 63)).Should().BeTrue();   // 64 chars
+
+    [Fact]
+    public void Name_validation_65_chars_rejected()
+        => ProjectPaths.IsValidName("A" + new string('a', 64)).Should().BeFalse();  // 65 chars
 
     [Fact]
     public void Root_falls_back_to_userprofile_when_unset()
