@@ -55,4 +55,34 @@ public class ArgvBuilderTests
         ArgvBuilder.Build("debug", "server", cfg).Last().Should().Be("-dbgFlag");
         ArgvBuilder.Build("normal", "server", cfg).Last().Should().Be("-normFlag");
     }
+
+    [Fact]
+    public void Config_relative_value_kept_as_is()
+        => ArgvBuilder.Build("debug", "server", Sides() with { ConfigName = "serverDZ.cfg" })
+            .Should().Contain("-config=serverDZ.cfg");
+
+    [Fact]
+    public void Config_absolute_instance_path_reduced_to_filename()
+        // DayZ rejects an absolute -config; the server runs from the instance dir (WorkingDir) so we
+        // pass just the filename.
+        => ArgvBuilder.Build("debug", "server", Sides() with { ConfigName = @"D:\DayzProjects\servers\Test\serverDZ.cfg" })
+            .Should().Contain("-config=serverDZ.cfg");
+
+    [Fact]
+    public void WorkingDir_is_install_for_relative_config_and_for_client()
+    {
+        var cfg = Sides();
+        ArgvBuilder.WorkingDir(cfg, "server").Should().Be(cfg.DayzPath);
+        ArgvBuilder.WorkingDir(cfg, "client").Should().Be(cfg.DayzPath);
+    }
+
+    [Fact]
+    public void WorkingDir_is_instance_dir_for_rooted_existing_config()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        File.WriteAllText(Path.Combine(dir, "serverDZ.cfg"), "hostname=\"x\";");
+        var cfg = Sides() with { ConfigName = Path.Combine(dir, "serverDZ.cfg") };
+        ArgvBuilder.WorkingDir(cfg, "server").Should().Be(dir);
+        ArgvBuilder.WorkingDir(cfg, "client").Should().Be(cfg.DayzPath);   // client always from install
+    }
 }

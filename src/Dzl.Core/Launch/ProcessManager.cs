@@ -36,7 +36,9 @@ public static class ProcessManager
         var psi = new ProcessStartInfo
         {
             FileName = Path.Combine(cfg.DayzPath, exe),
-            WorkingDirectory = cfg.DayzPath,
+            // Server with an absolute instance serverDZ.cfg runs from the instance dir so DayZ resolves
+            // its -config + mission there (it rejects absolute -config). Client always from the install.
+            WorkingDirectory = ArgvBuilder.WorkingDir(cfg, target),
             UseShellExecute = false,
         };
         foreach (var a in ArgvBuilder.Build(mode, target, cfg)) psi.ArgumentList.Add(a);
