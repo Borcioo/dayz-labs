@@ -38,6 +38,10 @@ public sealed record DzlConfig
     /// </summary>
     public bool EnableAutomationServer { get; init; } = false;
 
+    /// <summary>When a server is started from CLI/MCP and the tray isn't running, auto-launch it
+    /// (hidden, as a monitor). Default on. snake_case: auto_launch_tray.</summary>
+    public bool AutoLaunchTray { get; init; } = true;
+
     public static DzlConfig Default() => new();
 }
 
