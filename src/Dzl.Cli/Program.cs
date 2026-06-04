@@ -155,6 +155,7 @@ statusCmd.SetHandler(ctx =>
     Console.WriteLine($"client prof:   {report.Paths.GetValueOrDefault("client_profiles_path")}");
     Console.WriteLine($"config dir:    {report.Paths.GetValueOrDefault("config_dir")}");
     Console.WriteLine($"presets dir:   {report.Paths.GetValueOrDefault("presets_dir")}");
+    Console.WriteLine($"projects root: {report.Paths.GetValueOrDefault("projects_root")}");
     Console.WriteLine($"enabled mods:  {report.Mods.Count}");
     foreach (var m in report.Mods)
         Console.WriteLine($"  - {m.Path}  ({m.Side})");
@@ -234,11 +235,12 @@ setCmd.SetHandler(ctx =>
         case "dayz_path": updated = cfg with { DayzPath = value }; break;
         case "profiles_path": updated = cfg with { ProfilesPath = value }; break;
         case "client_profiles_path": updated = cfg with { ClientProfilesPath = value }; break;
+        case "projects_root": updated = cfg with { ProjectsRoot = value }; break;
         default:
             Console.Error.WriteLine(
                 "unknown/non-editable key '" + key + "'. editable: " +
                 "port, player_name, connect_ip, mission, config_name, " +
-                "dayz_path, profiles_path, client_profiles_path");
+                "dayz_path, profiles_path, client_profiles_path, projects_root");
             ctx.ExitCode = 1;
             return;
     }
@@ -253,6 +255,7 @@ setCmd.SetHandler(ctx =>
         "dayz_path" => updated.DayzPath,
         "profiles_path" => updated.ProfilesPath,
         "client_profiles_path" => updated.ClientProfilesPath,
+        "projects_root" => updated.ProjectsRoot,
         _ => value,
     };
     Console.WriteLine($"{key} = {shown}");
