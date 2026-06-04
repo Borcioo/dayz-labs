@@ -7,6 +7,7 @@ using Dzl.Core.Env;
 using Dzl.Core.Ipc;
 using Dzl.Core.Launch;
 using Dzl.Core.Logs;
+using Dzl.Core.Projects;
 using Dzl.Core.Tools;
 
 // Global --config option (shared instance read inside handlers).
@@ -517,7 +518,7 @@ serverRmCmd.SetHandler(ctx =>
     {
         if (active == name) Profiles.SetActive("", configPath);
         var (baseCfg, _, _) = Profiles.ResolveActive(configPath);
-        var serversDir = Path.Combine(baseCfg.ProjectsRoot, "servers", name);
+        var serversDir = Path.Combine(ProjectPaths.Root(baseCfg), "servers", name);
         Console.WriteLine($"removed preset '{name}' (instance files left on disk at {serversDir})");
     }
     else

@@ -21,6 +21,7 @@ public sealed class ServerService
     /// <summary>Scaffold a new server instance and save it as a preset (atomically), optionally activating it.</summary>
     public CreateServerResult Create(string name, string map, int? port = null, bool activate = true)
     {
+        Profiles.EnsureDefault(_configPath);
         if (!ProjectPaths.IsValidName(name))
             return new CreateServerResult(false, name, "", 0, $"invalid instance name: {name}");
 
