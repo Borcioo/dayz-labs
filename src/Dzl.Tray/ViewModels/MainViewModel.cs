@@ -1066,6 +1066,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return WorkshopStatus;
     }
 
+    /// <summary>Where item <paramref name="id"/> actually lives on disk (Steam client folder or the steamcmd
+    /// download under ProjectsRoot), or null if it isn't downloaded yet.</summary>
+    public string? ResolveModFolder(string id) => new WorkshopService(_configPath).ResolveContentDir(id);
+
     // === Code editor ======================================================
 
     /// <summary>True when a code editor is configured (drives the "Open in editor" buttons).</summary>

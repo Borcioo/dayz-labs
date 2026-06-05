@@ -75,12 +75,15 @@ public partial class WorkshopWindow : FluentWindow
         if (sender is FrameworkElement { Tag: string id }) await _vm.UnsubscribeWorkshopAsync(id);
     }
 
+    // Resolve the item's real folder by id (Steam client OR the steamcmd download under ProjectsRoot) — the
+    // SubscribedItem.Dir reflects only the Steam client folder and is empty for optimistic / steamcmd-only rows.
     private void OnOpenSubscribedFolder(object sender, RoutedEventArgs e)
     {
-        if (sender is not FrameworkElement { Tag: string dir }) return;
-        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
+        if (sender is not FrameworkElement { Tag: string id }) return;
+        var dir = _vm.ResolveModFolder(id);
+        if (string.IsNullOrWhiteSpace(dir))
         {
-            System.Windows.MessageBox.Show("Not downloaded yet — the Steam client downloads subscribed items in the background.",
+            System.Windows.MessageBox.Show("Not downloaded yet — subscribe (the Steam client downloads in the background) or use Download (steamcmd).",
                 "Open folder", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
             return;
         }

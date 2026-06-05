@@ -140,6 +140,21 @@ public sealed class WorkshopService
         return string.IsNullOrWhiteSpace(cfg.SteamCmdPath) ? null : WorkshopCmd.ContentDir(WorkshopInstallDir(), id);
     }
 
+    /// <summary>The folder where item <paramref name="id"/> actually lives on disk, checking both places it
+    /// can land: the Steam <i>client</i>'s workshop content folder (in-app Subscribe) and the steamcmd download
+    /// folder under ProjectsRoot. Null when it isn't downloaded in either.</summary>
+    public string? ResolveContentDir(string id)
+    {
+        var steam = Dzl.Core.Env.EnvDetect.SteamPath();
+        if (steam is not null)
+        {
+            var d = Path.Combine(steam, "steamapps", "workshop", "content", WorkshopCmd.AppId, id);
+            if (Directory.Exists(d)) return d;
+        }
+        var cd = ContentDir(id);
+        return cd is not null && Directory.Exists(cd) ? cd : null;
+    }
+
     /// <summary>Items subscribed in the Steam <i>client</i> (its workshop content folder, resolved from the
     /// Steam install) — these are what the DayZ Launcher loads. Friendly names via meta.cpp/mod.cpp.</summary>
     public List<SubscribedItem> Subscribed()
