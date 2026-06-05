@@ -34,6 +34,18 @@ public partial class WorkshopWindow : FluentWindow
 
     private async void OnLoadMore(object sender, RoutedEventArgs e) => await _vm.WorkshopLoadMoreAsync();
 
+    // Infinite scroll: auto-load the next page when the results list is scrolled near the bottom. With a
+    // virtualizing ListBox the ScrollViewer offsets are in item units, so "within 3 of the end" works.
+    private bool _loadingMore;
+    private async void OnResultsScroll(object sender, System.Windows.Controls.ScrollChangedEventArgs e)
+    {
+        if (_loadingMore || e.VerticalChange <= 0 || e.ExtentHeight <= e.ViewportHeight) return;
+        if (e.VerticalOffset + e.ViewportHeight < e.ExtentHeight - 3) return;   // not near the bottom yet
+        _loadingMore = true;
+        try { await _vm.WorkshopLoadMoreAsync(); }
+        finally { _loadingMore = false; }
+    }
+
     private void OnRefreshSubscribed(object sender, RoutedEventArgs e) => _vm.RefreshSubscribed();
 
     private void OnDownload(object sender, RoutedEventArgs e)

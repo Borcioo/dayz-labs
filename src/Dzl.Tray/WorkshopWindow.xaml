@@ -70,7 +70,8 @@
               BorderBrush="{DynamicResource ControlElevationBorderBrush}">
         <ListBox x:Name="ResultsList" ItemsSource="{Binding WorkshopResults}"
                  SelectedItem="{Binding SelectedWorkshopItem}" Background="Transparent" BorderThickness="0"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"
+                 ScrollViewer.ScrollChanged="OnResultsScroll">
           <ListBox.ItemTemplate>
             <DataTemplate>
               <Grid Margin="2">
