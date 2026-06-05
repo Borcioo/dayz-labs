@@ -862,6 +862,22 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return $"✓ cloned active → '{newName}' (now active)";
     }
 
+    /// <summary>The active server's folder (where its serverDZ.cfg / mpmissions / profiles live).</summary>
+    public string ActiveServerDir =>
+        Path.IsPathRooted(_cfg.ConfigName)
+            ? Path.GetDirectoryName(_cfg.ConfigName) ?? ProjectPaths.ServerDir(ProjectsRoot, ActiveName)
+            : ProjectPaths.ServerDir(ProjectsRoot, ActiveName);
+
+    /// <summary>Delete the active server's Central Economy persistence (storage_*) so the next start
+    /// regenerates it fresh. Returns a status line.</summary>
+    public string WipeActivePersistence()
+    {
+        var n = ServerScaffold.WipePersistence(ActiveServerDir);
+        return n > 0
+            ? $"✓ wiped {n} storage folder(s) — fresh persistence on next start"
+            : "nothing to wipe (persistence is already clean)";
+    }
+
     /// <summary>Rename the active instance (copy → new name, delete old, activate new).</summary>
     public string RenameActive(string newName)
     {

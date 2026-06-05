@@ -91,6 +91,36 @@
       <TabItem Header="Settings">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel Margin="4,12,4,4">
+
+            <!-- where the files come from -->
+            <ui:Card Margin="0,0,0,16" Padding="14">
+              <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                  <ui:SymbolIcon Symbol="Info24" FontSize="16" Margin="0,0,8,0"
+                                 Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                  <TextBlock Text="Where this server's files live" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </StackPanel>
+                <Grid>
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                  <Border Grid.Column="0" CornerRadius="4" Padding="8,5" VerticalAlignment="Center"
+                          Background="{DynamicResource ControlFillColorDefaultBrush}">
+                    <TextBlock Text="{Binding ActiveServerDir, Mode=OneWay}" FontFamily="Cascadia Mono, Consolas"
+                               FontSize="12" TextTrimming="CharacterEllipsis" />
+                  </Border>
+                  <ui:Button Grid.Column="1" Content="Open folder" Icon="{ui:SymbolIcon FolderOpen24}"
+                             Margin="8,0,0,0" Click="OnOpenInstanceFolder" />
+                </Grid>
+                <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="serverDZ.cfg, mpmissions and profiles (logs) all live in this folder. The mission is copied from your DayZ install when the server is created. Central Economy persistence (the mission's storage_* folders) is generated fresh on first run — wipe it to reset the world/persistence." />
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                  <ui:Button Content="Wipe persistence" Icon="{ui:SymbolIcon Delete24}" Click="OnWipePersistence" />
+                  <TextBlock x:Name="WipeStatus" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="12"
+                             Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+              </StackPanel>
+            </ui:Card>
+
             <!-- rename / clone -->
             <Grid Margin="0,0,0,16">
               <Grid.ColumnDefinitions>

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -173,6 +174,33 @@ public partial class ServerEditorWindow : FluentWindow
         return full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
             ? Path.GetRelativePath(root, full)
             : full;
+    }
+
+    private void OnOpenInstanceFolder(object sender, RoutedEventArgs e)
+    {
+        var dir = _vm.ActiveServerDir;
+        try
+        {
+            if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
+            {
+                System.Windows.MessageBox.Show($"Folder not found:\n{dir}", "Open server folder",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                return;
+            }
+            Process.Start(new ProcessStartInfo("explorer.exe", dir) { UseShellExecute = true });
+        }
+        catch { /* best-effort */ }
+    }
+
+    private void OnWipePersistence(object sender, RoutedEventArgs e)
+    {
+        var ok = System.Windows.MessageBox.Show(
+            "Wipe this server's persistence (Central Economy storage)?\n\nThe world / loot / player state " +
+            "resets; DayZ regenerates fresh storage on the next start. The mission files are kept.",
+            "Wipe persistence", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
+            == System.Windows.MessageBoxResult.Yes;
+        if (!ok) return;
+        WipeStatus.Text = _vm.WipeActivePersistence();
     }
 
     private void OnClose(object sender, RoutedEventArgs e) => Close();

@@ -44,6 +44,23 @@ public class EnvTests
         => ServerScaffold.IsRuntimeDir(name).Should().Be(skip);
 
     [Fact]
+    public void WipePersistence_removes_storage_dirs_only()
+    {
+        var inst = Directory.CreateTempSubdirectory().FullName;
+        var mission = Path.Combine(inst, "mpmissions", "dayzOffline.chernarusplus");
+        Directory.CreateDirectory(Path.Combine(mission, "storage_1"));
+        Directory.CreateDirectory(Path.Combine(mission, "storage_2"));
+        Directory.CreateDirectory(Path.Combine(mission, "db"));
+        File.WriteAllText(Path.Combine(mission, "init.c"), "");
+
+        ServerScaffold.WipePersistence(inst).Should().Be(2);
+        Directory.Exists(Path.Combine(mission, "storage_1")).Should().BeFalse();
+        Directory.Exists(Path.Combine(mission, "db")).Should().BeTrue();        // real content kept
+        File.Exists(Path.Combine(mission, "init.c")).Should().BeTrue();
+        ServerScaffold.WipePersistence(inst).Should().Be(0);                    // idempotent
+    }
+
+    [Fact]
     public void SteamCmd_script_targets_app_223350_with_validate()
     {
         var s = SteamCmd.DownloadServerScript(@"D:\dzserver");

@@ -106,6 +106,25 @@ class Missions
     public static bool IsRuntimeDir(string name) =>
         name.StartsWith("storage_", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>Delete the Central Economy persistence (<c>storage_*</c>) under this instance's
+    /// missions so the next start regenerates it fresh. Returns how many storage folders were removed.
+    /// Never throws.</summary>
+    public static int WipePersistence(string instanceDir)
+    {
+        var n = 0;
+        try
+        {
+            var mpm = Path.Combine(instanceDir, "mpmissions");
+            if (!Directory.Exists(mpm)) return 0;
+            foreach (var mission in Directory.EnumerateDirectories(mpm))
+                foreach (var d in Directory.EnumerateDirectories(mission))
+                    if (IsRuntimeDir(Path.GetFileName(d)))
+                    { try { Directory.Delete(d, recursive: true); n++; } catch { /* skip locked */ } }
+        }
+        catch { /* best-effort */ }
+        return n;
+    }
+
     private static void CopyDirectory(string src, string dst)
     {
         Directory.CreateDirectory(dst);
