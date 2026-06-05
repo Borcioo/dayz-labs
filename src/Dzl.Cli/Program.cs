@@ -2,8 +2,10 @@ using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Text.Json;
 using Dzl.Core.App;
+using Dzl.Core.Bases;
 using Dzl.Core.Config;
 using Dzl.Core.Env;
+using Dzl.Core.Servers;
 using Dzl.Core.Ipc;
 using Dzl.Core.Launch;
 using Dzl.Core.Logs;
@@ -478,7 +480,8 @@ var serverNewNameArg = new Argument<string>("name", "Instance name.");
 var serverNewMap = new Option<string>("--map", () => "chernarus", "Map name (e.g. chernarus, livonia).");
 var serverNewPort = new Option<int?>("--port", () => null, "UDP port (auto-assigned if omitted).");
 var serverNewNoActivate = new Option<bool>("--no-activate", "Don't activate the new instance preset.");
-var serverNewCmd = new Command("new", "Scaffold a new server instance.") { serverNewNameArg, serverNewMap, serverNewPort, serverNewNoActivate };
+var serverNewBase = new Option<string?>("--base", () => null, "Create from a base/template instead of the DayZ install.");
+var serverNewCmd = new Command("new", "Scaffold a new server instance.") { serverNewNameArg, serverNewMap, serverNewPort, serverNewNoActivate, serverNewBase };
 serverNewCmd.SetHandler(ctx =>
 {
     var (_, _, _, configPath) = Resolve(ctx);
@@ -486,7 +489,8 @@ serverNewCmd.SetHandler(ctx =>
     var map = ctx.ParseResult.GetValueForOption(serverNewMap)!;
     var port = ctx.ParseResult.GetValueForOption(serverNewPort);
     var noActivate = ctx.ParseResult.GetValueForOption(serverNewNoActivate);
-    var r = new ServerService(configPath).Create(name, map, port, activate: !noActivate);
+    var baseName = ctx.ParseResult.GetValueForOption(serverNewBase);
+    var r = new ServerService(configPath).Create(name, map, port, activate: !noActivate, baseName: baseName);
     if (!r.Ok)
     {
         Console.Error.WriteLine(r.Message);
@@ -558,6 +562,50 @@ serverRmCmd.SetHandler(ctx =>
 });
 serverCmd.AddCommand(serverRmCmd);
 root.AddCommand(serverCmd);
+
+// ---- base (server templates) ----
+var baseCmd = new Command("base", "Manage server bases (templates) new instances can be created from.");
+
+var baseLsCmd = new Command("ls", "List bases.");
+baseLsCmd.SetHandler(ctx =>
+{
+    var (cfg, _, _, _) = Resolve(ctx);
+    var bases = ServerBases.List(ProjectPaths.Root(cfg));
+    if (bases.Count == 0) { Console.WriteLine("(no bases)"); return; }
+    foreach (var b in bases)
+        Console.WriteLine($"{b.Name,-20} {b.Source,-13} {(string.IsNullOrEmpty(b.Mission) ? "" : b.Mission + "  ")}{(string.IsNullOrEmpty(b.DayzVersion) ? "" : "DayZ " + b.DayzVersion)}");
+});
+baseCmd.AddCommand(baseLsCmd);
+
+var baseNewNameArg = new Argument<string>("name", "Base name.");
+var baseNewEmpty = new Option<bool>("--empty", "Create an empty/custom base (you add the files), instead of copying the DayZ install.");
+var baseNewMap = new Option<string>("--map", () => "chernarus", "Map to snapshot from the install (when not --empty).");
+var baseNewCmd = new Command("new", "Create a base — from the DayZ install (default) or empty (--empty).")
+{ baseNewNameArg, baseNewEmpty, baseNewMap };
+baseNewCmd.SetHandler(ctx =>
+{
+    var (cfg, _, _, _) = Resolve(ctx);
+    var root = ProjectPaths.Root(cfg);
+    var name = ctx.ParseResult.GetValueForArgument(baseNewNameArg);
+    var (ok, message) = ctx.ParseResult.GetValueForOption(baseNewEmpty)
+        ? ServerBases.CreateEmpty(root, name)
+        : ServerBases.CreateFromInstall(root, name, cfg.DayzPath, MapAliases.MissionTemplate(ctx.ParseResult.GetValueForOption(baseNewMap)!));
+    Console.WriteLine(message);
+    if (!ok) ctx.ExitCode = 1;
+});
+baseCmd.AddCommand(baseNewCmd);
+
+var baseRmNameArg = new Argument<string>("name", "Base name.");
+var baseRmCmd = new Command("rm", "Delete a base.") { baseRmNameArg };
+baseRmCmd.SetHandler(ctx =>
+{
+    var (cfg, _, _, _) = Resolve(ctx);
+    var name = ctx.ParseResult.GetValueForArgument(baseRmNameArg);
+    if (ServerBases.Delete(ProjectPaths.Root(cfg), name)) Console.WriteLine($"deleted base '{name}'");
+    else { Console.Error.WriteLine($"no base '{name}'"); ctx.ExitCode = 1; }
+});
+baseCmd.AddCommand(baseRmCmd);
+root.AddCommand(baseCmd);
 
 // ---- workdrive ----
 var workdriveActionArg = new Argument<string>("action", "status|mount|unmount")

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
@@ -147,6 +148,25 @@ public static class EnvDetect
             return !string.IsNullOrWhiteSpace(k?.GetValue("path") as string);
         }
         catch { return false; }
+    }
+
+    /// <summary>Best-effort DayZ build/version string from the install's exe (FileVersion/ProductVersion),
+    /// for tagging a base/template. "unknown" if it can't be read.</summary>
+    public static string DayzVersion(string dayzPath)
+    {
+        foreach (var exe in new[] { "DayZServer_x64.exe", "DayZ_x64.exe", "DayZDiag_x64.exe" })
+        {
+            try
+            {
+                var p = Path.Combine(dayzPath, exe);
+                if (!File.Exists(p)) continue;
+                var fi = FileVersionInfo.GetVersionInfo(p);
+                var v = fi.ProductVersion ?? fi.FileVersion;
+                if (!string.IsNullOrWhiteSpace(v)) return v.Trim();
+            }
+            catch { /* try next */ }
+        }
+        return "unknown";
     }
 
     /// <summary>Steam install path from registry (Windows-only); null if not found.</summary>

@@ -106,6 +106,7 @@ public partial class MainWindow : FluentWindow
         PageMods.Visibility = tag == "mods" ? Visibility.Visible : Visibility.Collapsed;
         PageMyMods.Visibility = tag == "mymods" ? Visibility.Visible : Visibility.Collapsed;
         PageServers.Visibility = tag == "servers" ? Visibility.Visible : Visibility.Collapsed;
+        PageBases.Visibility = tag == "bases" ? Visibility.Visible : Visibility.Collapsed;
         PageLogs.Visibility = tag == "logs" ? Visibility.Visible : Visibility.Collapsed;
         PageTools.Visibility = tag == "tools" ? Visibility.Visible : Visibility.Collapsed;
         PageMcp.Visibility = tag == "mcp" ? Visibility.Visible : Visibility.Collapsed;
@@ -115,7 +116,8 @@ public partial class MainWindow : FluentWindow
         if (tag == "logs") UpdateLogListRowHeights();
         if (tag == "tools") RefreshToolsPage();
         if (tag == "mymods") { _vm.RefreshModProjects(); if (NewModAuthorBox.Text.Length == 0) NewModAuthorBox.Text = _vm.CachedAuthor; }
-        if (tag == "servers") _vm.RefreshServers();
+        if (tag == "servers") { _vm.RefreshServers(); _vm.RefreshBases(); }   // base dropdown needs bases
+        if (tag == "bases") _vm.RefreshBases();
         if (tag == "settings") LoadSettingsFields();
     }
 
@@ -477,8 +479,10 @@ public partial class MainWindow : FluentWindow
         if (name.Length == 0) { NewServerStatus.Text = "Enter an instance name."; return; }
         var map = (NewServerMapBox.SelectedItem as string) ?? "chernarus";
         int? port = int.TryParse(NewServerPortBox.Text.Trim(), out var p) ? p : null;
+        var baseSel = NewServerBaseBox.SelectedItem as string;
+        var baseName = (string.IsNullOrEmpty(baseSel) || baseSel == MainViewModel.VanillaChoice) ? null : baseSel;
         NewServerButton.IsEnabled = false;
-        try { NewServerStatus.Text = _vm.CreateServer(name, map, port); }
+        try { NewServerStatus.Text = _vm.CreateServer(name, map, port, baseName); }
         finally { NewServerButton.IsEnabled = true; }
         if (NewServerStatus.Text.StartsWith('✓')) { NewServerNameBox.Text = ""; NewServerPortBox.Text = ""; }
     }
@@ -488,6 +492,55 @@ public partial class MainWindow : FluentWindow
         if (sender is FrameworkElement { Tag: string name })
             NewServerStatus.Text = _vm.UseServer(name);
     }
+
+    // === Bases (templates) ================================================
+    private void OnCreateBaseFromInstall(object sender, RoutedEventArgs e)
+    {
+        var name = NewBaseNameBox.Text.Trim();
+        if (name.Length == 0) { NewBaseStatus.Text = "Enter a base name."; return; }
+        var map = (NewBaseMapBox.SelectedItem as string) ?? "chernarus";
+        NewBaseStatus.Text = _vm.CreateBaseFromInstall(name, map);
+        if (NewBaseStatus.Text.StartsWith('✓')) NewBaseNameBox.Text = "";
+    }
+
+    private void OnCreateEmptyBase(object sender, RoutedEventArgs e)
+    {
+        var name = NewBaseNameBox.Text.Trim();
+        if (name.Length == 0) { NewBaseStatus.Text = "Enter a base name."; return; }
+        NewBaseStatus.Text = _vm.CreateEmptyBase(name);
+        if (NewBaseStatus.Text.StartsWith('✓')) NewBaseNameBox.Text = "";
+    }
+
+    private void OnDeleteBase(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string name }) return;
+        var ok = System.Windows.MessageBox.Show(
+            $"Delete base \"{name}\"?\n\nThis removes the template folder and all its files. " +
+            "Existing instances created from it are not affected.",
+            "Delete base", System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning) == System.Windows.MessageBoxResult.Yes;
+        if (!ok) return;
+        NewBaseStatus.Text = _vm.DeleteBase(name);
+    }
+
+    private void OnOpenBaseFolder(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string name }) return;
+        var dir = _vm.BaseDirOf(name);
+        try
+        {
+            if (!Directory.Exists(dir))
+            {
+                System.Windows.MessageBox.Show($"Folder not found:\n{dir}", "Open base folder",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                return;
+            }
+            Process.Start(new ProcessStartInfo("explorer.exe", dir) { UseShellExecute = true });
+        }
+        catch { /* best-effort */ }
+    }
+
+    private void OnRefreshBases(object sender, RoutedEventArgs e) => _vm.RefreshBases();
 
     // === Shared pickers / folder open =====================================
 

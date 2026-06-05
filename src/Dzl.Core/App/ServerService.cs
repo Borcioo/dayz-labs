@@ -1,3 +1,4 @@
+using Dzl.Core.Bases;
 using Dzl.Core.Config;
 using Dzl.Core.Env;
 using Dzl.Core.Projects;
@@ -31,8 +32,9 @@ public sealed class ServerService
         return list;
     }
 
-    /// <summary>Scaffold a new server instance and save it as a preset (atomically), optionally activating it.</summary>
-    public CreateServerResult Create(string name, string map, int? port = null, bool activate = true)
+    /// <summary>Scaffold a new server instance (from a base/template if given, else from the DayZ install)
+    /// and save it as a preset (atomically), optionally activating it.</summary>
+    public CreateServerResult Create(string name, string map, int? port = null, bool activate = true, string? baseName = null)
     {
         Profiles.EnsureDefault(_configPath);
         if (!ProjectPaths.IsValidName(name))
@@ -48,13 +50,33 @@ public sealed class ServerService
             .Where(p => p > 0);
         var chosenPort = port ?? ServerInstances.NextPort(usedPorts);
 
-        var report = ServerScaffold.Scaffold(baseCfg.DayzPath, instanceDir, template);
+        string sourceNote;
+        if (!string.IsNullOrWhiteSpace(baseName) && ServerBases.Exists(root, baseName!))
+        {
+            // From a base/template: copy its serverDZ.cfg + mpmissions, then add the runtime bits.
+            ServerBases.CopyInto(root, baseName!, instanceDir);
+            Directory.CreateDirectory(Path.Combine(instanceDir, "profiles"));
+            Directory.CreateDirectory(Path.Combine(instanceDir, "profiles_client"));
+            ServerScaffold.EnsureFilePatching(Path.Combine(instanceDir, "serverDZ.cfg"));
+            sourceNote = $"from base '{baseName}'";
+        }
+        else
+        {
+            var report = ServerScaffold.Scaffold(baseCfg.DayzPath, instanceDir, template);
+            sourceNote = $"from DayZ install; {report.Notes}".TrimEnd(';', ' ');
+        }
 
         var cfg = ServerPreset.Build(baseCfg, instanceDir, chosenPort);
         Profiles.Save(cfg, name, _configPath);
         if (activate) Profiles.SetActive(name, _configPath);
 
-        var msg = report.CfgCreated ? "instance created" : "instance ready (cfg existed)";
-        return new CreateServerResult(true, name, instanceDir, chosenPort, $"{msg}; {report.Notes}".TrimEnd(';', ' '));
+        return new CreateServerResult(true, name, instanceDir, chosenPort, $"instance created {sourceNote}");
+    }
+
+    /// <summary>List the available bases (templates) under the active ProjectsRoot.</summary>
+    public IReadOnlyList<BaseInfo> ListBases()
+    {
+        var (cfg, _, _) = Profiles.ResolveActive(_configPath);
+        return ServerBases.List(ProjectPaths.Root(cfg));
     }
 }

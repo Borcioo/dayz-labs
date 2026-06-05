@@ -79,7 +79,7 @@ class Missions
             var dst = Path.Combine(instanceDir, "mpmissions", missionName);
             if (Directory.Exists(src) && !Directory.Exists(dst))
             {
-                CopyDirectory(src, dst);
+                CopyMission(src, dst);
                 missionCopied = true;
             }
             else if (!Directory.Exists(src))
@@ -125,16 +125,31 @@ class Missions
         return n;
     }
 
-    private static void CopyDirectory(string src, string dst)
+    /// <summary>Recursively copy a mission folder, skipping live persistence (<c>storage_*</c>) so the
+    /// copy starts clean. Used by instance scaffolding and by base/template creation.</summary>
+    public static void CopyMission(string src, string dst)
     {
         Directory.CreateDirectory(dst);
         foreach (var file in Directory.EnumerateFiles(src))
             File.Copy(file, Path.Combine(dst, Path.GetFileName(file)), overwrite: false);
         foreach (var dir in Directory.EnumerateDirectories(src))
         {
-            // Don't copy live persistence into a brand-new instance — it would start "dirty".
-            if (IsRuntimeDir(Path.GetFileName(dir))) continue;
-            CopyDirectory(dir, Path.Combine(dst, Path.GetFileName(dir)));
+            if (IsRuntimeDir(Path.GetFileName(dir))) continue;   // don't copy live persistence
+            CopyMission(dir, Path.Combine(dst, Path.GetFileName(dir)));
         }
+    }
+
+    /// <summary>Append <c>allowFilePatching = 1;</c> to a serverDZ.cfg if it's missing (dev clients
+    /// launched with -filePatching can't connect without it). Best-effort; never throws.</summary>
+    public static void EnsureFilePatching(string cfgPath)
+    {
+        try
+        {
+            if (!File.Exists(cfgPath)) return;
+            var text = File.ReadAllText(cfgPath);
+            if (!text.Contains("allowFilePatching", StringComparison.OrdinalIgnoreCase))
+                File.AppendAllText(cfgPath, "\r\nallowFilePatching = 1;\r\n");
+        }
+        catch { /* best-effort */ }
     }
 }

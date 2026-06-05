@@ -398,6 +398,12 @@
                 <TextBlock Text="Servers" VerticalAlignment="Center" />
               </StackPanel>
             </ListBoxItem>
+            <ListBoxItem Tag="bases">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:SymbolIcon Symbol="Layer24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                <TextBlock Text="Bases" VerticalAlignment="Center" />
+              </StackPanel>
+            </ListBoxItem>
             <ListBoxItem Tag="logs">
               <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <ui:SymbolIcon Symbol="TextBulletListLtr24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
@@ -977,15 +983,19 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                       </Grid.ColumnDefinitions>
                       <ui:TextBox x:Name="NewServerNameBox" Grid.Column="0" Margin="0,0,8,0"
                                   PlaceholderText="instance name (e.g. pvp, hardcore)" />
-                      <ComboBox x:Name="NewServerMapBox" Grid.Column="1" Width="130" Margin="0,0,8,0"
+                      <ComboBox x:Name="NewServerMapBox" Grid.Column="1" Width="120" Margin="0,0,8,0"
                                 VerticalAlignment="Center"
                                 ItemsSource="{Binding Maps}" SelectedIndex="0" />
-                      <ui:TextBox x:Name="NewServerPortBox" Grid.Column="2" Width="90" Margin="0,0,8,0"
+                      <ComboBox x:Name="NewServerBaseBox" Grid.Column="2" Width="170" Margin="0,0,8,0"
+                                VerticalAlignment="Center" ToolTip="Create from a base/template, or the DayZ install"
+                                ItemsSource="{Binding BaseChoices}" SelectedIndex="0" />
+                      <ui:TextBox x:Name="NewServerPortBox" Grid.Column="3" Width="80" Margin="0,0,8,0"
                                   PlaceholderText="port (auto)" />
-                      <ui:Button x:Name="NewServerButton" Grid.Column="3" Content="Create" Appearance="Primary"
+                      <ui:Button x:Name="NewServerButton" Grid.Column="4" Content="Create" Appearance="Primary"
                                  Icon="{ui:SymbolIcon Add24}" Click="OnCreateServer" />
                     </Grid>
                     <TextBlock x:Name="NewServerStatus" FontSize="12" TextWrapping="Wrap"
@@ -1061,6 +1071,104 @@
                           <Setter Property="Visibility" Value="Collapsed" />
                           <Style.Triggers>
                             <DataTrigger Binding="{Binding Servers.Count}" Value="0">
+                              <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </TextBlock.Style>
+                    </TextBlock>
+                  </StackPanel>
+                </ui:Card>
+
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+
+          <!-- ===== BASES (templates) ===== -->
+          <Grid x:Name="PageBases" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Margin="0,0,0,12">
+              <TextBlock Text="Bases" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                         Text="Reusable server templates — serverDZ.cfg + mpmissions you can build once and create new instances from (instead of the raw DayZ install). Snapshot the install (versioned) or make your own." />
+            </StackPanel>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+              <StackPanel>
+
+                <!-- New base -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="New base" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <Grid Margin="0,0,0,8">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="NewBaseNameBox" Grid.Column="0" Margin="0,0,8,0"
+                                  PlaceholderText="base name (letters, digits, _)" />
+                      <ComboBox x:Name="NewBaseMapBox" Grid.Column="1" Width="120" Margin="0,0,8,0"
+                                VerticalAlignment="Center" ItemsSource="{Binding Maps}" SelectedIndex="0" />
+                      <ui:Button Grid.Column="2" Content="From DayZ install" Appearance="Primary"
+                                 Icon="{ui:SymbolIcon ArrowDownload24}" Margin="0,0,8,0" Click="OnCreateBaseFromInstall" />
+                      <ui:Button Grid.Column="3" Content="Empty" Icon="{ui:SymbolIcon DocumentAdd24}" Click="OnCreateEmptyBase" />
+                    </Grid>
+                    <TextBlock x:Name="NewBaseStatus" FontSize="12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                  </StackPanel>
+                </ui:Card>
+
+                <!-- Bases list -->
+                <ui:Card Margin="0,0,0,4" Padding="16">
+                  <StackPanel>
+                    <Grid Margin="0,0,0,12">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Grid.Column="0" Text="Bases" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                      <ui:Button Grid.Column="1" Content="Refresh" Icon="{ui:SymbolIcon ArrowSync24}" Click="OnRefreshBases" />
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Bases}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border Margin="0,0,0,8" Padding="12" CornerRadius="6"
+                                  Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                  BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
+                            <Grid>
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                              </Grid.ColumnDefinitions>
+                              <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                                  <Run Text="{Binding Source, Mode=OneWay}" /><Run Text="  " /><Run Text="{Binding Mission, Mode=OneWay}" /><Run Text="  " /><Run Text="{Binding DayzVersion, Mode=OneWay}" />
+                                </TextBlock>
+                              </StackPanel>
+                              <ui:Button Grid.Column="1" Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open base folder"
+                                         Tag="{Binding Name}" Click="OnOpenBaseFolder" VerticalAlignment="Center" Margin="0,0,8,0" />
+                              <ui:Button Grid.Column="2" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" ToolTip="Delete base"
+                                         Tag="{Binding Name}" Click="OnDeleteBase" VerticalAlignment="Center" />
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="(no bases yet — create one above)" FontSize="12"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                      <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                          <Setter Property="Visibility" Value="Collapsed" />
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding Bases.Count}" Value="0">
                               <Setter Property="Visibility" Value="Visible" />
                             </DataTrigger>
                           </Style.Triggers>
