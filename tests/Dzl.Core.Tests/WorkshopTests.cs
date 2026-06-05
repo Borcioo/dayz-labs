@@ -64,6 +64,41 @@ public class WorkshopTests
     public void QueryType_maps_modes(string mode, int qt)
         => WorkshopApi.QueryType(mode).Should().Be(qt);
 
+    // --- keyless browse (HTML scrape) ---
+
+    [Theory]
+    [InlineData("top", "totaluniquesubscribers")]
+    [InlineData("recent", "mostrecent")]
+    [InlineData("trending", "trend")]
+    [InlineData("search", "textsearch")]
+    public void Web_sort_maps_modes(string mode, string sort) => WorkshopWeb.Sort(mode).Should().Be(sort);
+
+    [Fact]
+    public void Web_browse_url_has_appid_sort_and_searchtext()
+    {
+        var url = WorkshopWeb.BrowseUrl("search", "trader mod", 1);
+        url.Should().Contain("appid=221100");
+        url.Should().Contain("browsesort=textsearch");
+        url.Should().Contain("searchtext=trader%20mod");
+    }
+
+    [Fact]
+    public void Web_parse_extracts_id_title_preview_from_hashed_markup_and_dedupes()
+    {
+        // Mirrors current Steam markup: hashed classes, title in the img alt, dup links per item.
+        const string html =
+            @"<a href=""https://steamcommunity.com/sharedfiles/filedetails/?id=3737385977"" class=""rKsVn"">" +
+            @"<img src=""https://images.steamusercontent.com/ugc/x/?imw=288"" alt=""TP_Apoc_M1025"" loading=""lazy""/></a>" +
+            @"<a href=""https://steamcommunity.com/sharedfiles/filedetails/?id=3737385977"" class=""q""></a>" +
+            @"<a href=""https://steamcommunity.com/sharedfiles/filedetails/?id=111"" class=""z""><img src=""p2"" alt=""Second &amp; Co""/></a>";
+        var items = WorkshopWeb.ParseBrowse(html);
+        items.Should().HaveCount(2);                       // deduped (id 3737385977 once)
+        items[0].Id.Should().Be("3737385977");
+        items[0].Title.Should().Be("TP_Apoc_M1025");
+        items[0].PreviewUrl.Should().Contain("imw=288");
+        items[1].Title.Should().Be("Second & Co");         // HTML-decoded
+    }
+
     [Fact]
     public void SteamCmd_command_line_uses_anonymous_or_login()
     {
