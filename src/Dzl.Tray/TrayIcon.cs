@@ -178,7 +178,7 @@ public sealed class TrayIcon : IDisposable
         try
         {
             Directory.CreateDirectory(_configDir);
-            Process.Start(new ProcessStartInfo("explorer.exe", _configDir) { UseShellExecute = true });
+            ShellOpen.Folder(_configDir);
         }
         catch (Exception ex)
         {

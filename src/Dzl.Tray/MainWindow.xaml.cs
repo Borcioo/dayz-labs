@@ -392,17 +392,9 @@ public partial class MainWindow : FluentWindow
     private void OnOpenServerFolder(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string dir } || string.IsNullOrWhiteSpace(dir)) return;
-        try
-        {
-            if (!Directory.Exists(dir))
-            {
-                System.Windows.MessageBox.Show($"Folder not found:\n{dir}", "Open server folder",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                return;
-            }
-            Process.Start(new ProcessStartInfo("explorer.exe", dir) { UseShellExecute = true });
-        }
-        catch { /* best-effort */ }
+        if (!ShellOpen.Folder(dir))
+            System.Windows.MessageBox.Show($"Couldn't open the folder:\n{dir}", "Open server folder",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 
     private void OnDeleteServer(object sender, RoutedEventArgs e)
@@ -490,17 +482,9 @@ public partial class MainWindow : FluentWindow
     private void OnOpenModFolder(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string dir } || string.IsNullOrWhiteSpace(dir)) return;
-        try
-        {
-            if (!Directory.Exists(dir))
-            {
-                System.Windows.MessageBox.Show($"Folder not found:\n{dir}", "Open mod folder",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                return;
-            }
-            Process.Start(new ProcessStartInfo("explorer.exe", dir) { UseShellExecute = true });
-        }
-        catch { /* best-effort */ }
+        if (!ShellOpen.Folder(dir))
+            System.Windows.MessageBox.Show($"Couldn't open the folder:\n{dir}\n\n(missing, or the P: link is broken — try Rescan / re-link)",
+                "Open mod folder", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 
     private void OnUnlinkMod(object sender, RoutedEventArgs e)
@@ -771,17 +755,9 @@ public partial class MainWindow : FluentWindow
     {
         if (sender is not FrameworkElement { Tag: string name }) return;
         var dir = _vm.BaseDirOf(name);
-        try
-        {
-            if (!Directory.Exists(dir))
-            {
-                System.Windows.MessageBox.Show($"Folder not found:\n{dir}", "Open base folder",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                return;
-            }
-            Process.Start(new ProcessStartInfo("explorer.exe", dir) { UseShellExecute = true });
-        }
-        catch { /* best-effort */ }
+        if (!ShellOpen.Folder(dir))
+            System.Windows.MessageBox.Show($"Couldn't open the folder:\n{dir}", "Open base folder",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 
     private void OnRefreshBases(object sender, RoutedEventArgs e) => _vm.RefreshBases();

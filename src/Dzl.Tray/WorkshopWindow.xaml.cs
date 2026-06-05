@@ -81,14 +81,9 @@ public partial class WorkshopWindow : FluentWindow
     {
         if (sender is not FrameworkElement { Tag: string id }) return;
         var dir = _vm.ResolveModFolder(id);
-        if (string.IsNullOrWhiteSpace(dir))
-        {
+        if (string.IsNullOrWhiteSpace(dir) || !ShellOpen.Folder(dir))
             System.Windows.MessageBox.Show("Not downloaded yet — subscribe (the Steam client downloads in the background) or use Download (steamcmd).",
                 "Open folder", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-            return;
-        }
-        try { Process.Start(new ProcessStartInfo("explorer.exe", dir) { UseShellExecute = true }); }
-        catch { /* best-effort */ }
     }
 
     private void OnAddById(object sender, RoutedEventArgs e)

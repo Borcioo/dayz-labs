@@ -669,12 +669,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (string.IsNullOrEmpty(path)) return;
         var dir = Path.GetDirectoryName(path);
         if (string.IsNullOrEmpty(dir)) return;
-        try
-        {
-            Directory.CreateDirectory(dir);
-            Process.Start(new ProcessStartInfo("explorer.exe", dir) { UseShellExecute = true });
-        }
-        catch { /* best-effort; ignore */ }
+        try { Directory.CreateDirectory(dir); } catch { /* best-effort */ }
+        Dzl.Tray.ShellOpen.Folder(dir);
     }
 
     /// <summary>Clear a pane's in-memory view (the underlying file is untouched).</summary>

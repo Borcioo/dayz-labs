@@ -179,17 +179,9 @@ public partial class ServerEditorWindow : FluentWindow
     private void OnOpenInstanceFolder(object sender, RoutedEventArgs e)
     {
         var dir = _vm.ActiveServerDir;
-        try
-        {
-            if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
-            {
-                System.Windows.MessageBox.Show($"Folder not found:\n{dir}", "Open server folder",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                return;
-            }
-            Process.Start(new ProcessStartInfo("explorer.exe", dir) { UseShellExecute = true });
-        }
-        catch { /* best-effort */ }
+        if (!ShellOpen.Folder(dir))
+            System.Windows.MessageBox.Show($"Couldn't open the folder:\n{dir}", "Open server folder",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 
     private void OnWipePersistence(object sender, RoutedEventArgs e)
