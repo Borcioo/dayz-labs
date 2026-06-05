@@ -27,9 +27,14 @@ public sealed class TrayIcon : IDisposable
     private readonly TaskbarIcon _icon;
     private readonly DispatcherTimer _timer;
 
-    // Runtime-generated fallback icons (no packaged .ico asset).
-    private readonly Icon _iconUp;
-    private readonly Icon _iconDown;
+    private static readonly Color UpColor = Color.FromArgb(76, 175, 80);     // green
+    private static readonly Color DownColor = Color.FromArgb(120, 120, 120); // grey
+
+    // The status dot is regenerated on every state flip rather than swapping two cached
+    // Icon instances: H.NotifyIcon disposes the previous Icon when the property changes,
+    // so reusing a cached one would hand it a disposed handle on the next swap. We own the
+    // current Icon's lifetime and dispose the prior one ourselves after each assignment.
+    private Icon? _currentIcon;
 
     private MainWindow? _window;
     private bool _lastUp;
@@ -40,13 +45,11 @@ public sealed class TrayIcon : IDisposable
         _configPath = configPath;
         _configDir = Path.GetDirectoryName(configPath) ?? ".";
 
-        _iconUp = MakeDot(Color.FromArgb(76, 175, 80));   // green
-        _iconDown = MakeDot(Color.FromArgb(120, 120, 120)); // grey
-
+        _currentIcon = MakeDot(DownColor);
         _icon = new TaskbarIcon
         {
             ToolTipText = "dzl — server down",
-            Icon = _iconDown,
+            Icon = _currentIcon,
             ContextMenu = BuildMenu(),
         };
         _icon.ForceCreate();
@@ -204,7 +207,13 @@ public sealed class TrayIcon : IDisposable
         if (up == _lastUp && _icon.Icon is not null) return;
         _lastUp = up;
         _icon.ToolTipText = up ? "dzl — server UP" : "dzl — server down";
-        _icon.Icon = up ? _iconUp : _iconDown;
+
+        // Fresh icon each flip; dispose the one we previously created after the swap.
+        var next = MakeDot(up ? UpColor : DownColor);
+        var prev = _currentIcon;
+        _icon.Icon = next;
+        _currentIcon = next;
+        prev?.Dispose();
     }
 
     /// <summary>Generates a tiny 16x16 status-dot icon at runtime (no .ico asset needed).</summary>
@@ -235,7 +244,6 @@ public sealed class TrayIcon : IDisposable
         _disposed = true;
         _timer.Stop();
         _icon.Dispose();
-        _iconUp.Dispose();
-        _iconDown.Dispose();
+        _currentIcon?.Dispose();
     }
 }
