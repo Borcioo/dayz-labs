@@ -19,22 +19,18 @@ public partial class WorkshopWindow : FluentWindow
 
     public WorkshopWindow(MainViewModel vm)
     {
-        InitializeComponent();
         _vm = vm;
+        _vm.InitWorkshop();          // build filter list + sort/time-frame defaults before InitializeComponent binds them
+        InitializeComponent();
         DataContext = vm;
         Loaded += async (_, _) =>
         {
             _vm.RefreshSubscribed();
-            await _vm.WorkshopBrowseAsync("top");   // open on the popular list
+            await _vm.WorkshopBrowseAsync();   // open on the current sort (Most Popular / One Week)
         };
     }
 
-    private async void OnSearch(object sender, RoutedEventArgs e) => await _vm.WorkshopBrowseAsync("search");
-
-    private async void OnBrowseMode(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: string mode }) await _vm.WorkshopBrowseAsync(mode);
-    }
+    private async void OnSearch(object sender, RoutedEventArgs e) => await _vm.WorkshopBrowseAsync();
 
     private async void OnLoadMore(object sender, RoutedEventArgs e) => await _vm.WorkshopLoadMoreAsync();
 

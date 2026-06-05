@@ -20,18 +20,17 @@ public sealed class WorkshopService
 
     private DzlConfig Cfg => Profiles.ResolveActive(_configPath).cfg;
 
-    /// <summary>Search the Workshop (needs a Steam Web API key). Returns (ok, error, items); never throws.</summary>
+    /// <summary>Text search (keyless) — used by CLI/MCP. Returns (ok, error, items); never throws.</summary>
     public Task<(bool ok, string error, List<WorkshopItem> items)> SearchAsync(string query, int count = 30)
-        => WorkshopApi.SearchAsync(Cfg.SteamApiKey, query, count);
+        => WorkshopWeb.BrowseAsync("trend", 0, query, count, 1, null);
 
-    /// <summary>Browse the Workshop by mode (top/recent/trending/search), page, and optional category tag.
-    /// With a Steam Web API key it uses the official API (richer: subs/tags/description + server-side tag
-    /// filtering); without one it falls back to keyless HTML scraping — so browsing works out of the box.</summary>
+    /// <summary>Full keyless browse: sort + time-frame (days) + DayZ category tags + text search + page.</summary>
     public Task<(bool ok, string error, List<WorkshopItem> items)> BrowseAsync(
-        string mode, string query = "", int count = 30, int page = 1, string tag = "")
-        => string.IsNullOrWhiteSpace(Cfg.SteamApiKey)
-            ? WorkshopWeb.BrowseAsync(mode, query, count, page, tag)
-            : WorkshopApi.BrowseAsync(Cfg.SteamApiKey, mode, query, count, page, tag);
+        string browseSort, int days, string query, int count, int page, IEnumerable<string>? tags = null)
+        => WorkshopWeb.BrowseAsync(browseSort, days, query, count, page, tags);
+
+    /// <summary>Full details for one item (subscribers/description/tags) via the keyless details endpoint.</summary>
+    public Task<WorkshopItem?> DetailsAsync(string id) => WorkshopWeb.DetailsAsync(id);
 
     /// <summary>Download (or re-download to update) a Workshop item via steamcmd, spawning a console for login.</summary>
     public WorkshopOp Download(string id)

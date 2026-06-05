@@ -892,17 +892,49 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Items subscribed in the Steam client (its content folder) — what the Launcher loads.</summary>
     public ObservableCollection<SubscribedItem> WorkshopSubscribed { get; } = new();
 
-    /// <summary>Category tags seen across results ("" = all, first) — drives the category filter combo.</summary>
-    public ObservableCollection<string> WorkshopCategories { get; } = new();
+    /// <summary>Sort options + time frames (from the Workshop browse page) for the toolbar combos.</summary>
+    public IReadOnlyList<WorkshopSort> WorkshopSorts => WorkshopWeb.Sorts;
+    public IReadOnlyList<WorkshopTimeFrame> WorkshopTimeFrames => WorkshopWeb.TimeFrames;
+
+    /// <summary>Filter tags (Type + DayZ Mod-Type categories) — toggled, AND-ed into the query.</summary>
+    public ObservableCollection<WorkshopCategoryVm> WorkshopFilters { get; } = new();
 
     [ObservableProperty] private string _workshopQuery = "";
     [ObservableProperty] private string _workshopStatus = "";
-    [ObservableProperty] private string _workshopMode = "top";
-    [ObservableProperty] private string _workshopTag = "";
+    [ObservableProperty] private WorkshopSort? _selectedSort;
+    [ObservableProperty] private WorkshopTimeFrame? _selectedTimeFrame;
+    [ObservableProperty] private bool _showTimeFrame = true;
     [ObservableProperty] private WorkshopItem? _selectedWorkshopItem;
+    [ObservableProperty] private WorkshopItem? _workshopDetail;
     private int _workshopPage = 1;
+    private bool _wsReady;
 
-    partial void OnWorkshopTagChanged(string value) => _ = WorkshopBrowseAsync(WorkshopMode);   // re-browse with the chosen category
+    /// <summary>Build the filter tag list + sort/time-frame defaults (once). Call before showing the window.</summary>
+    public void InitWorkshop()
+    {
+        if (_wsReady) return;
+        foreach (var t in WorkshopWeb.Types.Concat(WorkshopWeb.ModTypes))
+        {
+            var c = new WorkshopCategoryVm(t);
+            c.Toggled += () => { if (_wsReady) _ = WorkshopBrowseAsync(); };
+            WorkshopFilters.Add(c);
+        }
+        SelectedSort = WorkshopSorts[0];                 // Most Popular (partial handlers no-op until _wsReady)
+        SelectedTimeFrame = WorkshopTimeFrames[1];       // One Week
+        _wsReady = true;
+    }
+
+    private IEnumerable<string> SelectedTags() => WorkshopFilters.Where(f => f.Selected).Select(f => f.Name);
+
+    partial void OnSelectedSortChanged(WorkshopSort? value)
+    {
+        ShowTimeFrame = value?.BrowseSort == "trend";
+        if (_wsReady) _ = WorkshopBrowseAsync();
+    }
+
+    partial void OnSelectedTimeFrameChanged(WorkshopTimeFrame? value) { if (_wsReady && ShowTimeFrame) _ = WorkshopBrowseAsync(); }
+
+    partial void OnSelectedWorkshopItemChanged(WorkshopItem? value) => _ = LoadDetailAsync(value);
 
     /// <summary>Reload the subscribed-items list (Steam client content folder).</summary>
     public void RefreshSubscribed()
@@ -911,48 +943,41 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         foreach (var s in new WorkshopService(_configPath).Subscribed()) WorkshopSubscribed.Add(s);
     }
 
-    private void MergeCategories(IEnumerable<WorkshopItem> items)
+    /// <summary>Browse with the current sort + time frame + selected category tags + search (page 1).</summary>
+    public async Task WorkshopBrowseAsync()
     {
-        if (!WorkshopCategories.Contains("")) WorkshopCategories.Insert(0, "");
-        foreach (var t in items.SelectMany(i => i.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)))
-            if (!WorkshopCategories.Contains(t)) WorkshopCategories.Add(t);
-    }
-
-    /// <summary>Browse mode (top/recent/trending/search) + current category — replaces results (page 1).</summary>
-    public async Task WorkshopBrowseAsync(string mode)
-    {
-        WorkshopMode = mode;
         _workshopPage = 1;
-        if (mode == "search" && string.IsNullOrWhiteSpace(WorkshopQuery)) { WorkshopStatus = "enter a search term"; return; }
+        var sort = SelectedSort?.BrowseSort ?? "trend";
+        var days = ShowTimeFrame ? (SelectedTimeFrame?.Days ?? 7) : 0;
+        var tags = SelectedTags().ToList();
         WorkshopStatus = "loading…";
-        var (ok, error, items) = await new WorkshopService(_configPath).BrowseAsync(mode, WorkshopQuery, 30, 1, WorkshopTag);
+        var (ok, error, items) = await new WorkshopService(_configPath).BrowseAsync(sort, days, WorkshopQuery, 30, 1, tags);
         WorkshopResults.Clear();
         foreach (var it in items) WorkshopResults.Add(it);
-        MergeCategories(items);
         SelectedWorkshopItem = WorkshopResults.FirstOrDefault();
-        WorkshopStatus = ok ? $"{items.Count} {mode} result(s){(WorkshopTag.Length > 0 ? $" · {WorkshopTag}" : "")}" : $"✗ {error}";
+        var f = tags.Count > 0 ? " · " + string.Join("+", tags) : "";
+        WorkshopStatus = ok ? $"{items.Count} result(s){f}" : $"✗ {error}";
     }
 
-    /// <summary>Append the next page of the current browse to the results.</summary>
+    /// <summary>Append the next page of the current browse.</summary>
     public async Task WorkshopLoadMoreAsync()
     {
         _workshopPage++;
+        var sort = SelectedSort?.BrowseSort ?? "trend";
+        var days = ShowTimeFrame ? (SelectedTimeFrame?.Days ?? 7) : 0;
         WorkshopStatus = "loading more…";
-        var (ok, error, items) = await new WorkshopService(_configPath).BrowseAsync(WorkshopMode, WorkshopQuery, 30, _workshopPage, WorkshopTag);
+        var (ok, error, items) = await new WorkshopService(_configPath).BrowseAsync(sort, days, WorkshopQuery, 30, _workshopPage, SelectedTags().ToList());
         foreach (var it in items) WorkshopResults.Add(it);
-        MergeCategories(items);
         WorkshopStatus = ok ? $"{WorkshopResults.Count} total (page {_workshopPage})" : $"✗ {error}";
     }
 
-    /// <summary>Search the Workshop (Steam Web API) and fill the results list.</summary>
-    public async Task WorkshopSearchAsync()
+    // Show the list item immediately in the details pane, then enrich (subs/description/tags) keylessly.
+    private async Task LoadDetailAsync(WorkshopItem? item)
     {
-        if (string.IsNullOrWhiteSpace(WorkshopQuery)) return;
-        WorkshopStatus = "searching…";
-        var (ok, error, items) = await new WorkshopService(_configPath).SearchAsync(WorkshopQuery);
-        WorkshopResults.Clear();
-        foreach (var it in items) WorkshopResults.Add(it);
-        WorkshopStatus = ok ? $"{items.Count} result(s)" : $"✗ {error}";
+        WorkshopDetail = item;
+        if (item is null) return;
+        var full = await new WorkshopService(_configPath).DetailsAsync(item.Id);
+        if (full is not null && SelectedWorkshopItem?.Id == item.Id) WorkshopDetail = full;
     }
 
     /// <summary>Auto-install steamcmd into the config dir; returns (ok, exe path, message).</summary>

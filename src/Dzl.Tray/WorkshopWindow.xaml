@@ -3,48 +3,70 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Dzl.Tray"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-        Title="Steam Workshop" Width="1040" Height="760"
-        MinWidth="820" MinHeight="560"
+        Title="Steam Workshop" Width="1180" Height="800"
+        MinWidth="900" MinHeight="600"
         WindowBackdropType="Mica"
         ExtendsContentIntoTitleBar="True"
         WindowStartupLocation="CenterOwner">
 
+  <Window.Resources>
+    <BooleanToVisibilityConverter x:Key="BoolToVis" />
+  </Window.Resources>
+
   <Grid Margin="16,8,16,16">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />  <!-- title -->
-      <RowDefinition Height="Auto" />  <!-- browse modes + search -->
-      <RowDefinition Height="*" />     <!-- results | details -->
+      <RowDefinition Height="Auto" />  <!-- sort/search toolbar -->
+      <RowDefinition Height="*" />     <!-- filters | results | details -->
       <RowDefinition Height="Auto" />  <!-- subscribed -->
-      <RowDefinition Height="Auto" />  <!-- status -->
+      <RowDefinition Height="Auto" />  <!-- load more + status -->
     </Grid.RowDefinitions>
 
     <ui:TitleBar Grid.Row="0" Title="Steam Workshop" ShowMaximize="True" ShowMinimize="False" Margin="0,0,0,8" />
 
-    <!-- Browse modes + search -->
+    <!-- Toolbar: sort + time frame + search -->
     <Grid Grid.Row="1" Margin="0,0,0,10">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+        <ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+        <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
       </Grid.ColumnDefinitions>
-      <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,12,0">
-        <ui:Button Content="Top" Icon="{ui:SymbolIcon Star24}" Tag="top" Click="OnBrowseMode" Margin="0,0,4,0" />
-        <ui:Button Content="Recent" Icon="{ui:SymbolIcon Clock24}" Tag="recent" Click="OnBrowseMode" Margin="0,0,4,0" />
-        <ui:Button Content="Trending" Icon="{ui:SymbolIcon ArrowTrending24}" Tag="trending" Click="OnBrowseMode" Margin="0,0,12,0" />
-        <ComboBox Width="150" VerticalAlignment="Center" ToolTip="Filter by category (needs a Web API key)"
-                  ItemsSource="{Binding WorkshopCategories}" SelectedItem="{Binding WorkshopTag}" />
-      </StackPanel>
-      <ui:TextBox x:Name="QueryBox" Grid.Column="1" PlaceholderText="search the DayZ Workshop…"
-                  Text="{Binding WorkshopQuery, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0" />
-      <ui:Button Grid.Column="2" Content="Search" Icon="{ui:SymbolIcon Search24}" Appearance="Primary" Margin="0,0,8,0" Click="OnSearch" />
-      <ui:Button Grid.Column="3" Content="Add by ID" Icon="{ui:SymbolIcon ArrowDownload24}" Click="OnAddById" />
+      <ComboBox Grid.Column="0" Width="170" Margin="0,0,8,0" VerticalAlignment="Center"
+                ItemsSource="{Binding WorkshopSorts}" SelectedItem="{Binding SelectedSort}" DisplayMemberPath="Label"
+                ToolTip="Sort order" />
+      <ComboBox Grid.Column="1" Width="130" Margin="0,0,12,0" VerticalAlignment="Center"
+                ItemsSource="{Binding WorkshopTimeFrames}" SelectedItem="{Binding SelectedTimeFrame}" DisplayMemberPath="Label"
+                Visibility="{Binding ShowTimeFrame, Converter={StaticResource BoolToVis}}" ToolTip="Time frame" />
+      <ui:TextBox Grid.Column="2" PlaceholderText="search the DayZ Workshop…" Margin="0,0,8,0"
+                  Text="{Binding WorkshopQuery, UpdateSourceTrigger=PropertyChanged}" />
+      <ui:Button Grid.Column="3" Content="Search" Icon="{ui:SymbolIcon Search24}" Appearance="Primary" Margin="0,0,8,0" Click="OnSearch" />
+      <ui:Button Grid.Column="4" Content="Add by ID" Icon="{ui:SymbolIcon ArrowDownload24}" Click="OnAddById" />
     </Grid>
 
-    <!-- Results (left) + details (right) -->
+    <!-- Filters | results | details -->
     <Grid Grid.Row="2">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*" /><ColumnDefinition Width="360" />
+        <ColumnDefinition Width="190" /><ColumnDefinition Width="*" /><ColumnDefinition Width="370" />
       </Grid.ColumnDefinitions>
 
-      <Border Grid.Column="0" CornerRadius="6" BorderThickness="1" Margin="0,0,12,0"
+      <!-- Filter rail -->
+      <Border Grid.Column="0" CornerRadius="6" BorderThickness="1" Padding="10" Margin="0,0,12,0"
+              BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock Text="FILTERS" FontSize="11" FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,8" />
+            <ItemsControl ItemsSource="{Binding WorkshopFilters}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <CheckBox Content="{Binding Name}" IsChecked="{Binding Selected, Mode=TwoWay}" Margin="0,2,0,2" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+      <!-- Results -->
+      <Border Grid.Column="1" CornerRadius="6" BorderThickness="1" Margin="0,0,12,0"
               BorderBrush="{DynamicResource ControlElevationBorderBrush}">
         <ListBox x:Name="ResultsList" ItemsSource="{Binding WorkshopResults}"
                  SelectedItem="{Binding SelectedWorkshopItem}" Background="Transparent" BorderThickness="0"
@@ -53,17 +75,13 @@
             <DataTemplate>
               <Grid Margin="2">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                <Border Grid.Column="0" Width="64" Height="64" CornerRadius="4" Margin="0,0,10,0"
+                <Border Grid.Column="0" Width="72" Height="72" CornerRadius="4" Margin="0,0,10,0"
                         Background="{DynamicResource ControlFillColorDefaultBrush}">
                   <Image Source="{Binding PreviewUrl}" Stretch="UniformToFill" />
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                   <TextBlock Text="{Binding Title}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
-                  <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}">
-                    <Run Text="{Binding Subscriptions, Mode=OneWay}" /><Run Text=" subs · " /><Run Text="{Binding Id, Mode=OneWay}" />
-                  </TextBlock>
-                  <TextBlock Text="{Binding Tags}" FontSize="11" TextTrimming="CharacterEllipsis"
-                             Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                  <TextBlock Text="{Binding Id}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                 </StackPanel>
               </Grid>
             </DataTemplate>
@@ -71,21 +89,21 @@
         </ListBox>
       </Border>
 
-      <!-- Details pane -->
-      <Border Grid.Column="1" CornerRadius="6" BorderThickness="1" Padding="12"
+      <!-- Details (enriched) -->
+      <Border Grid.Column="2" CornerRadius="6" BorderThickness="1" Padding="12"
               BorderBrush="{DynamicResource ControlElevationBorderBrush}"
-              DataContext="{Binding SelectedWorkshopItem}">
+              DataContext="{Binding WorkshopDetail}">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel>
-            <Border Height="170" CornerRadius="6" Margin="0,0,0,10"
+            <Border Height="190" CornerRadius="6" Margin="0,0,0,10"
                     Background="{DynamicResource ControlFillColorDefaultBrush}">
               <Image Source="{Binding PreviewUrl}" Stretch="Uniform" />
             </Border>
             <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" />
-            <TextBlock FontSize="11" Margin="0,2,0,8" Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+            <TextBlock FontSize="11" Margin="0,2,0,6" Foreground="{DynamicResource TextFillColorTertiaryBrush}">
               <Run Text="id " /><Run Text="{Binding Id, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding Subscriptions, Mode=OneWay}" /><Run Text=" subscribers" />
             </TextBlock>
-            <TextBlock Text="{Binding Tags}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"
+            <TextBlock Text="{Binding Tags}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,10"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
               <ui:Button Content="Subscribe" Icon="{ui:SymbolIcon Star24}" Appearance="Primary"

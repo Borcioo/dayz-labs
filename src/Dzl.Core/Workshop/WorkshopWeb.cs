@@ -1,33 +1,65 @@
 using System.Net;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace Dzl.Core.Workshop;
 
-/// <summary>Keyless Workshop browsing by scraping the Steam Community workshop browse page (no Web API key
-/// needed — what public mod-browser sites effectively do). Steam's markup uses hashed CSS classes, so the
-/// parser keys off the stable structure <c>filedetails/?id=N"&gt;&lt;img src="preview" alt="title"&gt;</c>
-/// rather than class names. URL building + HTML parsing are pure + unit-tested; the fetch is thin.</summary>
+/// <summary>A sort option as the Workshop browse page exposes it (label + its <c>browsesort</c> value).</summary>
+public sealed record WorkshopSort(string Label, string BrowseSort);
+
+/// <summary>A "Most Popular" time window (label + <c>days</c>; -1 = all time).</summary>
+public sealed record WorkshopTimeFrame(string Label, int Days);
+
+/// <summary>
+/// Keyless Workshop browsing by scraping the Steam Community browse page — full filters (sort, time frame,
+/// DayZ Mod-Type tags, text search, pagination) server-side, no Web API key. Steam's markup uses hashed CSS
+/// classes, so the list parser keys off the stable <c>filedetails/?id=N"&gt;&lt;img src=preview alt=title&gt;</c>
+/// structure. Per-item detail (subscribers/description/tags) is fetched via the keyless
+/// <c>GetPublishedFileDetails</c> endpoint. URL/HTML/JSON helpers are pure + unit-tested; fetches are thin.
+/// </summary>
 public static class WorkshopWeb
 {
     public const string AppId = "221100";
 
-    /// <summary>browsesort value for a mode: top=totaluniquesubscribers, recent=mostrecent, trending=trend,
-    /// search=textsearch.</summary>
-    public static string Sort(string mode) => mode switch
+    /// <summary>Sort options matching the Workshop dropdown.</summary>
+    public static readonly IReadOnlyList<WorkshopSort> Sorts = new[]
     {
-        "recent" => "mostrecent",
-        "trending" => "trend",
-        "search" => "textsearch",
-        _ => "totaluniquesubscribers",
+        new WorkshopSort("Most Popular", "trend"),
+        new WorkshopSort("Top Rated", "toprated"),
+        new WorkshopSort("Most Recent", "mostrecent"),
+        new WorkshopSort("Last Updated", "lastupdated"),
+        new WorkshopSort("Most Subscribed", "totaluniquesubscribers"),
     };
 
-    public static string BrowseUrl(string mode, string query, int page, string tag = "")
+    /// <summary>Time windows for "Most Popular" (browsesort=trend &amp; days=N).</summary>
+    public static readonly IReadOnlyList<WorkshopTimeFrame> TimeFrames = new[]
     {
+        new WorkshopTimeFrame("Today", 1), new WorkshopTimeFrame("One Week", 7),
+        new WorkshopTimeFrame("Thirty Days", 30), new WorkshopTimeFrame("Three Months", 90),
+        new WorkshopTimeFrame("Six Months", 180), new WorkshopTimeFrame("One Year", 365),
+        new WorkshopTimeFrame("All Time", -1),
+    };
+
+    /// <summary>DayZ "Mod Type" category tags (requiredtags) — from the Workshop browse sidebar.</summary>
+    public static readonly IReadOnlyList<string> ModTypes = new[]
+    {
+        "Animation", "Character", "Economy", "Environment", "Equipment", "Mechanics",
+        "Sound", "Props", "Terrain", "Vehicle", "Weapon",
+    };
+
+    /// <summary>"Type" tags.</summary>
+    public static readonly IReadOnlyList<string> Types = new[] { "Mod", "Server" };
+
+    public static string BrowseUrl(string browseSort, int days, string query, int page, IEnumerable<string>? tags = null)
+    {
+        var sort = string.IsNullOrWhiteSpace(browseSort) ? "trend" : browseSort;
         var p = page > 0 ? page : 1;
         var url = $"https://steamcommunity.com/workshop/browse/?appid={AppId}&section=readytouseitems"
-                + $"&browsesort={Sort(mode)}&actualsort={Sort(mode)}&p={p}";
+                + $"&browsesort={sort}&actualsort={sort}&p={p}";
+        if (sort == "trend" && days != 0) url += $"&days={days}";
         if (!string.IsNullOrWhiteSpace(query)) url += $"&searchtext={Uri.EscapeDataString(query)}";
-        if (!string.IsNullOrWhiteSpace(tag)) url += $"&requiredtags%5B%5D={Uri.EscapeDataString(tag)}";
+        foreach (var t in (tags ?? Enumerable.Empty<string>()).Where(t => !string.IsNullOrWhiteSpace(t)))
+            url += $"&requiredtags%5B%5D={Uri.EscapeDataString(t)}";
         return url;
     }
 
@@ -36,8 +68,7 @@ public static class WorkshopWeb
         @"filedetails/\?id=(\d+)""[^>]*>\s*<img\s+src=""([^""]+)""\s+alt=""([^""]*)""",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    /// <summary>Parse browse-page HTML into items (id, title from the img alt, preview url). Deduped by id,
-    /// order preserved. Pure.</summary>
+    /// <summary>Parse browse-page HTML into items (id, title from img alt, preview). Deduped, order preserved. Pure.</summary>
     public static List<WorkshopItem> ParseBrowse(string html)
     {
         var items = new List<WorkshopItem>();
@@ -46,9 +77,9 @@ public static class WorkshopWeb
         {
             var id = m.Groups[1].Value;
             if (!seen.Add(id)) continue;
-            var preview = WebUtility.HtmlDecode(m.Groups[2].Value);
-            var title = WebUtility.HtmlDecode(m.Groups[3].Value).Trim();
-            items.Add(new WorkshopItem(id, title, PreviewUrl: preview));
+            items.Add(new WorkshopItem(id,
+                WebUtility.HtmlDecode(m.Groups[3].Value).Trim(),
+                PreviewUrl: WebUtility.HtmlDecode(m.Groups[2].Value)));
         }
         return items;
     }
@@ -62,13 +93,13 @@ public static class WorkshopWeb
         return c;
     }
 
-    /// <summary>Scrape a browse mode + page (top/recent/trending/search). Returns (ok, error, items); never throws.</summary>
+    /// <summary>Browse with full filters (keyless). Returns (ok, error, items); never throws.</summary>
     public static async Task<(bool ok, string error, List<WorkshopItem> items)> BrowseAsync(
-        string mode, string query = "", int count = 30, int page = 1, string tag = "")
+        string browseSort, int days, string query, int count, int page, IEnumerable<string>? tags = null)
     {
         try
         {
-            var html = await Http.GetStringAsync(BrowseUrl(mode, query, page, tag)).ConfigureAwait(false);
+            var html = await Http.GetStringAsync(BrowseUrl(browseSort, days, query, page, tags)).ConfigureAwait(false);
             var items = ParseBrowse(html);
             if (count > 0 && items.Count > count) items = items.Take(count).ToList();
             return (true, "", items);
@@ -77,5 +108,44 @@ public static class WorkshopWeb
         {
             return (false, ex.Message, new());
         }
+    }
+
+    /// <summary>Parse a GetPublishedFileDetails response into one item (pure). Null if absent.</summary>
+    public static WorkshopItem? ParseDetails(string json, string id)
+    {
+        using var doc = JsonDocument.Parse(json);
+        if (!doc.RootElement.TryGetProperty("response", out var resp)) return null;
+        if (!resp.TryGetProperty("publishedfiledetails", out var arr) || arr.ValueKind != JsonValueKind.Array) return null;
+        var e = arr.EnumerateArray().FirstOrDefault();
+        if (e.ValueKind != JsonValueKind.Object) return null;
+
+        string S(string n) => e.TryGetProperty(n, out var v) ? v.GetString() ?? "" : "";
+        long L(string n) => e.TryGetProperty(n, out var v) && v.TryGetInt64(out var x) ? x : 0;
+        var tags = "";
+        if (e.TryGetProperty("tags", out var tg) && tg.ValueKind == JsonValueKind.Array)
+            tags = string.Join(", ", tg.EnumerateArray()
+                .Select(t => t.TryGetProperty("tag", out var tv) ? tv.GetString() : null)
+                .Where(s => !string.IsNullOrWhiteSpace(s)));
+
+        var realId = S("publishedfileid");
+        return new WorkshopItem(realId.Length > 0 ? realId : id, S("title"), S("file_description"),
+            L("time_updated"), S("preview_url"), L("subscriptions"), L("time_created"), tags);
+    }
+
+    /// <summary>Fetch full details for one item via the keyless GetPublishedFileDetails endpoint.</summary>
+    public static async Task<WorkshopItem?> DetailsAsync(string id)
+    {
+        try
+        {
+            var body = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("itemcount", "1"),
+                new KeyValuePair<string, string>("publishedfileids[0]", id),
+            });
+            var resp = await Http.PostAsync("https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/", body).ConfigureAwait(false);
+            var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+            return ParseDetails(json, id);
+        }
+        catch { return null; }
     }
 }
