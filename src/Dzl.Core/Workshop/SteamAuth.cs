@@ -72,18 +72,18 @@ public sealed class SteamAuth : IDisposable
         finally { Cleanup(); }
     }
 
-    /// <summary>Mint a fresh access token from a stored refresh token (no re-login). Null on failure.</summary>
-    public async Task<string?> RenewAccessTokenAsync(string refreshToken)
+    /// <summary>Mint a fresh access token from a stored refresh token (no re-login). Returns (token, error).</summary>
+    public async Task<(string? token, string error)> RenewAccessTokenAsync(string refreshToken)
     {
         try
         {
             var steamId = SteamIdFromToken(refreshToken);
-            if (steamId is null) return null;
-            if (!await ConnectAsync(CancellationToken.None)) return null;
+            if (steamId is null) return (null, "couldn't read the SteamID from the saved session");
+            if (!await ConnectAsync(CancellationToken.None)) return (null, "couldn't connect to Steam");
             var r = await _client.Authentication.GenerateAccessTokenForAppAsync(steamId, refreshToken).ConfigureAwait(false);
-            return string.IsNullOrWhiteSpace(r.AccessToken) ? null : r.AccessToken;
+            return string.IsNullOrWhiteSpace(r.AccessToken) ? (null, "Steam returned no access token") : (r.AccessToken, "");
         }
-        catch { return null; }
+        catch (Exception ex) { return (null, ex.Message); }
         finally { Cleanup(); }
     }
 

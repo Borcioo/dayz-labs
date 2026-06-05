@@ -45,25 +45,25 @@ public sealed class WorkshopService
     public bool SignedIn => SteamTokenStore.Exists(_configPath);
 
     /// <summary>A usable access token: the explicit pasted one, else one renewed (and cached ~12h) from the
-    /// stored refresh token. Null when not signed in.</summary>
-    private async Task<string?> AccessTokenAsync()
+    /// stored refresh token. Returns (token, error) — token null with a reason when unavailable.</summary>
+    private async Task<(string? token, string error)> AccessTokenAsync()
     {
         var pasted = Cfg.SteamAccessToken;
-        if (!string.IsNullOrWhiteSpace(pasted)) return pasted.Trim();
+        if (!string.IsNullOrWhiteSpace(pasted)) return (pasted.Trim(), "");
         var refresh = SteamTokenStore.Load(_configPath);
-        if (refresh is null) return null;
-        if (_accessCache is not null && DateTime.UtcNow - _accessAt < TimeSpan.FromHours(12)) return _accessCache;
+        if (refresh is null) return (null, "not signed in to Steam");
+        if (!string.IsNullOrEmpty(_accessCache) && DateTime.UtcNow - _accessAt < TimeSpan.FromHours(12)) return (_accessCache, "");
         using var auth = new SteamAuth();
-        var token = await auth.RenewAccessTokenAsync(refresh);
-        if (token is not null) { _accessCache = token; _accessAt = DateTime.UtcNow; }
-        return token;
+        var (token, error) = await auth.RenewAccessTokenAsync(refresh);
+        if (!string.IsNullOrEmpty(token)) { _accessCache = token; _accessAt = DateTime.UtcNow; }
+        return (token, string.IsNullOrEmpty(token) ? $"couldn't refresh Steam session ({error}) — sign in again" : "");
     }
 
     /// <summary>In-app subscribe (true) / unsubscribe (false) — renews the access token from the stored session.</summary>
     public async Task<(bool ok, string message)> SubscribeAsync(string id, bool subscribe = true)
     {
-        var token = await AccessTokenAsync();
-        if (token is null) return (false, "not signed in to Steam");
+        var (token, error) = await AccessTokenAsync();
+        if (string.IsNullOrEmpty(token)) return (false, error.Length > 0 ? error : "not signed in to Steam");
         return await WorkshopWeb.SubscribeAsync(token, id, subscribe);
     }
 
