@@ -110,4 +110,20 @@ public class ProfilesTests
         Profiles.List(path).Should().NotContain("tmp");
         Profiles.Delete("tmp", path).Should().BeFalse();
     }
+
+    [Fact]
+    public void Delete_does_not_resurrect_from_a_flat_backup()
+    {
+        var path = TmpConfig();
+        // a leftover flat backup (from migration) + the per-folder instance, as on a migrated machine
+        var flatDir = Path.Combine(Path.GetDirectoryName(path)!, "instances");
+        Directory.CreateDirectory(flatDir);
+        File.WriteAllText(Path.Combine(flatDir, "srv.json"), "{ \"port\": 2400 }");
+        Profiles.Save(DzlConfig.Default() with { Port = 2400 }, "srv", path);
+        Profiles.List(path).Should().Contain("srv");
+
+        Profiles.Delete("srv", path).Should().BeTrue();
+        Profiles.ResolveActive(path);                       // runs migration — must NOT recreate it
+        Profiles.List(path).Should().NotContain("srv");
+    }
 }

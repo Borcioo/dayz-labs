@@ -368,6 +368,23 @@ public partial class MainWindow : FluentWindow
     private void OnOpenServerSettings(object sender, RoutedEventArgs e) => OpenServerForRow(sender, 0);
     private void OnOpenServerMods(object sender, RoutedEventArgs e) => OpenServerForRow(sender, 1);
 
+    /// <summary>Open a server instance's folder in Explorer (Tag = the instance dir).</summary>
+    private void OnOpenServerFolder(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string dir } || string.IsNullOrWhiteSpace(dir)) return;
+        try
+        {
+            if (!Directory.Exists(dir))
+            {
+                System.Windows.MessageBox.Show($"Folder not found:\n{dir}", "Open server folder",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                return;
+            }
+            Process.Start(new ProcessStartInfo("explorer.exe", dir) { UseShellExecute = true });
+        }
+        catch { /* best-effort */ }
+    }
+
     private void OnDeleteServer(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string name }) return;

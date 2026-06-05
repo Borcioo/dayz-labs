@@ -64,16 +64,23 @@ public static partial class Profiles
     /// files (serverDZ.cfg / mpmissions / profiles) are left on disk.</summary>
     public static bool Delete(string name, string configPath)
     {
+        var removed = false;
         var f = PresetFile(name, configPath);
-        if (!File.Exists(f)) return false;
-        File.Delete(f);
-        try
+        if (File.Exists(f))
         {
-            var d = Path.GetDirectoryName(f)!;
-            if (Directory.Exists(d) && !Directory.EnumerateFileSystemEntries(d).Any()) Directory.Delete(d);
+            File.Delete(f);
+            removed = true;
+            try
+            {
+                var d = Path.GetDirectoryName(f)!;   // the .dzl dir
+                if (Directory.Exists(d) && !Directory.EnumerateFileSystemEntries(d).Any()) Directory.Delete(d);
+            }
+            catch { /* best-effort */ }
         }
-        catch { /* best-effort */ }
-        return true;
+        // Also remove the legacy flat backup, or the migration would resurrect the instance on next load.
+        var flat = Path.Combine(FlatInstancesDir(configPath), Safe(name) + ".json");
+        if (File.Exists(flat)) { try { File.Delete(flat); } catch { /* best-effort */ } removed = true; }
+        return removed;
     }
 
     public static void SetActive(string name, string configPath)

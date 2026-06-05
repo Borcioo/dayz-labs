@@ -537,7 +537,12 @@ serverRmCmd.SetHandler(ctx =>
     var name = ctx.ParseResult.GetValueForArgument(serverRmNameArg);
     if (Profiles.Delete(name, configPath))
     {
-        if (active == name) Profiles.SetActive("", configPath);
+        if (active == name)
+        {
+            var remaining = Profiles.List(configPath);
+            if (remaining.Count > 0) Profiles.SetActive(remaining[0], configPath);
+            else { Profiles.SetActive("", configPath); Profiles.EnsureDefault(configPath); }
+        }
         var (baseCfg, _, _) = Profiles.ResolveActive(configPath);
         var serversDir = Path.Combine(ProjectPaths.Root(baseCfg), "servers", name);
         Console.WriteLine($"removed preset '{name}' (instance files left on disk at {serversDir})");

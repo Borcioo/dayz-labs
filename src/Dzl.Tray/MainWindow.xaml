@@ -1018,6 +1018,7 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                               </Grid.ColumnDefinitions>
                               <!-- active marker -->
                               <TextBlock Grid.Column="0" Text="●" Margin="0,0,10,0" FontSize="14" VerticalAlignment="Center"
@@ -1035,13 +1036,15 @@
                                 <TextBlock Text="{Binding Dir}" FontSize="11" TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                               </StackPanel>
-                              <ui:Button Grid.Column="2" Content="Settings" Icon="{ui:SymbolIcon Settings24}"
+                              <ui:Button Grid.Column="2" Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open server folder"
+                                         Tag="{Binding Dir}" Click="OnOpenServerFolder" VerticalAlignment="Center" Margin="0,0,8,0" />
+                              <ui:Button Grid.Column="3" Content="Settings" Icon="{ui:SymbolIcon Settings24}"
                                          Tag="{Binding Name}" Click="OnOpenServerSettings" VerticalAlignment="Center" Margin="0,0,8,0" />
-                              <ui:Button Grid.Column="3" Content="Mods" Icon="{ui:SymbolIcon Apps24}"
+                              <ui:Button Grid.Column="4" Content="Mods" Icon="{ui:SymbolIcon Apps24}"
                                          Tag="{Binding Name}" Click="OnOpenServerMods" VerticalAlignment="Center" Margin="0,0,8,0" />
-                              <ui:Button Grid.Column="4" Content="Use" Icon="{ui:SymbolIcon Checkmark24}"
+                              <ui:Button Grid.Column="5" Content="Use" Icon="{ui:SymbolIcon Checkmark24}"
                                          Tag="{Binding Name}" Click="OnUseServer" VerticalAlignment="Center" Margin="0,0,8,0" />
-                              <ui:Button Grid.Column="5" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" ToolTip="Delete instance"
+                              <ui:Button Grid.Column="6" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" ToolTip="Delete instance"
                                          Tag="{Binding Name}" Click="OnDeleteServer" VerticalAlignment="Center" />
                             </Grid>
                           </Border>

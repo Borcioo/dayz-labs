@@ -836,9 +836,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Delete a server instance. If it was active, fall back to another (or a fresh default).</summary>
     public string DeleteServer(string name)
     {
+        var wasActive = ActivePreset == name;
         if (!Profiles.Delete(name, _configPath)) return $"✗ no server '{name}'";
-        if (ActivePreset == name) Profiles.SetActive("", _configPath);
-        Profiles.EnsureDefault(_configPath);          // guarantee an active instance still exists
+        if (wasActive)
+        {
+            // Fall back to another instance so something stays active (else seed a fresh default).
+            var remaining = Profiles.List(_configPath);
+            if (remaining.Count > 0) Profiles.SetActive(remaining[0], _configPath);
+            else { Profiles.SetActive("", _configPath); Profiles.EnsureDefault(_configPath); }
+        }
         Reload();
         RefreshServers();
         return $"✓ deleted '{name}'";
