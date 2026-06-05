@@ -108,6 +108,7 @@ public partial class MainWindow : FluentWindow
         PageMyMods.Visibility = tag == "mymods" ? Visibility.Visible : Visibility.Collapsed;
         PageServers.Visibility = tag == "servers" ? Visibility.Visible : Visibility.Collapsed;
         PageBases.Visibility = tag == "bases" ? Visibility.Visible : Visibility.Collapsed;
+        PageEconomy.Visibility = tag == "economy" ? Visibility.Visible : Visibility.Collapsed;
         PageLogs.Visibility = tag == "logs" ? Visibility.Visible : Visibility.Collapsed;
         PageTools.Visibility = tag == "tools" ? Visibility.Visible : Visibility.Collapsed;
         PageMcp.Visibility = tag == "mcp" ? Visibility.Visible : Visibility.Collapsed;
@@ -119,6 +120,7 @@ public partial class MainWindow : FluentWindow
         if (tag == "mymods") { _vm.RefreshModProjects(); if (NewModAuthorBox.Text.Length == 0) NewModAuthorBox.Text = _vm.CachedAuthor; }
         if (tag == "servers") { _vm.RefreshServers(); _vm.RefreshBases(); }   // base dropdown needs bases
         if (tag == "bases") _vm.RefreshBases();
+        if (tag == "economy") { _vm.LoadTypes(); RefreshTypesBackupsMenu(); }
         if (tag == "settings") { LoadSettingsFields(); _ = _vm.RefreshGitHubAuthAsync(); }
     }
 
@@ -553,6 +555,72 @@ public partial class MainWindow : FluentWindow
     {
         _vm.ApplyConfig(_vm.Cfg with { SigningKey = CfgSigningKey.Text.Trim(), KeysDir = CfgKeysDir.Text.Trim() });
         SigningStatus.Text = _vm.GenerateSigningKey();
+    }
+
+    // === Economy (types.xml) editor =======================================
+
+    private System.Collections.Generic.List<TypeRowVm> SelectedTypes() =>
+        TypesGrid.SelectedItems.Cast<TypeRowVm>().ToList();
+
+    private void OnReloadTypes(object sender, RoutedEventArgs e) { _vm.LoadTypes(); RefreshTypesBackupsMenu(); }
+    private void OnSaveTypes(object sender, RoutedEventArgs e) { _vm.SaveTypes(); RefreshTypesBackupsMenu(); }
+
+    private void OnAddType(object sender, RoutedEventArgs e)
+    {
+        var name = PromptDialog.Show(this, "Add type", "Class name (e.g. AKM):");
+        if (!string.IsNullOrWhiteSpace(name)) _vm.AddType(name.Trim());
+    }
+
+    private void OnRemoveTypes(object sender, RoutedEventArgs e) => _vm.RemoveTypes(SelectedTypes());
+
+    private void OnBatchSet(object sender, RoutedEventArgs e) => Batch(multiply: false);
+    private void OnBatchMultiply(object sender, RoutedEventArgs e) => Batch(multiply: true);
+
+    private void Batch(bool multiply)
+    {
+        var rows = SelectedTypes();
+        if (rows.Count == 0) { System.Windows.MessageBox.Show("Select one or more rows first.", "Batch", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information); return; }
+        var field = (BatchFieldBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "nominal";
+        if (!double.TryParse(BatchValueBox.Text.Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var val))
+        { System.Windows.MessageBox.Show("Enter a numeric value.", "Batch", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information); return; }
+        _vm.BatchApply(rows, field, val, multiply);
+        TypesGrid.Items.Refresh();
+    }
+
+    // Undo granularity for in-grid cell edits: snapshot the pre-edit state, commit it on edit-commit.
+    private void OnTypesBeginEdit(object sender, DataGridBeginningEditEventArgs e) => _vm.BeginTypeEdit();
+    private void OnTypesCellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+    {
+        if (e.EditAction == DataGridEditAction.Commit) _vm.CommitTypeEdit();
+        else _vm.CancelTypeEdit();
+    }
+
+    private void RefreshTypesBackupsMenu()
+    {
+        TypesBackupsMenu.Items.Clear();
+        var backups = _vm.TypesBackups();
+        if (backups.Count == 0)
+        {
+            TypesBackupsMenu.Items.Add(new System.Windows.Controls.MenuItem { Header = "(no backups yet)", IsEnabled = false });
+            return;
+        }
+        foreach (var b in backups)
+        {
+            var item = new System.Windows.Controls.MenuItem { Header = b.Stamp, Tag = b.Path };
+            item.Click += OnRestoreTypeBackup;
+            TypesBackupsMenu.Items.Add(item);
+        }
+    }
+
+    private void OnRestoreTypeBackup(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string path }) return;
+        var ok = System.Windows.MessageBox.Show(
+            $"Restore types.xml from backup {System.IO.Path.GetFileName(path)}?\n\nThe current file is snapshotted first (undoable).",
+            "Restore backup", System.Windows.MessageBoxButton.OKCancel, System.Windows.MessageBoxImage.Warning) == System.Windows.MessageBoxResult.OK;
+        if (!ok) return;
+        _vm.RestoreTypes(path);
+        RefreshTypesBackupsMenu();
     }
 
     private void OnDetectEditor(object sender, RoutedEventArgs e)

@@ -406,6 +406,12 @@
                 <TextBlock Text="Bases" VerticalAlignment="Center" />
               </StackPanel>
             </ListBoxItem>
+            <ListBoxItem Tag="economy">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:SymbolIcon Symbol="Money24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                <TextBlock Text="Economy" VerticalAlignment="Center" />
+              </StackPanel>
+            </ListBoxItem>
             <ListBoxItem Tag="logs">
               <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <ui:SymbolIcon Symbol="TextBulletListLtr24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
@@ -1314,6 +1320,94 @@
 
               </StackPanel>
             </ScrollViewer>
+          </Grid>
+
+          <!-- ===== ECONOMY (types.xml editor) ===== -->
+          <Grid x:Name="PageEconomy" Visibility="Collapsed">
+            <Grid.InputBindings>
+              <KeyBinding Modifiers="Control" Key="Z" Command="{Binding UndoTypesCommand}" />
+              <KeyBinding Modifiers="Control" Key="Y" Command="{Binding RedoTypesCommand}" />
+            </Grid.InputBindings>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Header + actions -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,8">
+              <TextBlock Text="Economy — types.xml" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                         Text="{Binding TypesFile}" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+
+            <!-- Toolbar: filter + undo/redo + add/remove/save/backups -->
+            <Grid Grid.Row="1" Margin="0,0,0,8">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <ui:TextBox x:Name="TypesFilterBox" Width="200" PlaceholderText="filter name…" Margin="0,0,8,0"
+                            Text="{Binding TypesFilter, UpdateSourceTrigger=PropertyChanged}" />
+                <ComboBox Width="150" Margin="0,0,8,0" VerticalAlignment="Center"
+                          ItemsSource="{Binding TypeCategories}" SelectedItem="{Binding TypesCategoryFilter}"
+                          ToolTip="Filter by category (blank = all)" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <ui:Button Icon="{ui:SymbolIcon ArrowUndo24}" ToolTip="Undo (Ctrl+Z)" Margin="0,0,4,0"
+                           Command="{Binding UndoTypesCommand}" />
+                <ui:Button Icon="{ui:SymbolIcon ArrowRedo24}" ToolTip="Redo (Ctrl+Y)" Margin="0,0,8,0"
+                           Command="{Binding RedoTypesCommand}" />
+                <ui:Button Content="Add" Icon="{ui:SymbolIcon Add24}" Margin="0,0,4,0" Click="OnAddType" />
+                <ui:Button Content="Remove" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" Margin="0,0,8,0" Click="OnRemoveTypes" />
+                <ui:Button Content="Reload" Icon="{ui:SymbolIcon ArrowSync24}" Margin="0,0,4,0" Click="OnReloadTypes" />
+                <ui:DropDownButton Content="Backups" Icon="{ui:SymbolIcon History24}" Margin="0,0,4,0">
+                  <ui:DropDownButton.Flyout>
+                    <ContextMenu x:Name="TypesBackupsMenu" />
+                  </ui:DropDownButton.Flyout>
+                </ui:DropDownButton>
+                <ui:Button Content="Save" Appearance="Primary" Icon="{ui:SymbolIcon Save24}" Click="OnSaveTypes" />
+              </StackPanel>
+            </Grid>
+
+            <!-- Grid -->
+            <DataGrid x:Name="TypesGrid" Grid.Row="2" ItemsSource="{Binding TypesView}"
+                      AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Extended"
+                      GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                      BeginningEdit="OnTypesBeginEdit" CellEditEnding="OnTypesCellEditEnding">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="2*" />
+                <DataGridTextColumn Header="Nominal" Binding="{Binding Nominal}" Width="70" />
+                <DataGridTextColumn Header="Min" Binding="{Binding Min}" Width="60" />
+                <DataGridTextColumn Header="Lifetime" Binding="{Binding Lifetime}" Width="90" />
+                <DataGridTextColumn Header="Restock" Binding="{Binding Restock}" Width="80" />
+                <DataGridTextColumn Header="Cost" Binding="{Binding Cost}" Width="60" />
+                <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="*" />
+                <DataGridTextColumn Header="Usage" Binding="{Binding Usage}" Width="*" />
+                <DataGridTextColumn Header="Tiers (value)" Binding="{Binding Value}" Width="*" />
+              </DataGrid.Columns>
+            </DataGrid>
+
+            <!-- Batch bar + status -->
+            <Grid Grid.Row="3" Margin="0,8,0,0">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <TextBlock Text="Batch on selected:" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12" />
+                <ComboBox x:Name="BatchFieldBox" Width="100" Margin="0,0,8,0" VerticalAlignment="Center" SelectedIndex="0">
+                  <ComboBoxItem Content="nominal" /><ComboBoxItem Content="min" />
+                  <ComboBoxItem Content="lifetime" /><ComboBoxItem Content="restock" /><ComboBoxItem Content="cost" />
+                </ComboBox>
+                <ui:TextBox x:Name="BatchValueBox" Width="80" PlaceholderText="value" Margin="0,0,8,0" />
+                <ui:Button Content="Set" Margin="0,0,4,0" Click="OnBatchSet" />
+                <ui:Button Content="× Multiply" Click="OnBatchMultiply"
+                           ToolTip="Multiply nominal/min by the value on selected rows" />
+              </StackPanel>
+              <TextBlock Grid.Column="1" Text="{Binding TypesStatus}" VerticalAlignment="Center"
+                         HorizontalAlignment="Right" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </Grid>
           </Grid>
 
           <!-- ===== LOGS ===== -->

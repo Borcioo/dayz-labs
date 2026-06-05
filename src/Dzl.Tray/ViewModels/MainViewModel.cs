@@ -18,6 +18,7 @@ using Dzl.Core.Tools;
 using Dzl.Core.Projects;
 using Dzl.Core.Servers;
 using Dzl.Core.Bases;
+using Dzl.Core.Economy;
 using Dzl.Core.Vcs;
 using Dzl.Tray;
 
@@ -190,6 +191,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         ModsView = CollectionViewSource.GetDefaultView(Mods);
         ModsView.Filter = FilterMod;
+        TypesView = CollectionViewSource.GetDefaultView(Types);
+        TypesView.Filter = FilterType;
         ModsDropHandler = new ModsDropHandler(this);
         LogsDropHandler = new LogsDropHandler(this);
 
@@ -942,6 +945,189 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var r = await Task.Run(() => new RepoService(cp).Release(name, tag, notes));
         BuildLog += (r.Ok ? "✓ " : "✗ ") + r.Message + "\n";
         Building = false;
+    }
+
+    // === Economy (types.xml) page =========================================
+
+    /// <summary>Editable rows for the active mission's types.xml.</summary>
+    public ObservableCollection<TypeRowVm> Types { get; } = new();
+
+    /// <summary>Filtered/sortable view over <see cref="Types"/> (drives the DataGrid).</summary>
+    public ICollectionView TypesView { get; }
+
+    /// <summary>Distinct categories (+ "" = all) for the category filter combo.</summary>
+    public ObservableCollection<string> TypeCategories { get; } = new();
+
+    [ObservableProperty] private string _typesFilter = "";
+    [ObservableProperty] private string _typesCategoryFilter = "";
+    [ObservableProperty] private string _typesStatus = "";
+
+    partial void OnTypesFilterChanged(string value) => TypesView.Refresh();
+    partial void OnTypesCategoryFilterChanged(string value) => TypesView.Refresh();
+
+    /// <summary>Path of the active mission's types.xml (or a hint), shown on the Economy page.</summary>
+    public string TypesFile => new TypesService(_configPath).TypesFile() ?? "(no types.xml — pick/scaffold a server mission)";
+
+    public bool HasTypes => new TypesService(_configPath).TypesFile() is not null;
+
+    private bool FilterType(object o)
+    {
+        if (o is not TypeRowVm t) return true;
+        if (TypesFilter.Length > 0 && !t.Name.Contains(TypesFilter, StringComparison.OrdinalIgnoreCase)) return false;
+        if (TypesCategoryFilter.Length > 0 && !string.Equals(t.Category, TypesCategoryFilter, StringComparison.OrdinalIgnoreCase)) return false;
+        return true;
+    }
+
+    // --- undo/redo (in-session history; snapshot-based) ---
+    private const int UndoCap = 50;
+    private readonly List<List<Dzl.Core.Economy.TypeEntry>> _typesUndo = new();
+    private readonly List<List<Dzl.Core.Economy.TypeEntry>> _typesRedo = new();
+    private List<Dzl.Core.Economy.TypeEntry>? _pendingEdit;   // captured at cell BeginEdit
+
+    public bool CanUndoTypes => _typesUndo.Count > 0;
+    public bool CanRedoTypes => _typesRedo.Count > 0;
+
+    private List<Dzl.Core.Economy.TypeEntry> CaptureTypes() => Types.Select(t => t.ToEntry()).ToList();
+
+    private void PushTypeUndo()
+    {
+        _typesUndo.Add(CaptureTypes());
+        if (_typesUndo.Count > UndoCap) _typesUndo.RemoveAt(0);
+        _typesRedo.Clear();
+        AfterTypeHistoryChange();
+    }
+
+    private void AfterTypeHistoryChange()
+    {
+        OnPropertyChanged(nameof(CanUndoTypes));
+        OnPropertyChanged(nameof(CanRedoTypes));
+        UndoTypesCommand.NotifyCanExecuteChanged();
+        RedoTypesCommand.NotifyCanExecuteChanged();
+    }
+
+    private void RestoreTypeSnapshot(List<Dzl.Core.Economy.TypeEntry> snap)
+    {
+        Types.Clear();
+        foreach (var e in snap) Types.Add(new TypeRowVm(e));
+        RefreshTypeCategories();
+        TypesView.Refresh();
+    }
+
+    /// <summary>Capture the pre-edit state when a grid cell starts editing (committed on edit-commit).</summary>
+    public void BeginTypeEdit() => _pendingEdit = CaptureTypes();
+
+    public void CommitTypeEdit()
+    {
+        if (_pendingEdit is null) return;
+        _typesUndo.Add(_pendingEdit);
+        if (_typesUndo.Count > UndoCap) _typesUndo.RemoveAt(0);
+        _typesRedo.Clear();
+        _pendingEdit = null;
+        AfterTypeHistoryChange();
+    }
+
+    public void CancelTypeEdit() => _pendingEdit = null;
+
+    [RelayCommand(CanExecute = nameof(CanUndoTypes))]
+    private void UndoTypes()
+    {
+        if (_typesUndo.Count == 0) return;
+        var prev = _typesUndo[^1]; _typesUndo.RemoveAt(_typesUndo.Count - 1);
+        _typesRedo.Add(CaptureTypes());
+        RestoreTypeSnapshot(prev);
+        AfterTypeHistoryChange();
+        TypesStatus = "undo";
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRedoTypes))]
+    private void RedoTypes()
+    {
+        if (_typesRedo.Count == 0) return;
+        var next = _typesRedo[^1]; _typesRedo.RemoveAt(_typesRedo.Count - 1);
+        _typesUndo.Add(CaptureTypes());
+        RestoreTypeSnapshot(next);
+        AfterTypeHistoryChange();
+        TypesStatus = "redo";
+    }
+
+    private void RefreshTypeCategories()
+    {
+        var sel = TypesCategoryFilter;
+        TypeCategories.Clear();
+        TypeCategories.Add("");   // all
+        foreach (var c in Types.Select(t => t.Category).Where(c => c.Length > 0).Distinct().OrderBy(c => c))
+            TypeCategories.Add(c);
+        if (!TypeCategories.Contains(sel)) TypesCategoryFilter = "";
+    }
+
+    /// <summary>(Re)load types from the active mission's types.xml. Clears the undo history.</summary>
+    public void LoadTypes()
+    {
+        Types.Clear();
+        foreach (var e in new TypesService(_configPath).List()) Types.Add(new TypeRowVm(e));
+        RefreshTypeCategories();
+        _typesUndo.Clear(); _typesRedo.Clear(); _pendingEdit = null;
+        AfterTypeHistoryChange();
+        OnPropertyChanged(nameof(TypesFile));
+        OnPropertyChanged(nameof(HasTypes));
+        TypesView.Refresh();
+        TypesStatus = $"{Types.Count} types";
+    }
+
+    /// <summary>Persist the full edited set (snapshots a versioned backup first).</summary>
+    public void SaveTypes()
+    {
+        var r = new TypesService(_configPath).SaveAll(Types.Select(t => t.ToEntry()).ToList());
+        TypesStatus = (r.Ok ? "✓ " : "✗ ") + r.Message;
+        if (r.Ok) LoadTypes();
+    }
+
+    public void AddType(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return;
+        PushTypeUndo();
+        var row = new TypeRowVm(new Dzl.Core.Economy.TypeEntry { Name = name.Trim(), Nominal = 1, Min = 0, Lifetime = 3888000, Cost = 100 });
+        Types.Add(row);
+        TypesView.Refresh();
+        TypesStatus = $"added {name} (unsaved)";
+    }
+
+    public void RemoveTypes(IReadOnlyList<TypeRowVm> rows)
+    {
+        if (rows.Count == 0) return;
+        PushTypeUndo();
+        foreach (var r in rows) Types.Remove(r);
+        TypesView.Refresh();
+        TypesStatus = $"removed {rows.Count} (unsaved — Save to persist)";
+    }
+
+    /// <summary>Batch-apply a numeric field across selected rows: set to <paramref name="value"/>, or
+    /// multiply (nominal) by it. In-memory only until Save.</summary>
+    public void BatchApply(IReadOnlyList<TypeRowVm> rows, string field, double value, bool multiply)
+    {
+        if (rows.Count == 0) return;
+        PushTypeUndo();
+        foreach (var t in rows)
+        {
+            switch (field)
+            {
+                case "nominal": t.Nominal = multiply ? Math.Max(0, (int)Math.Round(t.Nominal * value)) : (int)value; break;
+                case "min": t.Min = multiply ? Math.Max(0, (int)Math.Round(t.Min * value)) : (int)value; break;
+                case "lifetime": t.Lifetime = (int)value; break;
+                case "restock": t.Restock = (int)value; break;
+                case "cost": t.Cost = (int)value; break;
+            }
+        }
+        TypesStatus = $"batch {(multiply ? "×" : "=")}{value} {field} on {rows.Count} (unsaved)";
+    }
+
+    public List<Dzl.Core.Economy.TypesBackupInfo> TypesBackups() => new TypesService(_configPath).Backups();
+
+    public void RestoreTypes(string file)
+    {
+        var r = new TypesService(_configPath).Restore(file);
+        TypesStatus = (r.Ok ? "✓ " : "✗ ") + r.Message;
+        if (r.Ok) LoadTypes();
     }
 
     // === Servers (instances) page =========================================
