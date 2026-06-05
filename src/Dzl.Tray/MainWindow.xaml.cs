@@ -565,24 +565,8 @@ public partial class MainWindow : FluentWindow
 
     // === Steam Workshop ===================================================
 
-    private async void OnWorkshopSearch(object sender, RoutedEventArgs e) => await _vm.WorkshopSearchAsync();
-
-    private void OnWorkshopDownload(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: string id }) _vm.WorkshopDownload(id);
-    }
-
-    private void OnWorkshopAddById(object sender, RoutedEventArgs e)
-    {
-        var input = PromptDialog.Show(this, "Add Workshop item", "Workshop id or URL:");
-        if (string.IsNullOrWhiteSpace(input)) return;
-        // Accept a bare id or a full Workshop URL (…?id=123456789).
-        var digits = new string(input.Where(char.IsDigit).ToArray());
-        var m = System.Text.RegularExpressions.Regex.Match(input, @"id=(\d+)");
-        var id = m.Success ? m.Groups[1].Value : digits;
-        if (id.Length == 0) { System.Windows.MessageBox.Show("Couldn't find a Workshop id in that input.", "Add by ID", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information); return; }
-        _vm.WorkshopDownload(id);
-    }
+    private void OnOpenWorkshop(object sender, RoutedEventArgs e)
+        => new WorkshopWindow(_vm) { Owner = this }.Show();
 
     // === Economy (types.xml) editor =======================================
 

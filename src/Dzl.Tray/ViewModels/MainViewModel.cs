@@ -888,8 +888,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     // === Steam Workshop (SP5) =============================================
 
     public ObservableCollection<WorkshopItem> WorkshopResults { get; } = new();
+
+    /// <summary>Items subscribed in the Steam client (its content folder) — what the Launcher loads.</summary>
+    public ObservableCollection<SubscribedItem> WorkshopSubscribed { get; } = new();
+
     [ObservableProperty] private string _workshopQuery = "";
     [ObservableProperty] private string _workshopStatus = "";
+
+    /// <summary>Reload the subscribed-items list (Steam client content folder).</summary>
+    public void RefreshSubscribed()
+    {
+        WorkshopSubscribed.Clear();
+        foreach (var s in new WorkshopService(_configPath).Subscribed()) WorkshopSubscribed.Add(s);
+    }
 
     /// <summary>Search the Workshop (Steam Web API) and fill the results list.</summary>
     public async Task WorkshopSearchAsync()

@@ -734,48 +734,19 @@
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
               <StackPanel>
 
-                <!-- Steam Workshop (SP5) -->
+                <!-- Steam Workshop (SP5) — full browser in its own window -->
                 <ui:Card Margin="0,0,0,12" Padding="16">
-                  <StackPanel>
-                    <TextBlock Text="Steam Workshop" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
-                    <Grid Margin="0,0,0,6">
-                      <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
-                      </Grid.ColumnDefinitions>
-                      <ui:TextBox x:Name="WorkshopQueryBox" Grid.Column="0" PlaceholderText="search the Workshop…"
-                                  Text="{Binding WorkshopQuery, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0" />
-                      <ui:Button Grid.Column="1" Content="Search" Icon="{ui:SymbolIcon Search24}" Appearance="Primary"
-                                 Margin="0,0,8,0" Click="OnWorkshopSearch" />
-                      <ui:Button Grid.Column="2" Content="Add by ID" Icon="{ui:SymbolIcon ArrowDownload24}" Click="OnWorkshopAddById" />
-                    </Grid>
-                    <TextBlock x:Name="WorkshopStatus" Text="{Binding WorkshopStatus}" FontSize="11"
-                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,0,6" />
-                    <ItemsControl ItemsSource="{Binding WorkshopResults}" MaxHeight="320">
-                      <ItemsControl.Template>
-                        <ControlTemplate TargetType="ItemsControl">
-                          <ScrollViewer VerticalScrollBarVisibility="Auto"><ItemsPresenter /></ScrollViewer>
-                        </ControlTemplate>
-                      </ItemsControl.Template>
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                          <Border Margin="0,0,0,4" Padding="8" CornerRadius="4"
-                                  Background="{DynamicResource ControlFillColorDefaultBrush}">
-                            <Grid>
-                              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                              <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding Title}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{Binding Id}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                              </StackPanel>
-                              <ui:Button Grid.Column="1" Content="Download" Icon="{ui:SymbolIcon ArrowDownload24}"
-                                         Tag="{Binding Id}" Click="OnWorkshopDownload" VerticalAlignment="Center" />
-                            </Grid>
-                          </Border>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <TextBlock Margin="0,6,0,0" FontSize="11" Opacity="0.7" TextWrapping="Wrap"
-                               Text="Search needs a Steam Web API key, download needs steamcmd (both in Settings → Steam). Owned/DayZ items need a Steam login — complete it in the console steamcmd opens." />
-                  </StackPanel>
+                  <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                      <TextBlock Text="Steam Workshop" FontSize="16" FontWeight="SemiBold" />
+                      <TextBlock FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"
+                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                 Text="Browse + search the Workshop, subscribe (Steam) or download (steamcmd), and see your subscribed mods — in a dedicated window. Keys/steamcmd in Settings → Steam." />
+                    </StackPanel>
+                    <ui:Button Grid.Column="1" Content="Open Workshop" Appearance="Primary"
+                               Icon="{ui:SymbolIcon Search24}" VerticalAlignment="Center" Click="OnOpenWorkshop" />
+                  </Grid>
                 </ui:Card>
 
                 <!-- Discovered library -->

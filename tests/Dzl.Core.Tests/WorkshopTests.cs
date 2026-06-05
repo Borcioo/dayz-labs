@@ -42,14 +42,14 @@ public class WorkshopTests
     [Fact]
     public void SteamCmd_command_line_uses_anonymous_or_login()
     {
-        SteamCmd.CommandLine(null, "123").Should().Be("+login anonymous +workshop_download_item 221100 123 +quit");
-        SteamCmd.CommandLine("macie", "123").Should().Be("+login macie +workshop_download_item 221100 123 +quit");
+        WorkshopCmd.CommandLine(null, "123").Should().Be("+login anonymous +workshop_download_item 221100 123 +quit");
+        WorkshopCmd.CommandLine("macie", "123").Should().Be("+login macie +workshop_download_item 221100 123 +quit");
     }
 
     [Fact]
     public void SteamCmd_content_dir_is_under_steamapps_workshop_content()
     {
-        SteamCmd.ContentDir(@"C:\steamcmd\steamcmd.exe", "123")
+        WorkshopCmd.ContentDir(@"C:\steamcmd\steamcmd.exe", "123")
             .Should().Be(@"C:\steamcmd\steamapps\workshop\content\221100\123");
     }
 }

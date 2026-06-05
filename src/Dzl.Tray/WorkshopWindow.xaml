@@ -1,0 +1,108 @@
+<ui:FluentWindow x:Class="Dzl.Tray.WorkshopWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Dzl.Tray"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="Steam Workshop" Width="820" Height="720"
+        MinWidth="640" MinHeight="480"
+        WindowBackdropType="Mica"
+        ExtendsContentIntoTitleBar="True"
+        WindowStartupLocation="CenterOwner">
+
+  <Grid Margin="16,8,16,16">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />  <!-- title bar -->
+      <RowDefinition Height="Auto" />  <!-- search -->
+      <RowDefinition Height="*" />     <!-- results -->
+      <RowDefinition Height="Auto" />  <!-- subscribed header -->
+      <RowDefinition Height="2*" />    <!-- subscribed list -->
+      <RowDefinition Height="Auto" />  <!-- status -->
+    </Grid.RowDefinitions>
+
+    <ui:TitleBar Grid.Row="0" Title="Steam Workshop" ShowMaximize="True" ShowMinimize="False" Margin="0,0,0,8" />
+
+    <!-- Search -->
+    <Grid Grid.Row="1" Margin="0,0,0,8">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <ui:TextBox x:Name="QueryBox" Grid.Column="0" PlaceholderText="search the DayZ Workshop…"
+                  Text="{Binding WorkshopQuery, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0" />
+      <ui:Button Grid.Column="1" Content="Search" Icon="{ui:SymbolIcon Search24}" Appearance="Primary"
+                 Margin="0,0,8,0" Click="OnSearch" />
+      <ui:Button Grid.Column="2" Content="Add by ID" Icon="{ui:SymbolIcon ArrowDownload24}" Click="OnAddById" />
+    </Grid>
+
+    <!-- Search results -->
+    <Border Grid.Row="2" CornerRadius="6" BorderThickness="1"
+            BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <ItemsControl ItemsSource="{Binding WorkshopResults}" Margin="6">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Margin="0,0,0,4" Padding="10" CornerRadius="4"
+                      Background="{DynamicResource ControlFillColorDefaultBrush}">
+                <Grid>
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                  <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Title}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Description}" FontSize="11" TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{Binding Id}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:Button Content="Subscribe" Icon="{ui:SymbolIcon Star24}" ToolTip="Open in Steam to subscribe"
+                               Tag="{Binding Id}" Click="OnSubscribe" Margin="0,0,8,0" />
+                    <ui:Button Content="Download" Icon="{ui:SymbolIcon ArrowDownload24}" ToolTip="Download via steamcmd"
+                               Tag="{Binding Id}" Click="OnDownload" />
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Border>
+
+    <!-- Subscribed header -->
+    <Grid Grid.Row="3" Margin="0,12,0,6">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+      <TextBlock Grid.Column="0" Text="Subscribed (Steam client)" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+      <ui:Button Grid.Column="1" Content="Refresh" Icon="{ui:SymbolIcon ArrowSync24}" Click="OnRefreshSubscribed" />
+    </Grid>
+
+    <!-- Subscribed list -->
+    <Border Grid.Row="4" CornerRadius="6" BorderThickness="1"
+            BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <ItemsControl ItemsSource="{Binding WorkshopSubscribed}" Margin="6">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Margin="0,0,0,4" Padding="10" CornerRadius="4"
+                      Background="{DynamicResource ControlFillColorDefaultBrush}">
+                <Grid>
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                  <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Name}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Id}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:Button Icon="{ui:SymbolIcon Star24}" ToolTip="Open in Steam (manage/unsubscribe)"
+                               Tag="{Binding Id}" Click="OnSubscribe" Margin="0,0,8,0" />
+                    <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open the mod folder"
+                               Tag="{Binding Dir}" Click="OnOpenSubscribedFolder" Margin="0,0,8,0" />
+                    <ui:Button Icon="{ui:SymbolIcon ArrowDownload24}" ToolTip="Update via steamcmd"
+                               Tag="{Binding Id}" Click="OnDownload" />
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Border>
+
+    <TextBlock Grid.Row="5" Text="{Binding WorkshopStatus}" Margin="0,8,0,0" FontSize="12"
+               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+  </Grid>
+</ui:FluentWindow>

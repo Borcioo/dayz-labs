@@ -4,7 +4,7 @@ namespace Dzl.Core.Workshop;
 
 /// <summary>Drives steamcmd for Workshop downloads. Arg/path building is pure + unit-tested; the run spawns
 /// a visible console so the user can complete Steam login / Steam Guard (owned DayZ items need ownership).</summary>
-public static class SteamCmd
+public static class WorkshopCmd
 {
     public const string AppId = "221100";
 
