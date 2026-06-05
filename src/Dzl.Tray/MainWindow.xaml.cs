@@ -470,6 +470,12 @@ public partial class MainWindow : FluentWindow
             NewModStatus.Text = _vm.QuickJunction(name);
     }
 
+    private async void OnBuildMod(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string name })
+            await _vm.BuildModAsync(name);
+    }
+
     // === SERVERS page =====================================================
 
     private void OnRefreshServers(object sender, RoutedEventArgs e) => _vm.RefreshServers();

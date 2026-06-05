@@ -785,6 +785,30 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return link.Ok ? $"✓ {name}: {link.Detail}" : $"✗ {name}: {link.Detail}";
     }
 
+    // === Build → deploy (SP2) ============================================
+
+    /// <summary>Live AddonBuilder log for the most recent build (shown on the My Mods page).</summary>
+    [ObservableProperty] private string _buildLog = "";
+
+    /// <summary>True while a build is running — used to disable the build buttons.</summary>
+    [ObservableProperty] private bool _building;
+
+    /// <summary>Build a mod project into a PBO off the UI thread, streaming the AddonBuilder log; on
+    /// success register the <c>@&lt;Mod&gt;</c> into the active server's run-list and refresh.</summary>
+    public async Task BuildModAsync(string name)
+    {
+        if (Building) return;
+        Building = true;
+        BuildLog = $"▸ Building {name} …\n";
+        var configPath = _configPath;
+        var result = await Task.Run(() =>
+            new BuildService(configPath).Build(name, clean: false, binarize: true,
+                onLine: line => _dispatcher.BeginInvoke(() => BuildLog += line + "\n")));
+        BuildLog += (result.Ok ? "\n✓ " : "\n✗ ") + result.Message + "\n";
+        Building = false;
+        if (result.Ok) { Reload(); RefreshModProjects(); }
+    }
+
     // === Servers (instances) page =========================================
 
     /// <summary>Server instances discovered under &lt;ProjectsRoot&gt;\servers (drives the Servers page).</summary>

@@ -897,6 +897,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                               </Grid.ColumnDefinitions>
                               <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
@@ -930,7 +931,10 @@
                                 </TextBlock>
                               </Border>
                               <ui:Button Grid.Column="2" Content="Quick junction" Icon="{ui:SymbolIcon Link24}"
-                                         Tag="{Binding Name}" Click="OnQuickJunction" VerticalAlignment="Center" />
+                                         Tag="{Binding Name}" Click="OnQuickJunction" VerticalAlignment="Center" Margin="0,0,8,0" />
+                              <ui:Button Grid.Column="3" Content="Build" Appearance="Primary"
+                                         Icon="{ui:SymbolIcon Hammer24}" ToolTip="Build → PBO and add to the active server's run-list"
+                                         Tag="{Binding Name}" Click="OnBuildMod" VerticalAlignment="Center" />
                             </Grid>
                           </Border>
                         </DataTemplate>
@@ -949,6 +953,26 @@
                         </Style>
                       </TextBlock.Style>
                     </TextBlock>
+                  </StackPanel>
+                </ui:Card>
+
+                <!-- Build log -->
+                <ui:Card Margin="0,0,0,4" Padding="16">
+                  <ui:Card.Style>
+                    <Style TargetType="ui:Card">
+                      <Setter Property="Visibility" Value="Visible" />
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding BuildLog}" Value="">
+                          <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </ui:Card.Style>
+                  <StackPanel>
+                    <TextBlock Text="Build log" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <TextBox Text="{Binding BuildLog, Mode=OneWay}" Style="{StaticResource LogTextBox}"
+                             Height="200" IsReadOnly="True"
+                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
                   </StackPanel>
                 </ui:Card>
 
