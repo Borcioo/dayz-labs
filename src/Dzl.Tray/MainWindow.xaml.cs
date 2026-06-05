@@ -514,6 +514,20 @@ public partial class MainWindow : FluentWindow
 
     private async void OnGitHubLogout(object sender, RoutedEventArgs e) => await _vm.GitHubLogoutAsync();
 
+    // Fill the DayZ + Tools path fields from the Steam libraries (same detection the setup wizard runs);
+    // only overwrites a field when detection actually finds something, so manual entries survive a miss.
+    private void OnDetectPaths(object sender, RoutedEventArgs e)
+    {
+        var d = Dzl.Core.Env.EnvDetect.Detect();
+        if (!string.IsNullOrWhiteSpace(d.DayzPath)) CfgDayzPath.Text = d.DayzPath;
+        if (!string.IsNullOrWhiteSpace(d.ToolsPath)) CfgDayzToolsPath.Text = d.ToolsPath;
+        var found = (d.DayzPath is not null ? 1 : 0) + (d.ToolsPath is not null ? 1 : 0);
+        System.Windows.MessageBox.Show(
+            found == 0 ? "Couldn't find DayZ or DayZ Tools in your Steam libraries — set the paths manually."
+                       : $"Filled {found} path(s) from Steam. Review, then Save.",
+            "Auto-detect paths", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+    }
+
     // === SERVERS page =====================================================
 
     private void OnRefreshServers(object sender, RoutedEventArgs e) => _vm.RefreshServers();
