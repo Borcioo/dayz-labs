@@ -22,10 +22,19 @@ public partial class WorkshopWindow : FluentWindow
         InitializeComponent();
         _vm = vm;
         DataContext = vm;
-        Loaded += (_, _) => _vm.RefreshSubscribed();
+        Loaded += async (_, _) =>
+        {
+            _vm.RefreshSubscribed();
+            await _vm.WorkshopBrowseAsync("top");   // open on the popular list
+        };
     }
 
-    private async void OnSearch(object sender, RoutedEventArgs e) => await _vm.WorkshopSearchAsync();
+    private async void OnSearch(object sender, RoutedEventArgs e) => await _vm.WorkshopBrowseAsync("search");
+
+    private async void OnBrowseMode(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string mode }) await _vm.WorkshopBrowseAsync(mode);
+    }
 
     private void OnRefreshSubscribed(object sender, RoutedEventArgs e) => _vm.RefreshSubscribed();
 

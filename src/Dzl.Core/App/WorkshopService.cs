@@ -24,6 +24,10 @@ public sealed class WorkshopService
     public Task<(bool ok, string error, List<WorkshopItem> items)> SearchAsync(string query, int count = 30)
         => WorkshopApi.SearchAsync(Cfg.SteamApiKey, query, count);
 
+    /// <summary>Browse the Workshop by mode: top / recent / trending / search (search uses <paramref name="query"/>).</summary>
+    public Task<(bool ok, string error, List<WorkshopItem> items)> BrowseAsync(string mode, string query = "", int count = 30)
+        => WorkshopApi.BrowseAsync(Cfg.SteamApiKey, mode, query, count);
+
     /// <summary>Download (or re-download to update) a Workshop item via steamcmd, spawning a console for login.</summary>
     public WorkshopOp Download(string id)
     {

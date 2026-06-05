@@ -40,6 +40,31 @@ public class WorkshopTests
     }
 
     [Fact]
+    public void ParseSearch_reads_browse_metadata_preview_subs_tags()
+    {
+        const string json = """
+        {"response":{"publishedfiledetails":[
+          {"publishedfileid":"42","title":"Trader","preview_url":"https://img/x.jpg","subscriptions":12345,
+           "time_created":1600000000,"tags":[{"tag":"Mechanic","display_name":"Mechanic"},{"display_name":"Economy"}]}
+        ]}}
+        """;
+        var i = WorkshopApi.ParseSearch(json).Should().ContainSingle().Subject;
+        i.PreviewUrl.Should().Be("https://img/x.jpg");
+        i.Subscriptions.Should().Be(12345);
+        i.Created.Should().Be(1600000000);
+        i.Tags.Should().Be("Mechanic, Economy");
+    }
+
+    [Theory]
+    [InlineData("top", 0)]
+    [InlineData("recent", 1)]
+    [InlineData("trending", 3)]
+    [InlineData("search", 12)]
+    [InlineData("whatever", 0)]
+    public void QueryType_maps_modes(string mode, int qt)
+        => WorkshopApi.QueryType(mode).Should().Be(qt);
+
+    [Fact]
     public void SteamCmd_command_line_uses_anonymous_or_login()
     {
         WorkshopCmd.CommandLine(null, "123").Should().Be("+login anonymous +workshop_download_item 221100 123 +quit");

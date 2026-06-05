@@ -894,12 +894,27 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     [ObservableProperty] private string _workshopQuery = "";
     [ObservableProperty] private string _workshopStatus = "";
+    [ObservableProperty] private string _workshopMode = "top";
+    [ObservableProperty] private WorkshopItem? _selectedWorkshopItem;
 
     /// <summary>Reload the subscribed-items list (Steam client content folder).</summary>
     public void RefreshSubscribed()
     {
         WorkshopSubscribed.Clear();
         foreach (var s in new WorkshopService(_configPath).Subscribed()) WorkshopSubscribed.Add(s);
+    }
+
+    /// <summary>Browse the Workshop by mode (top/recent/trending/search) and fill the results list.</summary>
+    public async Task WorkshopBrowseAsync(string mode)
+    {
+        WorkshopMode = mode;
+        WorkshopStatus = mode == "search" && string.IsNullOrWhiteSpace(WorkshopQuery) ? "enter a search term" : "loading…";
+        if (mode == "search" && string.IsNullOrWhiteSpace(WorkshopQuery)) return;
+        var (ok, error, items) = await new WorkshopService(_configPath).BrowseAsync(mode, WorkshopQuery);
+        WorkshopResults.Clear();
+        foreach (var it in items) WorkshopResults.Add(it);
+        SelectedWorkshopItem = WorkshopResults.FirstOrDefault();
+        WorkshopStatus = ok ? $"{items.Count} {mode} result(s)" : $"✗ {error}";
     }
 
     /// <summary>Search the Workshop (Steam Web API) and fill the results list.</summary>
