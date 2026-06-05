@@ -971,6 +971,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         WorkshopStatus = ok ? $"{WorkshopResults.Count} total (page {_workshopPage})" : $"✗ {error}";
     }
 
+    /// <summary>True when a Steam session is stored (signed in).</summary>
+    public bool SteamSignedIn => new WorkshopService(_configPath).SignedIn;
+
+    public Task<Dzl.Core.Workshop.SteamLoginResult> SteamLoginQrAsync(Action<string> onUrl, System.Threading.CancellationToken ct)
+        => new WorkshopService(_configPath).LoginViaQrAsync(onUrl, ct);
+
+    public Task<Dzl.Core.Workshop.SteamLoginResult> SteamLoginCredentialsAsync(string user, string pass, SteamKit2.Authentication.IAuthenticator auth, System.Threading.CancellationToken ct)
+        => new WorkshopService(_configPath).LoginViaCredentialsAsync(user, pass, auth, ct);
+
+    public void SteamSignOut() => new WorkshopService(_configPath).SignOut();
+
     /// <summary>Subscribe in-app via the Steam web token if set; returns false (so the caller opens the Steam
     /// page) when no token is configured.</summary>
     public async Task<bool> SubscribeWorkshopAsync(string id)

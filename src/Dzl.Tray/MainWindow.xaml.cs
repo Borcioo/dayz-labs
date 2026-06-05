@@ -334,6 +334,7 @@ public partial class MainWindow : FluentWindow
         CfgSteamCmdPath.Text = c.SteamCmdPath;
         CfgSteamLogin.Text = c.SteamLogin;
         CfgSteamAccessToken.Text = c.SteamAccessToken;
+        SteamSignInStatus.Text = _vm.SteamSignedIn ? "✓ signed in (Subscribe works in-app)" : "not signed in — Subscribe opens the Steam page";
         ConfigError.Visibility = Visibility.Collapsed;
     }
 
@@ -652,6 +653,19 @@ public partial class MainWindow : FluentWindow
         if (ok) CfgSteamCmdPath.Text = path;
         SteamCmdStatus.Text = (ok ? "✓ " : "✗ ") + msg + (ok ? "  (Save to apply)" : "");
         if (btn is not null) btn.IsEnabled = true;
+    }
+
+    private void OnSteamSignIn(object sender, RoutedEventArgs e)
+    {
+        var dlg = new SteamLoginWindow(_vm) { Owner = this };
+        dlg.ShowDialog();
+        SteamSignInStatus.Text = _vm.SteamSignedIn ? "✓ signed in (Subscribe works in-app)" : "not signed in — Subscribe opens the Steam page";
+    }
+
+    private void OnSteamSignOut(object sender, RoutedEventArgs e)
+    {
+        _vm.SteamSignOut();
+        SteamSignInStatus.Text = "signed out";
     }
 
     private void OnDetectEditor(object sender, RoutedEventArgs e)

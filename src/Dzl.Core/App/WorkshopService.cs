@@ -1,6 +1,7 @@
 using Dzl.Core.Config;
 using Dzl.Core.Mods;
 using Dzl.Core.Workshop;
+using SteamKit2.Authentication;
 
 namespace Dzl.Core.App;
 
@@ -32,12 +33,68 @@ public sealed class WorkshopService
     /// <summary>Full details for one item (subscribers/description/tags) via the keyless details endpoint.</summary>
     public Task<WorkshopItem?> DetailsAsync(string id) => WorkshopWeb.DetailsAsync(id);
 
-    /// <summary>True when a Steam web access token is set (enables in-app Subscribe instead of opening Steam).</summary>
-    public bool HasAccessToken => !string.IsNullOrWhiteSpace(Cfg.SteamAccessToken);
+    // Cached access token (short-lived) minted from the stored refresh token; renewed on demand.
+    private static string? _accessCache;
+    private static DateTime _accessAt;
 
-    /// <summary>In-app subscribe (true) / unsubscribe (false) via the Steam web token.</summary>
-    public Task<(bool ok, string message)> SubscribeAsync(string id, bool subscribe = true)
-        => WorkshopWeb.SubscribeAsync(Cfg.SteamAccessToken, id, subscribe);
+    /// <summary>True when in-app Subscribe is possible — a signed-in Steam session (stored refresh token) or
+    /// an explicitly pasted access token.</summary>
+    public bool HasAccessToken => SignedIn || !string.IsNullOrWhiteSpace(Cfg.SteamAccessToken);
+
+    /// <summary>True when a Steam session (refresh token) is stored.</summary>
+    public bool SignedIn => SteamTokenStore.Exists(_configPath);
+
+    /// <summary>A usable access token: the explicit pasted one, else one renewed (and cached ~12h) from the
+    /// stored refresh token. Null when not signed in.</summary>
+    private async Task<string?> AccessTokenAsync()
+    {
+        var pasted = Cfg.SteamAccessToken;
+        if (!string.IsNullOrWhiteSpace(pasted)) return pasted.Trim();
+        var refresh = SteamTokenStore.Load(_configPath);
+        if (refresh is null) return null;
+        if (_accessCache is not null && DateTime.UtcNow - _accessAt < TimeSpan.FromHours(12)) return _accessCache;
+        using var auth = new SteamAuth();
+        var token = await auth.RenewAccessTokenAsync(refresh);
+        if (token is not null) { _accessCache = token; _accessAt = DateTime.UtcNow; }
+        return token;
+    }
+
+    /// <summary>In-app subscribe (true) / unsubscribe (false) — renews the access token from the stored session.</summary>
+    public async Task<(bool ok, string message)> SubscribeAsync(string id, bool subscribe = true)
+    {
+        var token = await AccessTokenAsync();
+        if (token is null) return (false, "not signed in to Steam");
+        return await WorkshopWeb.SubscribeAsync(token, id, subscribe);
+    }
+
+    /// <summary>QR sign-in; on success stores the refresh token (encrypted) for future Subscribe calls.</summary>
+    public async Task<SteamLoginResult> LoginViaQrAsync(Action<string> onChallengeUrl, CancellationToken ct)
+    {
+        using var auth = new SteamAuth();
+        var r = await auth.LoginViaQrAsync(onChallengeUrl, ct);
+        if (r.Ok && !string.IsNullOrWhiteSpace(r.RefreshToken))
+        {
+            SteamTokenStore.Save(_configPath, r.RefreshToken);
+            _accessCache = r.AccessToken; _accessAt = DateTime.UtcNow;
+        }
+        return r;
+    }
+
+    /// <summary>Username/password sign-in (+ Steam Guard via <paramref name="authenticator"/>).</summary>
+    public async Task<SteamLoginResult> LoginViaCredentialsAsync(string user, string pass, IAuthenticator authenticator, CancellationToken ct)
+    {
+        using var auth = new SteamAuth();
+        var r = await auth.LoginViaCredentialsAsync(user, pass, authenticator, ct);
+        if (r.Ok && !string.IsNullOrWhiteSpace(r.RefreshToken))
+        {
+            SteamTokenStore.Save(_configPath, r.RefreshToken);
+            _accessCache = r.AccessToken; _accessAt = DateTime.UtcNow;
+        }
+        return r;
+    }
+
+    /// <summary>Forget the stored Steam session.</summary>
+    public void SignOut() { SteamTokenStore.Clear(_configPath); _accessCache = null; }
 
     /// <summary>Download (or re-download to update) a Workshop item via steamcmd, spawning a console for login.</summary>
     public WorkshopOp Download(string id)
