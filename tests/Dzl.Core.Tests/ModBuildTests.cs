@@ -1,6 +1,7 @@
 using Dzl.Core.App;
 using Dzl.Core.Build;
 using Dzl.Core.Config;
+using Dzl.Core.Projects;
 using FluentAssertions;
 using Xunit;
 
@@ -17,17 +18,6 @@ public class ModBuildTests
     }
 
     private static string Tmp() => Directory.CreateTempSubdirectory().FullName;
-
-    // --- pure path helpers ---
-
-    [Fact]
-    public void Output_paths_are_rooted_under_P_Mods()
-    {
-        ModBuild.OutputDir("Foo").Should().Be(@"P:\Mods\@Foo");
-        ModBuild.AddonsDir("Foo").Should().Be(@"P:\Mods\@Foo\Addons");
-        ModBuild.MarkerPath("Foo").Should().Be(@"P:\Mods\@Foo\.dzl-build");
-        ModBuild.LoadPath("Foo").Should().Be(@"P:\Mods\@Foo");
-    }
 
     // --- fresh-pbo verification ---
 
@@ -99,7 +89,7 @@ public class ModBuildTests
     public void Build_fails_when_addonbuilder_missing_even_for_a_valid_project()
     {
         var (configPath, root) = TmpConfig();
-        var proj = Path.Combine(root, "Foo");
+        var proj = ProjectPaths.ModDir(root, "Foo");   // <root>\mods\Foo
         Directory.CreateDirectory(proj);
         File.WriteAllText(Path.Combine(proj, "config.cpp"), "class CfgPatches {};");
 

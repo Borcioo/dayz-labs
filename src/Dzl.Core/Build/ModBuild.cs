@@ -9,24 +9,13 @@ public sealed record BuildResult(
     bool Ok, string ModName, string ModDir, string PboPath, bool Registered, string Message, string Output);
 
 /// <summary>
-/// Pure helpers for the build→deploy pipeline: where a built mod lands on the work drive, how to
-/// verify a fresh PBO was produced, the ownership marker, and the run-list registration. The I/O
-/// orchestration (junction, AddonBuilder process, save) lives in <c>Dzl.Core.App.BuildService</c>;
-/// everything here is side-effect-light and unit-tested.
+/// Side-effect-light helpers for the build→deploy pipeline: verifying a fresh PBO was produced, the
+/// ownership marker, and the run-list registration. Output paths now live in <c>ProjectPaths</c>
+/// (builds are physical under <c>&lt;ProjectsRoot&gt;\build\@&lt;Mod&gt;</c>); the I/O orchestration
+/// (junctions, AddonBuilder process, save) lives in <c>Dzl.Core.App.BuildService</c>.
 /// </summary>
 public static class ModBuild
 {
-    /// <summary>Built mods are deployed under <c>P:\Mods\@&lt;Mod&gt;\Addons\</c> so the dev engine can
-    /// load them from the work drive (matches the agentic-z layout, rooted on P:).</summary>
-    public const string ModsRoot = @"P:\Mods";
-
-    public static string OutputDir(string mod) => Path.Combine(ModsRoot, "@" + mod);
-    public static string AddonsDir(string mod) => Path.Combine(OutputDir(mod), "Addons");
-    public static string MarkerPath(string mod) => Path.Combine(OutputDir(mod), ".dzl-build");
-
-    /// <summary>The path written into the run-list — the engine loads the <c>@&lt;Mod&gt;</c> folder.</summary>
-    public static string LoadPath(string mod) => OutputDir(mod);
-
     /// <summary>Newest <c>.pbo</c> in the Addons dir, or null if none exists.</summary>
     public static FileInfo? NewestPbo(string addonsDir)
     {
@@ -42,12 +31,12 @@ public static class ModBuild
     public static bool HasFreshPbo(string addonsDir, DateTime sinceUtc) =>
         NewestPbo(addonsDir) is { } f && f.LastWriteTimeUtc >= sinceUtc;
 
-    /// <summary>Drops the dzl ownership marker so later runs know this <c>@&lt;Mod&gt;</c> is dzl-built
-    /// (and safe to overwrite/clean), mirroring agentic-z's scaffold marker.</summary>
-    public static void WriteMarker(string mod, string detail)
+    /// <summary>Drops the dzl ownership marker (at <paramref name="markerPath"/>) so later runs know this
+    /// build folder is dzl-built and safe to overwrite/clean.</summary>
+    public static void WriteMarker(string markerPath, string detail)
     {
-        Directory.CreateDirectory(OutputDir(mod));
-        File.WriteAllText(MarkerPath(mod), detail);
+        Directory.CreateDirectory(Path.GetDirectoryName(markerPath)!);
+        File.WriteAllText(markerPath, detail);
     }
 
     /// <summary>Append the built mod's load path to the run-list (enabled, both sides), deduping on path

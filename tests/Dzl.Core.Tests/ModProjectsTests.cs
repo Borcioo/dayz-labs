@@ -8,11 +8,12 @@ public class ModProjectsTests
     public void Discover_lists_subdirs_that_look_like_mod_projects()
     {
         var root = Directory.CreateTempSubdirectory().FullName;
-        var a = Path.Combine(root, "Alpha"); Directory.CreateDirectory(a);
+        var mods = ProjectPaths.ModsDir(root);
+        var a = Path.Combine(mods, "Alpha"); Directory.CreateDirectory(a);
         File.WriteAllText(Path.Combine(a, "$PBOPREFIX$"), "Alpha");
-        var b = Path.Combine(root, "Beta"); Directory.CreateDirectory(b);
+        var b = Path.Combine(mods, "Beta"); Directory.CreateDirectory(b);
         File.WriteAllText(Path.Combine(b, "config.cpp"), "class CfgPatches{};");
-        Directory.CreateDirectory(Path.Combine(root, "NotAMod"));
+        Directory.CreateDirectory(Path.Combine(mods, "NotAMod"));
 
         var found = ModProjects.Discover(root).Select(p => p.Name).ToList();
         found.Should().Contain("Alpha").And.Contain("Beta");

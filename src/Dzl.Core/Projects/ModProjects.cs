@@ -17,10 +17,10 @@ public static class ModProjects
     public static List<ModProject> Discover(string root, string? workDriveSource = null)
     {
         var list = new List<ModProject>();
-        if (!Directory.Exists(root)) return list;
-        foreach (var dir in Directory.GetDirectories(root))
+        var modsDir = ProjectPaths.ModsDir(root);
+        if (!Directory.Exists(modsDir)) return list;
+        foreach (var dir in Directory.GetDirectories(modsDir))
         {
-            if (string.Equals(System.IO.Path.GetFileName(dir), "servers", StringComparison.OrdinalIgnoreCase)) continue;
             if (!IsProject(dir)) continue;
             var name = System.IO.Path.GetFileName(dir);
             var link = ProjectPaths.JunctionPath(workDriveSource, name);

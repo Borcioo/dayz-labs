@@ -7,10 +7,11 @@ using Dzl.Core.Tools;
 namespace Dzl.Core.App;
 
 /// <summary>
-/// SP2 build→deploy: turn a mod <i>project</i> (source under ProjectsRoot, reachable via its
-/// <c>P:\&lt;Mod&gt;\</c> junction) into a loadable PBO under <c>P:\Mods\@&lt;Mod&gt;\Addons\</c>,
-/// then register that <c>@&lt;Mod&gt;</c> into the active server instance's run-list. One facade per
-/// frontend (CLI/MCP/tray); orchestration only — pure bits live in <see cref="ModBuild"/>.
+/// SP2 build→deploy: turn a mod <i>project</i> (source at <c>&lt;ProjectsRoot&gt;\mods\&lt;Mod&gt;</c>,
+/// reached via its <c>P:\&lt;Mod&gt;</c> junction) into a loadable PBO under
+/// <c>&lt;ProjectsRoot&gt;\build\@&lt;Mod&gt;\Addons\</c> (physical; surfaced on P: as
+/// <c>P:\Mods\@&lt;Mod&gt;</c> via a junction), then register that build into the active server's run-list
+/// by its always-live physical path. One facade per frontend; pure bits live in <see cref="ModBuild"/>.
 /// </summary>
 public sealed class BuildService
 {
@@ -30,7 +31,8 @@ public sealed class BuildService
 
         Profiles.EnsureDefault(_configPath);
         var (cfg, _, _) = Profiles.ResolveActive(_configPath);
-        var projectDir = ProjectPaths.ModDir(ProjectPaths.Root(cfg), mod);
+        var root = ProjectPaths.Root(cfg);
+        var projectDir = ProjectPaths.ModDir(root, mod);
         var src = ProjectPaths.WorkDriveLink(mod);
         var exe = ToolCatalog.Find(cfg.DayzToolsPath, "addonbuilder");
 
@@ -44,7 +46,8 @@ public sealed class BuildService
                 : "ready to build";
 
         return new BuildPlanView(true, mod, projectDir, src,
-            ModBuild.OutputDir(mod), ModBuild.AddonsDir(mod), exe?.ExePath ?? "(not found)", pMounted, ready, msg);
+            ProjectPaths.BuildDir(root, mod), ProjectPaths.BuildAddonsDir(root, mod),
+            exe?.ExePath ?? "(not found)", pMounted, ready, msg);
     }
 
     /// <summary>Build <paramref name="modName"/> and (on success) add it to the active run-list.</summary>
@@ -74,15 +77,23 @@ public sealed class BuildService
         if (!WorkDrive.IsMounted())
             return Fail("P: work drive not mounted — mount it first (binarize resolves vanilla data + includes against P:)");
 
-        // (Re)create the junction on the always-live work-drive source folder (survives P: unmounts);
-        // P: is mounted here (checked above), so AddonBuilder reads the same object via the P:\ path.
-        var junction = ProjectPaths.JunctionPath(EnvDetect.WorkDriveSource(cfg.WorkDriveSource, cfg.DayzToolsPath), modName);
-        var ens = Junction.Ensure(junction, projectDir);
-        if (!ens.Ok)
-            return Fail($"junction {junction} → {projectDir} failed: {ens.Detail}");
-
-        var addonsDir = ModBuild.AddonsDir(modName);
+        var workDriveSource = EnvDetect.WorkDriveSource(cfg.WorkDriveSource, cfg.DayzToolsPath);
+        var buildDir = ProjectPaths.BuildDir(root, modName);
+        var addonsDir = ProjectPaths.BuildAddonsDir(root, modName);
         Directory.CreateDirectory(addonsDir);
+
+        // Junctions anchored on the always-live work-drive source folder (survive P: unmounts): the source
+        // so AddonBuilder reads it via P:\<Mod>, and the build so it surfaces at P:\Mods\@<Mod>. Both targets
+        // live physically under ProjectsRoot (mods\ and build\).
+        var srcJunction = ProjectPaths.JunctionPath(workDriveSource, modName);
+        var srcEns = Junction.Ensure(srcJunction, projectDir);
+        if (!srcEns.Ok)
+            return Fail($"source junction {srcJunction} → {projectDir} failed: {srcEns.Detail}");
+
+        var buildJunction = ProjectPaths.BuildJunctionPath(workDriveSource, modName);
+        var buildEns = Junction.Ensure(buildJunction, buildDir);
+        if (!buildEns.Ok)
+            return Fail($"build junction {buildJunction} → {buildDir} failed: {buildEns.Detail}");
 
         var startUtc = DateTime.UtcNow;
         var pack = AddonBuilder.Pack(exe.ExePath, ProjectPaths.WorkDriveLink(modName), addonsDir,
@@ -95,15 +106,15 @@ public sealed class BuildService
             return Fail("AddonBuilder reported success but no fresh .pbo appeared", pack.Output);
 
         var pbo = ModBuild.NewestPbo(addonsDir)!.FullName;
-        ModBuild.WriteMarker(modName, $"dzl-built {startUtc:O} from {projectDir}");
+        ModBuild.WriteMarker(ProjectPaths.BuildMarkerPath(root, modName), $"dzl-built {startUtc:O} from {projectDir}");
 
-        // Register into the active instance's run-list (idempotent), saving to the active instance.
-        var updated = ModBuild.Register(cfg, ModBuild.LoadPath(modName));
+        // Register the physical build folder (always-live) into the active run-list (idempotent).
+        var updated = ModBuild.Register(cfg, buildDir);
         var registered = !ReferenceEquals(updated, cfg);
         if (registered)
             Profiles.Save(updated, string.IsNullOrEmpty(active) ? "default" : active, _configPath);
 
         var note = registered ? $"built + added to run-list ({active})" : "built (already in run-list)";
-        return new BuildResult(true, modName, ModBuild.OutputDir(modName), pbo, registered, note, pack.Output);
+        return new BuildResult(true, modName, buildDir, pbo, registered, note, pack.Output);
     }
 }

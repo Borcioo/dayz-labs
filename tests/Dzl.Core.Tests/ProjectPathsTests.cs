@@ -41,10 +41,22 @@ public class ProjectPathsTests
     [Fact]
     public void Paths_compose_under_root()
     {
-        ProjectPaths.ModDir(@"D:\P", "MyMod").Should().Be(@"D:\P\MyMod");
+        ProjectPaths.ModsDir(@"D:\P").Should().Be(@"D:\P\mods");
+        ProjectPaths.ModDir(@"D:\P", "MyMod").Should().Be(@"D:\P\mods\MyMod");
+        ProjectPaths.ModMetaDir(@"D:\P", "MyMod").Should().Be(@"D:\P\mods\MyMod\.dzl");
+        ProjectPaths.BuildDir(@"D:\P", "MyMod").Should().Be(@"D:\P\build\@MyMod");
+        ProjectPaths.BuildAddonsDir(@"D:\P", "MyMod").Should().Be(@"D:\P\build\@MyMod\Addons");
         ProjectPaths.ServersDir(@"D:\P").Should().Be(@"D:\P\servers");
         ProjectPaths.ServerDir(@"D:\P", "chernarus").Should().Be(@"D:\P\servers\chernarus");
         ProjectPaths.WorkDriveLink("MyMod").Should().Be(@"P:\MyMod");
+        ProjectPaths.BuildLink("MyMod").Should().Be(@"P:\Mods\@MyMod");
+    }
+
+    [Fact]
+    public void Build_junction_anchors_on_the_work_drive_source()
+    {
+        ProjectPaths.BuildJunctionPath(@"D:\DayZWorkDrive", "MyMod").Should().Be(@"D:\DayZWorkDrive\Mods\@MyMod");
+        ProjectPaths.BuildJunctionPath(null, "MyMod").Should().Be(@"P:\Mods\@MyMod");
     }
 
     [Fact]

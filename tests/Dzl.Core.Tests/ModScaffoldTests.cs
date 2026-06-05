@@ -21,12 +21,14 @@ public class ModScaffoldTests
         var root = Directory.CreateTempSubdirectory().FullName;
         var r1 = ModScaffold.Scaffold(root, "CoolMod", "Macie");
         r1.Ok.Should().BeTrue();
-        var modDir = Path.Combine(root, "CoolMod");
+        var modDir = ProjectPaths.ModDir(root, "CoolMod");   // <root>\mods\CoolMod
+        r1.ModDir.Should().Be(modDir);
         File.Exists(Path.Combine(modDir, "config.cpp")).Should().BeTrue();
         File.ReadAllText(Path.Combine(modDir, "$PBOPREFIX$")).Trim().Should().Be("CoolMod");
         Directory.Exists(Path.Combine(modDir, "scripts", "3_Game")).Should().BeTrue();
         Directory.Exists(Path.Combine(modDir, "data")).Should().BeTrue();
         File.Exists(Path.Combine(modDir, "README.md")).Should().BeTrue();
+        File.Exists(Path.Combine(modDir, ".dzl", "mod.json")).Should().BeTrue();   // metadata folder
 
         File.WriteAllText(Path.Combine(modDir, "config.cpp"), "EDITED");
         var r2 = ModScaffold.Scaffold(root, "CoolMod", "Macie");

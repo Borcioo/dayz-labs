@@ -1,6 +1,17 @@
+using System.Text.Json;
+using Dzl.Core.Config;
+
 namespace Dzl.Core.Projects;
 
 public sealed record ScaffoldResult(bool Ok, string ModDir, string Message);
+
+/// <summary>Per-mod dzl metadata persisted at <c>&lt;Mod&gt;\.dzl\mod.json</c> (snake_case).</summary>
+public sealed record ModMeta
+{
+    public string Name { get; init; } = "";
+    public string Author { get; init; } = "";
+    public string Created { get; init; } = "";   // ISO-8601 UTC
+}
 
 /// <summary>Writes the standard DayZ mod source skeleton into &lt;root&gt;/&lt;Mod&gt;/. Idempotent:
 /// existing files are never overwritten. Pure template builders are unit-tested; the writer is thin.</summary>
@@ -71,6 +82,15 @@ $"# {mod}\n\nDayZ mod scaffolded by dzl.\n\n- Source: this folder (under your Pr
                 Directory.CreateDirectory(d);
                 WriteIfAbsent(Path.Combine(d, ".gitkeep"), "");
             }
+
+            // dzl metadata folder (.dzl\mod.json) — our per-mod configs/metadata live here.
+            var metaDir = ProjectPaths.ModMetaDir(root, mod);
+            Directory.CreateDirectory(metaDir);
+            WriteIfAbsent(Path.Combine(metaDir, "mod.json"),
+                JsonSerializer.Serialize(
+                    new ModMeta { Name = mod, Author = author, Created = DateTime.UtcNow.ToString("O") },
+                    ConfigStore.Json));
+
             return new ScaffoldResult(true, modDir, "scaffolded");
         }
         catch (Exception ex) { return new ScaffoldResult(false, modDir, ex.Message); }
