@@ -634,6 +634,24 @@ public partial class MainWindow : FluentWindow
         RefreshTypesBackupsMenu();
     }
 
+    // Open a clickable hyperlink (apikey page, etc.) in the default browser.
+    private void OnNavigateLink(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+    {
+        try { Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); } catch { }
+        e.Handled = true;
+    }
+
+    private async void OnInstallSteamCmd(object sender, RoutedEventArgs e)
+    {
+        var btn = sender as System.Windows.Controls.Control;
+        if (btn is not null) btn.IsEnabled = false;
+        SteamCmdStatus.Text = "Downloading steamcmd…";
+        var (ok, path, msg) = await _vm.InstallSteamCmdAsync();
+        if (ok) CfgSteamCmdPath.Text = path;
+        SteamCmdStatus.Text = (ok ? "✓ " : "✗ ") + msg + (ok ? "  (Save to apply)" : "");
+        if (btn is not null) btn.IsEnabled = true;
+    }
+
     private void OnDetectEditor(object sender, RoutedEventArgs e)
     {
         var editors = _vm.DetectEditors();

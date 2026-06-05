@@ -913,6 +913,16 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         WorkshopStatus = ok ? $"{items.Count} result(s)" : $"✗ {error}";
     }
 
+    /// <summary>Auto-install steamcmd into the config dir; returns (ok, exe path, message).</summary>
+    public Task<(bool ok, string path, string error)> InstallSteamCmdAsync()
+        => InstallSteamCmdCore(Path.Combine(ConfigDir, "steamcmd"));
+
+    private static async Task<(bool ok, string path, string error)> InstallSteamCmdCore(string dest)
+    {
+        var (ok, exe, msg) = await SteamCmdInstaller.InstallAsync(dest);
+        return (ok, exe, msg);
+    }
+
     /// <summary>Download a Workshop item by id via steamcmd (opens a console). Returns a status line.</summary>
     public string WorkshopDownload(string id)
     {

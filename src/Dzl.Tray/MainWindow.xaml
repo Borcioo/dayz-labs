@@ -2103,14 +2103,24 @@
                 <ui:Card Margin="0,0,0,12" Padding="16">
                   <StackPanel>
                     <TextBlock Text="Steam (Workshop)" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
-                    <TextBlock Text="Steam Web API key (Workshop search — steamcommunity.com/dev/apikey)" Style="{StaticResource FieldLabel}" />
+                    <TextBlock Style="{StaticResource FieldLabel}">
+                      <Run Text="Steam Web API key (Workshop search — get one at " /><Hyperlink
+                          NavigateUri="https://steamcommunity.com/dev/apikey"
+                          RequestNavigate="OnNavigateLink">steamcommunity.com/dev/apikey</Hyperlink><Run Text=")" />
+                    </TextBlock>
                     <ui:TextBox x:Name="CfgSteamApiKey" Margin="0,0,0,10" PlaceholderText="blank = search disabled" />
                     <TextBlock Text="steamcmd.exe (Workshop download)" Style="{StaticResource FieldLabel}" />
-                    <Grid Margin="0,0,0,10">
-                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                      <ui:TextBox x:Name="CfgSteamCmdPath" Grid.Column="0" PlaceholderText="path to steamcmd.exe (blank = download disabled)" />
-                      <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="file:CfgSteamCmdPath" Click="OnBrowseInto" />
+                    <Grid Margin="0,0,0,4">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="CfgSteamCmdPath" Grid.Column="0" PlaceholderText="path to steamcmd.exe (or click Install)" />
+                      <ui:Button Grid.Column="1" Content="Install" Icon="{ui:SymbolIcon ArrowDownload24}" Margin="8,0,0,0"
+                                 Click="OnInstallSteamCmd" ToolTip="Download + set up steamcmd automatically" />
+                      <ui:Button Grid.Column="2" Content="📁" Margin="8,0,0,0" Tag="file:CfgSteamCmdPath" Click="OnBrowseInto" />
                     </Grid>
+                    <TextBlock x:Name="SteamCmdStatus" FontSize="11" Margin="0,0,0,10"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" />
                     <TextBlock Text="Steam login (for owned/DayZ items; blank = anonymous)" Style="{StaticResource FieldLabel}" />
                     <ui:TextBox x:Name="CfgSteamLogin" PlaceholderText="steam username (password / Guard entered in the steamcmd console)" />
                   </StackPanel>
