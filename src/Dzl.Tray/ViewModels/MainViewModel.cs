@@ -812,19 +812,22 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>Build a mod project into a PBO off the UI thread, streaming the AddonBuilder log; on
     /// success register the <c>@&lt;Mod&gt;</c> into the active server's run-list and refresh.</summary>
-    public async Task BuildModAsync(string name)
+    public async Task BuildModAsync(string name, bool clean = false, bool binarize = true)
     {
         if (Building) return;
         Building = true;
-        BuildLog = $"▸ Building {name} …\n";
+        BuildLog = $"▸ Building {name} (clean={clean}, binarize={binarize}) …\n";
         var configPath = _configPath;
         var result = await Task.Run(() =>
-            new BuildService(configPath).Build(name, clean: false, binarize: true,
+            new BuildService(configPath).Build(name, clean: clean, binarize: binarize,
                 onLine: line => _dispatcher.BeginInvoke(() => BuildLog += line + "\n")));
         BuildLog += (result.Ok ? "\n✓ " : "\n✗ ") + result.Message + "\n";
         Building = false;
         if (result.Ok) { Reload(); RefreshModProjects(); }
     }
+
+    /// <summary>Resolved path/tool preview for the Build options dialog (no side effects).</summary>
+    public BuildService.BuildPlanView BuildPlan(string name) => new BuildService(_configPath).Plan(name);
 
     /// <summary>Publish a mod project to GitHub (init + first commit + gh repo create) off the UI thread.</summary>
     public async Task PublishRepoAsync(string name)

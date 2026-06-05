@@ -472,8 +472,11 @@ public partial class MainWindow : FluentWindow
 
     private async void OnBuildMod(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement { Tag: string name })
-            await _vm.BuildModAsync(name);
+        if (sender is not FrameworkElement { Tag: string name }) return;
+        var plan = _vm.BuildPlan(name);                 // resolve + pre-fill paths
+        var opt = BuildDialog.Show(this, plan);          // null = cancelled
+        if (opt is null) return;
+        await _vm.BuildModAsync(name, opt.Value.clean, opt.Value.binarize);
     }
 
     private async void OnPublishRepo(object sender, RoutedEventArgs e)

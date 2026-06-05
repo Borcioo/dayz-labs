@@ -16,6 +16,34 @@ public sealed class BuildService
     private readonly string _configPath;
     public BuildService(string configPath) { _configPath = configPath; }
 
+    /// <summary>Resolved, read-only preview of where a build will read from / write to and which tool it
+    /// will use — so a UI can pre-fill the paths and warn before running. No side effects.</summary>
+    public sealed record BuildPlanView(
+        bool Ok, string Mod, string ProjectDir, string SourceOnP, string OutputDir, string AddonsDir,
+        string AddonBuilderExe, bool Ready, string Message);
+
+    public BuildPlanView Plan(string mod)
+    {
+        if (!ProjectPaths.IsValidName(mod))
+            return new BuildPlanView(false, mod, "", "", "", "", "", false, $"invalid mod name: {mod}");
+
+        Profiles.EnsureDefault(_configPath);
+        var (cfg, _, _) = Profiles.ResolveActive(_configPath);
+        var projectDir = ProjectPaths.ModDir(ProjectPaths.Root(cfg), mod);
+        var src = ProjectPaths.WorkDriveLink(mod);
+        var exe = ToolCatalog.Find(cfg.DayzToolsPath, "addonbuilder");
+
+        var isProject = Directory.Exists(projectDir) && ModProjects.IsProject(projectDir);
+        var haveTool = exe is not null && exe.Exists;
+        var ready = isProject && haveTool;
+        var msg = !isProject ? "not a mod project ($PBOPREFIX$ / config.cpp missing)"
+                : !haveTool ? "AddonBuilder not found — set the DayZ Tools path"
+                : "ready to build";
+
+        return new BuildPlanView(true, mod, projectDir, src,
+            ModBuild.OutputDir(mod), ModBuild.AddonsDir(mod), exe?.ExePath ?? "(not found)", ready, msg);
+    }
+
     /// <summary>Build <paramref name="modName"/> and (on success) add it to the active run-list.</summary>
     /// <param name="clean">Pass <c>-clear</c> to AddonBuilder (wipe the temp/output first).</param>
     /// <param name="binarize">Binarize configs/models (AddonBuilder default). <c>false</c> = <c>-packonly</c>.</param>
