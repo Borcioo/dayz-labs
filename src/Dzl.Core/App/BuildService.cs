@@ -76,7 +76,7 @@ public sealed class BuildService
 
         // (Re)create the junction on the always-live work-drive source folder (survives P: unmounts);
         // P: is mounted here (checked above), so AddonBuilder reads the same object via the P:\ path.
-        var junction = ProjectPaths.JunctionPath(EnvDetect.WorkDir(cfg.DayzToolsPath), modName);
+        var junction = ProjectPaths.JunctionPath(EnvDetect.WorkDriveSource(cfg.WorkDriveSource, cfg.DayzToolsPath), modName);
         var ens = Junction.Ensure(junction, projectDir);
         if (!ens.Ok)
             return Fail($"junction {junction} → {projectDir} failed: {ens.Detail}");

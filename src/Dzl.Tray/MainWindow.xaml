@@ -1875,6 +1875,19 @@
                       <ui:Button Grid.Column="2" Content="Mount" Margin="0,0,8,0" Click="OnMountWorkDrive" />
                       <ui:Button Grid.Column="3" Content="Unmount" Click="OnUnmountWorkDrive" />
                     </Grid>
+
+                    <TextBlock Text="Work drive source folder (the always-live folder P: maps to)"
+                               Style="{StaticResource FieldLabel}" />
+                    <Grid Margin="0,0,0,2">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="CfgWorkDriveSource" Grid.Column="0"
+                                  PlaceholderText="blank = auto (from DayZ Tools settings.ini)" />
+                      <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="dir:CfgWorkDriveSource" Click="OnBrowseInto" />
+                    </Grid>
+                    <TextBlock FontSize="11" Opacity="0.7" Margin="0,0,0,8">
+                      <Run Text="Resolved: " /><Run Text="{Binding ResolvedWorkDriveSource, Mode=OneWay}" FontWeight="SemiBold" />
+                    </TextBlock>
+
                     <ui:ToggleSwitch x:Name="CfgAutomountWorkDrive" Content="Mount P: automatically when dzl starts" />
                     <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" FontSize="12" Opacity="0.7"
                                Text="P: is the DayZ Tools work drive — required to build mods (binarize resolves vanilla data + includes against P:). It can unmount between sessions; the bottom bar shows its live state." />

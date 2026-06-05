@@ -577,6 +577,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             SuppressPresetSwitch = false;
         }
         RefreshPreview();
+        OnPropertyChanged(nameof(ResolvedWorkDriveSource));   // cfg override may have changed
         RetailLogs();   // logs follow the active server's profiles
     }
 
@@ -695,7 +696,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void MountWorkDrive()
     {
         var exe = Path.Combine(_cfg.DayzToolsPath, "Bin", "WorkDrive", "WorkDrive.exe");
-        var source = EnvDetect.WorkDir(_cfg.DayzToolsPath);
+        var source = WorkDriveSource;
         Task.Run(() =>
         {
             try { WorkDrive.Mount(exe, source); } catch { }
@@ -748,10 +749,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Cached author handle (for prefilling the New mod form), or "".</summary>
     public string CachedAuthor => ModScaffold.CachedAuthor(ConfigDir) ?? "";
 
-    /// <summary>The always-live work-drive source folder P: is mounted from (DayZ Tools settings.ini
-    /// <c>[ProjectDrive] path=</c>). Mod junctions are anchored here so their state survives P: unmounts and
-    /// they can be (re)created offline. Null → falls back to the P:\ junction path.</summary>
-    private string? WorkDriveSource => EnvDetect.WorkDir(_cfg.DayzToolsPath);
+    /// <summary>The always-live work-drive source folder P: is mounted from / junctions are anchored on:
+    /// the explicit config override if set, else auto-derived from DayZ Tools settings.ini
+    /// (<c>[ProjectDrive] path=</c>). Null → falls back to the P:\ junction path.</summary>
+    private string? WorkDriveSource => EnvDetect.WorkDriveSource(_cfg.WorkDriveSource, _cfg.DayzToolsPath);
+
+    /// <summary>Effective work-drive source for display in Settings (or a hint when not resolvable).</summary>
+    public string ResolvedWorkDriveSource => WorkDriveSource ?? "(not detected — set the DayZ Tools path)";
 
     /// <summary>Re-enumerate mod source projects. Called on My Mods page show + after create/import/link.</summary>
     public void RefreshModProjects()

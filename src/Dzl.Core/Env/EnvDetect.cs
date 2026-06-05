@@ -106,6 +106,11 @@ public static class EnvDetect
         return v.Length == 0 ? null : v;
     }
 
+    /// <summary>Effective work-drive source folder: the explicit override if non-empty, else the value
+    /// derived from DayZ Tools settings.ini (<see cref="WorkDir"/>). Null when neither is available.</summary>
+    public static string? WorkDriveSource(string? overrideFolder, string toolsPath) =>
+        !string.IsNullOrWhiteSpace(overrideFolder) ? overrideFolder!.Trim() : WorkDir(toolsPath);
+
     /// <summary>Read <c>&lt;toolsPath&gt;\settings.ini</c> and return its WorkDirPath; null if missing. Thin/manual.</summary>
     public static string? WorkDir(string toolsPath)
     {

@@ -35,6 +35,10 @@ public sealed record GlobalConfig
     /// <summary>Mount the P: work drive when the tray app launches. Off by default. snake_case: automount_work_drive.</summary>
     public bool AutomountWorkDrive { get; init; } = false;
 
+    /// <summary>Override for the work-drive source folder (the always-live folder P: is mounted from /
+    /// junctions are anchored on). Empty = auto-derive from DayZ Tools settings.ini. snake_case: work_drive_source.</summary>
+    public string WorkDriveSource { get; init; } = "";
+
     /// <summary>Name of the active server instance (replaces the old <c>active_preset</c>). snake_case: active_instance.</summary>
     public string ActiveInstance { get; init; } = "";
 }

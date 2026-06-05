@@ -50,7 +50,7 @@ modsProjectsCmd.SetHandler(ctx =>
 {
     var (cfg, _, _, _) = Resolve(ctx);
     var root2 = ProjectPaths.Root(cfg);
-    var projects = ModProjects.Discover(root2, EnvDetect.WorkDir(cfg.DayzToolsPath));
+    var projects = ModProjects.Discover(root2, EnvDetect.WorkDriveSource(cfg.WorkDriveSource, cfg.DayzToolsPath));
     if (projects.Count == 0)
     {
         Console.WriteLine("(no mod projects)");
@@ -660,7 +660,7 @@ newCmd.SetHandler(ctx =>
     if (result.Ok)
     {
         var linkResult = Junction.Ensure(
-            ProjectPaths.JunctionPath(EnvDetect.WorkDir(cfg.DayzToolsPath), mod),
+            ProjectPaths.JunctionPath(EnvDetect.WorkDriveSource(cfg.WorkDriveSource, cfg.DayzToolsPath), mod),
             ProjectPaths.ModDir(projectsRoot, mod));
         if (!linkResult.Ok)
             Console.WriteLine($"warning: link {linkResult.Action}: {linkResult.Detail}");
@@ -705,7 +705,7 @@ linkCmd.SetHandler(ctx =>
     var mod = ctx.ParseResult.GetValueForArgument(linkModArg);
     var projectsRoot = ProjectPaths.Root(cfg);
     var result = Junction.Ensure(
-        ProjectPaths.JunctionPath(EnvDetect.WorkDir(cfg.DayzToolsPath), mod),
+        ProjectPaths.JunctionPath(EnvDetect.WorkDriveSource(cfg.WorkDriveSource, cfg.DayzToolsPath), mod),
         ProjectPaths.ModDir(projectsRoot, mod));
     Console.WriteLine($"{result.Action}: {result.Detail}");
     if (!result.Ok) ctx.ExitCode = 1;

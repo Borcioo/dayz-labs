@@ -45,6 +45,10 @@ public sealed record DzlConfig
     /// automount_work_drive.</summary>
     public bool AutomountWorkDrive { get; init; } = false;
 
+    /// <summary>Override for the work-drive source folder (P: mount source / junction anchor). Empty =
+    /// auto-derive from DayZ Tools settings.ini. snake_case: work_drive_source.</summary>
+    public string WorkDriveSource { get; init; } = "";
+
     public static DzlConfig Default() => new();
 
     // --- two-tier split: global (machine env) vs per-server instance ---
@@ -67,6 +71,7 @@ public sealed record DzlConfig
         EnableAutomationServer = EnableAutomationServer,
         AutoLaunchTray = AutoLaunchTray,
         AutomountWorkDrive = AutomountWorkDrive,
+        WorkDriveSource = WorkDriveSource,
         ActiveInstance = activeInstance,
     };
 
@@ -104,6 +109,7 @@ public sealed record DzlConfig
         EnableAutomationServer = g.EnableAutomationServer,
         AutoLaunchTray = g.AutoLaunchTray,
         AutomountWorkDrive = g.AutomountWorkDrive,
+        WorkDriveSource = g.WorkDriveSource,
         ProfilesPath = i.ProfilesPath,
         ClientProfilesPath = i.ClientProfilesPath,
         Port = i.Port,

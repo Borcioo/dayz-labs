@@ -95,12 +95,13 @@ public partial class App : Application
         if (cfg.AutomountWorkDrive)
         {
             var toolsPath = cfg.DayzToolsPath;
+            var source = Dzl.Core.Env.EnvDetect.WorkDriveSource(cfg.WorkDriveSource, toolsPath);
             System.Threading.Tasks.Task.Run(() =>
             {
                 try
                 {
                     var exe = Path.Combine(toolsPath, "Bin", "WorkDrive", "WorkDrive.exe");
-                    Dzl.Core.Tools.WorkDrive.Mount(File.Exists(exe) ? exe : "", Dzl.Core.Env.EnvDetect.WorkDir(toolsPath));
+                    Dzl.Core.Tools.WorkDrive.Mount(File.Exists(exe) ? exe : "", source);
                 }
                 catch { /* best-effort; the status bar reflects the real state */ }
             });
