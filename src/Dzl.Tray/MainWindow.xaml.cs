@@ -388,12 +388,15 @@ public partial class MainWindow : FluentWindow
     private void OnDeleteServer(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string name }) return;
-        var ok = System.Windows.MessageBox.Show(
-            $"Delete server instance \"{name}\"?\n\nThis removes its config + preset (the serverDZ.cfg / mission files on disk are left in place).",
-            "Delete server", System.Windows.MessageBoxButton.YesNo,
-            System.Windows.MessageBoxImage.Warning) == System.Windows.MessageBoxResult.Yes;
-        if (!ok) return;
-        NewServerStatus.Text = _vm.DeleteServer(name);
+        var r = System.Windows.MessageBox.Show(
+            $"Delete server \"{name}\"?\n\n" +
+            "YES — delete the server AND all its files (serverDZ.cfg, mpmissions, profiles / logs). Cannot be undone.\n\n" +
+            "NO — remove it from dzl only; keep the folder + files on disk.\n\n" +
+            "CANCEL — don't delete.",
+            "Delete server", System.Windows.MessageBoxButton.YesNoCancel,
+            System.Windows.MessageBoxImage.Warning);
+        if (r == System.Windows.MessageBoxResult.Cancel) return;
+        NewServerStatus.Text = _vm.DeleteServer(name, removeFiles: r == System.Windows.MessageBoxResult.Yes);
     }
 
     private void OnWipeServerPersistence(object sender, RoutedEventArgs e)

@@ -62,22 +62,42 @@ public static partial class Profiles
 
     /// <summary>Remove the instance's dzl config (and its now-empty <c>.dzl</c> dir). The server's own
     /// files (serverDZ.cfg / mpmissions / profiles) are left on disk.</summary>
-    public static bool Delete(string name, string configPath)
+    /// <summary>
+    /// Remove a server instance. By default only dzl's record is removed (the <c>.dzl</c> config + the
+    /// legacy flat backup) and the server's own files (serverDZ.cfg / mpmissions / profiles) are left on
+    /// disk. With <paramref name="removeFolder"/> the whole instance folder is deleted too.
+    /// </summary>
+    public static bool Delete(string name, string configPath, bool removeFolder = false)
     {
         var removed = false;
-        var f = PresetFile(name, configPath);
-        if (File.Exists(f))
+
+        if (removeFolder)
         {
-            File.Delete(f);
-            removed = true;
-            try
+            // Delete the entire instance folder (config + serverDZ.cfg + mpmissions + profiles).
+            var instDir = InstanceDir(name, configPath);   // always <ProjectsRoot>\servers\<name>
+            if (Directory.Exists(instDir))
             {
-                var d = Path.GetDirectoryName(f)!;   // the .dzl dir
-                if (Directory.Exists(d) && !Directory.EnumerateFileSystemEntries(d).Any()) Directory.Delete(d);
+                try { Directory.Delete(instDir, recursive: true); removed = true; }
+                catch { /* may be locked if the server is running */ }
             }
-            catch { /* best-effort */ }
         }
-        // Also remove the legacy flat backup, or the migration would resurrect the instance on next load.
+        else
+        {
+            var f = PresetFile(name, configPath);
+            if (File.Exists(f))
+            {
+                File.Delete(f);
+                removed = true;
+                try
+                {
+                    var d = Path.GetDirectoryName(f)!;   // the .dzl dir
+                    if (Directory.Exists(d) && !Directory.EnumerateFileSystemEntries(d).Any()) Directory.Delete(d);
+                }
+                catch { /* best-effort */ }
+            }
+        }
+
+        // Always remove the legacy flat backup, or the migration would resurrect the instance on next load.
         var flat = Path.Combine(FlatInstancesDir(configPath), Safe(name) + ".json");
         if (File.Exists(flat)) { try { File.Delete(flat); } catch { /* best-effort */ } removed = true; }
         return removed;

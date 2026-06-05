@@ -530,12 +530,15 @@ serverUseCmd.SetHandler(ctx =>
 serverCmd.AddCommand(serverUseCmd);
 
 var serverRmNameArg = new Argument<string>("name", "Instance / preset name.");
-var serverRmCmd = new Command("rm", "Remove a server preset (instance files stay on disk).") { serverRmNameArg };
+var serverRmPurge = new Option<bool>("--purge", "Also delete the server's files (serverDZ.cfg, mpmissions, profiles).");
+var serverRmCmd = new Command("rm", "Remove a server (keeps its files unless --purge).") { serverRmNameArg, serverRmPurge };
 serverRmCmd.SetHandler(ctx =>
 {
     var (_, _, active, configPath) = Resolve(ctx);
     var name = ctx.ParseResult.GetValueForArgument(serverRmNameArg);
-    if (Profiles.Delete(name, configPath))
+    var purge = ctx.ParseResult.GetValueForOption(serverRmPurge);
+    var serversDir = Path.Combine(ProjectPaths.Root(Profiles.ResolveActive(configPath).cfg), "servers", name);
+    if (Profiles.Delete(name, configPath, purge))
     {
         if (active == name)
         {
@@ -543,9 +546,9 @@ serverRmCmd.SetHandler(ctx =>
             if (remaining.Count > 0) Profiles.SetActive(remaining[0], configPath);
             else { Profiles.SetActive("", configPath); Profiles.EnsureDefault(configPath); }
         }
-        var (baseCfg, _, _) = Profiles.ResolveActive(configPath);
-        var serversDir = Path.Combine(ProjectPaths.Root(baseCfg), "servers", name);
-        Console.WriteLine($"removed preset '{name}' (instance files left on disk at {serversDir})");
+        Console.WriteLine(purge
+            ? $"deleted server '{name}' and its files"
+            : $"removed server '{name}' (files kept on disk at {serversDir})");
     }
     else
     {

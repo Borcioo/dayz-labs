@@ -112,6 +112,28 @@ public class ProfilesTests
     }
 
     [Fact]
+    public void Delete_keeps_files_by_default_but_purges_with_removeFolder()
+    {
+        var path = TmpConfig();
+        Profiles.Save(DzlConfig.Default(), "srv", path);
+        var dir = Profiles.InstanceDir("srv", path);
+        File.WriteAllText(Path.Combine(dir, "serverDZ.cfg"), "x");   // a server file alongside .dzl
+
+        // default: instance gone from the list, but the folder + files remain
+        Profiles.Delete("srv", path).Should().BeTrue();
+        Profiles.List(path).Should().NotContain("srv");
+        Directory.Exists(dir).Should().BeTrue();
+        File.Exists(Path.Combine(dir, "serverDZ.cfg")).Should().BeTrue();
+
+        // removeFolder: the whole instance folder is deleted
+        Profiles.Save(DzlConfig.Default(), "srv2", path);
+        var dir2 = Profiles.InstanceDir("srv2", path);
+        File.WriteAllText(Path.Combine(dir2, "serverDZ.cfg"), "x");
+        Profiles.Delete("srv2", path, removeFolder: true).Should().BeTrue();
+        Directory.Exists(dir2).Should().BeFalse();
+    }
+
+    [Fact]
     public void Delete_does_not_resurrect_from_a_flat_backup()
     {
         var path = TmpConfig();

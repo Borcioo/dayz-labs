@@ -834,10 +834,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>Delete a server instance. If it was active, fall back to another (or a fresh default).</summary>
-    public string DeleteServer(string name)
+    public string DeleteServer(string name, bool removeFiles = false)
     {
         var wasActive = ActivePreset == name;
-        if (!Profiles.Delete(name, _configPath)) return $"✗ no server '{name}'";
+        if (!Profiles.Delete(name, _configPath, removeFiles)) return $"✗ no server '{name}'";
         if (wasActive)
         {
             // Fall back to another instance so something stays active (else seed a fresh default).
@@ -847,7 +847,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         Reload();
         RefreshServers();
-        return $"✓ deleted '{name}'";
+        return removeFiles ? $"✓ deleted '{name}' + its files" : $"✓ deleted '{name}' (files kept on disk)";
     }
 
     /// <summary>Clone the active instance's config to a new name and activate it.</summary>
