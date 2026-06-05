@@ -973,6 +973,8 @@
                               <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                                 <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open the project folder"
                                            Tag="{Binding Path}" Click="OnOpenModFolder" Margin="0,0,8,0" />
+                                <ui:Button Icon="{ui:SymbolIcon Code24}" ToolTip="Open the project in your code editor"
+                                           Tag="{Binding Path}" Click="OnOpenInEditor" Margin="0,0,8,0" />
                                 <ui:Button Content="Link" Icon="{ui:SymbolIcon Link24}" ToolTip="Create the P: junction"
                                            Tag="{Binding Name}" Click="OnQuickJunction" Margin="0,0,8,0"
                                            Visibility="{Binding Linked, Converter={StaticResource InverseBoolToVis}}" />
@@ -1127,8 +1129,12 @@
                                 <TextBlock Text="{Binding Dir}" FontSize="11" TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                               </StackPanel>
-                              <ui:Button Grid.Column="2" Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open server folder"
-                                         Tag="{Binding Dir}" Click="OnOpenServerFolder" VerticalAlignment="Center" Margin="0,0,8,0" />
+                              <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open server folder"
+                                           Tag="{Binding Dir}" Click="OnOpenServerFolder" Margin="0,0,8,0" />
+                                <ui:Button Icon="{ui:SymbolIcon Code24}" ToolTip="Open server in your code editor"
+                                           Tag="{Binding Dir}" Click="OnOpenInEditor" Margin="0,0,8,0" />
+                              </StackPanel>
                               <ui:Button Grid.Column="3" Content="Settings" Icon="{ui:SymbolIcon Settings24}"
                                          Tag="{Binding Name}" Click="OnOpenServerSettings" VerticalAlignment="Center" Margin="0,0,8,0" />
                               <ui:Button Grid.Column="4" Content="Mods" Icon="{ui:SymbolIcon Apps24}"
@@ -1935,6 +1941,25 @@
                                Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                     <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" FontSize="12" Opacity="0.7"
                                Text="The private key never ships/commits; the public .bikey is copied into each signed mod's keys\ folder so servers can whitelist it. Generate once, then enable 'Sign' when building." />
+                  </StackPanel>
+                </ui:Card>
+
+                <!-- Editor -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Code editor" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <TextBlock Text="Editor launcher (opens mod + server folders via 'Open in editor')" Style="{StaticResource FieldLabel}" />
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="CfgEditorPath" Grid.Column="0"
+                                  PlaceholderText="e.g. cursor / code, or a full path to the editor exe" />
+                      <ui:Button Grid.Column="1" Content="Detect" Icon="{ui:SymbolIcon ArrowSync24}" Margin="8,0,0,0" Click="OnDetectEditor" />
+                      <ui:Button Grid.Column="2" Content="📁" Margin="8,0,0,0" Tag="file:CfgEditorPath" Click="OnBrowseInto" />
+                    </Grid>
+                    <TextBlock x:Name="EditorStatus" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                   </StackPanel>
                 </ui:Card>
 

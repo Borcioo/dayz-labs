@@ -47,6 +47,10 @@ public sealed record GlobalConfig
     /// cached author handle. snake_case: signing_key.</summary>
     public string SigningKey { get; init; } = "";
 
+    /// <summary>Code editor launcher (exe/cli) for "Open in editor" on mods + servers, e.g. cursor / code.
+    /// Empty = no editor configured. snake_case: editor_path.</summary>
+    public string EditorPath { get; init; } = "";
+
     /// <summary>Name of the active server instance (replaces the old <c>active_preset</c>). snake_case: active_instance.</summary>
     public string ActiveInstance { get; init; } = "";
 }

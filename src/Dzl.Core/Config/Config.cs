@@ -55,6 +55,9 @@ public sealed record DzlConfig
     /// <summary>Creator's signing key name (empty = cached author). snake_case: signing_key.</summary>
     public string SigningKey { get; init; } = "";
 
+    /// <summary>Code editor launcher for "Open in editor". snake_case: editor_path.</summary>
+    public string EditorPath { get; init; } = "";
+
     public static DzlConfig Default() => new();
 
     // --- two-tier split: global (machine env) vs per-server instance ---
@@ -80,6 +83,7 @@ public sealed record DzlConfig
         WorkDriveSource = WorkDriveSource,
         KeysDir = KeysDir,
         SigningKey = SigningKey,
+        EditorPath = EditorPath,
         ActiveInstance = activeInstance,
     };
 
@@ -120,6 +124,7 @@ public sealed record DzlConfig
         WorkDriveSource = g.WorkDriveSource,
         KeysDir = g.KeysDir,
         SigningKey = g.SigningKey,
+        EditorPath = g.EditorPath,
         ProfilesPath = i.ProfilesPath,
         ClientProfilesPath = i.ClientProfilesPath,
         Port = i.Port,

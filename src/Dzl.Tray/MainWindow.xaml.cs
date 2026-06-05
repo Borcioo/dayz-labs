@@ -327,6 +327,7 @@ public partial class MainWindow : FluentWindow
         CfgWorkDriveSource.Text = c.WorkDriveSource;
         CfgSigningKey.Text = c.SigningKey;
         CfgKeysDir.Text = c.KeysDir;
+        CfgEditorPath.Text = c.EditorPath;
         ConfigError.Visibility = Visibility.Collapsed;
     }
 
@@ -353,6 +354,7 @@ public partial class MainWindow : FluentWindow
             WorkDriveSource = CfgWorkDriveSource.Text.Trim(),
             SigningKey = CfgSigningKey.Text.Trim(),
             KeysDir = CfgKeysDir.Text.Trim(),
+            EditorPath = CfgEditorPath.Text.Trim(),
         };
         _vm.ApplyConfig(edited);
         LoadSettingsFields();
@@ -553,6 +555,23 @@ public partial class MainWindow : FluentWindow
         SigningStatus.Text = _vm.GenerateSigningKey();
     }
 
+    private void OnDetectEditor(object sender, RoutedEventArgs e)
+    {
+        var editors = _vm.DetectEditors();
+        if (editors.Count == 0) { EditorStatus.Text = "No editor found on PATH (cursor/code/…). Browse to one manually."; return; }
+        CfgEditorPath.Text = editors[0].Path;   // best match (Cursor first)
+        EditorStatus.Text = $"Found: {string.Join(", ", editors.Select(x => x.Name))}. Using {editors[0].Name}. Save to apply.";
+    }
+
+    private void OnOpenInEditor(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string folder }) return;
+        var msg = _vm.OpenInEditor(folder);
+        if (msg.StartsWith('✗'))
+            System.Windows.MessageBox.Show(msg.TrimStart('✗', ' '), "Open in editor",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+    }
+
     // Fill the DayZ + Tools path fields from the Steam libraries (same detection the setup wizard runs);
     // only overwrites a field when detection actually finds something, so manual entries survive a miss.
     private void OnDetectPaths(object sender, RoutedEventArgs e)
@@ -670,8 +689,14 @@ public partial class MainWindow : FluentWindow
         if (sender is not FrameworkElement { Tag: string tag }) return;
         var parts = tag.Split(':', 2);
         if (parts.Length != 2) return;
-        var dir = PickFolder();
-        if (dir is null) return;
-        if (FindName(parts[1]) is TextBox tb) tb.Text = dir;
+        var picked = parts[0] == "file" ? PickFile() : PickFolder();
+        if (picked is null) return;
+        if (FindName(parts[1]) is TextBox tb) tb.Text = picked;
+    }
+
+    private static string? PickFile()
+    {
+        var dlg = new OpenFileDialog { Filter = "Programs (*.exe;*.cmd;*.bat)|*.exe;*.cmd;*.bat|All files (*.*)|*.*" };
+        return dlg.ShowDialog() == true ? dlg.FileName : null;
     }
 }

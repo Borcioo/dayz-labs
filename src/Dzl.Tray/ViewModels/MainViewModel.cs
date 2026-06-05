@@ -881,6 +881,23 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return r.Ok ? $"✓ key ready: {r.PrivateKey}" : $"✗ {r.Output}";
     }
 
+    // === Code editor ======================================================
+
+    /// <summary>True when a code editor is configured (drives the "Open in editor" buttons).</summary>
+    public bool HasEditor => !string.IsNullOrWhiteSpace(_cfg.EditorPath);
+
+    /// <summary>Open a folder (mod project or server instance) in the configured editor. Returns a status.</summary>
+    public string OpenInEditor(string folder)
+    {
+        if (!HasEditor) return "✗ no editor set — Settings → Editor → Detect";
+        return EditorLauncher.Open(_cfg.EditorPath, folder)
+            ? $"✓ opened {Path.GetFileName(folder.TrimEnd('\\', '/'))} in editor"
+            : "✗ could not launch the editor";
+    }
+
+    /// <summary>Detected editors on this machine (for the Settings Detect button).</summary>
+    public List<EditorInfo> DetectEditors() => EditorDetect.Detect();
+
     /// <summary>Publish a mod project to GitHub (init + first commit + gh repo create) off the UI thread.</summary>
     public async Task PublishRepoAsync(string name)
     {
