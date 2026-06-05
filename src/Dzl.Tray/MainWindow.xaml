@@ -734,25 +734,48 @@
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
               <StackPanel>
 
-                <!-- Steam Workshop (SP5 placeholder) -->
+                <!-- Steam Workshop (SP5) -->
                 <ui:Card Margin="0,0,0,12" Padding="16">
-                  <Grid>
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="*" />
-                      <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0">
-                      <TextBlock Text="Steam Workshop" FontSize="16" FontWeight="SemiBold" />
-                      <TextBlock FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"
-                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                 Text="Search, download and update mods from the Workshop — coming in a later update (SP5). For now, subscribe in the DayZ Launcher / Steam; subscribed mods appear in your library below." />
-                    </StackPanel>
-                    <Border Grid.Column="1" CornerRadius="10" Padding="10,4" VerticalAlignment="Center"
-                            Background="{DynamicResource ControlFillColorDefaultBrush}">
-                      <TextBlock Text="soon" FontSize="11" FontWeight="SemiBold"
-                                 Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                    </Border>
-                  </Grid>
+                  <StackPanel>
+                    <TextBlock Text="Steam Workshop" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <Grid Margin="0,0,0,6">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="WorkshopQueryBox" Grid.Column="0" PlaceholderText="search the Workshop…"
+                                  Text="{Binding WorkshopQuery, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0" />
+                      <ui:Button Grid.Column="1" Content="Search" Icon="{ui:SymbolIcon Search24}" Appearance="Primary"
+                                 Margin="0,0,8,0" Click="OnWorkshopSearch" />
+                      <ui:Button Grid.Column="2" Content="Add by ID" Icon="{ui:SymbolIcon ArrowDownload24}" Click="OnWorkshopAddById" />
+                    </Grid>
+                    <TextBlock x:Name="WorkshopStatus" Text="{Binding WorkshopStatus}" FontSize="11"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,0,6" />
+                    <ItemsControl ItemsSource="{Binding WorkshopResults}" MaxHeight="320">
+                      <ItemsControl.Template>
+                        <ControlTemplate TargetType="ItemsControl">
+                          <ScrollViewer VerticalScrollBarVisibility="Auto"><ItemsPresenter /></ScrollViewer>
+                        </ControlTemplate>
+                      </ItemsControl.Template>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border Margin="0,0,0,4" Padding="8" CornerRadius="4"
+                                  Background="{DynamicResource ControlFillColorDefaultBrush}">
+                            <Grid>
+                              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                              <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Title}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Id}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                              </StackPanel>
+                              <ui:Button Grid.Column="1" Content="Download" Icon="{ui:SymbolIcon ArrowDownload24}"
+                                         Tag="{Binding Id}" Click="OnWorkshopDownload" VerticalAlignment="Center" />
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Margin="0,6,0,0" FontSize="11" Opacity="0.7" TextWrapping="Wrap"
+                               Text="Search needs a Steam Web API key, download needs steamcmd (both in Settings → Steam). Owned/DayZ items need a Steam login — complete it in the console steamcmd opens." />
+                  </StackPanel>
                 </ui:Card>
 
                 <!-- Discovered library -->
@@ -2102,6 +2125,23 @@
                     </Grid>
                     <TextBlock x:Name="EditorStatus" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"
                                Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                  </StackPanel>
+                </ui:Card>
+
+                <!-- Steam (Workshop) -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Steam (Workshop)" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <TextBlock Text="Steam Web API key (Workshop search — steamcommunity.com/dev/apikey)" Style="{StaticResource FieldLabel}" />
+                    <ui:TextBox x:Name="CfgSteamApiKey" Margin="0,0,0,10" PlaceholderText="blank = search disabled" />
+                    <TextBlock Text="steamcmd.exe (Workshop download)" Style="{StaticResource FieldLabel}" />
+                    <Grid Margin="0,0,0,10">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="CfgSteamCmdPath" Grid.Column="0" PlaceholderText="path to steamcmd.exe (blank = download disabled)" />
+                      <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="file:CfgSteamCmdPath" Click="OnBrowseInto" />
+                    </Grid>
+                    <TextBlock Text="Steam login (for owned/DayZ items; blank = anonymous)" Style="{StaticResource FieldLabel}" />
+                    <ui:TextBox x:Name="CfgSteamLogin" PlaceholderText="steam username (password / Guard entered in the steamcmd console)" />
                   </StackPanel>
                 </ui:Card>
 

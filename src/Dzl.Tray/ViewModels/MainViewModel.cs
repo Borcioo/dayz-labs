@@ -19,6 +19,7 @@ using Dzl.Core.Projects;
 using Dzl.Core.Servers;
 using Dzl.Core.Bases;
 using Dzl.Core.Economy;
+using Dzl.Core.Workshop;
 using Dzl.Core.Vcs;
 using Dzl.Tray;
 
@@ -882,6 +883,31 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         var r = new BuildService(_configPath).GenerateKey();
         return r.Ok ? $"✓ key ready: {r.PrivateKey}" : $"✗ {r.Output}";
+    }
+
+    // === Steam Workshop (SP5) =============================================
+
+    public ObservableCollection<WorkshopItem> WorkshopResults { get; } = new();
+    [ObservableProperty] private string _workshopQuery = "";
+    [ObservableProperty] private string _workshopStatus = "";
+
+    /// <summary>Search the Workshop (Steam Web API) and fill the results list.</summary>
+    public async Task WorkshopSearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(WorkshopQuery)) return;
+        WorkshopStatus = "searching…";
+        var (ok, error, items) = await new WorkshopService(_configPath).SearchAsync(WorkshopQuery);
+        WorkshopResults.Clear();
+        foreach (var it in items) WorkshopResults.Add(it);
+        WorkshopStatus = ok ? $"{items.Count} result(s)" : $"✗ {error}";
+    }
+
+    /// <summary>Download a Workshop item by id via steamcmd (opens a console). Returns a status line.</summary>
+    public string WorkshopDownload(string id)
+    {
+        var r = new WorkshopService(_configPath).Download(id);
+        WorkshopStatus = (r.Ok ? "✓ " : "✗ ") + r.Message;
+        return WorkshopStatus;
     }
 
     // === Code editor ======================================================
