@@ -98,6 +98,24 @@ public static class DzlMcpTools
         return J(new { ok, output });
     }
 
+    // --- GitHub (SP4) ---
+
+    [McpServerTool, Description("Git status of a mod project: IsRepo, Branch, Ahead, Behind, Dirty, HasRemote, Detail.")]
+    public static string RepoStatus([Description("Mod project name")] string mod)
+        => J(new RepoService(ConfigPath()).Status(mod));
+
+    [McpServerTool, Description("Init git (with .gitignore + first commit) and create & push a GitHub repo named after the mod.")]
+    public static string CreateRepo([Description("Mod project name")] string mod,
+                                    [Description("private repo (false = public)")] bool @private = true,
+                                    [Description("repo description")] string? description = null)
+        => J(new RepoService(ConfigPath()).Publish(mod, @private, description));
+
+    [McpServerTool, Description("Cut a GitHub release at HEAD for the mod (creates + pushes the tag).")]
+    public static string Release([Description("Mod project name")] string mod,
+                                 [Description("tag, e.g. v1.0.0")] string tag,
+                                 [Description("release notes (omit = auto-generated)")] string? notes = null)
+        => J(new RepoService(ConfigPath()).Release(mod, tag, notes));
+
     // --- Server instances ---
 
     [McpServerTool, Description("Scaffold a new server instance and save it as a preset. Returns Ok, Name, Dir, Port, Message.")]
