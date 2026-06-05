@@ -58,6 +58,15 @@ public sealed record DzlConfig
     /// <summary>Code editor launcher for "Open in editor". snake_case: editor_path.</summary>
     public string EditorPath { get; init; } = "";
 
+    /// <summary>Steam Web API key (Workshop search). snake_case: steam_api_key.</summary>
+    public string SteamApiKey { get; init; } = "";
+
+    /// <summary>Path to steamcmd.exe (Workshop download). snake_case: steamcmd_path.</summary>
+    public string SteamCmdPath { get; init; } = "";
+
+    /// <summary>steamcmd login username (empty = anonymous). snake_case: steam_login.</summary>
+    public string SteamLogin { get; init; } = "";
+
     public static DzlConfig Default() => new();
 
     // --- two-tier split: global (machine env) vs per-server instance ---
@@ -84,6 +93,9 @@ public sealed record DzlConfig
         KeysDir = KeysDir,
         SigningKey = SigningKey,
         EditorPath = EditorPath,
+        SteamApiKey = SteamApiKey,
+        SteamCmdPath = SteamCmdPath,
+        SteamLogin = SteamLogin,
         ActiveInstance = activeInstance,
     };
 
@@ -125,6 +137,9 @@ public sealed record DzlConfig
         KeysDir = g.KeysDir,
         SigningKey = g.SigningKey,
         EditorPath = g.EditorPath,
+        SteamApiKey = g.SteamApiKey,
+        SteamCmdPath = g.SteamCmdPath,
+        SteamLogin = g.SteamLogin,
         ProfilesPath = i.ProfilesPath,
         ClientProfilesPath = i.ClientProfilesPath,
         Port = i.Port,

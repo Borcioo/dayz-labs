@@ -121,6 +121,28 @@ public static class DzlMcpTools
                                  [Description("release notes (omit = auto-generated)")] string? notes = null)
         => J(new RepoService(ConfigPath()).Release(mod, tag, notes));
 
+    // --- Steam Workshop (SP5) ---
+
+    [McpServerTool, Description("Search the Steam Workshop for DayZ mods (needs a Steam Web API key in config). Returns id + title.")]
+    public static async Task<string> WorkshopSearch([Description("search text")] string query,
+                                                    [Description("max results")] int count = 20)
+    {
+        var (ok, error, items) = await new WorkshopService(ConfigPath()).SearchAsync(query, count);
+        return J(new { ok, error, items });
+    }
+
+    [McpServerTool, Description("Download a Workshop item by id via steamcmd (opens a console for Steam login/Guard). Needs steamcmd configured.")]
+    public static string WorkshopAdd([Description("Workshop published-file id")] string id)
+        => J(new WorkshopService(ConfigPath()).Download(id));
+
+    [McpServerTool, Description("Re-download a Workshop item to update it (or all downloaded items when id omitted).")]
+    public static string WorkshopUpdate([Description("item id (optional; omit = all)")] string? id = null)
+    {
+        var svc = new WorkshopService(ConfigPath());
+        var ids = id is not null ? new List<string> { id } : svc.Downloaded();
+        return J(ids.Select(x => svc.Download(x)).ToList());
+    }
+
     // --- Central Economy (types.xml) (SP6) ---
 
     [McpServerTool, Description("List types from the active server mission's types.xml (optionally filtered by name substring).")]

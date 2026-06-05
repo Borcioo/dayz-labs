@@ -51,6 +51,16 @@ public sealed record GlobalConfig
     /// Empty = no editor configured. snake_case: editor_path.</summary>
     public string EditorPath { get; init; } = "";
 
+    /// <summary>Steam Web API key (steamcommunity.com/dev/apikey) — required for Workshop search. snake_case: steam_api_key.</summary>
+    public string SteamApiKey { get; init; } = "";
+
+    /// <summary>Path to steamcmd.exe — required for Workshop download/update. snake_case: steamcmd_path.</summary>
+    public string SteamCmdPath { get; init; } = "";
+
+    /// <summary>steamcmd login username for Workshop downloads (empty = anonymous; owned/DayZ items usually
+    /// need a login — password/Steam Guard are entered in the spawned console). snake_case: steam_login.</summary>
+    public string SteamLogin { get; init; } = "";
+
     /// <summary>Name of the active server instance (replaces the old <c>active_preset</c>). snake_case: active_instance.</summary>
     public string ActiveInstance { get; init; } = "";
 }

@@ -879,4 +879,47 @@ typesRestoreCmd.SetHandler(ctx =>
 typesCmd.AddCommand(typesRestoreCmd);
 root.AddCommand(typesCmd);
 
+// ---- workshop (SP5: Steam Workshop) ----
+var workshopCmd = new Command("workshop", "Search + download Steam Workshop mods (search needs a Web API key; download needs steamcmd).");
+
+var wsSearchQ = new Argument<string>("query", "Search text.");
+var wsSearchCount = new Option<int>("--count", () => 20, "Max results.");
+var wsSearchCmd = new Command("search", "Search the Workshop (Steam Web API).") { wsSearchQ, wsSearchCount };
+wsSearchCmd.SetHandler(async ctx =>
+{
+    var (_, _, _, configPath) = Resolve(ctx);
+    var q = ctx.ParseResult.GetValueForArgument(wsSearchQ);
+    var count = ctx.ParseResult.GetValueForOption(wsSearchCount);
+    var (ok, error, items) = await new WorkshopService(configPath).SearchAsync(q, count);
+    if (!ok) { Console.Error.WriteLine(error); ctx.ExitCode = 1; return; }
+    if (items.Count == 0) { Console.WriteLine("(no results)"); return; }
+    foreach (var i in items) Console.WriteLine($"{i.Id,-12} {i.Title}");
+});
+workshopCmd.AddCommand(wsSearchCmd);
+
+var wsAddId = new Argument<string>("id", "Workshop published-file id.");
+var wsAddCmd = new Command("add", "Download a Workshop item via steamcmd (opens a console for login).") { wsAddId };
+wsAddCmd.SetHandler(ctx =>
+{
+    var (_, _, _, configPath) = Resolve(ctx);
+    var r = new WorkshopService(configPath).Download(ctx.ParseResult.GetValueForArgument(wsAddId));
+    Console.WriteLine(r.Message);
+    if (!r.Ok) ctx.ExitCode = 1;
+});
+workshopCmd.AddCommand(wsAddCmd);
+
+var wsUpdId = new Argument<string?>("id", () => null, "Item id (omit = re-download all downloaded items).");
+var wsUpdateCmd = new Command("update", "Re-download item(s) to update them (steamcmd).") { wsUpdId };
+wsUpdateCmd.SetHandler(ctx =>
+{
+    var (_, _, _, configPath) = Resolve(ctx);
+    var svc = new WorkshopService(configPath);
+    var id = ctx.ParseResult.GetValueForArgument(wsUpdId);
+    var ids = id is not null ? new List<string> { id } : svc.Downloaded();
+    if (ids.Count == 0) { Console.WriteLine("(nothing downloaded to update)"); return; }
+    foreach (var x in ids) Console.WriteLine(svc.Download(x).Message);
+});
+workshopCmd.AddCommand(wsUpdateCmd);
+root.AddCommand(workshopCmd);
+
 return await root.InvokeAsync(args);
