@@ -971,6 +971,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         WorkshopStatus = ok ? $"{WorkshopResults.Count} total (page {_workshopPage})" : $"✗ {error}";
     }
 
+    /// <summary>Subscribe in-app via the Steam web token if set; returns false (so the caller opens the Steam
+    /// page) when no token is configured.</summary>
+    public async Task<bool> SubscribeWorkshopAsync(string id)
+    {
+        var svc = new WorkshopService(_configPath);
+        if (!svc.HasAccessToken) return false;
+        WorkshopStatus = "subscribing…";
+        var (ok, msg) = await svc.SubscribeAsync(id, true);
+        WorkshopStatus = (ok ? "✓ " : "✗ ") + msg;
+        if (ok) RefreshSubscribed();
+        return true;
+    }
+
     // Show the list item immediately in the details pane, then enrich (subs/description/tags) keylessly.
     private async Task LoadDetailAsync(WorkshopItem? item)
     {

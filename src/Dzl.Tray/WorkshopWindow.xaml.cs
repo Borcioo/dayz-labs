@@ -53,10 +53,11 @@ public partial class WorkshopWindow : FluentWindow
         if (sender is FrameworkElement { Tag: string id }) _vm.WorkshopDownload(id);
     }
 
-    // Subscribe / manage in the Steam client (Steam blocks auto-subscribe from outside — opens the page).
-    private void OnSubscribe(object sender, RoutedEventArgs e)
+    // Subscribe in-app via the Steam web token when set; otherwise open the item page in the Steam client.
+    private async void OnSubscribe(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string id }) return;
+        if (await _vm.SubscribeWorkshopAsync(id)) return;   // handled in-app
         try { Process.Start(new ProcessStartInfo(WorkshopService.SteamPageUrl(id)) { UseShellExecute = true }); }
         catch { /* best-effort */ }
     }

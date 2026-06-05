@@ -116,6 +116,11 @@ public class WorkshopTests
     }
 
     [Fact]
+    public void Subscribe_payload_matches_a_captured_request()
+        // protobuf: id=3737385977, field2=1, appid=221100, field4=1 — verified against a real Subscribe POST.
+        => WorkshopWeb.SubscribePayload("3737385977").Should().Be("CPn3j/YNEAEYrL8NIAE=");
+
+    [Fact]
     public void SteamCmd_command_line_uses_anonymous_or_login()
     {
         WorkshopCmd.CommandLine(null, "123").Should().Be("+login anonymous +workshop_download_item 221100 123 +quit");

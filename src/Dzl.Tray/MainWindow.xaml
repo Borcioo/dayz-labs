@@ -2122,7 +2122,9 @@
                     <TextBlock x:Name="SteamCmdStatus" FontSize="11" Margin="0,0,0,10"
                                Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" />
                     <TextBlock Text="Steam login (for owned/DayZ items; blank = anonymous)" Style="{StaticResource FieldLabel}" />
-                    <ui:TextBox x:Name="CfgSteamLogin" PlaceholderText="steam username (password / Guard entered in the steamcmd console)" />
+                    <ui:TextBox x:Name="CfgSteamLogin" Margin="0,0,0,10" PlaceholderText="steam username (password / Guard entered in the steamcmd console)" />
+                    <TextBlock Text="Steam access token (in-app Subscribe — optional; blank = Subscribe opens the Steam page)" Style="{StaticResource FieldLabel}" />
+                    <ui:TextBox x:Name="CfgSteamAccessToken" PlaceholderText="access_token JWT from a logged-in Steam web session (expires — re-paste when Subscribe fails)" />
                   </StackPanel>
                 </ui:Card>
 

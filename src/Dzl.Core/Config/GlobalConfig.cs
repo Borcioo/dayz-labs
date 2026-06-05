@@ -61,6 +61,11 @@ public sealed record GlobalConfig
     /// need a login — password/Steam Guard are entered in the spawned console). snake_case: steam_login.</summary>
     public string SteamLogin { get; init; } = "";
 
+    /// <summary>Steam web access token (JWT) for in-app Subscribe/Unsubscribe via IPublishedFileService.
+    /// From a logged-in Steam web session; expires periodically. Empty = Subscribe opens the Steam page.
+    /// snake_case: steam_access_token.</summary>
+    public string SteamAccessToken { get; init; } = "";
+
     /// <summary>Name of the active server instance (replaces the old <c>active_preset</c>). snake_case: active_instance.</summary>
     public string ActiveInstance { get; init; } = "";
 }

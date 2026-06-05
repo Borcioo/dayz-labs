@@ -67,6 +67,9 @@ public sealed record DzlConfig
     /// <summary>steamcmd login username (empty = anonymous). snake_case: steam_login.</summary>
     public string SteamLogin { get; init; } = "";
 
+    /// <summary>Steam web access token for in-app Subscribe. snake_case: steam_access_token.</summary>
+    public string SteamAccessToken { get; init; } = "";
+
     public static DzlConfig Default() => new();
 
     // --- two-tier split: global (machine env) vs per-server instance ---
@@ -96,6 +99,7 @@ public sealed record DzlConfig
         SteamApiKey = SteamApiKey,
         SteamCmdPath = SteamCmdPath,
         SteamLogin = SteamLogin,
+        SteamAccessToken = SteamAccessToken,
         ActiveInstance = activeInstance,
     };
 
@@ -140,6 +144,7 @@ public sealed record DzlConfig
         SteamApiKey = g.SteamApiKey,
         SteamCmdPath = g.SteamCmdPath,
         SteamLogin = g.SteamLogin,
+        SteamAccessToken = g.SteamAccessToken,
         ProfilesPath = i.ProfilesPath,
         ClientProfilesPath = i.ClientProfilesPath,
         Port = i.Port,

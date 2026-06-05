@@ -32,6 +32,13 @@ public sealed class WorkshopService
     /// <summary>Full details for one item (subscribers/description/tags) via the keyless details endpoint.</summary>
     public Task<WorkshopItem?> DetailsAsync(string id) => WorkshopWeb.DetailsAsync(id);
 
+    /// <summary>True when a Steam web access token is set (enables in-app Subscribe instead of opening Steam).</summary>
+    public bool HasAccessToken => !string.IsNullOrWhiteSpace(Cfg.SteamAccessToken);
+
+    /// <summary>In-app subscribe (true) / unsubscribe (false) via the Steam web token.</summary>
+    public Task<(bool ok, string message)> SubscribeAsync(string id, bool subscribe = true)
+        => WorkshopWeb.SubscribeAsync(Cfg.SteamAccessToken, id, subscribe);
+
     /// <summary>Download (or re-download to update) a Workshop item via steamcmd, spawning a console for login.</summary>
     public WorkshopOp Download(string id)
     {

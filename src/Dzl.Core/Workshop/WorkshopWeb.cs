@@ -132,6 +132,48 @@ public static class WorkshopWeb
             L("time_updated"), S("preview_url"), L("subscriptions"), L("time_created"), tags);
     }
 
+    private static byte[] Varint(ulong v)
+    {
+        var b = new List<byte>();
+        do { var x = (byte)(v & 0x7F); v >>= 7; if (v != 0) x |= 0x80; b.Add(x); } while (v != 0);
+        return b.ToArray();
+    }
+
+    /// <summary>Base64 protobuf body for a Subscribe/Unsubscribe request (CPublishedFile_(Un)Subscribe_Request):
+    /// field1 = publishedfileid, field2 = 1, field3 = appid (221100), field4 = 1. Pure — unit-tested against a
+    /// captured request.</summary>
+    public static string SubscribePayload(string id)
+    {
+        var b = new List<byte> { 0x08 };
+        b.AddRange(Varint(ulong.Parse(id)));
+        b.AddRange(new byte[] { 0x10, 0x01, 0x18 });
+        b.AddRange(Varint(ulong.Parse(AppId)));
+        b.AddRange(new byte[] { 0x20, 0x01 });
+        return Convert.ToBase64String(b.ToArray());
+    }
+
+    /// <summary>In-app (un)subscribe via IPublishedFileService — needs a Steam web access token (JWT) from a
+    /// logged-in session. Returns (ok, message); never throws.</summary>
+    public static async Task<(bool ok, string message)> SubscribeAsync(string accessToken, string id, bool subscribe = true)
+    {
+        if (string.IsNullOrWhiteSpace(accessToken)) return (false, "no Steam access token");
+        if (string.IsNullOrWhiteSpace(id) || !ulong.TryParse(id, out _)) return (false, "invalid workshop id");
+        try
+        {
+            var verb = subscribe ? "Subscribe" : "Unsubscribe";
+            var url = $"https://api.steampowered.com/IPublishedFileService/{verb}/v1?access_token={Uri.EscapeDataString(accessToken)}";
+            var body = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("input_protobuf_encoded", SubscribePayload(id)),
+            });
+            var resp = await Http.PostAsync(url, body).ConfigureAwait(false);
+            return resp.IsSuccessStatusCode
+                ? (true, subscribe ? $"subscribed {id}" : $"unsubscribed {id}")
+                : (false, $"HTTP {(int)resp.StatusCode} (token may be expired — re-paste it)");
+        }
+        catch (Exception ex) { return (false, ex.Message); }
+    }
+
     /// <summary>Fetch full details for one item via the keyless GetPublishedFileDetails endpoint.</summary>
     public static async Task<WorkshopItem?> DetailsAsync(string id)
     {
