@@ -971,25 +971,57 @@
                                 </TextBlock>
                               </Border>
                               <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open the project folder"
-                                           Tag="{Binding Path}" Click="OnOpenModFolder" Margin="0,0,8,0" />
-                                <ui:Button Icon="{ui:SymbolIcon Code24}" ToolTip="Open the project in your code editor"
-                                           Tag="{Binding Path}" Click="OnOpenInEditor" Margin="0,0,8,0" />
-                                <ui:Button Content="Link" Icon="{ui:SymbolIcon Link24}" ToolTip="Create the P: junction"
-                                           Tag="{Binding Name}" Click="OnQuickJunction" Margin="0,0,8,0"
-                                           Visibility="{Binding Linked, Converter={StaticResource InverseBoolToVis}}" />
-                                <ui:Button Content="Unlink" Icon="{ui:SymbolIcon LinkDismiss24}" ToolTip="Remove the P: junction (keeps the source folder)"
-                                           Tag="{Binding Name}" Click="OnUnlinkMod" Margin="0,0,8,0"
-                                           Visibility="{Binding Linked, Converter={StaticResource BoolToVis}}" />
-                                <ui:Button Content="Build" Appearance="Primary"
-                                           Icon="{ui:SymbolIcon Box24}"
+                                <!-- Primary: Build. Everything else under the ⋯ menu. -->
+                                <ui:Button Content="Build" Appearance="Primary" Icon="{ui:SymbolIcon Box24}"
                                            ToolTip="Build → PBO and add to the active server's run-list (needs P: mounted)"
                                            Tag="{Binding Name}" Click="OnBuildMod" Margin="0,0,8,0"
                                            IsEnabled="{Binding DataContext.WorkDriveMounted, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
-                                <ui:Button Content="Publish" Icon="{ui:SymbolIcon Branch24}" ToolTip="Publish to GitHub (gh repo create)"
-                                           Tag="{Binding Name}" Click="OnPublishRepo" Margin="0,0,8,0" />
-                                <ui:Button Content="Release" Icon="{ui:SymbolIcon Tag24}" ToolTip="Create a GitHub release"
-                                           Tag="{Binding Name}" Click="OnReleaseRepo" />
+                                <ui:DropDownButton Icon="{ui:SymbolIcon MoreHorizontal24}" ToolTip="More actions">
+                                  <ui:DropDownButton.Flyout>
+                                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                      <MenuItem Header="Open folder" Tag="{Binding Path}" Click="OnOpenModFolder">
+                                        <MenuItem.Icon><ui:SymbolIcon Symbol="FolderOpen24" /></MenuItem.Icon>
+                                      </MenuItem>
+                                      <MenuItem Header="Open in editor" Tag="{Binding Path}" Click="OnOpenInEditor">
+                                        <MenuItem.Icon><ui:SymbolIcon Symbol="Code24" /></MenuItem.Icon>
+                                      </MenuItem>
+                                      <Separator />
+                                      <MenuItem Header="Link (P:)" Tag="{Binding Name}" Click="OnQuickJunction">
+                                        <MenuItem.Icon><ui:SymbolIcon Symbol="Link24" /></MenuItem.Icon>
+                                        <MenuItem.Style>
+                                          <Style TargetType="MenuItem">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                              <DataTrigger Binding="{Binding Linked}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                              </DataTrigger>
+                                            </Style.Triggers>
+                                          </Style>
+                                        </MenuItem.Style>
+                                      </MenuItem>
+                                      <MenuItem Header="Unlink (P:)" Tag="{Binding Name}" Click="OnUnlinkMod">
+                                        <MenuItem.Icon><ui:SymbolIcon Symbol="LinkDismiss24" /></MenuItem.Icon>
+                                        <MenuItem.Style>
+                                          <Style TargetType="MenuItem">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                              <DataTrigger Binding="{Binding Linked}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                              </DataTrigger>
+                                            </Style.Triggers>
+                                          </Style>
+                                        </MenuItem.Style>
+                                      </MenuItem>
+                                      <Separator />
+                                      <MenuItem Header="Publish to GitHub" Tag="{Binding Name}" Click="OnPublishRepo">
+                                        <MenuItem.Icon><ui:SymbolIcon Symbol="Branch24" /></MenuItem.Icon>
+                                      </MenuItem>
+                                      <MenuItem Header="Create release" Tag="{Binding Name}" Click="OnReleaseRepo">
+                                        <MenuItem.Icon><ui:SymbolIcon Symbol="Tag24" /></MenuItem.Icon>
+                                      </MenuItem>
+                                    </ContextMenu>
+                                  </ui:DropDownButton.Flyout>
+                                </ui:DropDownButton>
                               </StackPanel>
                             </Grid>
                           </Border>
@@ -1130,21 +1162,37 @@
                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                               </StackPanel>
                               <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open server folder"
-                                           Tag="{Binding Dir}" Click="OnOpenServerFolder" Margin="0,0,8,0" />
-                                <ui:Button Icon="{ui:SymbolIcon Code24}" ToolTip="Open server in your code editor"
-                                           Tag="{Binding Dir}" Click="OnOpenInEditor" Margin="0,0,8,0" />
+                                <!-- Primary: Use (activate). Everything else under the ⋯ menu. -->
+                                <ui:Button Content="Use" Appearance="Primary" Icon="{ui:SymbolIcon Checkmark24}"
+                                           ToolTip="Make this the active server instance"
+                                           Tag="{Binding Name}" Click="OnUseServer" Margin="0,0,8,0" />
+                                <ui:DropDownButton Icon="{ui:SymbolIcon MoreHorizontal24}" ToolTip="More actions">
+                                  <ui:DropDownButton.Flyout>
+                                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                      <MenuItem Header="Settings…" Tag="{Binding Name}" Click="OnOpenServerSettings">
+                                        <MenuItem.Icon><ui:SymbolIcon Symbol="Settings24" /></MenuItem.Icon>
+                                      </MenuItem>
+                                      <MenuItem Header="Mods…" Tag="{Binding Name}" Click="OnOpenServerMods">
+                                        <MenuItem.Icon><ui:SymbolIcon Symbol="Apps24" /></MenuItem.Icon>
+                                      </MenuItem>
+                                      <Separator />
+                                      <MenuItem Header="Open folder" Tag="{Binding Dir}" Click="OnOpenServerFolder">
+                                        <MenuItem.Icon><ui:SymbolIcon Symbol="FolderOpen24" /></MenuItem.Icon>
+                                      </MenuItem>
+                                      <MenuItem Header="Open in editor" Tag="{Binding Dir}" Click="OnOpenInEditor">
+                                        <MenuItem.Icon><ui:SymbolIcon Symbol="Code24" /></MenuItem.Icon>
+                                      </MenuItem>
+                                      <Separator />
+                                      <MenuItem Header="Wipe persistence" Tag="{Binding Dir}" Click="OnWipeServerPersistence">
+                                        <MenuItem.Icon><ui:SymbolIcon Symbol="Broom24" /></MenuItem.Icon>
+                                      </MenuItem>
+                                      <MenuItem Header="Delete instance" Tag="{Binding Name}" Click="OnDeleteServer">
+                                        <MenuItem.Icon><ui:SymbolIcon Symbol="Delete24" /></MenuItem.Icon>
+                                      </MenuItem>
+                                    </ContextMenu>
+                                  </ui:DropDownButton.Flyout>
+                                </ui:DropDownButton>
                               </StackPanel>
-                              <ui:Button Grid.Column="3" Content="Settings" Icon="{ui:SymbolIcon Settings24}"
-                                         Tag="{Binding Name}" Click="OnOpenServerSettings" VerticalAlignment="Center" Margin="0,0,8,0" />
-                              <ui:Button Grid.Column="4" Content="Mods" Icon="{ui:SymbolIcon Apps24}"
-                                         Tag="{Binding Name}" Click="OnOpenServerMods" VerticalAlignment="Center" Margin="0,0,8,0" />
-                              <ui:Button Grid.Column="5" Content="Use" Icon="{ui:SymbolIcon Checkmark24}"
-                                         Tag="{Binding Name}" Click="OnUseServer" VerticalAlignment="Center" Margin="0,0,8,0" />
-                              <ui:Button Grid.Column="6" Icon="{ui:SymbolIcon Broom24}" ToolTip="Wipe persistence (reset world / CE storage)"
-                                         Tag="{Binding Dir}" Click="OnWipeServerPersistence" VerticalAlignment="Center" Margin="0,0,8,0" />
-                              <ui:Button Grid.Column="7" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" ToolTip="Delete instance"
-                                         Tag="{Binding Name}" Click="OnDeleteServer" VerticalAlignment="Center" />
                             </Grid>
                           </Border>
                         </DataTemplate>
