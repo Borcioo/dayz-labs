@@ -937,11 +937,11 @@
                                 <ui:Button Content="Quick junction" Icon="{ui:SymbolIcon Link24}"
                                            Tag="{Binding Name}" Click="OnQuickJunction" Margin="0,0,8,0" />
                                 <ui:Button Content="Build" Appearance="Primary"
-                                           Icon="{ui:SymbolIcon Hammer24}" ToolTip="Build → PBO and add to the active server's run-list"
+                                           Icon="{ui:SymbolIcon Box24}" ToolTip="Build → PBO and add to the active server's run-list"
                                            Tag="{Binding Name}" Click="OnBuildMod" Margin="0,0,8,0" />
-                                <ui:Button Icon="{ui:SymbolIcon Branch24}" ToolTip="Publish to GitHub (gh repo create)"
+                                <ui:Button Content="Publish" Icon="{ui:SymbolIcon Branch24}" ToolTip="Publish to GitHub (gh repo create)"
                                            Tag="{Binding Name}" Click="OnPublishRepo" Margin="0,0,8,0" />
-                                <ui:Button Icon="{ui:SymbolIcon Tag24}" ToolTip="Create a GitHub release"
+                                <ui:Button Content="Release" Icon="{ui:SymbolIcon Tag24}" ToolTip="Create a GitHub release"
                                            Tag="{Binding Name}" Click="OnReleaseRepo" />
                               </StackPanel>
                             </Grid>
