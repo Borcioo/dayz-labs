@@ -1005,6 +1005,21 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return true;
     }
 
+    /// <summary>Unsubscribe a mod (needs a Steam session); removes it from the Subscribed list on success.</summary>
+    public async Task UnsubscribeWorkshopAsync(string id)
+    {
+        var svc = new WorkshopService(_configPath);
+        if (!svc.HasAccessToken) { WorkshopStatus = "✗ sign in to Steam to unsubscribe (Settings → Steam)"; return; }
+        WorkshopStatus = "unsubscribing…";
+        var (ok, msg) = await svc.SubscribeAsync(id, subscribe: false);
+        WorkshopStatus = (ok ? "✓ " : "✗ ") + msg;
+        if (ok)
+        {
+            var it = WorkshopSubscribed.FirstOrDefault(s => s.Id == id);
+            if (it is not null) WorkshopSubscribed.Remove(it);
+        }
+    }
+
     // Show the list item immediately in the details pane, then enrich (subs/description/tags) keylessly.
     private async Task LoadDetailAsync(WorkshopItem? item)
     {

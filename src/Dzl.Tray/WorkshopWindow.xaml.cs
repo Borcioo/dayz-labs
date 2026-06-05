@@ -62,9 +62,28 @@ public partial class WorkshopWindow : FluentWindow
         catch { /* best-effort */ }
     }
 
+    // Always open the item's Steam page (manage/unsubscribe there) — distinct from Subscribe (which acts in-app).
+    private void OnOpenInSteam(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string id }) return;
+        try { Process.Start(new ProcessStartInfo(WorkshopService.SteamPageUrl(id)) { UseShellExecute = true }); }
+        catch { /* best-effort */ }
+    }
+
+    private async void OnUnsubscribe(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string id }) await _vm.UnsubscribeWorkshopAsync(id);
+    }
+
     private void OnOpenSubscribedFolder(object sender, RoutedEventArgs e)
     {
-        if (sender is not FrameworkElement { Tag: string dir } || !Directory.Exists(dir)) return;
+        if (sender is not FrameworkElement { Tag: string dir }) return;
+        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
+        {
+            System.Windows.MessageBox.Show("Not downloaded yet — the Steam client downloads subscribed items in the background.",
+                "Open folder", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            return;
+        }
         try { Process.Start(new ProcessStartInfo("explorer.exe", dir) { UseShellExecute = true }); }
         catch { /* best-effort */ }
     }

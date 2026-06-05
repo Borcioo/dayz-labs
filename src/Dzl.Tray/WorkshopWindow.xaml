@@ -133,9 +133,10 @@
                     <TextBlock Text="{Binding Id}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                   </StackPanel>
                   <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <ui:Button Icon="{ui:SymbolIcon Star24}" ToolTip="Open in Steam" Tag="{Binding Id}" Click="OnSubscribe" Margin="0,0,8,0" />
+                    <ui:Button Icon="{ui:SymbolIcon Open24}" ToolTip="Open in Steam (manage)" Tag="{Binding Id}" Click="OnOpenInSteam" Margin="0,0,8,0" />
                     <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open folder" Tag="{Binding Dir}" Click="OnOpenSubscribedFolder" Margin="0,0,8,0" />
-                    <ui:Button Icon="{ui:SymbolIcon ArrowDownload24}" ToolTip="Update via steamcmd" Tag="{Binding Id}" Click="OnDownload" />
+                    <ui:Button Icon="{ui:SymbolIcon ArrowDownload24}" ToolTip="Update via steamcmd" Tag="{Binding Id}" Click="OnDownload" Margin="0,0,8,0" />
+                    <ui:Button Icon="{ui:SymbolIcon LinkDismiss24}" Appearance="Danger" ToolTip="Unsubscribe" Tag="{Binding Id}" Click="OnUnsubscribe" />
                   </StackPanel>
                 </Grid>
               </DataTemplate>
