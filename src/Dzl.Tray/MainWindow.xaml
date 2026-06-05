@@ -1918,6 +1918,9 @@
                                   PlaceholderText="blank = your author handle" />
                       <ui:Button Grid.Column="1" Content="Generate key" Margin="8,0,0,0" Click="OnGenerateKey" />
                     </Grid>
+                    <TextBlock FontSize="11" Opacity="0.7" Margin="0,0,0,10">
+                      <Run Text="Resolved key: " /><Run Text="{Binding ResolvedSigningKey, Mode=OneWay}" FontWeight="SemiBold" />
+                    </TextBlock>
                     <TextBlock Text="Keys folder (.biprivatekey / .bikey)" Style="{StaticResource FieldLabel}" />
                     <Grid>
                       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
@@ -1925,6 +1928,9 @@
                                   PlaceholderText="blank = &lt;ProjectsRoot&gt;\keys" />
                       <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="dir:CfgKeysDir" Click="OnBrowseInto" />
                     </Grid>
+                    <TextBlock FontSize="11" Opacity="0.7" Margin="0,2,0,0">
+                      <Run Text="Resolved folder: " /><Run Text="{Binding ResolvedKeysDir, Mode=OneWay}" FontWeight="SemiBold" />
+                    </TextBlock>
                     <TextBlock x:Name="SigningStatus" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"
                                Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                     <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" FontSize="12" Opacity="0.7"

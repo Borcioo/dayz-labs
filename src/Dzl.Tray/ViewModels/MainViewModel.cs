@@ -588,7 +588,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             SuppressPresetSwitch = false;
         }
         RefreshPreview();
-        OnPropertyChanged(nameof(ResolvedWorkDriveSource));   // cfg override may have changed
+        OnPropertyChanged(nameof(ResolvedWorkDriveSource));   // cfg overrides may have changed
+        OnPropertyChanged(nameof(ResolvedKeysDir));
+        OnPropertyChanged(nameof(ResolvedSigningKey));
         RetailLogs();   // logs follow the active server's profiles
     }
 
@@ -767,6 +769,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>Effective work-drive source for display in Settings (or a hint when not resolvable).</summary>
     public string ResolvedWorkDriveSource => WorkDriveSource ?? "(not detected — set the DayZ Tools path)";
+
+    /// <summary>Effective keys folder shown in Settings — the override or the <c>&lt;ProjectsRoot&gt;\keys</c> default.</summary>
+    public string ResolvedKeysDir => ProjectPaths.KeysDir(ProjectsRoot, _cfg.KeysDir);
+
+    /// <summary>Effective signing-key name shown in Settings — the config value, else the cached author.</summary>
+    public string ResolvedSigningKey
+    {
+        get
+        {
+            var n = !string.IsNullOrWhiteSpace(_cfg.SigningKey) ? _cfg.SigningKey.Trim() : CachedAuthor;
+            return string.IsNullOrWhiteSpace(n) ? "(none — set a name or author)" : n;
+        }
+    }
 
     /// <summary>Re-enumerate mod source projects. Called on My Mods page show + after create/import/link.</summary>
     public void RefreshModProjects()
