@@ -1912,9 +1912,25 @@
 
                     <Separator Margin="0,12,0,12" />
 
-                    <TextBlock Text="Steam" FontWeight="SemiBold" Margin="0,0,0,4" />
+                    <Grid Margin="0,0,0,6">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Grid.Column="0" Text="Steam" FontWeight="SemiBold" VerticalAlignment="Center" Width="64" />
+                      <TextBlock Grid.Column="1" Text="{Binding SteamAccount}" VerticalAlignment="Center"
+                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                      <ui:Button Grid.Column="2" Content="Login" Icon="{ui:SymbolIcon Person24}"
+                                 Margin="0,0,8,0" Click="OnSteamSignIn"
+                                 ToolTip="Sign in with QR or password — no keys to paste" />
+                      <ui:Button Grid.Column="3" Content="Logout" Click="OnSteamSignOut" />
+                    </Grid>
                     <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                               Text="Sign in to Steam below — Workshop browse and Subscribe work without any API key, and the sign-in also lets steamcmd download owner-gated DayZ items as your account. Publishing reuses your running Steam client (Publisher.exe)." />
+                               Text="Steam sign-in (QR or password) powers Workshop Subscribe and lets steamcmd download owner-gated DayZ items as your account. Publishing reuses your running Steam client (Publisher.exe)." />
+                    <TextBlock x:Name="SteamSignInStatus" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                   </StackPanel>
                 </ui:Card>
 
@@ -2099,11 +2115,13 @@
                   </StackPanel>
                 </ui:Card>
 
-                <!-- Steam (Workshop) -->
+                <!-- Workshop downloads (steamcmd) -->
                 <ui:Card Margin="0,0,0,12" Padding="16">
                   <StackPanel>
-                    <TextBlock Text="Steam (Workshop)" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
-                    <TextBlock Text="steamcmd.exe (Workshop download)" Style="{StaticResource FieldLabel}" />
+                    <TextBlock Text="Workshop downloads (steamcmd)" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,4" />
+                    <TextBlock FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               Text="Optional — only for downloading Workshop items via steamcmd (e.g. for a headless server). In-app Subscribe uses your Steam client instead and needs none of this." />
+                    <TextBlock Text="steamcmd.exe" Style="{StaticResource FieldLabel}" />
                     <Grid Margin="0,0,0,4">
                       <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
@@ -2115,15 +2133,8 @@
                     </Grid>
                     <TextBlock x:Name="SteamCmdStatus" FontSize="11" Margin="0,0,0,10"
                                Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" />
-                    <TextBlock Text="Steam login (for owned/DayZ items; blank = anonymous)" Style="{StaticResource FieldLabel}" />
-                    <ui:TextBox x:Name="CfgSteamLogin" Margin="0,0,0,10" PlaceholderText="steam username (password / Guard entered in the steamcmd console)" />
-                    <TextBlock Text="Steam sign-in (for in-app Subscribe)" Style="{StaticResource FieldLabel}" />
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                      <ui:Button Content="Sign in to Steam" Icon="{ui:SymbolIcon Person24}" Margin="0,0,8,0" Click="OnSteamSignIn" />
-                      <ui:Button Content="Sign out" Click="OnSteamSignOut" />
-                    </StackPanel>
-                    <TextBlock x:Name="SteamSignInStatus" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"
-                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    <TextBlock Text="Steam account name (auto-filled when you sign in above; blank = anonymous, which fails for DayZ)" Style="{StaticResource FieldLabel}" />
+                    <ui:TextBox x:Name="CfgSteamLogin" Margin="0,0,0,4" PlaceholderText="steam username (password / Guard entered in the steamcmd console)" />
                   </StackPanel>
                 </ui:Card>
 

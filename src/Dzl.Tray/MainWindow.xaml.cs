@@ -121,7 +121,7 @@ public partial class MainWindow : FluentWindow
         if (tag == "servers") { _vm.RefreshServers(); _vm.RefreshBases(); }   // base dropdown needs bases
         if (tag == "bases") _vm.RefreshBases();
         if (tag == "economy") { _vm.LoadTypes(); RefreshTypesBackupsMenu(); }
-        if (tag == "settings") { LoadSettingsFields(); _ = _vm.RefreshGitHubAuthAsync(); }
+        if (tag == "settings") { LoadSettingsFields(); _ = _vm.RefreshGitHubAuthAsync(); _vm.RefreshSteamAccount(); }
     }
 
     // --- Dashboard shortcut handlers --------------------------------------
@@ -332,7 +332,7 @@ public partial class MainWindow : FluentWindow
         CfgEditorPath.Text = c.EditorPath;
         CfgSteamCmdPath.Text = c.SteamCmdPath;
         CfgSteamLogin.Text = c.SteamLogin;
-        SteamSignInStatus.Text = _vm.SteamSignedIn ? "✓ signed in (Subscribe works in-app)" : "not signed in — Subscribe opens the Steam page";
+        SteamSignInStatus.Text = _vm.SteamSignedIn ? "✓ Subscribe works in-app" : "not signed in — Subscribe opens the Steam page";
         ConfigError.Visibility = Visibility.Collapsed;
     }
 
@@ -655,12 +655,15 @@ public partial class MainWindow : FluentWindow
     {
         var dlg = new SteamLoginWindow(_vm) { Owner = this };
         dlg.ShowDialog();
-        SteamSignInStatus.Text = _vm.SteamSignedIn ? "✓ signed in (Subscribe works in-app)" : "not signed in — Subscribe opens the Steam page";
+        _vm.RefreshSteamAccount();
+        LoadSettingsFields();   // sign-in auto-fills SteamLogin → reflect it in the steamcmd field
+        SteamSignInStatus.Text = _vm.SteamSignedIn ? "✓ Subscribe works in-app" : "not signed in — Subscribe opens the Steam page";
     }
 
     private void OnSteamSignOut(object sender, RoutedEventArgs e)
     {
         _vm.SteamSignOut();
+        _vm.RefreshSteamAccount();
         SteamSignInStatus.Text = "signed out";
     }
 

@@ -982,6 +982,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>True when a Steam session is stored (signed in).</summary>
     public bool SteamSignedIn => new WorkshopService(_configPath).SignedIn;
 
+    /// <summary>Steam account label for the Settings → Accounts row (reflects the stored sign-in).</summary>
+    [ObservableProperty] private string _steamAccount = "not signed in";
+
+    /// <summary>Refresh the Steam account label from the stored session + the account name saved on sign-in.</summary>
+    public void RefreshSteamAccount()
+        => SteamAccount = SteamSignedIn
+            ? (string.IsNullOrWhiteSpace(Cfg.SteamLogin) ? "signed in" : $"logged in as {Cfg.SteamLogin}")
+            : "not signed in";
+
     public Task<Dzl.Core.Workshop.SteamLoginResult> SteamLoginQrAsync(Action<string> onUrl, System.Threading.CancellationToken ct)
         => new WorkshopService(_configPath).LoginViaQrAsync(onUrl, ct);
 
