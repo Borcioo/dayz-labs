@@ -60,7 +60,7 @@ public class ProjectPathsTests
         ProjectPaths.PrivateKey(@"D:\P", null, "Macie").Should().Be(@"D:\P\keys\Macie.biprivatekey");
         ProjectPaths.PublicKey(@"D:\P", null, "Macie").Should().Be(@"D:\P\keys\Macie.bikey");
         ProjectPaths.PublicKey(@"D:\P", @"E:\K", "Macie").Should().Be(@"E:\K\Macie.bikey");
-        ProjectPaths.ModKeysDir(@"D:\P", "MyMod").Should().Be(@"D:\P\mods\MyMod\keys");
+        ProjectPaths.BuildKeysDir(@"D:\P", "MyMod").Should().Be(@"D:\P\build\@MyMod\keys");
     }
 
     [Fact]

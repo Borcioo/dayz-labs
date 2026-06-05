@@ -162,7 +162,8 @@ public sealed class BuildService
         var pbo = ModBuild.NewestPbo(addonsDir)!.FullName;
         ModBuild.WriteMarker(ProjectPaths.BuildMarkerPath(root, modName), $"dzl-built {startUtc:O} from {projectDir}");
 
-        // Ship the public key inside the mod so servers can whitelist it (private key stays in the keys folder).
+        // Place the public key in the built mod's keys\ (sibling of Addons\, outside the PBO) so the
+        // distributed/loaded @<Mod> carries it and servers can whitelist it. The private key stays put.
         if (sign)
         {
             try
@@ -171,9 +172,9 @@ public sealed class BuildService
                 var pub = ProjectPaths.PublicKey(root, cfg.KeysDir, keyName);
                 if (File.Exists(pub))
                 {
-                    var modKeys = ProjectPaths.ModKeysDir(root, modName);
-                    Directory.CreateDirectory(modKeys);
-                    File.Copy(pub, Path.Combine(modKeys, keyName + ".bikey"), overwrite: true);
+                    var buildKeys = ProjectPaths.BuildKeysDir(root, modName);
+                    Directory.CreateDirectory(buildKeys);
+                    File.Copy(pub, Path.Combine(buildKeys, keyName + ".bikey"), overwrite: true);
                 }
             }
             catch { /* best-effort; the .bisign is already produced */ }

@@ -60,8 +60,10 @@ public static partial class ProjectPaths
     public static string PublicKey(string root, string? keysOverride, string keyName) =>
         Path.Combine(KeysDir(root, keysOverride), keyName + ".bikey");
 
-    /// <summary>A mod's <c>keys\</c> folder, where the public <c>.bikey</c> is copied so it ships with the PBO.</summary>
-    public static string ModKeysDir(string root, string mod) => Path.Combine(ModDir(root, mod), "keys");
+    /// <summary>The built mod's <c>keys\</c> folder (<c>build\@&lt;Mod&gt;\keys</c>, sibling of <c>Addons\</c>) —
+    /// where the public <c>.bikey</c> goes so the loadable/distributed <c>@&lt;Mod&gt;</c> carries it. It lives
+    /// OUTSIDE the PBO (it must not be in the source, or AddonBuilder would pack it into the .pbo).</summary>
+    public static string BuildKeysDir(string root, string mod) => Path.Combine(BuildDir(root, mod), "keys");
 
     /// <summary>The folder holding all server instances under the projects root.</summary>
     public static string ServersDir(string root) => Path.Combine(root, "servers");
