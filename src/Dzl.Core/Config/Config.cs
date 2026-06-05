@@ -49,6 +49,12 @@ public sealed record DzlConfig
     /// auto-derive from DayZ Tools settings.ini. snake_case: work_drive_source.</summary>
     public string WorkDriveSource { get; init; } = "";
 
+    /// <summary>Folder for signing keys (empty = ProjectsRoot\keys). snake_case: keys_dir.</summary>
+    public string KeysDir { get; init; } = "";
+
+    /// <summary>Creator's signing key name (empty = cached author). snake_case: signing_key.</summary>
+    public string SigningKey { get; init; } = "";
+
     public static DzlConfig Default() => new();
 
     // --- two-tier split: global (machine env) vs per-server instance ---
@@ -72,6 +78,8 @@ public sealed record DzlConfig
         AutoLaunchTray = AutoLaunchTray,
         AutomountWorkDrive = AutomountWorkDrive,
         WorkDriveSource = WorkDriveSource,
+        KeysDir = KeysDir,
+        SigningKey = SigningKey,
         ActiveInstance = activeInstance,
     };
 
@@ -110,6 +118,8 @@ public sealed record DzlConfig
         AutoLaunchTray = g.AutoLaunchTray,
         AutomountWorkDrive = g.AutomountWorkDrive,
         WorkDriveSource = g.WorkDriveSource,
+        KeysDir = g.KeysDir,
+        SigningKey = g.SigningKey,
         ProfilesPath = i.ProfilesPath,
         ClientProfilesPath = i.ClientProfilesPath,
         Port = i.Port,

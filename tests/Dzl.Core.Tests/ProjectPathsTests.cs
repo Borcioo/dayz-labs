@@ -53,6 +53,17 @@ public class ProjectPathsTests
     }
 
     [Fact]
+    public void Key_paths_resolve_under_keys_dir_with_override()
+    {
+        ProjectPaths.KeysDir(@"D:\P", null).Should().Be(@"D:\P\keys");
+        ProjectPaths.KeysDir(@"D:\P", @"E:\MyKeys").Should().Be(@"E:\MyKeys");
+        ProjectPaths.PrivateKey(@"D:\P", null, "Macie").Should().Be(@"D:\P\keys\Macie.biprivatekey");
+        ProjectPaths.PublicKey(@"D:\P", null, "Macie").Should().Be(@"D:\P\keys\Macie.bikey");
+        ProjectPaths.PublicKey(@"D:\P", @"E:\K", "Macie").Should().Be(@"E:\K\Macie.bikey");
+        ProjectPaths.ModKeysDir(@"D:\P", "MyMod").Should().Be(@"D:\P\mods\MyMod\keys");
+    }
+
+    [Fact]
     public void Build_area_is_a_single_junction_on_the_work_drive_source()
     {
         ProjectPaths.BuildAreaJunction(@"D:\DayZWorkDrive").Should().Be(@"D:\DayZWorkDrive\Mods");

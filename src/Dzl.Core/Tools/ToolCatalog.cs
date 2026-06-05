@@ -24,6 +24,7 @@ public static class ToolCatalog
         ("bankrev",         "BankRev (extract PBO)",@"PboUtils\BankRev.exe",               ToolKind.CliWrappable),
         ("filebank",        "FileBank (pack PBO)",  @"PboUtils\FileBank.exe",              ToolKind.CliWrappable),
         ("dssignfile",      "DSSignFile (sign)", @"DsUtils\DSSignFile.exe",                ToolKind.CliWrappable),
+        ("dscreatekey",     "DSCreateKey (keygen)",@"DsUtils\DSCreateKey.exe",             ToolKind.CliWrappable),
     };
 
     public static List<ToolEntry> Discover(string toolsPath)

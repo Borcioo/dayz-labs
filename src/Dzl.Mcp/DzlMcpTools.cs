@@ -74,8 +74,13 @@ public static class DzlMcpTools
     [McpServerTool, Description("Build a mod project into a PBO (Addon Builder) and add the @<Mod> to the active server's run-list. Higher-level than pack_pbo: resolves the project under ProjectsRoot, ensures the P: junction, deploys to P:\\Mods\\@<Mod>\\Addons and registers it.")]
     public static string BuildMod([Description("Mod project name (under ProjectsRoot)")] string mod,
                                   [Description("Wipe output first (AddonBuilder -clear)")] bool clean = false,
-                                  [Description("Binarize configs/models (false = -packonly)")] bool binarize = true)
-        => J(new BuildService(ConfigPath()).Build(mod, clean, binarize));
+                                  [Description("Binarize configs/models (false = -packonly)")] bool binarize = true,
+                                  [Description("Sign the PBO with your signing key (must exist — see generate_key)")] bool sign = false)
+        => J(new BuildService(ConfigPath()).Build(mod, clean, binarize, sign));
+
+    [McpServerTool, Description("Create the creator's signing key pair (DSCreateKey) in the keys folder. One key signs all your mods. Name defaults to the configured signing key / author.")]
+    public static string GenerateKey([Description("Key name (optional; defaults to configured signing key / author)")] string? name = null)
+        => J(new BuildService(ConfigPath()).GenerateKey(name));
 
     [McpServerTool, Description("Pack a source folder into a PBO (Addon Builder).")]
     public static string PackPbo([Description("Source folder")] string src,

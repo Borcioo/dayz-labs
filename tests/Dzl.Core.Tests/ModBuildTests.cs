@@ -85,6 +85,35 @@ public class ModBuildTests
         r.Message.Should().Contain("not a mod project");
     }
 
+    // --- signing key generation (pre-flight; no DSCreateKey on the test machine) ---
+
+    [Fact]
+    public void GenerateKey_fails_without_a_name()
+    {
+        var (configPath, _) = TmpConfig();   // no signing_key, no cached author
+        var r = new BuildService(configPath).GenerateKey();
+        r.Ok.Should().BeFalse();
+        r.Output.Should().Contain("no signing-key name");
+    }
+
+    [Fact]
+    public void GenerateKey_rejects_an_invalid_name()
+    {
+        var (configPath, _) = TmpConfig();
+        var r = new BuildService(configPath).GenerateKey("1bad");
+        r.Ok.Should().BeFalse();
+        r.Output.Should().Contain("invalid key name");
+    }
+
+    [Fact]
+    public void GenerateKey_fails_when_DSCreateKey_missing()
+    {
+        var (configPath, _) = TmpConfig();   // tools path is empty/temp → DSCreateKey absent
+        var r = new BuildService(configPath).GenerateKey("Macie");
+        r.Ok.Should().BeFalse();
+        r.Output.Should().Contain("DSCreateKey not found");
+    }
+
     [Fact]
     public void Build_fails_when_addonbuilder_missing_even_for_a_valid_project()
     {

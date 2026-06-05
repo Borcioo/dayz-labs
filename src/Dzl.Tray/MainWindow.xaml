@@ -1907,6 +1907,31 @@
                   </StackPanel>
                 </ui:Card>
 
+                <!-- Signing -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Signing" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <TextBlock Text="Signing key name (one key signs all your mods)" Style="{StaticResource FieldLabel}" />
+                    <Grid Margin="0,0,0,10">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="CfgSigningKey" Grid.Column="0"
+                                  PlaceholderText="blank = your author handle" />
+                      <ui:Button Grid.Column="1" Content="Generate key" Margin="8,0,0,0" Click="OnGenerateKey" />
+                    </Grid>
+                    <TextBlock Text="Keys folder (.biprivatekey / .bikey)" Style="{StaticResource FieldLabel}" />
+                    <Grid>
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <ui:TextBox x:Name="CfgKeysDir" Grid.Column="0"
+                                  PlaceholderText="blank = &lt;ProjectsRoot&gt;\keys" />
+                      <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="dir:CfgKeysDir" Click="OnBrowseInto" />
+                    </Grid>
+                    <TextBlock x:Name="SigningStatus" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" FontSize="12" Opacity="0.7"
+                               Text="The private key never ships/commits; the public .bikey is copied into each signed mod's keys\ folder so servers can whitelist it. Generate once, then enable 'Sign' when building." />
+                  </StackPanel>
+                </ui:Card>
+
                 <!-- Save config -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
                   <ui:Button Content="Save config" Appearance="Primary" Icon="{ui:SymbolIcon Save24}"

@@ -48,6 +48,21 @@ public static partial class ProjectPaths
     /// <summary>The dzl ownership marker for a build (<c>&lt;root&gt;\build\@&lt;Mod&gt;\.dzl-build</c>).</summary>
     public static string BuildMarkerPath(string root, string mod) => Path.Combine(BuildDir(root, mod), ".dzl-build");
 
+    /// <summary>Folder holding signing keys; the override if set, else <c>&lt;root&gt;\keys</c>.</summary>
+    public static string KeysDir(string root, string? overrideDir) =>
+        string.IsNullOrWhiteSpace(overrideDir) ? Path.Combine(root, "keys") : overrideDir!;
+
+    /// <summary>Private signing key path (<c>&lt;keysDir&gt;\&lt;key&gt;.biprivatekey</c>) — never ship/commit this.</summary>
+    public static string PrivateKey(string root, string? keysOverride, string keyName) =>
+        Path.Combine(KeysDir(root, keysOverride), keyName + ".biprivatekey");
+
+    /// <summary>Public key path (<c>&lt;keysDir&gt;\&lt;key&gt;.bikey</c>) — distributed in each mod's keys\.</summary>
+    public static string PublicKey(string root, string? keysOverride, string keyName) =>
+        Path.Combine(KeysDir(root, keysOverride), keyName + ".bikey");
+
+    /// <summary>A mod's <c>keys\</c> folder, where the public <c>.bikey</c> is copied so it ships with the PBO.</summary>
+    public static string ModKeysDir(string root, string mod) => Path.Combine(ModDir(root, mod), "keys");
+
     /// <summary>The folder holding all server instances under the projects root.</summary>
     public static string ServersDir(string root) => Path.Combine(root, "servers");
 

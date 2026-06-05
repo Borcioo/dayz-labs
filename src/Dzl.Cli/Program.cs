@@ -716,15 +716,17 @@ root.AddCommand(linkCmd);
 var buildModArg = new Argument<string>("Mod", "Mod project name (under ProjectsRoot).");
 var buildClean = new Option<bool>("--clean", "Wipe the output first (AddonBuilder -clear).");
 var buildNoBin = new Option<bool>("--no-binarize", "Pack only, don't binarize (AddonBuilder -packonly).");
+var buildSign = new Option<bool>("--sign", "Sign the PBO with your signing key (generate one with 'dzl key new').");
 var buildCmd = new Command("build", "Build a mod into a PBO and add it to the active server's run-list.")
-    { buildModArg, buildClean, buildNoBin };
+    { buildModArg, buildClean, buildNoBin, buildSign };
 buildCmd.SetHandler(ctx =>
 {
     var (_, _, _, configPath) = Resolve(ctx);
     var mod = ctx.ParseResult.GetValueForArgument(buildModArg);
     var clean = ctx.ParseResult.GetValueForOption(buildClean);
     var noBin = ctx.ParseResult.GetValueForOption(buildNoBin);
-    var r = new BuildService(configPath).Build(mod, clean: clean, binarize: !noBin,
+    var sign = ctx.ParseResult.GetValueForOption(buildSign);
+    var r = new BuildService(configPath).Build(mod, clean: clean, binarize: !noBin, sign: sign,
         onLine: line => Console.Error.WriteLine(line));   // log to stderr; result line to stdout
     if (!r.Ok)
     {
@@ -735,6 +737,21 @@ buildCmd.SetHandler(ctx =>
     Console.WriteLine($"{r.Message}  →  {r.PboPath}");
 });
 root.AddCommand(buildCmd);
+
+// ---- key (signing key generation) ----
+var keyCmd = new Command("key", "Manage your DayZ signing key (one key signs all your mods).");
+var keyNewName = new Argument<string?>("name", () => null, "Key name (defaults to your configured signing key / author).");
+var keyNewCmd = new Command("new", "Create a signing key pair (DSCreateKey) in the keys folder.") { keyNewName };
+keyNewCmd.SetHandler(ctx =>
+{
+    var (_, _, _, configPath) = Resolve(ctx);
+    var name = ctx.ParseResult.GetValueForArgument(keyNewName);
+    var r = new BuildService(configPath).GenerateKey(name);
+    Console.WriteLine(r.Ok ? $"✓ key: {r.PrivateKey}  (public {r.PublicKey})" : $"✗ {r.Output}");
+    if (!r.Ok) ctx.ExitCode = 1;
+});
+keyCmd.AddCommand(keyNewCmd);
+root.AddCommand(keyCmd);
 
 // ---- repo (SP4: GitHub) ----
 var repoCmd = new Command("repo", "Manage a mod project as a git/GitHub repo.");

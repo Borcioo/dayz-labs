@@ -325,6 +325,8 @@ public partial class MainWindow : FluentWindow
         CfgEnableAutomationServer.IsChecked = c.EnableAutomationServer;
         CfgAutomountWorkDrive.IsChecked = c.AutomountWorkDrive;
         CfgWorkDriveSource.Text = c.WorkDriveSource;
+        CfgSigningKey.Text = c.SigningKey;
+        CfgKeysDir.Text = c.KeysDir;
         ConfigError.Visibility = Visibility.Collapsed;
     }
 
@@ -349,6 +351,8 @@ public partial class MainWindow : FluentWindow
             EnableAutomationServer = CfgEnableAutomationServer.IsChecked == true,
             AutomountWorkDrive = CfgAutomountWorkDrive.IsChecked == true,
             WorkDriveSource = CfgWorkDriveSource.Text.Trim(),
+            SigningKey = CfgSigningKey.Text.Trim(),
+            KeysDir = CfgKeysDir.Text.Trim(),
         };
         _vm.ApplyConfig(edited);
         LoadSettingsFields();
@@ -499,10 +503,9 @@ public partial class MainWindow : FluentWindow
     private async void OnBuildMod(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string name }) return;
-        var plan = _vm.BuildPlan(name);                 // resolve + pre-fill paths
-        var opt = BuildDialog.Show(this, plan);          // null = cancelled
+        var opt = BuildDialog.Show(this, _vm, name);     // resolves the plan + pre-fills paths; null = cancelled
         if (opt is null) return;
-        await _vm.BuildModAsync(name, opt.Value.clean, opt.Value.binarize);
+        await _vm.BuildModAsync(name, opt.Value.clean, opt.Value.binarize, opt.Value.sign);
     }
 
     private async void OnPublishRepo(object sender, RoutedEventArgs e)
@@ -542,6 +545,13 @@ public partial class MainWindow : FluentWindow
     }
 
     private async void OnGitHubLogout(object sender, RoutedEventArgs e) => await _vm.GitHubLogoutAsync();
+
+    // Persist the typed signing-key name + keys folder first (so generation uses them), then run DSCreateKey.
+    private void OnGenerateKey(object sender, RoutedEventArgs e)
+    {
+        _vm.ApplyConfig(_vm.Cfg with { SigningKey = CfgSigningKey.Text.Trim(), KeysDir = CfgKeysDir.Text.Trim() });
+        SigningStatus.Text = _vm.GenerateSigningKey();
+    }
 
     // Fill the DayZ + Tools path fields from the Steam libraries (same detection the setup wizard runs);
     // only overwrites a field when detection actually finds something, so manual entries survive a miss.

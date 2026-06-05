@@ -39,6 +39,14 @@ public sealed record GlobalConfig
     /// junctions are anchored on). Empty = auto-derive from DayZ Tools settings.ini. snake_case: work_drive_source.</summary>
     public string WorkDriveSource { get; init; } = "";
 
+    /// <summary>Folder holding signing keys (.biprivatekey/.bikey). Empty = <c>&lt;ProjectsRoot&gt;\keys</c>.
+    /// snake_case: keys_dir.</summary>
+    public string KeysDir { get; init; } = "";
+
+    /// <summary>Name of the creator's signing key (one key signs all your mods). Empty = fall back to the
+    /// cached author handle. snake_case: signing_key.</summary>
+    public string SigningKey { get; init; } = "";
+
     /// <summary>Name of the active server instance (replaces the old <c>active_preset</c>). snake_case: active_instance.</summary>
     public string ActiveInstance { get; init; } = "";
 }
