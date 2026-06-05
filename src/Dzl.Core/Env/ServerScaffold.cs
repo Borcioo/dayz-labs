@@ -100,12 +100,22 @@ class Missions
             string.Join("; ", notes));
     }
 
+    /// <summary>True for DayZ runtime/persistence folders a FRESH instance must NOT inherit from the
+    /// install's mission — the engine regenerates them on first run. Currently the per-instance
+    /// Central Economy storage dirs (<c>storage_&lt;instanceId&gt;</c>).</summary>
+    public static bool IsRuntimeDir(string name) =>
+        name.StartsWith("storage_", StringComparison.OrdinalIgnoreCase);
+
     private static void CopyDirectory(string src, string dst)
     {
         Directory.CreateDirectory(dst);
         foreach (var file in Directory.EnumerateFiles(src))
             File.Copy(file, Path.Combine(dst, Path.GetFileName(file)), overwrite: false);
         foreach (var dir in Directory.EnumerateDirectories(src))
+        {
+            // Don't copy live persistence into a brand-new instance — it would start "dirty".
+            if (IsRuntimeDir(Path.GetFileName(dir))) continue;
             CopyDirectory(dir, Path.Combine(dst, Path.GetFileName(dir)));
+        }
     }
 }

@@ -33,6 +33,16 @@ public class EnvTests
         cfg.Should().NotContain("chernarusplus.chernarusplus");        // regression: no double suffix
     }
 
+    [Theory]
+    [InlineData("storage_1", true)]
+    [InlineData("storage_42", true)]
+    [InlineData("STORAGE_1", true)]
+    [InlineData("db", false)]
+    [InlineData("env", false)]
+    [InlineData("cfgplayerspawnpoints.xml", false)]
+    public void Mission_copy_skips_live_storage_dirs(string name, bool skip)
+        => ServerScaffold.IsRuntimeDir(name).Should().Be(skip);
+
     [Fact]
     public void SteamCmd_script_targets_app_223350_with_validate()
     {
