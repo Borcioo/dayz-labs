@@ -32,6 +32,9 @@ public sealed record GlobalConfig
     /// (hidden, as a monitor). Default on. snake_case: auto_launch_tray.</summary>
     public bool AutoLaunchTray { get; init; } = true;
 
+    /// <summary>Mount the P: work drive when the tray app launches. Off by default. snake_case: automount_work_drive.</summary>
+    public bool AutomountWorkDrive { get; init; } = false;
+
     /// <summary>Name of the active server instance (replaces the old <c>active_preset</c>). snake_case: active_instance.</summary>
     public string ActiveInstance { get; init; } = "";
 }

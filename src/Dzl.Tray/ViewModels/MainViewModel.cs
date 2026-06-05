@@ -204,7 +204,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         RefreshPreview();
 
         _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
-        _statusTimer.Tick += (_, _) => { RefreshStatus(); RefreshLogPaths(); };
+        _statusTimer.Tick += (_, _) => { RefreshStatus(); RefreshLogPaths(); RefreshWorkDrive(); };
         _statusTimer.Start();
         RefreshStatus();
 

@@ -21,11 +21,13 @@
       <RowDefinition Height="Auto" />  <!-- title bar -->
       <RowDefinition Height="Auto" />  <!-- top action bar -->
       <RowDefinition Height="*" />     <!-- nav + content -->
+      <RowDefinition Height="Auto" />  <!-- bottom status bar -->
     </Grid.RowDefinitions>
     <Grid.Resources>
       <local:StatusDotConverter x:Key="StatusDotConverter" />
       <local:BoolToOpacityConverter x:Key="BoolToOpacity" />
       <BooleanToVisibilityConverter x:Key="BoolToVis" />
+      <local:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
       <local:StringEqualsConverter x:Key="StringEquals" />
       <local:StringEqualsVisibilityConverter x:Key="StringEqualsVis" />
       <local:StringMatchVisibilityConverter x:Key="StringMatchVis" />
@@ -820,6 +822,15 @@
               <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
                 <Run Text="Source projects under " /><Run Text="{Binding ProjectsRoot, Mode=OneWay}" FontWeight="SemiBold" />
               </TextBlock>
+              <!-- P: status — building needs the work drive mounted -->
+              <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                <Ellipse Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,8,0"
+                         Fill="{Binding WorkDriveMounted, Converter={StaticResource StatusDotConverter}}" />
+                <TextBlock Text="{Binding WorkDriveStatus}" VerticalAlignment="Center" FontSize="12"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,8,0" />
+                <ui:Button Content="Mount P:" Padding="8,2" FontSize="12" Click="OnMountWorkDrive"
+                           Visibility="{Binding WorkDriveMounted, Converter={StaticResource InverseBoolToVis}}" />
+              </StackPanel>
             </StackPanel>
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -1826,6 +1837,29 @@
                   </StackPanel>
                 </ui:Card>
 
+                <!-- Work drive (P:) -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Work drive (P:)" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <Grid Margin="0,0,0,8">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <Ellipse Grid.Column="0" Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,8,0"
+                               Fill="{Binding WorkDriveMounted, Converter={StaticResource StatusDotConverter}}" />
+                      <TextBlock Grid.Column="1" Text="{Binding WorkDriveStatus}" VerticalAlignment="Center" />
+                      <ui:Button Grid.Column="2" Content="Mount" Margin="0,0,8,0" Click="OnMountWorkDrive" />
+                      <ui:Button Grid.Column="3" Content="Unmount" Click="OnUnmountWorkDrive" />
+                    </Grid>
+                    <ui:ToggleSwitch x:Name="CfgAutomountWorkDrive" Content="Mount P: automatically when dzl starts" />
+                    <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" FontSize="12" Opacity="0.7"
+                               Text="P: is the DayZ Tools work drive — required to build mods (binarize resolves vanilla data + includes against P:). It can unmount between sessions; the bottom bar shows its live state." />
+                  </StackPanel>
+                </ui:Card>
+
                 <!-- Save config -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
                   <ui:Button Content="Save config" Appearance="Primary" Icon="{ui:SymbolIcon Save24}"
@@ -1924,5 +1958,26 @@
 
       </Grid>
     </Grid>
+
+    <!-- ===== Bottom status bar (app-wide): live P: work-drive state + quick mount ===== -->
+    <Border Grid.Row="3" Padding="12,4" BorderThickness="0,1,0,0"
+            BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+            Background="{DynamicResource ControlFillColorDefaultBrush}">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <Ellipse Grid.Column="0" Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,8,0"
+                 Fill="{Binding WorkDriveMounted, Converter={StaticResource StatusDotConverter}}" />
+        <TextBlock Grid.Column="1" Text="{Binding WorkDriveStatus}" VerticalAlignment="Center"
+                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+        <ui:Button Grid.Column="3" Content="Mount P:" Padding="8,2" FontSize="12"
+                   Click="OnMountWorkDrive"
+                   Visibility="{Binding WorkDriveMounted, Converter={StaticResource InverseBoolToVis}}" />
+      </Grid>
+    </Border>
   </Grid>
 </ui:FluentWindow>

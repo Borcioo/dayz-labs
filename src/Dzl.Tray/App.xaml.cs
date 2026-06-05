@@ -90,6 +90,22 @@ public partial class App : Application
 
         _tray = new TrayIcon(configPath);
 
+        // Auto-mount the P: work drive on launch when opted in (background; idempotent — no-op if
+        // already mounted). De-elevated, in this user session, so P: is visible to the tray + game.
+        if (cfg.AutomountWorkDrive)
+        {
+            var toolsPath = cfg.DayzToolsPath;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    var exe = Path.Combine(toolsPath, "Bin", "WorkDrive", "WorkDrive.exe");
+                    Dzl.Core.Tools.WorkDrive.Mount(File.Exists(exe) ? exe : "", Dzl.Core.Env.EnvDetect.WorkDir(toolsPath));
+                }
+                catch { /* best-effort; the status bar reflects the real state */ }
+            });
+        }
+
         // Show the main window on launch so it's visible immediately. Pass --tray (or --minimized)
         // to start hidden to the tray instead — used by login auto-start.
         bool startHidden = e.Args.Any(a =>

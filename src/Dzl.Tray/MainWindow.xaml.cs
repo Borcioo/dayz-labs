@@ -323,6 +323,7 @@ public partial class MainWindow : FluentWindow
         CfgClientExeNormal.Text = c.ClientExeNormal;
         CfgScanRoots.Text = string.Join("\n", c.ScanRoots);
         CfgEnableAutomationServer.IsChecked = c.EnableAutomationServer;
+        CfgAutomountWorkDrive.IsChecked = c.AutomountWorkDrive;
         ConfigError.Visibility = Visibility.Collapsed;
     }
 
@@ -345,6 +346,7 @@ public partial class MainWindow : FluentWindow
             ClientExeNormal = CfgClientExeNormal.Text.Trim(),
             ScanRoots = roots,
             EnableAutomationServer = CfgEnableAutomationServer.IsChecked == true,
+            AutomountWorkDrive = CfgAutomountWorkDrive.IsChecked == true,
         };
         _vm.ApplyConfig(edited);
         LoadSettingsFields();

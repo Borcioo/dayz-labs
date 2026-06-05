@@ -41,6 +41,10 @@ public sealed record DzlConfig
     /// (hidden, as a monitor). Default on. snake_case: auto_launch_tray.</summary>
     public bool AutoLaunchTray { get; init; } = true;
 
+    /// <summary>Mount the P: work drive when the tray app launches. Off by default. snake_case:
+    /// automount_work_drive.</summary>
+    public bool AutomountWorkDrive { get; init; } = false;
+
     public static DzlConfig Default() => new();
 
     // --- two-tier split: global (machine env) vs per-server instance ---
@@ -62,6 +66,7 @@ public sealed record DzlConfig
         ModWidthIdx = ModWidthIdx,
         EnableAutomationServer = EnableAutomationServer,
         AutoLaunchTray = AutoLaunchTray,
+        AutomountWorkDrive = AutomountWorkDrive,
         ActiveInstance = activeInstance,
     };
 
@@ -98,6 +103,7 @@ public sealed record DzlConfig
         ModWidthIdx = g.ModWidthIdx,
         EnableAutomationServer = g.EnableAutomationServer,
         AutoLaunchTray = g.AutoLaunchTray,
+        AutomountWorkDrive = g.AutomountWorkDrive,
         ProfilesPath = i.ProfilesPath,
         ClientProfilesPath = i.ClientProfilesPath,
         Port = i.Port,
