@@ -774,17 +774,24 @@
                               <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                               </Grid.ColumnDefinitions>
                               <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Name}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
                                 <TextBlock Text="{Binding Path}" FontSize="11" TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                               </StackPanel>
-                              <Border Grid.Column="1" CornerRadius="9" Padding="8,2" Background="#5A1F1F"
+                              <Border Grid.Column="1" CornerRadius="9" Padding="8,2" Margin="0,0,8,0" Background="#5A1F1F"
                                       VerticalAlignment="Center"
                                       Visibility="{Binding Missing, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="missing" FontSize="11" FontWeight="SemiBold" Foreground="#FF6B6B" />
                               </Border>
+                              <ui:Button Grid.Column="2" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger"
+                                         ToolTip="Remove this stale entry from the active server's run-list"
+                                         VerticalAlignment="Center"
+                                         Visibility="{Binding Missing, Converter={StaticResource BoolToVis}}"
+                                         Command="{Binding DataContext.RemoveModCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                         CommandParameter="{Binding}" />
                             </Grid>
                           </Border>
                         </DataTemplate>

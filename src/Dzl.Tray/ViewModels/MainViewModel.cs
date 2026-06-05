@@ -455,6 +455,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         RefreshPreview();
     }
 
+    /// <summary>Drop a mod from the active server's run-list (used to prune stale/"missing" entries that a
+    /// Rescan can't touch — Rescan only re-discovers files on disk, it doesn't edit the saved run-list).</summary>
+    [RelayCommand]
+    private void RemoveMod(ModRowVm? row)
+    {
+        if (row is null) return;
+        row.Changed -= OnModChanged;
+        Mods.Remove(row);
+        Persist();   // rebuilds the run-list from the remaining rows + saves to the active instance
+    }
+
     // --- Presets -----------------------------------------------------------
     //
     // All preset ops run DIRECTLY against Profiles/Core (quick file I/O). The tray
