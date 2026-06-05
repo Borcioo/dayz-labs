@@ -4,6 +4,18 @@ using System.Text.RegularExpressions;
 
 namespace Dzl.Core.Workshop;
 
+/// <summary>A Workshop item: id + title plus the browse/detail metadata (preview image, subs, dates, tags,
+/// short description) the keyless endpoints return.</summary>
+public sealed record WorkshopItem(
+    string Id,
+    string Title,
+    string Description = "",
+    long Updated = 0,
+    string PreviewUrl = "",
+    long Subscriptions = 0,
+    long Created = 0,
+    string Tags = "");
+
 /// <summary>A sort option as the Workshop browse page exposes it (label + its <c>browsesort</c> value).</summary>
 public sealed record WorkshopSort(string Label, string BrowseSort);
 

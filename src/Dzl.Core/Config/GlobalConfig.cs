@@ -51,9 +51,6 @@ public sealed record GlobalConfig
     /// Empty = no editor configured. snake_case: editor_path.</summary>
     public string EditorPath { get; init; } = "";
 
-    /// <summary>Steam Web API key (steamcommunity.com/dev/apikey) — required for Workshop search. snake_case: steam_api_key.</summary>
-    public string SteamApiKey { get; init; } = "";
-
     /// <summary>Path to steamcmd.exe — required for Workshop download/update. snake_case: steamcmd_path.</summary>
     public string SteamCmdPath { get; init; } = "";
 

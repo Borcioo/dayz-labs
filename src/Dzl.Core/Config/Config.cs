@@ -58,9 +58,6 @@ public sealed record DzlConfig
     /// <summary>Code editor launcher for "Open in editor". snake_case: editor_path.</summary>
     public string EditorPath { get; init; } = "";
 
-    /// <summary>Steam Web API key (Workshop search). snake_case: steam_api_key.</summary>
-    public string SteamApiKey { get; init; } = "";
-
     /// <summary>Path to steamcmd.exe (Workshop download). snake_case: steamcmd_path.</summary>
     public string SteamCmdPath { get; init; } = "";
 
@@ -96,7 +93,6 @@ public sealed record DzlConfig
         KeysDir = KeysDir,
         SigningKey = SigningKey,
         EditorPath = EditorPath,
-        SteamApiKey = SteamApiKey,
         SteamCmdPath = SteamCmdPath,
         SteamLogin = SteamLogin,
         SteamAccessToken = SteamAccessToken,
@@ -141,7 +137,6 @@ public sealed record DzlConfig
         KeysDir = g.KeysDir,
         SigningKey = g.SigningKey,
         EditorPath = g.EditorPath,
-        SteamApiKey = g.SteamApiKey,
         SteamCmdPath = g.SteamCmdPath,
         SteamLogin = g.SteamLogin,
         SteamAccessToken = g.SteamAccessToken,

@@ -330,7 +330,6 @@ public partial class MainWindow : FluentWindow
         CfgSigningKey.Text = c.SigningKey;
         CfgKeysDir.Text = c.KeysDir;
         CfgEditorPath.Text = c.EditorPath;
-        CfgSteamApiKey.Text = c.SteamApiKey;
         CfgSteamCmdPath.Text = c.SteamCmdPath;
         CfgSteamLogin.Text = c.SteamLogin;
         SteamSignInStatus.Text = _vm.SteamSignedIn ? "✓ signed in (Subscribe works in-app)" : "not signed in — Subscribe opens the Steam page";
@@ -361,7 +360,6 @@ public partial class MainWindow : FluentWindow
             SigningKey = CfgSigningKey.Text.Trim(),
             KeysDir = CfgKeysDir.Text.Trim(),
             EditorPath = CfgEditorPath.Text.Trim(),
-            SteamApiKey = CfgSteamApiKey.Text.Trim(),
             SteamCmdPath = CfgSteamCmdPath.Text.Trim(),
             SteamLogin = CfgSteamLogin.Text.Trim(),
         };
