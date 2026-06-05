@@ -906,6 +906,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _showTimeFrame = true;
     [ObservableProperty] private WorkshopItem? _selectedWorkshopItem;
     [ObservableProperty] private WorkshopItem? _workshopDetail;
+    [ObservableProperty] private bool _detailSubscribed;   // is the item shown in the details pane already subscribed?
     private int _workshopPage = 1;
     private bool _wsReady;
 
@@ -936,11 +937,18 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedWorkshopItemChanged(WorkshopItem? value) => _ = LoadDetailAsync(value);
 
+    partial void OnWorkshopDetailChanged(WorkshopItem? value) => RecomputeDetailSubscribed();
+
+    /// <summary>Refresh <see cref="DetailSubscribed"/> from the current detail item + subscribed list.</summary>
+    private void RecomputeDetailSubscribed()
+        => DetailSubscribed = WorkshopDetail is { } d && WorkshopSubscribed.Any(s => s.Id == d.Id);
+
     /// <summary>Reload the subscribed-items list (Steam client content folder).</summary>
     public void RefreshSubscribed()
     {
         WorkshopSubscribed.Clear();
         foreach (var s in new WorkshopService(_configPath).Subscribed()) WorkshopSubscribed.Add(s);
+        RecomputeDetailSubscribed();
     }
 
     /// <summary>Browse with the current sort + time frame + selected category tags + search (page 1).</summary>
@@ -1001,6 +1009,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                             ?? (WorkshopDetail?.Id == id ? WorkshopDetail!.Title : null) ?? id;
                 WorkshopSubscribed.Insert(0, new SubscribedItem(id, $"{title}  (downloading…)", ""));
             }
+            RecomputeDetailSubscribed();
         }
         return true;
     }
@@ -1017,6 +1026,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             var it = WorkshopSubscribed.FirstOrDefault(s => s.Id == id);
             if (it is not null) WorkshopSubscribed.Remove(it);
+            RecomputeDetailSubscribed();
         }
     }
 

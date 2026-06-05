@@ -11,6 +11,7 @@
 
   <Window.Resources>
     <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    <local:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
   </Window.Resources>
 
   <Grid Margin="16,8,16,16">
@@ -108,7 +109,12 @@
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
               <ui:Button Content="Subscribe" Icon="{ui:SymbolIcon Star24}" Appearance="Primary"
-                         Tag="{Binding Id}" Click="OnSubscribe" Margin="0,0,8,0" />
+                         Tag="{Binding Id}" Click="OnSubscribe" Margin="0,0,8,0"
+                         Visibility="{Binding DataContext.DetailSubscribed, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}, Converter={StaticResource InverseBoolToVis}}" />
+              <ui:Button Content="Unsubscribe" Icon="{ui:SymbolIcon Checkmark24}" Appearance="Secondary"
+                         Tag="{Binding Id}" Click="OnUnsubscribe" Margin="0,0,8,0"
+                         ToolTip="Subscribed — click to unsubscribe"
+                         Visibility="{Binding DataContext.DetailSubscribed, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}, Converter={StaticResource BoolToVis}}" />
               <ui:Button Content="Download" Icon="{ui:SymbolIcon ArrowDownload24}" Tag="{Binding Id}" Click="OnDownload" />
             </StackPanel>
             <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="12"
