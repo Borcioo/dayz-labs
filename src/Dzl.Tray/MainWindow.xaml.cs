@@ -119,7 +119,7 @@ public partial class MainWindow : FluentWindow
         if (tag == "mymods") { _vm.RefreshModProjects(); if (NewModAuthorBox.Text.Length == 0) NewModAuthorBox.Text = _vm.CachedAuthor; }
         if (tag == "servers") { _vm.RefreshServers(); _vm.RefreshBases(); }   // base dropdown needs bases
         if (tag == "bases") _vm.RefreshBases();
-        if (tag == "settings") LoadSettingsFields();
+        if (tag == "settings") { LoadSettingsFields(); _ = _vm.RefreshGitHubAuthAsync(); }
     }
 
     // --- Dashboard shortcut handlers --------------------------------------
@@ -495,6 +495,24 @@ public partial class MainWindow : FluentWindow
         if (string.IsNullOrWhiteSpace(tag)) return;
         await _vm.ReleaseRepoAsync(name, tag.Trim(), null);
     }
+
+    // GitHub OAuth login is interactive (device code + browser), so run it in a real terminal the
+    // user can complete; afterwards they can re-open Settings to see the refreshed account.
+    private void OnGitHubLogin(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("cmd.exe", "/k gh auth login --web --hostname github.com --git-protocol https")
+            { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show("Could not launch gh login:\n" + ex.Message, "GitHub login",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+        }
+    }
+
+    private async void OnGitHubLogout(object sender, RoutedEventArgs e) => await _vm.GitHubLogoutAsync();
 
     // === SERVERS page =====================================================
 

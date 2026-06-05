@@ -1700,6 +1700,37 @@
                 <!-- Settings are machine-global. Per-server settings (port, mission, mods, params)
                      live on the Servers page, under each server instance. -->
 
+                <!-- Accounts -->
+                <ui:Card Margin="0,0,0,12" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Accounts" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
+
+                    <Grid Margin="0,0,0,6">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Grid.Column="0" Text="GitHub" FontWeight="SemiBold" VerticalAlignment="Center" Width="64" />
+                      <TextBlock Grid.Column="1" Text="{Binding GhAccount}" VerticalAlignment="Center"
+                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                      <ui:Button Grid.Column="2" Content="Login" Icon="{ui:SymbolIcon Person24}"
+                                 Margin="0,0,8,0" Click="OnGitHubLogin"
+                                 ToolTip="Runs 'gh auth login --web' in a terminal — browser OAuth, no keys to type" />
+                      <ui:Button Grid.Column="3" Content="Logout" Click="OnGitHubLogout" />
+                    </Grid>
+                    <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               Text="GitHub uses the gh CLI's browser OAuth — no token to paste. Publish/Release reuse this login." />
+
+                    <Separator Margin="0,12,0,12" />
+
+                    <TextBlock Text="Steam" FontWeight="SemiBold" Margin="0,0,0,4" />
+                    <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               Text="No OAuth available. Workshop publish/download reuse your running Steam client (Publisher.exe / steamcmd) — no key needed. A Steam Web API key is only required for the Workshop search (SP5) and must be created on steamcommunity.com/dev/apikey; it can't be obtained via OAuth." />
+                  </StackPanel>
+                </ui:Card>
+
                 <!-- Paths -->
                 <ui:Card Margin="0,0,0,12" Padding="16">
                   <StackPanel>

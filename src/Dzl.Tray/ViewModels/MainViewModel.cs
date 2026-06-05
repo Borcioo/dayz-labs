@@ -839,6 +839,27 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         RefreshModProjects();
     }
 
+    /// <summary>GitHub account label for the Settings → Accounts row (keyless; reflects gh's OAuth login).</summary>
+    [ObservableProperty] private string _ghAccount = "checking…";
+
+    /// <summary>Whether gh reports a logged-in account (drives Login/Logout button enablement).</summary>
+    [ObservableProperty] private bool _ghLoggedIn;
+
+    /// <summary>Refresh the GitHub auth label off the UI thread (gh auth status shells out).</summary>
+    public async Task RefreshGitHubAuthAsync()
+    {
+        var a = await Task.Run(() => GitHub.AuthStatus());
+        GhLoggedIn = a.LoggedIn;
+        GhAccount = a.Detail;
+    }
+
+    /// <summary>Log out of GitHub (gh auth logout), then refresh the label.</summary>
+    public async Task GitHubLogoutAsync()
+    {
+        await Task.Run(() => GitHub.Logout());
+        await RefreshGitHubAuthAsync();
+    }
+
     /// <summary>Cut a GitHub release for a mod project off the UI thread.</summary>
     public async Task ReleaseRepoAsync(string name, string tag, string? notes)
     {
