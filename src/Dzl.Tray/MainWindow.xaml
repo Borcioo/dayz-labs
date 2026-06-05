@@ -989,10 +989,12 @@
                                   PlaceholderText="instance name (e.g. pvp, hardcore)" />
                       <ComboBox x:Name="NewServerMapBox" Grid.Column="1" Width="120" Margin="0,0,8,0"
                                 VerticalAlignment="Center"
+                                ToolTip="Map for vanilla instances. A base already fixes its own map, so this is locked when a base is selected."
                                 ItemsSource="{Binding Maps}" SelectedIndex="0" />
                       <ComboBox x:Name="NewServerBaseBox" Grid.Column="2" Width="170" Margin="0,0,8,0"
-                                VerticalAlignment="Center" ToolTip="Create from a base/template, or the DayZ install"
-                                ItemsSource="{Binding BaseChoices}" SelectedIndex="0" />
+                                VerticalAlignment="Center" ToolTip="Create from a base/template (brings its own map), or the DayZ install"
+                                ItemsSource="{Binding BaseChoices}" SelectedIndex="0"
+                                SelectionChanged="OnNewServerBaseChanged" />
                       <ui:TextBox x:Name="NewServerPortBox" Grid.Column="3" Width="80" Margin="0,0,8,0"
                                   PlaceholderText="port (auto)" />
                       <ui:Button x:Name="NewServerButton" Grid.Column="4" Content="Create" Appearance="Primary"

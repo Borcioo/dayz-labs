@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using Dzl.Core.Config;
+using Dzl.Core.Servers;
 using Dzl.Core.Tools;
 using Dzl.Tray.ViewModels;
 using Microsoft.Win32;
@@ -491,6 +492,21 @@ public partial class MainWindow : FluentWindow
     {
         if (sender is FrameworkElement { Tag: string name })
             NewServerStatus.Text = _vm.UseServer(name);
+    }
+
+    // A base fixes its own map (baked into its serverDZ.cfg + mpmission). When one is
+    // selected, lock the map dropdown and reflect the base's map; only vanilla is free to pick.
+    private void OnNewServerBaseChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (NewServerMapBox is null) return;   // fires once during InitializeComponent before peers exist
+        var sel = NewServerBaseBox.SelectedItem as string;
+        var vanilla = string.IsNullOrEmpty(sel) || sel == MainViewModel.VanillaChoice;
+        NewServerMapBox.IsEnabled = vanilla;
+        if (!vanilla)
+        {
+            var b = _vm.Bases.FirstOrDefault(x => x.Name == sel);
+            if (b is not null) NewServerMapBox.SelectedItem = MapAliases.MapName(b.Mission);
+        }
     }
 
     // === Bases (templates) ================================================
