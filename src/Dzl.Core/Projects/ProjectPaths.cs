@@ -65,6 +65,11 @@ public static partial class ProjectPaths
     /// OUTSIDE the PBO (it must not be in the source, or AddonBuilder would pack it into the .pbo).</summary>
     public static string BuildKeysDir(string root, string mod) => Path.Combine(BuildDir(root, mod), "keys");
 
+    /// <summary>steamcmd's install root for Workshop downloads (<c>&lt;root&gt;\workshop</c>). Items land under
+    /// <c>&lt;root&gt;\workshop\steamapps\workshop\content\221100\&lt;id&gt;</c> — kept in the projects tree
+    /// (passed to steamcmd via <c>+force_install_dir</c>) instead of buried next to steamcmd.exe.</summary>
+    public static string WorkshopDir(string root) => Path.Combine(root, "workshop");
+
     /// <summary>The folder holding all server instances under the projects root.</summary>
     public static string ServersDir(string root) => Path.Combine(root, "servers");
 

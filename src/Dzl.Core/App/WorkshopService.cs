@@ -100,6 +100,10 @@ public sealed class WorkshopService
     /// <summary>Forget the stored Steam session.</summary>
     public void SignOut() { SteamTokenStore.Clear(_configPath); _accessCache = null; }
 
+    /// <summary>steamcmd's install root for Workshop downloads — <c>&lt;ProjectsRoot&gt;\workshop</c>, kept in the
+    /// projects tree (via <c>+force_install_dir</c>) instead of buried next to steamcmd.exe.</summary>
+    private string WorkshopInstallDir() => Dzl.Core.Projects.ProjectPaths.WorkshopDir(Dzl.Core.Projects.ProjectPaths.Root(Cfg));
+
     /// <summary>Download (or re-download to update) a Workshop item via steamcmd, spawning a console for login.</summary>
     public WorkshopOp Download(string id)
     {
@@ -112,17 +116,18 @@ public sealed class WorkshopService
         // (Failure)". Require a Steam account name (auto-filled on sign-in, or set in Settings → Steam).
         if (string.IsNullOrWhiteSpace(cfg.SteamLogin))
             return new(false, "DayZ Workshop items can't be downloaded anonymously — sign in to Steam (Settings → Steam) so steamcmd uses your account");
-        return WorkshopCmd.Download(cfg.SteamCmdPath, cfg.SteamLogin, id)
-            ? new(true, $"launched steamcmd for {id} as {cfg.SteamLogin} — complete any password / Steam Guard prompt in the console window")
+        var dir = WorkshopInstallDir();
+        return WorkshopCmd.Download(cfg.SteamCmdPath, cfg.SteamLogin, id, dir)
+            ? new(true, $"launched steamcmd for {id} as {cfg.SteamLogin} → {WorkshopCmd.ContentDir(dir, id)} — complete any password / Steam Guard prompt in the console window")
             : new(false, "could not launch steamcmd");
     }
 
-    /// <summary>Workshop item ids already downloaded into steamcmd's content folder.</summary>
+    /// <summary>Workshop item ids already downloaded into the projects-tree workshop folder.</summary>
     public List<string> Downloaded()
     {
         var cfg = Cfg;
         if (string.IsNullOrWhiteSpace(cfg.SteamCmdPath)) return new();
-        var dir = Path.Combine(Path.GetDirectoryName(cfg.SteamCmdPath) ?? ".", "steamapps", "workshop", "content", WorkshopCmd.AppId);
+        var dir = Path.Combine(WorkshopInstallDir(), "steamapps", "workshop", "content", WorkshopCmd.AppId);
         if (!Directory.Exists(dir)) return new();
         try { return Directory.GetDirectories(dir).Select(d => Path.GetFileName(d)!).Where(s => s.Length > 0).ToList(); }
         catch { return new(); }
@@ -132,7 +137,7 @@ public sealed class WorkshopService
     public string? ContentDir(string id)
     {
         var cfg = Cfg;
-        return string.IsNullOrWhiteSpace(cfg.SteamCmdPath) ? null : WorkshopCmd.ContentDir(cfg.SteamCmdPath, id);
+        return string.IsNullOrWhiteSpace(cfg.SteamCmdPath) ? null : WorkshopCmd.ContentDir(WorkshopInstallDir(), id);
     }
 
     /// <summary>Items subscribed in the Steam <i>client</i> (its workshop content folder, resolved from the

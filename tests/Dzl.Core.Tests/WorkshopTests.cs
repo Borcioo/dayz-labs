@@ -68,9 +68,16 @@ public class WorkshopTests
     }
 
     [Fact]
-    public void SteamCmd_content_dir_is_under_steamapps_workshop_content()
+    public void SteamCmd_command_line_puts_force_install_dir_before_login()
     {
-        WorkshopCmd.ContentDir(@"C:\steamcmd\steamcmd.exe", "123")
-            .Should().Be(@"C:\steamcmd\steamapps\workshop\content\221100\123");
+        WorkshopCmd.CommandLine("macie", "123", @"D:\Proj\workshop")
+            .Should().Be(@"+force_install_dir ""D:\Proj\workshop"" +login macie +workshop_download_item 221100 123 +quit");
+    }
+
+    [Fact]
+    public void SteamCmd_content_dir_is_under_install_root_steamapps_workshop_content()
+    {
+        WorkshopCmd.ContentDir(@"D:\Proj\workshop", "123")
+            .Should().Be(@"D:\Proj\workshop\steamapps\workshop\content\221100\123");
     }
 }
