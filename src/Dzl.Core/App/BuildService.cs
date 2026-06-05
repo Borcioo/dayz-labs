@@ -1,5 +1,6 @@
 using Dzl.Core.Build;
 using Dzl.Core.Config;
+using Dzl.Core.Env;
 using Dzl.Core.Projects;
 using Dzl.Core.Tools;
 
@@ -73,17 +74,18 @@ public sealed class BuildService
         if (!WorkDrive.IsMounted())
             return Fail("P: work drive not mounted — mount it first (binarize resolves vanilla data + includes against P:)");
 
-        // The engine + AddonBuilder see the source on P:; (re)create the junction if missing/stale.
-        var link = ProjectPaths.WorkDriveLink(modName);
-        var ens = Junction.Ensure(link, projectDir);
+        // (Re)create the junction on the always-live work-drive source folder (survives P: unmounts);
+        // P: is mounted here (checked above), so AddonBuilder reads the same object via the P:\ path.
+        var junction = ProjectPaths.JunctionPath(EnvDetect.WorkDir(cfg.DayzToolsPath), modName);
+        var ens = Junction.Ensure(junction, projectDir);
         if (!ens.Ok)
-            return Fail($"junction P:\\{modName} → {projectDir} failed: {ens.Detail}");
+            return Fail($"junction {junction} → {projectDir} failed: {ens.Detail}");
 
         var addonsDir = ModBuild.AddonsDir(modName);
         Directory.CreateDirectory(addonsDir);
 
         var startUtc = DateTime.UtcNow;
-        var pack = AddonBuilder.Pack(exe.ExePath, link, addonsDir,
+        var pack = AddonBuilder.Pack(exe.ExePath, ProjectPaths.WorkDriveLink(modName), addonsDir,
             clear: clean, packOnly: !binarize, prefix: null, signKey: null, onLine: onLine);
 
         if (!pack.Ok)

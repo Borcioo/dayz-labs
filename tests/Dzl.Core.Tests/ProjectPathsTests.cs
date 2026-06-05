@@ -46,4 +46,15 @@ public class ProjectPathsTests
         ProjectPaths.ServerDir(@"D:\P", "chernarus").Should().Be(@"D:\P\servers\chernarus");
         ProjectPaths.WorkDriveLink("MyMod").Should().Be(@"P:\MyMod");
     }
+
+    [Fact]
+    public void JunctionPath_anchors_on_the_work_drive_source_folder()
+        => ProjectPaths.JunctionPath(@"D:\DayZWorkDrive", "MyMod").Should().Be(@"D:\DayZWorkDrive\MyMod");
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void JunctionPath_falls_back_to_P_when_source_unknown(string? source)
+        => ProjectPaths.JunctionPath(source, "MyMod").Should().Be(@"P:\MyMod");
 }

@@ -29,6 +29,16 @@ public static partial class ProjectPaths
     /// <summary>The folder for one server instance under the projects root.</summary>
     public static string ServerDir(string root, string instance) => Path.Combine(root, "servers", instance);
 
-    /// <summary>The P: junction path for a mod (where AddonBuilder/engine expect to see the source).</summary>
+    /// <summary>The <b>P:</b> path for a mod — where AddonBuilder and the engine address the source once
+    /// the work drive is mounted. P: is a subst/mount of the work-drive source folder, so this and
+    /// <see cref="JunctionPath"/> point at the same reparse point when P: is up.</summary>
     public static string WorkDriveLink(string mod) => Path.Combine(@"P:\", mod);
+
+    /// <summary>The physical junction path for a mod on the work-drive <b>source</b> folder (the always-live
+    /// folder P: is mounted from, e.g. <c>D:\DayZWorkDrive</c> — read from DayZ Tools settings.ini). Managing
+    /// the junction here keeps its state stable across P: unmounts and lets us (re)create it offline; when
+    /// P: is mounted, <see cref="WorkDriveLink"/> resolves to the same object. Falls back to <c>P:\</c> when
+    /// the source folder is unknown (then behaves like the old P:-anchored model).</summary>
+    public static string JunctionPath(string? workDriveSource, string mod) =>
+        Path.Combine(string.IsNullOrWhiteSpace(workDriveSource) ? @"P:\" : workDriveSource!, mod);
 }

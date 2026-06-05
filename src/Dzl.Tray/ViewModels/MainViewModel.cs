@@ -748,11 +748,16 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Cached author handle (for prefilling the New mod form), or "".</summary>
     public string CachedAuthor => ModScaffold.CachedAuthor(ConfigDir) ?? "";
 
+    /// <summary>The always-live work-drive source folder P: is mounted from (DayZ Tools settings.ini
+    /// <c>[ProjectDrive] path=</c>). Mod junctions are anchored here so their state survives P: unmounts and
+    /// they can be (re)created offline. Null → falls back to the P:\ junction path.</summary>
+    private string? WorkDriveSource => EnvDetect.WorkDir(_cfg.DayzToolsPath);
+
     /// <summary>Re-enumerate mod source projects. Called on My Mods page show + after create/import/link.</summary>
     public void RefreshModProjects()
     {
         ModProjects.Clear();
-        foreach (var p in Dzl.Core.Projects.ModProjects.Discover(ProjectsRoot)) ModProjects.Add(new ModProjectVm(p));
+        foreach (var p in Dzl.Core.Projects.ModProjects.Discover(ProjectsRoot, WorkDriveSource)) ModProjects.Add(new ModProjectVm(p));
         OnPropertyChanged(nameof(ProjectsRoot));
         _ = LoadGitStatusesAsync();   // fire-and-forget; fills each card's git badge off the UI thread
     }
@@ -779,7 +784,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var res = ModScaffold.Scaffold(root, name, author);
         if (!res.Ok) return $"✗ {res.Message}";
         if (!string.IsNullOrWhiteSpace(author)) ModScaffold.SaveAuthor(ConfigDir, author);
-        var link = Junction.Ensure(ProjectPaths.WorkDriveLink(name), ProjectPaths.ModDir(root, name));
+        var link = Junction.Ensure(ProjectPaths.JunctionPath(WorkDriveSource, name), ProjectPaths.ModDir(root, name));
         RefreshModProjects();
         return link.Ok
             ? $"✓ created {name} + linked P:\\{name}"
@@ -797,7 +802,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>(Re)create the P:\&lt;Mod&gt; junction for a project. Returns a status line.</summary>
     public string QuickJunction(string name)
     {
-        var link = Junction.Ensure(ProjectPaths.WorkDriveLink(name), ProjectPaths.ModDir(ProjectsRoot, name));
+        var link = Junction.Ensure(ProjectPaths.JunctionPath(WorkDriveSource, name), ProjectPaths.ModDir(ProjectsRoot, name));
         RefreshModProjects();
         return link.Ok ? $"✓ {name}: {link.Detail}" : $"✗ {name}: {link.Detail}";
     }
