@@ -5,7 +5,14 @@ using Xunit;
 
 public class LauncherServiceTests
 {
-    private static string TmpConfig() => Path.Combine(Directory.CreateTempSubdirectory().FullName, "config.json");
+    // config.json with a temp ProjectsRoot so instances live under a temp dir (never the real profile).
+    private static string TmpConfig()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var p = Path.Combine(dir, "config.json");
+        GlobalStore.Save(new GlobalConfig { ProjectsRoot = Path.Combine(dir, "projects") }, p);
+        return p;
+    }
 
     [Fact]
     public void Status_reports_active_profile_and_down_targets()
@@ -23,12 +30,12 @@ public class LauncherServiceTests
     public void Mods_lists_enabled_with_side()
     {
         var path = TmpConfig();
+        Profiles.EnsureDefault(path);
         var cfg = ConfigStore.Load(path) with { Mods = new() {
             new() { Path = @"P:\@CF", Enabled = true, Side = "both" },
             new() { Path = @"P:\@Off", Enabled = false, Side = "both" },
         }};
-        Profiles.EnsureDefault(path);
-        ConfigStore.Save(cfg, Profiles.PresetFile("default", path)); // active profile is 'default'
+        Profiles.Save(cfg, "default", path); // active instance is 'default'
         var svc = new LauncherService(path);
         var mods = svc.Mods();
         mods.Should().ContainSingle(m => m.Path == @"P:\@CF" && m.Side == "both");
@@ -53,10 +60,9 @@ public class LauncherServiceTests
         // independent of any real DayZ install on the test machine.
         var path = TmpConfig();
         var empty = Directory.CreateTempSubdirectory().FullName;
-        var cfg = ConfigStore.Load(path) with { ProfilesPath = empty, ClientProfilesPath = empty };
-        ConfigStore.Save(cfg, path);
         Profiles.EnsureDefault(path);
-        ConfigStore.Save(cfg, Profiles.PresetFile("default", path)); // active profile is 'default'
+        var cfg = ConfigStore.Load(path) with { ProfilesPath = empty, ClientProfilesPath = empty };
+        Profiles.Save(cfg, "default", path); // active instance is 'default'
         var svc = new LauncherService(path);
         svc.Logs("script", 10).Lines.Should().BeEmpty();
     }

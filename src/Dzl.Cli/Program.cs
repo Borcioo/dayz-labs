@@ -174,7 +174,7 @@ statusCmd.SetHandler(ctx =>
     Console.WriteLine($"profiles:      {report.Paths.GetValueOrDefault("profiles_path")}");
     Console.WriteLine($"client prof:   {report.Paths.GetValueOrDefault("client_profiles_path")}");
     Console.WriteLine($"config dir:    {report.Paths.GetValueOrDefault("config_dir")}");
-    Console.WriteLine($"instances dir: {report.Paths.GetValueOrDefault("presets_dir")}");
+    Console.WriteLine($"servers dir:   {report.Paths.GetValueOrDefault("presets_dir")}");
     Console.WriteLine($"projects root: {report.Paths.GetValueOrDefault("projects_root")}");
     Console.WriteLine($"enabled mods:  {report.Mods.Count}");
     foreach (var m in report.Mods)

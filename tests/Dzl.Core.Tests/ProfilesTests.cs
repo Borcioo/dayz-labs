@@ -4,14 +4,20 @@ using Xunit;
 
 public class ProfilesTests
 {
-    private static string TmpConfig() => Path.Combine(Directory.CreateTempSubdirectory().FullName, "config.json");
+    // A config.json with a temp ProjectsRoot, so instances live under <temp>\projects\servers\<name>\.dzl\.
+    private static string TmpConfig()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var configPath = Path.Combine(dir, "config.json");
+        GlobalStore.Save(new GlobalConfig { ProjectsRoot = Path.Combine(dir, "projects") }, configPath);
+        return configPath;
+    }
 
     [Fact]
-    public void Save_then_resolve_active_points_at_preset()
+    public void Save_then_resolve_active_points_at_instance()
     {
         var path = TmpConfig();
-        var c = DzlConfig.Default() with { Port = 2700 };
-        Profiles.Save(c, "proj", path);
+        Profiles.Save(DzlConfig.Default() with { Port = 2700 }, "proj", path);
         Profiles.SetActive("proj", path);
         var (cfg, savePath, name) = Profiles.ResolveActive(path);
         name.Should().Be("proj");
@@ -20,19 +26,27 @@ public class ProfilesTests
     }
 
     [Fact]
-    public void EnsureDefault_seeds_and_activates_on_first_run()
+    public void Instance_config_lives_in_dot_dzl_inside_its_folder()
     {
         var path = TmpConfig();
-        ConfigStore.Save(DzlConfig.Default() with { Port = 2345 }, path);
-        Profiles.EnsureDefault(path).Should().Be("default");
-        Profiles.List(path).Should().Contain("default");
-        var (cfg, _, active) = Profiles.ResolveActive(path);
-        active.Should().Be("default");
-        cfg.Port.Should().Be(2345);
+        Profiles.Save(DzlConfig.Default(), "srv", path);
+        var f = Profiles.PresetFile("srv", path);
+        f.Should().EndWith(Path.Combine("servers", "srv", ".dzl", "instance.json"));
+        File.Exists(f).Should().BeTrue();
     }
 
     [Fact]
-    public void EnsureDefault_noop_when_preset_already_active()
+    public void EnsureDefault_seeds_and_activates_on_first_run()
+    {
+        var path = TmpConfig();
+        Profiles.EnsureDefault(path).Should().Be("default");
+        Profiles.List(path).Should().Contain("default");
+        var (_, _, active) = Profiles.ResolveActive(path);
+        active.Should().Be("default");
+    }
+
+    [Fact]
+    public void EnsureDefault_noop_when_instance_already_active()
     {
         var path = TmpConfig();
         Profiles.Save(DzlConfig.Default(), "proj", path);
@@ -42,7 +56,7 @@ public class ProfilesTests
     }
 
     [Fact]
-    public void EnsureDefault_noop_when_presets_exist_but_none_active()
+    public void EnsureDefault_noop_when_instances_exist_but_none_active()
     {
         var path = TmpConfig();
         Profiles.Save(DzlConfig.Default(), "proj", path);
@@ -65,17 +79,13 @@ public class ProfilesTests
         var path = TmpConfig();
         Profiles.SetActive("ghost", path);
         var (_, savePath, name) = Profiles.ResolveActive(path);
-        name.Should().Be("");                                       // dangling → treated as no-active
-        savePath.Should().Be(Profiles.PresetFile("default", path)); // a save would land in the default instance
+        name.Should().Be("");
+        savePath.Should().Be(Profiles.PresetFile("default", path));
     }
 
     [Fact]
-    public void Switching_active_preset_moves_the_save_target()
+    public void Switching_active_instance_moves_the_save_target()
     {
-        // Guards the contract the tray's Reload() relies on: after switching the active preset,
-        // ResolveActive's savePath must point at the NEW preset's file. (The tray bug was caching
-        // savePath once at construction, so edits to a switched-to preset were written to the old
-        // file and lost on reload.)
         var path = TmpConfig();
         Profiles.Save(DzlConfig.Default() with { Port = 1 }, "alpha", path);
         Profiles.Save(DzlConfig.Default() with { Port = 2 }, "beta", path);
@@ -92,7 +102,7 @@ public class ProfilesTests
     }
 
     [Fact]
-    public void Delete_removes_preset()
+    public void Delete_removes_instance()
     {
         var path = TmpConfig();
         Profiles.Save(DzlConfig.Default(), "tmp", path);
