@@ -732,7 +732,7 @@
             </Grid>
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-              <StackPanel>
+              <StackPanel Margin="0,0,14,0">
 
                 <!-- Steam Workshop (SP5) — full browser in its own window -->
                 <ui:Card Margin="0,0,0,12" Padding="16">
@@ -841,7 +841,7 @@
             </StackPanel>
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-              <StackPanel>
+              <StackPanel Margin="0,0,14,0">
 
                 <!-- Warning: P: not mounted → building is blocked -->
                 <Border Margin="0,0,0,12" Padding="12" CornerRadius="6"
@@ -1083,7 +1083,7 @@
             </StackPanel>
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-              <StackPanel>
+              <StackPanel Margin="0,0,14,0">
 
                 <!-- New server -->
                 <ui:Card Margin="0,0,0,12" Padding="16">
@@ -1232,7 +1232,7 @@
             </StackPanel>
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-              <StackPanel>
+              <StackPanel Margin="0,0,14,0">
 
                 <!-- New base -->
                 <ui:Card Margin="0,0,0,12" Padding="16">
@@ -1714,7 +1714,7 @@
             </Grid>
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-              <StackPanel>
+              <StackPanel Margin="0,0,14,0">
 
                 <!-- DayZ Tools catalog -->
                 <ui:Card Margin="0,0,0,12" Padding="16">
@@ -1877,7 +1877,7 @@
             <TextBlock Grid.Row="0" Text="Settings" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12" />
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-              <StackPanel>
+              <StackPanel Margin="0,0,14,0">
 
                 <!-- Re-run the first-run environment wizard -->
                 <ui:Button Content="Run setup wizard…" Icon="{ui:SymbolIcon Wand24}"
@@ -2157,7 +2157,7 @@
             </StackPanel>
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-              <StackPanel>
+              <StackPanel Margin="0,0,14,0">
 
                 <!-- Register in Claude Code -->
                 <ui:Card Margin="0,0,0,12" Padding="16">
