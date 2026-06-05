@@ -52,10 +52,18 @@ public sealed class WorkshopService
         if (!string.IsNullOrWhiteSpace(pasted)) return (pasted.Trim(), "");
         var refresh = SteamTokenStore.Load(_configPath);
         if (refresh is null) return (null, "not signed in to Steam");
-        if (!string.IsNullOrEmpty(_accessCache) && DateTime.UtcNow - _accessAt < TimeSpan.FromHours(12)) return (_accessCache, "");
+        // 1) in-memory cache (this process)  2) disk-cached access token from a prior run — reuse while it's still
+        // valid (~24h) since renewing from the refresh token is unreliable. Only mint a new one once it's expired.
+        if (!string.IsNullOrEmpty(_accessCache) && SteamAuth.TokenStillValid(_accessCache)) return (_accessCache, "");
+        var stored = SteamTokenStore.LoadAccess(_configPath);
+        if (!string.IsNullOrEmpty(stored) && SteamAuth.TokenStillValid(stored))
+        {
+            _accessCache = stored; _accessAt = DateTime.UtcNow;
+            return (stored, "");
+        }
         using var auth = new SteamAuth();
         var (token, error) = await auth.RenewAccessTokenAsync(refresh);
-        if (!string.IsNullOrEmpty(token)) { _accessCache = token; _accessAt = DateTime.UtcNow; }
+        if (!string.IsNullOrEmpty(token)) { _accessCache = token; _accessAt = DateTime.UtcNow; SteamTokenStore.SaveAccess(_configPath, token); }
         return (token, string.IsNullOrEmpty(token) ? $"couldn't refresh Steam session ({error}) — sign in again" : "");
     }
 
@@ -91,6 +99,7 @@ public sealed class WorkshopService
     {
         SteamTokenStore.Save(_configPath, r.RefreshToken);
         _accessCache = r.AccessToken; _accessAt = DateTime.UtcNow;
+        if (!string.IsNullOrWhiteSpace(r.AccessToken)) SteamTokenStore.SaveAccess(_configPath, r.AccessToken);
         if (string.IsNullOrWhiteSpace(r.AccountName)) return;
         var (cfg, _, active) = Profiles.ResolveActive(_configPath);
         if (!string.Equals(cfg.SteamLogin, r.AccountName, StringComparison.OrdinalIgnoreCase))

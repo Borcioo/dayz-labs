@@ -98,6 +98,22 @@ public sealed class SteamAuth : IDisposable
     /// <summary>Extract the SteamID from a Steam JWT (the <c>sub</c> claim is the steamid64). Pure.</summary>
     public static SteamID? SteamIdFromToken(string jwt)
     {
+        var sub = Claim(jwt, "sub");
+        return sub is not null && ulong.TryParse(sub, out var id) ? new SteamID(id) : null;
+    }
+
+    /// <summary>True when a Steam JWT access token is still valid for at least <paramref name="margin"/> (default
+    /// 10 min) — reads the <c>exp</c> claim. A token with no readable expiry is treated as expired. Pure.</summary>
+    public static bool TokenStillValid(string jwt, TimeSpan? margin = null)
+    {
+        var exp = Claim(jwt, "exp");
+        if (exp is null || !long.TryParse(exp, out var unix)) return false;
+        return DateTimeOffset.FromUnixTimeSeconds(unix) - DateTimeOffset.UtcNow > (margin ?? TimeSpan.FromMinutes(10));
+    }
+
+    /// <summary>Read a string claim from a Steam JWT payload (the middle, base64url segment). Pure; null on any error.</summary>
+    private static string? Claim(string jwt, string name)
+    {
         try
         {
             var parts = jwt.Split('.');
@@ -105,8 +121,8 @@ public sealed class SteamAuth : IDisposable
             var b64 = parts[1].Replace('-', '+').Replace('_', '/');
             b64 = b64.PadRight(b64.Length + (4 - b64.Length % 4) % 4, '=');
             using var doc = JsonDocument.Parse(Encoding.UTF8.GetString(Convert.FromBase64String(b64)));
-            return doc.RootElement.TryGetProperty("sub", out var sub) && ulong.TryParse(sub.GetString(), out var id)
-                ? new SteamID(id) : null;
+            if (!doc.RootElement.TryGetProperty(name, out var v)) return null;
+            return v.ValueKind == JsonValueKind.Number ? v.GetRawText() : v.GetString();
         }
         catch { return null; }
     }

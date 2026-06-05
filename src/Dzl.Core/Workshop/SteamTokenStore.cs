@@ -3,43 +3,51 @@ using System.Text;
 
 namespace Dzl.Core.Workshop;
 
-/// <summary>Stores the Steam <b>refresh token</b> (long-lived, account-sensitive) encrypted at rest with
-/// Windows DPAPI (CurrentUser scope) in <c>&lt;configDir&gt;\steam.token</c> — never in config.json. The
-/// short-lived access token is kept only in memory and renewed from this. Never throws.</summary>
+/// <summary>Stores the Steam tokens encrypted at rest with Windows DPAPI (CurrentUser scope) next to the
+/// config — never in config.json. The <b>refresh token</b> (long-lived) lives in <c>steam.token</c>; the
+/// shorter-lived <b>access token</b> (what the Workshop API needs, ~24h) is cached in <c>steam.access</c> so a
+/// restart can reuse it without re-minting (token renewal from the refresh token is unreliable). Never throws.</summary>
 public static class SteamTokenStore
 {
-    private static string TokenFile(string configPath) =>
-        Path.Combine(Path.GetDirectoryName(configPath) ?? ".", "steam.token");
+    private static string Dir(string configPath) => Path.GetDirectoryName(configPath) ?? ".";
+    private static string RefreshFile(string configPath) => Path.Combine(Dir(configPath), "steam.token");
+    private static string AccessFile(string configPath) => Path.Combine(Dir(configPath), "steam.access");
 
-    public static void Save(string configPath, string refreshToken)
+    private static void Write(string file, string value)
     {
         if (!OperatingSystem.IsWindows()) return;   // DPAPI is Windows-only (dzl is a Windows app)
         try
         {
-            var enc = ProtectedData.Protect(Encoding.UTF8.GetBytes(refreshToken), null, DataProtectionScope.CurrentUser);
-            File.WriteAllBytes(TokenFile(configPath), enc);
+            var enc = ProtectedData.Protect(Encoding.UTF8.GetBytes(value), null, DataProtectionScope.CurrentUser);
+            File.WriteAllBytes(file, enc);
         }
         catch { /* best-effort; sign-in can be repeated */ }
     }
 
-    public static string? Load(string configPath)
+    private static string? Read(string file)
     {
         if (!OperatingSystem.IsWindows()) return null;
         try
         {
-            var f = TokenFile(configPath);
-            if (!File.Exists(f)) return null;
-            var dec = ProtectedData.Unprotect(File.ReadAllBytes(f), null, DataProtectionScope.CurrentUser);
+            if (!File.Exists(file)) return null;
+            var dec = ProtectedData.Unprotect(File.ReadAllBytes(file), null, DataProtectionScope.CurrentUser);
             var s = Encoding.UTF8.GetString(dec);
             return string.IsNullOrWhiteSpace(s) ? null : s;
         }
         catch { return null; }
     }
 
-    public static bool Exists(string configPath) => File.Exists(TokenFile(configPath));
+    public static void Save(string configPath, string refreshToken) => Write(RefreshFile(configPath), refreshToken);
+    public static string? Load(string configPath) => Read(RefreshFile(configPath));
+
+    public static void SaveAccess(string configPath, string accessToken) => Write(AccessFile(configPath), accessToken);
+    public static string? LoadAccess(string configPath) => Read(AccessFile(configPath));
+
+    public static bool Exists(string configPath) => File.Exists(RefreshFile(configPath));
 
     public static void Clear(string configPath)
     {
-        try { var f = TokenFile(configPath); if (File.Exists(f)) File.Delete(f); } catch { /* best-effort */ }
+        foreach (var f in new[] { RefreshFile(configPath), AccessFile(configPath) })
+            try { if (File.Exists(f)) File.Delete(f); } catch { /* best-effort */ }
     }
 }
