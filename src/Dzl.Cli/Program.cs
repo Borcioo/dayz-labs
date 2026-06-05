@@ -802,4 +802,81 @@ repoReleaseCmd.SetHandler(ctx =>
 repoCmd.AddCommand(repoReleaseCmd);
 root.AddCommand(repoCmd);
 
+// ---- types (SP6: Central Economy) ----
+var typesCmd = new Command("types", "Edit the active server mission's Central Economy (types.xml).");
+
+var typesLsCmd = new Command("ls", "List types (name, nominal, min, lifetime, category).");
+var typesLsFilter = new Option<string?>("--filter", () => null, "Substring filter on the type name.");
+typesLsCmd.AddOption(typesLsFilter);
+typesLsCmd.SetHandler(ctx =>
+{
+    var (_, _, _, configPath) = Resolve(ctx);
+    var svc = new TypesService(configPath);
+    if (svc.TypesFile() is null) { Console.Error.WriteLine("no types.xml for the active server's mission"); ctx.ExitCode = 1; return; }
+    var filter = ctx.ParseResult.GetValueForOption(typesLsFilter);
+    var list = svc.List().Where(t => filter is null || t.Name.Contains(filter, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(t => t.Name);
+    foreach (var t in list)
+        Console.WriteLine($"{t.Name,-32} nom={t.Nominal,-4} min={t.Min,-4} life={t.Lifetime,-7} {t.Category}");
+});
+typesCmd.AddCommand(typesLsCmd);
+
+var typesSetClass = new Argument<string>("Class", "Type/class name.");
+var typesSetNominal = new Option<int?>("--nominal", () => null, "Target spawn count.");
+var typesSetMin = new Option<int?>("--min", () => null, "Minimum before restock.");
+var typesSetLife = new Option<int?>("--lifetime", () => null, "Despawn seconds.");
+var typesSetRestock = new Option<int?>("--restock", () => null, "Restock seconds.");
+var typesSetCost = new Option<int?>("--cost", () => null, "Spawn priority cost.");
+var typesSetCat = new Option<string?>("--category", () => null, "Category name.");
+var typesSetCmd = new Command("set", "Set/insert a type (only the given fields change; backs up first).")
+    { typesSetClass, typesSetNominal, typesSetMin, typesSetLife, typesSetRestock, typesSetCost, typesSetCat };
+typesSetCmd.SetHandler(ctx =>
+{
+    var (_, _, _, configPath) = Resolve(ctx);
+    var r = new TypesService(configPath).Set(
+        ctx.ParseResult.GetValueForArgument(typesSetClass),
+        ctx.ParseResult.GetValueForOption(typesSetNominal),
+        ctx.ParseResult.GetValueForOption(typesSetMin),
+        ctx.ParseResult.GetValueForOption(typesSetLife),
+        ctx.ParseResult.GetValueForOption(typesSetRestock),
+        ctx.ParseResult.GetValueForOption(typesSetCost),
+        ctx.ParseResult.GetValueForOption(typesSetCat));
+    Console.WriteLine(r.Message);
+    if (!r.Ok) ctx.ExitCode = 1;
+});
+typesCmd.AddCommand(typesSetCmd);
+
+var typesRmClass = new Argument<string>("Class", "Type/class name.");
+var typesRmCmd = new Command("rm", "Remove a type (backs up first).") { typesRmClass };
+typesRmCmd.SetHandler(ctx =>
+{
+    var (_, _, _, configPath) = Resolve(ctx);
+    var r = new TypesService(configPath).Remove(ctx.ParseResult.GetValueForArgument(typesRmClass));
+    Console.WriteLine(r.Message);
+    if (!r.Ok) ctx.ExitCode = 1;
+});
+typesCmd.AddCommand(typesRmCmd);
+
+var typesBackupsCmd = new Command("backups", "List types.xml backups (newest first).");
+typesBackupsCmd.SetHandler(ctx =>
+{
+    var (_, _, _, configPath) = Resolve(ctx);
+    var b = new TypesService(configPath).Backups();
+    if (b.Count == 0) { Console.WriteLine("(no backups)"); return; }
+    foreach (var x in b) Console.WriteLine($"{x.Stamp}  {x.Path}");
+});
+typesCmd.AddCommand(typesBackupsCmd);
+
+var typesRestoreArg = new Argument<string>("file", "Backup file path (see 'types backups').");
+var typesRestoreCmd = new Command("restore", "Restore a backup over the live types.xml (snapshots current first).") { typesRestoreArg };
+typesRestoreCmd.SetHandler(ctx =>
+{
+    var (_, _, _, configPath) = Resolve(ctx);
+    var r = new TypesService(configPath).Restore(ctx.ParseResult.GetValueForArgument(typesRestoreArg));
+    Console.WriteLine(r.Message);
+    if (!r.Ok) ctx.ExitCode = 1;
+});
+typesCmd.AddCommand(typesRestoreCmd);
+root.AddCommand(typesCmd);
+
 return await root.InvokeAsync(args);

@@ -121,6 +121,38 @@ public static class DzlMcpTools
                                  [Description("release notes (omit = auto-generated)")] string? notes = null)
         => J(new RepoService(ConfigPath()).Release(mod, tag, notes));
 
+    // --- Central Economy (types.xml) (SP6) ---
+
+    [McpServerTool, Description("List types from the active server mission's types.xml (optionally filtered by name substring).")]
+    public static string TypesList([Description("name substring filter (optional)")] string? filter = null)
+    {
+        var all = new TypesService(ConfigPath()).List();
+        var list = filter is null ? all
+            : all.Where(t => t.Name.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToList();
+        return J(list);
+    }
+
+    [McpServerTool, Description("Set/insert a type in the active mission's types.xml (only given fields change; versioned backup first).")]
+    public static string TypesSet([Description("Type/class name")] string cls,
+                                  [Description("nominal spawn count")] int? nominal = null,
+                                  [Description("minimum before restock")] int? min = null,
+                                  [Description("lifetime (despawn seconds)")] int? lifetime = null,
+                                  [Description("restock seconds")] int? restock = null,
+                                  [Description("spawn cost")] int? cost = null,
+                                  [Description("category name")] string? category = null)
+        => J(new TypesService(ConfigPath()).Set(cls, nominal, min, lifetime, restock, cost, category));
+
+    [McpServerTool, Description("Remove a type from the active mission's types.xml (versioned backup first).")]
+    public static string TypesRemove([Description("Type/class name")] string cls)
+        => J(new TypesService(ConfigPath()).Remove(cls));
+
+    [McpServerTool, Description("List versioned backups of the active mission's types.xml (newest first).")]
+    public static string TypesBackups() => J(new TypesService(ConfigPath()).Backups());
+
+    [McpServerTool, Description("Restore a types.xml backup over the live file (snapshots the current file first).")]
+    public static string TypesRestore([Description("Backup file path (from types_backups)")] string file)
+        => J(new TypesService(ConfigPath()).Restore(file));
+
     // --- Server instances ---
 
     [McpServerTool, Description("Scaffold a new server instance and save it as a preset. Returns Ok, Name, Dir, Port, Message.")]
