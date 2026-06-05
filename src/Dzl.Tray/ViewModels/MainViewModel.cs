@@ -870,9 +870,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>Delete the active server's Central Economy persistence (storage_*) so the next start
     /// regenerates it fresh. Returns a status line.</summary>
-    public string WipeActivePersistence()
+    public string WipeActivePersistence() => WipePersistenceDir(ActiveServerDir);
+
+    /// <summary>Wipe persistence (storage_*) for the server whose files live in <paramref name="dir"/>.</summary>
+    public string WipePersistenceDir(string dir)
     {
-        var n = ServerScaffold.WipePersistence(ActiveServerDir);
+        var n = ServerScaffold.WipePersistence(dir);
         return n > 0
             ? $"✓ wiped {n} storage folder(s) — fresh persistence on next start"
             : "nothing to wipe (persistence is already clean)";

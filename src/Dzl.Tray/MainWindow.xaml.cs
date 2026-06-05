@@ -396,6 +396,18 @@ public partial class MainWindow : FluentWindow
         NewServerStatus.Text = _vm.DeleteServer(name);
     }
 
+    private void OnWipeServerPersistence(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string dir } || string.IsNullOrWhiteSpace(dir)) return;
+        var ok = System.Windows.MessageBox.Show(
+            $"Wipe persistence for this server?\n\n{dir}\n\nThe world / loot / player state resets; DayZ " +
+            "regenerates fresh Central Economy storage on the next start. The mission files are kept.",
+            "Wipe persistence", System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning) == System.Windows.MessageBoxResult.Yes;
+        if (!ok) return;
+        NewServerStatus.Text = _vm.WipePersistenceDir(dir);
+    }
+
     private void OnAddScanRoot(object sender, RoutedEventArgs e)
     {
         var dir = PickFolder();

@@ -1019,6 +1019,7 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                               </Grid.ColumnDefinitions>
                               <!-- active marker -->
                               <TextBlock Grid.Column="0" Text="●" Margin="0,0,10,0" FontSize="14" VerticalAlignment="Center"
@@ -1044,7 +1045,9 @@
                                          Tag="{Binding Name}" Click="OnOpenServerMods" VerticalAlignment="Center" Margin="0,0,8,0" />
                               <ui:Button Grid.Column="5" Content="Use" Icon="{ui:SymbolIcon Checkmark24}"
                                          Tag="{Binding Name}" Click="OnUseServer" VerticalAlignment="Center" Margin="0,0,8,0" />
-                              <ui:Button Grid.Column="6" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" ToolTip="Delete instance"
+                              <ui:Button Grid.Column="6" Icon="{ui:SymbolIcon Broom24}" ToolTip="Wipe persistence (reset world / CE storage)"
+                                         Tag="{Binding Dir}" Click="OnWipeServerPersistence" VerticalAlignment="Center" Margin="0,0,8,0" />
+                              <ui:Button Grid.Column="7" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" ToolTip="Delete instance"
                                          Tag="{Binding Name}" Click="OnDeleteServer" VerticalAlignment="Center" />
                             </Grid>
                           </Border>
