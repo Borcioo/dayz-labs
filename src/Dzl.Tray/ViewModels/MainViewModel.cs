@@ -18,6 +18,7 @@ using Dzl.Core.Tools;
 using Dzl.Core.Projects;
 using Dzl.Core.Servers;
 using Dzl.Core.Bases;
+using Dzl.Core.Vcs;
 using Dzl.Tray;
 
 namespace Dzl.Tray.ViewModels;
@@ -735,7 +736,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     // === My Mods (source projects) page ===================================
 
     /// <summary>Mod source projects discovered under the ProjectsRoot (drives the My Mods page).</summary>
-    public ObservableCollection<ModProject> ModProjects { get; } = new();
+    public ObservableCollection<ModProjectVm> ModProjects { get; } = new();
 
     /// <summary>Resolved ProjectsRoot (configured value or the %USERPROFILE% fallback). Shown on
     /// the My Mods / Servers pages so the user knows where dzl creates things.</summary>
@@ -751,8 +752,24 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void RefreshModProjects()
     {
         ModProjects.Clear();
-        foreach (var p in Dzl.Core.Projects.ModProjects.Discover(ProjectsRoot)) ModProjects.Add(p);
+        foreach (var p in Dzl.Core.Projects.ModProjects.Discover(ProjectsRoot)) ModProjects.Add(new ModProjectVm(p));
         OnPropertyChanged(nameof(ProjectsRoot));
+        _ = LoadGitStatusesAsync();   // fire-and-forget; fills each card's git badge off the UI thread
+    }
+
+    /// <summary>Fill each project card's git summary off the UI thread (git status shells out).</summary>
+    private async Task LoadGitStatusesAsync()
+    {
+        var root = ProjectsRoot;
+        foreach (var vm in ModProjects.ToList())
+        {
+            var dir = ProjectPaths.ModDir(root, vm.Name);
+            var s = await Task.Run(() => Git.Status(dir));
+            if (!s.IsRepo) { vm.Git = "no repo"; continue; }
+            var ab = (s.Ahead > 0 || s.Behind > 0) ? $" ↑{s.Ahead}↓{s.Behind}" : "";
+            var local = s.HasRemote ? "" : " (local)";
+            vm.Git = $"{s.Branch} • {s.Detail}{ab}{local}";
+        }
     }
 
     /// <summary>Scaffold a new mod project + link P:\&lt;Mod&gt;. Caches the author. Returns a status line.</summary>
@@ -807,6 +824,31 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         BuildLog += (result.Ok ? "\n✓ " : "\n✗ ") + result.Message + "\n";
         Building = false;
         if (result.Ok) { Reload(); RefreshModProjects(); }
+    }
+
+    /// <summary>Publish a mod project to GitHub (init + first commit + gh repo create) off the UI thread.</summary>
+    public async Task PublishRepoAsync(string name)
+    {
+        if (Building) return;
+        Building = true;
+        BuildLog = $"▸ Publishing {name} to GitHub …\n";
+        var cp = _configPath;
+        var r = await Task.Run(() => new RepoService(cp).Publish(name));
+        BuildLog += (r.Ok ? "✓ " : "✗ ") + r.Message + "\n";
+        Building = false;
+        RefreshModProjects();
+    }
+
+    /// <summary>Cut a GitHub release for a mod project off the UI thread.</summary>
+    public async Task ReleaseRepoAsync(string name, string tag, string? notes)
+    {
+        if (Building) return;
+        Building = true;
+        BuildLog = $"▸ Releasing {name} {tag} …\n";
+        var cp = _configPath;
+        var r = await Task.Run(() => new RepoService(cp).Release(name, tag, notes));
+        BuildLog += (r.Ok ? "✓ " : "✗ ") + r.Message + "\n";
+        Building = false;
     }
 
     // === Servers (instances) page =========================================

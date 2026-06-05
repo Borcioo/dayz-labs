@@ -476,6 +476,26 @@ public partial class MainWindow : FluentWindow
             await _vm.BuildModAsync(name);
     }
 
+    private async void OnPublishRepo(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string name }) return;
+        var ok = System.Windows.MessageBox.Show(
+            $"Publish \"{name}\" to GitHub?\n\nThis runs git init (if needed), makes a first commit, then " +
+            "'gh repo create --private --push' under your logged-in GitHub account.",
+            "Publish to GitHub", System.Windows.MessageBoxButton.OKCancel,
+            System.Windows.MessageBoxImage.Question) == System.Windows.MessageBoxResult.OK;
+        if (!ok) return;
+        await _vm.PublishRepoAsync(name);
+    }
+
+    private async void OnReleaseRepo(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string name }) return;
+        var tag = PromptDialog.Show(this, "Create GitHub release", $"Tag for {name} (e.g. v1.0.0):");
+        if (string.IsNullOrWhiteSpace(tag)) return;
+        await _vm.ReleaseRepoAsync(name, tag.Trim(), null);
+    }
+
     // === SERVERS page =====================================================
 
     private void OnRefreshServers(object sender, RoutedEventArgs e) => _vm.RefreshServers();
