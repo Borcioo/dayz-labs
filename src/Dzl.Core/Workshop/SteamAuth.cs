@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using SteamKit2;
 using SteamKit2.Authentication;
+using SteamKit2.Internal;
 
 namespace Dzl.Core.Workshop;
 
@@ -42,7 +43,13 @@ public sealed class SteamAuth : IDisposable
         try
         {
             if (!await ConnectAsync(ct)) return new(false, "", "", "", "could not connect to Steam");
-            var session = await _client.Authentication.BeginAuthSessionViaQRAsync(new AuthSessionDetails()).ConfigureAwait(false);
+            // WebBrowser platform → the resulting tokens are web-scoped (aud "web:community"), which is what the
+            // Workshop Subscribe API needs. A SteamClient-platform token can't mint that (GenerateAccessTokenForApp
+            // → AccessDenied), and its refresh token can't renew into one either.
+            var session = await _client.Authentication.BeginAuthSessionViaQRAsync(new AuthSessionDetails
+            {
+                PlatformType = EAuthTokenPlatformType.k_EAuthTokenPlatformType_WebBrowser,
+            }).ConfigureAwait(false);
             onChallengeUrl(session.ChallengeURL);
             session.ChallengeURLChanged = () => onChallengeUrl(session.ChallengeURL);
             var poll = await session.PollingWaitForResultAsync(ct).ConfigureAwait(false);
@@ -64,6 +71,7 @@ public sealed class SteamAuth : IDisposable
                 Password = password,
                 IsPersistentSession = true,
                 Authenticator = authenticator,
+                PlatformType = EAuthTokenPlatformType.k_EAuthTokenPlatformType_WebBrowser,  // web-scoped tokens for the Workshop API
             }).ConfigureAwait(false);
             var poll = await session.PollingWaitForResultAsync(ct).ConfigureAwait(false);
             return new(true, poll.AccountName, poll.RefreshToken, poll.AccessToken ?? "", "");
