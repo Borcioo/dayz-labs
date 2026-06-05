@@ -2130,8 +2130,6 @@
                     </StackPanel>
                     <TextBlock x:Name="SteamSignInStatus" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"
                                Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                    <TextBlock Text="Advanced: paste an access_token instead (optional; blank = use the sign-in above / open the Steam page)" Style="{StaticResource FieldLabel}" />
-                    <ui:TextBox x:Name="CfgSteamAccessToken" PlaceholderText="access_token JWT (rarely needed — sign in above instead)" />
                   </StackPanel>
                 </ui:Card>
 

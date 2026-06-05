@@ -333,7 +333,6 @@ public partial class MainWindow : FluentWindow
         CfgSteamApiKey.Text = c.SteamApiKey;
         CfgSteamCmdPath.Text = c.SteamCmdPath;
         CfgSteamLogin.Text = c.SteamLogin;
-        CfgSteamAccessToken.Text = c.SteamAccessToken;
         SteamSignInStatus.Text = _vm.SteamSignedIn ? "✓ signed in (Subscribe works in-app)" : "not signed in — Subscribe opens the Steam page";
         ConfigError.Visibility = Visibility.Collapsed;
     }
@@ -365,7 +364,6 @@ public partial class MainWindow : FluentWindow
             SteamApiKey = CfgSteamApiKey.Text.Trim(),
             SteamCmdPath = CfgSteamCmdPath.Text.Trim(),
             SteamLogin = CfgSteamLogin.Text.Trim(),
-            SteamAccessToken = CfgSteamAccessToken.Text.Trim(),
         };
         _vm.ApplyConfig(edited);
         LoadSettingsFields();
