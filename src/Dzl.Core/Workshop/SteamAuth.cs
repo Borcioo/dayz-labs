@@ -43,12 +43,12 @@ public sealed class SteamAuth : IDisposable
         try
         {
             if (!await ConnectAsync(ct)) return new(false, "", "", "", "could not connect to Steam");
-            // WebBrowser platform → the resulting tokens are web-scoped (aud "web:community"), which is what the
-            // Workshop Subscribe API needs. A SteamClient-platform token can't mint that (GenerateAccessTokenForApp
-            // → AccessDenied), and its refresh token can't renew into one either.
+            // MobileApp platform: its access token works against the Steam Web API (Workshop Subscribe) AND its
+            // refresh token can mint new access tokens via GenerateAccessTokenForApp. As of 2025-04, that renewal
+            // ONLY works for MobileApp tokens — WebBrowser/SteamClient refresh tokens fail with AccessDenied.
             var session = await _client.Authentication.BeginAuthSessionViaQRAsync(new AuthSessionDetails
             {
-                PlatformType = EAuthTokenPlatformType.k_EAuthTokenPlatformType_WebBrowser,
+                PlatformType = EAuthTokenPlatformType.k_EAuthTokenPlatformType_MobileApp,
             }).ConfigureAwait(false);
             onChallengeUrl(session.ChallengeURL);
             session.ChallengeURLChanged = () => onChallengeUrl(session.ChallengeURL);
@@ -71,7 +71,7 @@ public sealed class SteamAuth : IDisposable
                 Password = password,
                 IsPersistentSession = true,
                 Authenticator = authenticator,
-                PlatformType = EAuthTokenPlatformType.k_EAuthTokenPlatformType_WebBrowser,  // web-scoped tokens for the Workshop API
+                PlatformType = EAuthTokenPlatformType.k_EAuthTokenPlatformType_MobileApp,  // only MobileApp refresh tokens can renew (see QR note)
             }).ConfigureAwait(false);
             var poll = await session.PollingWaitForResultAsync(ct).ConfigureAwait(false);
             return new(true, poll.AccountName, poll.RefreshToken, poll.AccessToken ?? "", "");
