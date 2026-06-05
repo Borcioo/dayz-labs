@@ -11,15 +11,21 @@ public static class ModDiscovery
         || (File.Exists(System.IO.Path.Combine(dir, "config.cpp"))
             && Directory.Exists(System.IO.Path.Combine(dir, "scripts")));
 
-    // All immediate subdirectories of each root that look like a mod.
+    // All immediate subdirectories of each root that look like a mod. A root that is missing, offline, a
+    // dangling junction, or inaccessible is skipped — never throws (a bad scan root must not crash callers).
     public static List<string> Discover(IEnumerable<string> roots)
     {
         var found = new List<string>();
         foreach (var root in roots)
         {
-            if (!Directory.Exists(root)) continue;
-            foreach (var dir in Directory.GetDirectories(root))
-                if (IsMod(dir)) found.Add(dir);
+            try
+            {
+                if (!Directory.Exists(root)) continue;
+                foreach (var dir in Directory.GetDirectories(root))
+                    if (IsMod(dir)) found.Add(dir);
+            }
+            catch (IOException) { /* missing/dangling/offline root — skip */ }
+            catch (UnauthorizedAccessException) { /* inaccessible root — skip */ }
         }
         return found;
     }

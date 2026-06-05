@@ -11,7 +11,7 @@ namespace Dzl.Core.App;
 /// reached via its <c>P:\&lt;Mod&gt;</c> junction) into a loadable PBO under
 /// <c>&lt;ProjectsRoot&gt;\build\@&lt;Mod&gt;\Addons\</c> (physical; surfaced on P: as
 /// <c>P:\Mods\@&lt;Mod&gt;</c> via a junction), then register that build into the active server's run-list
-/// by its always-live physical path. One facade per frontend; pure bits live in <see cref="ModBuild"/>.
+/// by its <c>P:\Mods\@&lt;Mod&gt;</c> engine path. One facade per frontend; pure bits live in <see cref="ModBuild"/>.
 /// </summary>
 public sealed class BuildService
 {
@@ -109,8 +109,9 @@ public sealed class BuildService
         var pbo = ModBuild.NewestPbo(addonsDir)!.FullName;
         ModBuild.WriteMarker(ProjectPaths.BuildMarkerPath(root, modName), $"dzl-built {startUtc:O} from {projectDir}");
 
-        // Register the physical build folder (always-live) into the active run-list (idempotent).
-        var updated = ModBuild.Register(cfg, buildDir);
+        // Register by the engine/toolchain path P:\Mods\@<Mod> (the build is surfaced there via the build-area
+        // junction). Clean + conventional ("Mods is on P:"), and it matches a P:\Mods scan so Merge dedupes.
+        var updated = ModBuild.Register(cfg, ProjectPaths.BuildLink(modName));
         var registered = !ReferenceEquals(updated, cfg);
         if (registered)
             Profiles.Save(updated, string.IsNullOrEmpty(active) ? "default" : active, _configPath);

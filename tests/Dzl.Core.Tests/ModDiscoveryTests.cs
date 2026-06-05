@@ -26,6 +26,17 @@ public class ModDiscoveryTests
     }
 
     [Fact]
+    public void Discover_skips_missing_or_inaccessible_roots_without_throwing()
+    {
+        var good = MakeTree();
+        var bad = Path.Combine(good, "does", "not", "exist");   // missing path (stands in for a dangling junction)
+        List<string> found = null!;
+        var act = () => found = ModDiscovery.Discover(new[] { bad, good });
+        act.Should().NotThrow();
+        found.Select(Path.GetFileName).Should().Contain("@CF").And.Contain("DevMod");   // good root still scanned
+    }
+
+    [Fact]
     public void Merge_keeps_saved_order_enabled_side_and_appends_new_disabled()
     {
         var root = MakeTree();
