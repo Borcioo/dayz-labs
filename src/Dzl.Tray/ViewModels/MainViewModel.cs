@@ -991,7 +991,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         WorkshopStatus = "subscribing…";
         var (ok, msg) = await svc.SubscribeAsync(id, true);
         WorkshopStatus = (ok ? "✓ " : "✗ ") + msg;
-        if (ok) RefreshSubscribed();
+        if (ok)
+        {
+            RefreshSubscribed();   // reflect the Steam client folder (may lag — download is async)
+            // Optimistic: show it as subscribed immediately even before Steam finishes downloading it.
+            if (!WorkshopSubscribed.Any(s => s.Id == id))
+            {
+                var title = WorkshopResults.FirstOrDefault(r => r.Id == id)?.Title
+                            ?? (WorkshopDetail?.Id == id ? WorkshopDetail!.Title : null) ?? id;
+                WorkshopSubscribed.Insert(0, new SubscribedItem(id, $"{title}  (downloading…)", ""));
+            }
+        }
         return true;
     }
 
