@@ -31,18 +31,20 @@ public static class WorkshopApi
         _ => 0,   // top
     };
 
-    /// <summary>Build a QueryFiles URL for any query type, requesting the browse/detail metadata.</summary>
-    public static string QueryUrl(string apiKey, int queryType, string query, int count)
+    /// <summary>Build a QueryFiles URL for any query type, page, and optional required tag (category filter).</summary>
+    public static string QueryUrl(string apiKey, int queryType, string query, int count, int page = 1, string tag = "")
     {
         var n = count is > 0 and <= 100 ? count : 30;
-        return "https://api.steampowered.com/IPublishedFileService/QueryFiles/v1/"
+        var url = "https://api.steampowered.com/IPublishedFileService/QueryFiles/v1/"
              + $"?key={Uri.EscapeDataString(apiKey)}"
              + $"&appid={AppId}"
              + $"&query_type={queryType}"
              + $"&search_text={Uri.EscapeDataString(query)}"
-             + $"&numperpage={n}&page=1"
+             + $"&numperpage={n}&page={(page > 0 ? page : 1)}"
              + "&return_metadata=true&return_previews=true&return_tags=true"
              + "&return_vote_data=true&return_short_description=true";
+        if (!string.IsNullOrWhiteSpace(tag)) url += $"&requiredtags%5B0%5D={Uri.EscapeDataString(tag)}";
+        return url;
     }
 
     /// <summary>Text-search URL (query_type 12) — kept for callers/tests.</summary>
@@ -90,15 +92,16 @@ public static class WorkshopApi
 
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(20) };
 
-    /// <summary>Browse the Workshop by mode (top/recent/trending/search). Returns (ok, error, items).</summary>
+    /// <summary>Browse the Workshop by mode (top/recent/trending/search), page, and optional category tag.
+    /// Returns (ok, error, items).</summary>
     public static async Task<(bool ok, string error, List<WorkshopItem> items)> BrowseAsync(
-        string apiKey, string mode, string query = "", int count = 30)
+        string apiKey, string mode, string query = "", int count = 30, int page = 1, string tag = "")
     {
         if (string.IsNullOrWhiteSpace(apiKey))
             return (false, "no Steam Web API key — set it in Settings (steamcommunity.com/dev/apikey)", new());
         try
         {
-            var json = await Http.GetStringAsync(QueryUrl(apiKey, QueryType(mode), query, count)).ConfigureAwait(false);
+            var json = await Http.GetStringAsync(QueryUrl(apiKey, QueryType(mode), query, count, page, tag)).ConfigureAwait(false);
             return (true, "", ParseSearch(json));
         }
         catch (Exception ex)

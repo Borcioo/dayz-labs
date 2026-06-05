@@ -36,6 +36,8 @@ public partial class WorkshopWindow : FluentWindow
         if (sender is FrameworkElement { Tag: string mode }) await _vm.WorkshopBrowseAsync(mode);
     }
 
+    private async void OnLoadMore(object sender, RoutedEventArgs e) => await _vm.WorkshopLoadMoreAsync();
+
     private void OnRefreshSubscribed(object sender, RoutedEventArgs e) => _vm.RefreshSubscribed();
 
     private void OnDownload(object sender, RoutedEventArgs e)

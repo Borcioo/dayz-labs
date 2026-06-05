@@ -28,7 +28,9 @@
       <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,12,0">
         <ui:Button Content="Top" Icon="{ui:SymbolIcon Star24}" Tag="top" Click="OnBrowseMode" Margin="0,0,4,0" />
         <ui:Button Content="Recent" Icon="{ui:SymbolIcon Clock24}" Tag="recent" Click="OnBrowseMode" Margin="0,0,4,0" />
-        <ui:Button Content="Trending" Icon="{ui:SymbolIcon ArrowTrending24}" Tag="trending" Click="OnBrowseMode" />
+        <ui:Button Content="Trending" Icon="{ui:SymbolIcon ArrowTrending24}" Tag="trending" Click="OnBrowseMode" Margin="0,0,12,0" />
+        <ComboBox Width="150" VerticalAlignment="Center" ToolTip="Filter by category (needs a Web API key)"
+                  ItemsSource="{Binding WorkshopCategories}" SelectedItem="{Binding WorkshopTag}" />
       </StackPanel>
       <ui:TextBox x:Name="QueryBox" Grid.Column="1" PlaceholderText="search the DayZ Workshop…"
                   Text="{Binding WorkshopQuery, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0" />
@@ -124,7 +126,11 @@
       </Border>
     </Expander>
 
-    <TextBlock Grid.Row="4" Text="{Binding WorkshopStatus}" Margin="0,8,0,0" FontSize="12"
-               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+    <Grid Grid.Row="4" Margin="0,8,0,0">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+      <ui:Button Grid.Column="0" Content="Load more" Icon="{ui:SymbolIcon ChevronDown24}" Click="OnLoadMore" Margin="0,0,12,0" />
+      <TextBlock Grid.Column="1" Text="{Binding WorkshopStatus}" VerticalAlignment="Center" FontSize="12"
+                 HorizontalAlignment="Right" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+    </Grid>
   </Grid>
 </ui:FluentWindow>

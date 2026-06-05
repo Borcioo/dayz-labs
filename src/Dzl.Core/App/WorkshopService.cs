@@ -24,13 +24,14 @@ public sealed class WorkshopService
     public Task<(bool ok, string error, List<WorkshopItem> items)> SearchAsync(string query, int count = 30)
         => WorkshopApi.SearchAsync(Cfg.SteamApiKey, query, count);
 
-    /// <summary>Browse the Workshop by mode: top / recent / trending / search. With a Steam Web API key it uses
-    /// the official API (richer: subs/tags/description); without one it falls back to keyless HTML scraping of
-    /// the Workshop browse page (id/title/preview) — so browsing works out of the box.</summary>
-    public Task<(bool ok, string error, List<WorkshopItem> items)> BrowseAsync(string mode, string query = "", int count = 30)
+    /// <summary>Browse the Workshop by mode (top/recent/trending/search), page, and optional category tag.
+    /// With a Steam Web API key it uses the official API (richer: subs/tags/description + server-side tag
+    /// filtering); without one it falls back to keyless HTML scraping — so browsing works out of the box.</summary>
+    public Task<(bool ok, string error, List<WorkshopItem> items)> BrowseAsync(
+        string mode, string query = "", int count = 30, int page = 1, string tag = "")
         => string.IsNullOrWhiteSpace(Cfg.SteamApiKey)
-            ? WorkshopWeb.BrowseAsync(mode, query, count)
-            : WorkshopApi.BrowseAsync(Cfg.SteamApiKey, mode, query, count);
+            ? WorkshopWeb.BrowseAsync(mode, query, count, page, tag)
+            : WorkshopApi.BrowseAsync(Cfg.SteamApiKey, mode, query, count, page, tag);
 
     /// <summary>Download (or re-download to update) a Workshop item via steamcmd, spawning a console for login.</summary>
     public WorkshopOp Download(string id)

@@ -21,12 +21,13 @@ public static class WorkshopWeb
         _ => "totaluniquesubscribers",
     };
 
-    public static string BrowseUrl(string mode, string query, int page)
+    public static string BrowseUrl(string mode, string query, int page, string tag = "")
     {
         var p = page > 0 ? page : 1;
         var url = $"https://steamcommunity.com/workshop/browse/?appid={AppId}&section=readytouseitems"
                 + $"&browsesort={Sort(mode)}&actualsort={Sort(mode)}&p={p}";
         if (!string.IsNullOrWhiteSpace(query)) url += $"&searchtext={Uri.EscapeDataString(query)}";
+        if (!string.IsNullOrWhiteSpace(tag)) url += $"&requiredtags%5B%5D={Uri.EscapeDataString(tag)}";
         return url;
     }
 
@@ -61,13 +62,13 @@ public static class WorkshopWeb
         return c;
     }
 
-    /// <summary>Scrape a browse mode (top/recent/trending/search). Returns (ok, error, items); never throws.</summary>
+    /// <summary>Scrape a browse mode + page (top/recent/trending/search). Returns (ok, error, items); never throws.</summary>
     public static async Task<(bool ok, string error, List<WorkshopItem> items)> BrowseAsync(
-        string mode, string query = "", int count = 30)
+        string mode, string query = "", int count = 30, int page = 1, string tag = "")
     {
         try
         {
-            var html = await Http.GetStringAsync(BrowseUrl(mode, query, 1)).ConfigureAwait(false);
+            var html = await Http.GetStringAsync(BrowseUrl(mode, query, page, tag)).ConfigureAwait(false);
             var items = ParseBrowse(html);
             if (count > 0 && items.Count > count) items = items.Take(count).ToList();
             return (true, "", items);
