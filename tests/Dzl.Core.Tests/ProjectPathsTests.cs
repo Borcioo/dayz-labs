@@ -53,10 +53,10 @@ public class ProjectPathsTests
     }
 
     [Fact]
-    public void Build_junction_anchors_on_the_work_drive_source()
+    public void Build_area_is_a_single_junction_on_the_work_drive_source()
     {
-        ProjectPaths.BuildJunctionPath(@"D:\DayZWorkDrive", "MyMod").Should().Be(@"D:\DayZWorkDrive\Mods\@MyMod");
-        ProjectPaths.BuildJunctionPath(null, "MyMod").Should().Be(@"P:\Mods\@MyMod");
+        ProjectPaths.BuildAreaJunction(@"D:\DayZWorkDrive").Should().Be(@"D:\DayZWorkDrive\Mods");
+        ProjectPaths.BuildAreaJunction(null).Should().Be(@"P:\Mods");
     }
 
     [Fact]

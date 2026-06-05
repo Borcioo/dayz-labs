@@ -90,10 +90,11 @@ public sealed class BuildService
         if (!srcEns.Ok)
             return Fail($"source junction {srcJunction} → {projectDir} failed: {srcEns.Detail}");
 
-        var buildJunction = ProjectPaths.BuildJunctionPath(workDriveSource, modName);
-        var buildEns = Junction.Ensure(buildJunction, buildDir);
+        // One junction for the whole build area surfaces every build at P:\Mods\@<Mod>.
+        var buildArea = ProjectPaths.BuildAreaJunction(workDriveSource);
+        var buildEns = Junction.Ensure(buildArea, ProjectPaths.BuildRoot(root));
         if (!buildEns.Ok)
-            return Fail($"build junction {buildJunction} → {buildDir} failed: {buildEns.Detail}");
+            return Fail($"build junction {buildArea} → {ProjectPaths.BuildRoot(root)} failed: {buildEns.Detail}");
 
         var startUtc = DateTime.UtcNow;
         var pack = AddonBuilder.Pack(exe.ExePath, ProjectPaths.WorkDriveLink(modName), addonsDir,

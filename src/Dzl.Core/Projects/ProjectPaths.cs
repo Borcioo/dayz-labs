@@ -69,9 +69,10 @@ public static partial class ProjectPaths
     /// <summary>The <b>P:</b> path the engine/toolchain addresses a built mod by (<c>P:\Mods\@&lt;Mod&gt;</c>).</summary>
     public static string BuildLink(string mod) => Path.Combine(@"P:\Mods", "@" + mod);
 
-    /// <summary>The physical junction path for a mod's <b>build output</b> on the work-drive source folder
-    /// (<c>&lt;source&gt;\Mods\@&lt;Mod&gt;</c> → <see cref="BuildDir"/>). When P: is mounted this surfaces the
-    /// build at <see cref="BuildLink"/>. Falls back to <c>P:\Mods</c> when the source is unknown.</summary>
-    public static string BuildJunctionPath(string? workDriveSource, string mod) =>
-        Path.Combine(string.IsNullOrWhiteSpace(workDriveSource) ? @"P:\" : workDriveSource!, "Mods", "@" + mod);
+    /// <summary>The single junction for the whole build area: <c>&lt;source&gt;\Mods</c> → <see cref="BuildRoot"/>.
+    /// One junction surfaces every <c>build\@&lt;Mod&gt;</c> at <c>P:\Mods\@&lt;Mod&gt;</c> (the build folders live
+    /// under one parent, unlike sources which sit at the shared P:\ root and need per-mod links). Falls back to
+    /// <c>P:\Mods</c> when the source folder is unknown.</summary>
+    public static string BuildAreaJunction(string? workDriveSource) =>
+        Path.Combine(string.IsNullOrWhiteSpace(workDriveSource) ? @"P:\" : workDriveSource!, "Mods");
 }
