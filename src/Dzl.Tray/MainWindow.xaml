@@ -836,6 +836,25 @@
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
               <StackPanel>
 
+                <!-- Warning: P: not mounted → building is blocked -->
+                <Border Margin="0,0,0,12" Padding="12" CornerRadius="6"
+                        Background="#3A2A0F" BorderBrush="#7A5A1F" BorderThickness="1"
+                        Visibility="{Binding WorkDriveMounted, Converter={StaticResource InverseBoolToVis}}">
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="Auto" />
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:SymbolIcon Grid.Column="0" Symbol="Warning24" FontSize="18" Margin="0,0,10,0"
+                                   VerticalAlignment="Center" Foreground="#F0C04A" />
+                    <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap" Foreground="#F0D9A8"
+                               Text="P: work drive is not mounted — building is disabled. Binarize resolves vanilla data and includes against P:. Mount it to build." />
+                    <ui:Button Grid.Column="2" Content="Mount P:" Appearance="Primary" VerticalAlignment="Center"
+                               Margin="12,0,0,0" Click="OnMountWorkDrive" />
+                  </Grid>
+                </Border>
+
                 <!-- New mod -->
                 <ui:Card Margin="0,0,0,12" Padding="16">
                   <StackPanel>
@@ -948,8 +967,10 @@
                                 <ui:Button Content="Quick junction" Icon="{ui:SymbolIcon Link24}"
                                            Tag="{Binding Name}" Click="OnQuickJunction" Margin="0,0,8,0" />
                                 <ui:Button Content="Build" Appearance="Primary"
-                                           Icon="{ui:SymbolIcon Box24}" ToolTip="Build → PBO and add to the active server's run-list"
-                                           Tag="{Binding Name}" Click="OnBuildMod" Margin="0,0,8,0" />
+                                           Icon="{ui:SymbolIcon Box24}"
+                                           ToolTip="Build → PBO and add to the active server's run-list (needs P: mounted)"
+                                           Tag="{Binding Name}" Click="OnBuildMod" Margin="0,0,8,0"
+                                           IsEnabled="{Binding DataContext.WorkDriveMounted, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
                                 <ui:Button Content="Publish" Icon="{ui:SymbolIcon Branch24}" ToolTip="Publish to GitHub (gh repo create)"
                                            Tag="{Binding Name}" Click="OnPublishRepo" Margin="0,0,8,0" />
                                 <ui:Button Content="Release" Icon="{ui:SymbolIcon Tag24}" ToolTip="Create a GitHub release"

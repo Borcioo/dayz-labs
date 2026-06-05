@@ -20,12 +20,12 @@ public sealed class BuildService
     /// will use — so a UI can pre-fill the paths and warn before running. No side effects.</summary>
     public sealed record BuildPlanView(
         bool Ok, string Mod, string ProjectDir, string SourceOnP, string OutputDir, string AddonsDir,
-        string AddonBuilderExe, bool Ready, string Message);
+        string AddonBuilderExe, bool WorkDriveMounted, bool Ready, string Message);
 
     public BuildPlanView Plan(string mod)
     {
         if (!ProjectPaths.IsValidName(mod))
-            return new BuildPlanView(false, mod, "", "", "", "", "", false, $"invalid mod name: {mod}");
+            return new BuildPlanView(false, mod, "", "", "", "", "", false, false, $"invalid mod name: {mod}");
 
         Profiles.EnsureDefault(_configPath);
         var (cfg, _, _) = Profiles.ResolveActive(_configPath);
@@ -35,13 +35,15 @@ public sealed class BuildService
 
         var isProject = Directory.Exists(projectDir) && ModProjects.IsProject(projectDir);
         var haveTool = exe is not null && exe.Exists;
-        var ready = isProject && haveTool;
+        var pMounted = WorkDrive.IsMounted();
+        var ready = isProject && haveTool && pMounted;
         var msg = !isProject ? "not a mod project ($PBOPREFIX$ / config.cpp missing)"
                 : !haveTool ? "AddonBuilder not found — set the DayZ Tools path"
+                : !pMounted ? "P: work drive not mounted — mount it to build"
                 : "ready to build";
 
         return new BuildPlanView(true, mod, projectDir, src,
-            ModBuild.OutputDir(mod), ModBuild.AddonsDir(mod), exe?.ExePath ?? "(not found)", ready, msg);
+            ModBuild.OutputDir(mod), ModBuild.AddonsDir(mod), exe?.ExePath ?? "(not found)", pMounted, ready, msg);
     }
 
     /// <summary>Build <paramref name="modName"/> and (on success) add it to the active run-list.</summary>
@@ -67,6 +69,9 @@ public sealed class BuildService
         var exe = ToolCatalog.Find(cfg.DayzToolsPath, "addonbuilder");
         if (exe is null || !exe.Exists)
             return Fail("AddonBuilder not found — set DayZ Tools path / install Addon Builder");
+
+        if (!WorkDrive.IsMounted())
+            return Fail("P: work drive not mounted — mount it first (binarize resolves vanilla data + includes against P:)");
 
         // The engine + AddonBuilder see the source on P:; (re)create the junction if missing/stale.
         var link = ProjectPaths.WorkDriveLink(modName);
