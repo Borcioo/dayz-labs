@@ -699,4 +699,28 @@ linkCmd.SetHandler(ctx =>
 });
 root.AddCommand(linkCmd);
 
+// ---- build (SP2: build → deploy) ----
+var buildModArg = new Argument<string>("Mod", "Mod project name (under ProjectsRoot).");
+var buildClean = new Option<bool>("--clean", "Wipe the output first (AddonBuilder -clear).");
+var buildNoBin = new Option<bool>("--no-binarize", "Pack only, don't binarize (AddonBuilder -packonly).");
+var buildCmd = new Command("build", "Build a mod into a PBO and add it to the active server's run-list.")
+    { buildModArg, buildClean, buildNoBin };
+buildCmd.SetHandler(ctx =>
+{
+    var (_, _, _, configPath) = Resolve(ctx);
+    var mod = ctx.ParseResult.GetValueForArgument(buildModArg);
+    var clean = ctx.ParseResult.GetValueForOption(buildClean);
+    var noBin = ctx.ParseResult.GetValueForOption(buildNoBin);
+    var r = new BuildService(configPath).Build(mod, clean: clean, binarize: !noBin,
+        onLine: line => Console.Error.WriteLine(line));   // log to stderr; result line to stdout
+    if (!r.Ok)
+    {
+        Console.Error.WriteLine(r.Message);
+        ctx.ExitCode = 1;
+        return;
+    }
+    Console.WriteLine($"{r.Message}  →  {r.PboPath}");
+});
+root.AddCommand(buildCmd);
+
 return await root.InvokeAsync(args);

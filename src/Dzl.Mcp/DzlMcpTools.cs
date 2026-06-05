@@ -71,6 +71,12 @@ public static class DzlMcpTools
         return J(ImageToPaa.ConvertFolder(exe.ExePath, dir, recursive));
     }
 
+    [McpServerTool, Description("Build a mod project into a PBO (Addon Builder) and add the @<Mod> to the active server's run-list. Higher-level than pack_pbo: resolves the project under ProjectsRoot, ensures the P: junction, deploys to P:\\Mods\\@<Mod>\\Addons and registers it.")]
+    public static string BuildMod([Description("Mod project name (under ProjectsRoot)")] string mod,
+                                  [Description("Wipe output first (AddonBuilder -clear)")] bool clean = false,
+                                  [Description("Binarize configs/models (false = -packonly)")] bool binarize = true)
+        => J(new BuildService(ConfigPath()).Build(mod, clean, binarize));
+
     [McpServerTool, Description("Pack a source folder into a PBO (Addon Builder).")]
     public static string PackPbo([Description("Source folder")] string src,
                                  [Description("Output folder")] string dst,
