@@ -7,9 +7,8 @@ namespace Dzl.Core.App;
 
 public sealed record WorkshopOp(bool Ok, string Message);
 
-/// <summary>A Workshop item available locally — subscribed in the Steam client or downloaded via steamcmd.
-/// <paramref name="Source"/> names where it came from ("Steam" / "steamcmd").</summary>
-public sealed record SubscribedItem(string Id, string Name, string Dir, string Source = "");
+/// <summary>A Workshop item subscribed/downloaded in the Steam client's content folder.</summary>
+public sealed record SubscribedItem(string Id, string Name, string Dir);
 
 /// <summary>
 /// SP5 Steam Workshop: search (Steam Web API — needs a key) and download/update (steamcmd — owned/DayZ
@@ -101,9 +100,12 @@ public sealed class WorkshopService
     /// <summary>Forget the stored Steam session.</summary>
     public void SignOut() { SteamTokenStore.Clear(_configPath); _accessCache = null; }
 
-    /// <summary>steamcmd's install root for Workshop downloads — <c>&lt;ProjectsRoot&gt;\workshop</c>, kept in the
-    /// projects tree (via <c>+force_install_dir</c>) instead of buried next to steamcmd.exe.</summary>
-    private string WorkshopInstallDir() => Dzl.Core.Projects.ProjectPaths.WorkshopDir(Dzl.Core.Projects.ProjectPaths.Root(Cfg));
+    /// <summary>steamcmd's install root for Workshop downloads — the Steam install (so items land in the same
+    /// <c>steamapps\workshop\content\221100</c> folder as client subscriptions, which the Launcher loads and the
+    /// Subscribed list shows). Falls back to <c>&lt;ProjectsRoot&gt;\workshop</c> only when Steam can't be found.</summary>
+    private string WorkshopInstallDir() =>
+        Dzl.Core.Env.EnvDetect.SteamPath()
+        ?? Dzl.Core.Projects.ProjectPaths.WorkshopDir(Dzl.Core.Projects.ProjectPaths.Root(Cfg));
 
     /// <summary>Download (or re-download to update) a Workshop item via steamcmd, spawning a console for login.</summary>
     public WorkshopOp Download(string id)
@@ -156,33 +158,23 @@ public sealed class WorkshopService
         return cd is not null && Directory.Exists(cd) ? cd : null;
     }
 
-    /// <summary>Workshop items available locally: those subscribed in the Steam <i>client</i> (what the DayZ
-    /// Launcher loads) merged with those downloaded via steamcmd under ProjectsRoot. Deduped by id — the Steam
-    /// client copy wins. Friendly names via meta.cpp/mod.cpp.</summary>
+    /// <summary>Items in the Steam <i>client</i>'s workshop content folder (resolved from the Steam install) —
+    /// what the DayZ Launcher loads. steamcmd downloads land here too (see <see cref="WorkshopInstallDir"/>), so
+    /// this single Steam-folder scan covers both. Friendly names via meta.cpp/mod.cpp.</summary>
     public List<SubscribedItem> Subscribed()
     {
-        var byId = new Dictionary<string, SubscribedItem>(StringComparer.Ordinal);
-        // steamcmd downloads first; the Steam client copy (added second) overwrites on a clash.
-        foreach (var s in ScanContent(Path.Combine(WorkshopInstallDir(), "steamapps", "workshop", "content", WorkshopCmd.AppId), "steamcmd"))
-            byId[s.Id] = s;
         var steam = Dzl.Core.Env.EnvDetect.SteamPath();
-        if (steam is not null)
-            foreach (var s in ScanContent(Path.Combine(steam, "steamapps", "workshop", "content", WorkshopCmd.AppId), "Steam"))
-                byId[s.Id] = s;
-        return byId.Values.OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase).ToList();
-    }
-
-    /// <summary>Enumerate a workshop content folder (<c>…\content\221100</c>) as items tagged with their source.</summary>
-    private static IEnumerable<SubscribedItem> ScanContent(string contentDir, string source)
-    {
-        string[] dirs;
-        try { dirs = Directory.Exists(contentDir) ? Directory.GetDirectories(contentDir) : Array.Empty<string>(); }
-        catch { yield break; }
-        foreach (var d in dirs)
+        if (steam is null) return new();
+        var dir = Path.Combine(steam, "steamapps", "workshop", "content", WorkshopCmd.AppId);
+        if (!Directory.Exists(dir)) return new();
+        try
         {
-            var id = Path.GetFileName(d);
-            if (!string.IsNullOrEmpty(id)) yield return new SubscribedItem(id, ModDiscovery.ResolveName(d), d, source);
+            return Directory.GetDirectories(dir)
+                .Select(d => new SubscribedItem(Path.GetFileName(d)!, ModDiscovery.ResolveName(d), d))
+                .OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
+        catch { return new(); }
     }
 
     /// <summary>Steam client URL that opens a Workshop item's page (where the user clicks Subscribe).</summary>

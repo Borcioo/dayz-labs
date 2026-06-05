@@ -125,7 +125,7 @@
     </Grid>
 
     <!-- Subscribed -->
-    <Expander Grid.Row="3" Header="Installed locally (Steam client + steamcmd)" Margin="0,12,0,0" IsExpanded="False">
+    <Expander Grid.Row="3" Header="Subscribed (Steam client)" Margin="0,12,0,0" IsExpanded="False">
       <Border CornerRadius="6" BorderThickness="1" MaxHeight="200" Margin="0,8,0,0"
               BorderBrush="{DynamicResource ControlElevationBorderBrush}">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -136,9 +136,7 @@
                   <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                   <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Name}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
-                    <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}">
-                      <Run Text="{Binding Id, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding Source, Mode=OneWay}" />
-                    </TextBlock>
+                    <TextBlock Text="{Binding Id}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                   </StackPanel>
                   <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <ui:Button Icon="{ui:SymbolIcon Open24}" ToolTip="Open in Steam (manage)" Tag="{Binding Id}" Click="OnOpenInSteam" Margin="0,0,8,0" />

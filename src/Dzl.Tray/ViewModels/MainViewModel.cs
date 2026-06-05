@@ -1016,7 +1016,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             {
                 var title = WorkshopResults.FirstOrDefault(r => r.Id == id)?.Title
                             ?? (WorkshopDetail?.Id == id ? WorkshopDetail!.Title : null) ?? id;
-                WorkshopSubscribed.Insert(0, new SubscribedItem(id, $"{title}  (downloading…)", "", "Steam"));
+                WorkshopSubscribed.Insert(0, new SubscribedItem(id, $"{title}  (downloading…)", ""));
             }
             RecomputeDetailSubscribed();
         }
