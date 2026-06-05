@@ -964,8 +964,14 @@
                                 </TextBlock>
                               </Border>
                               <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                <ui:Button Content="Quick junction" Icon="{ui:SymbolIcon Link24}"
-                                           Tag="{Binding Name}" Click="OnQuickJunction" Margin="0,0,8,0" />
+                                <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open the project folder"
+                                           Tag="{Binding Path}" Click="OnOpenModFolder" Margin="0,0,8,0" />
+                                <ui:Button Content="Link" Icon="{ui:SymbolIcon Link24}" ToolTip="Create the P: junction"
+                                           Tag="{Binding Name}" Click="OnQuickJunction" Margin="0,0,8,0"
+                                           Visibility="{Binding Linked, Converter={StaticResource InverseBoolToVis}}" />
+                                <ui:Button Content="Unlink" Icon="{ui:SymbolIcon LinkDismiss24}" ToolTip="Remove the P: junction (keeps the source folder)"
+                                           Tag="{Binding Name}" Click="OnUnlinkMod" Margin="0,0,8,0"
+                                           Visibility="{Binding Linked, Converter={StaticResource BoolToVis}}" />
                                 <ui:Button Content="Build" Appearance="Primary"
                                            Icon="{ui:SymbolIcon Box24}"
                                            ToolTip="Build → PBO and add to the active server's run-list (needs P: mounted)"

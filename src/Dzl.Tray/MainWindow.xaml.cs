@@ -474,6 +474,28 @@ public partial class MainWindow : FluentWindow
             NewModStatus.Text = _vm.QuickJunction(name);
     }
 
+    private void OnOpenModFolder(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string dir } || string.IsNullOrWhiteSpace(dir)) return;
+        try
+        {
+            if (!Directory.Exists(dir))
+            {
+                System.Windows.MessageBox.Show($"Folder not found:\n{dir}", "Open mod folder",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                return;
+            }
+            Process.Start(new ProcessStartInfo("explorer.exe", dir) { UseShellExecute = true });
+        }
+        catch { /* best-effort */ }
+    }
+
+    private void OnUnlinkMod(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string name })
+            NewModStatus.Text = _vm.UnlinkMod(name);
+    }
+
     private async void OnBuildMod(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string name }) return;

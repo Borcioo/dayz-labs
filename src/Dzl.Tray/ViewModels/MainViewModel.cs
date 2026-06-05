@@ -811,6 +811,16 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return link.Ok ? $"✓ {name}: {link.Detail}" : $"✗ {name}: {link.Detail}";
     }
 
+    /// <summary>Remove a mod's work-drive junction (leaves the source folder untouched). Returns a status line.</summary>
+    public string UnlinkMod(string name)
+    {
+        var link = ProjectPaths.JunctionPath(WorkDriveSource, name);
+        try { if (Junction.IsLink(link)) Junction.Remove(link); }
+        catch (Exception ex) { RefreshModProjects(); return $"✗ {name}: {ex.Message}"; }
+        RefreshModProjects();
+        return $"✓ unlinked {name}";
+    }
+
     // === Build → deploy (SP2) ============================================
 
     /// <summary>Live AddonBuilder log for the most recent build (shown on the My Mods page).</summary>
