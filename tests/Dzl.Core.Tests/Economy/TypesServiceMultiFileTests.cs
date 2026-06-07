@@ -173,4 +173,54 @@ public class TypesServiceMultiFileTests
         limits.Usage.Should().Contain("Military");
         limits.Category.Should().Contain("weapons");
     }
+
+    /// <summary>M3 — a brand-new entry with empty SourceFile must land in the primary (vanilla) file,
+    /// not create an orphan path, and must NOT appear in the mod file.</summary>
+    [Fact]
+    public void SaveAll_new_entry_with_empty_SourceFile_lands_in_primary()
+    {
+        var (configPath, missionDir) = Scaffold();
+        var svc = new TypesService(configPath);
+
+        var entries = svc.List();
+        var newGun = new TypeEntry { Name = "NewGun", SourceFile = "", Nominal = 3 };
+        var allEntries = entries.Append(newGun).ToList();
+
+        svc.SaveAll(allEntries).Ok.Should().BeTrue();
+
+        // Reload and verify NewGun exists
+        var reloaded = new TypesService(configPath).List();
+        var found = reloaded.Should().ContainSingle(t => t.Name == "NewGun").Subject;
+
+        // Its SourceFile after reload should be the vanilla db\types.xml (the primary)
+        var vanillaPath = Path.Combine(missionDir, "db", "types.xml");
+        found.SourceFile.Replace('/', '\\').Should().Be(vanillaPath.Replace('/', '\\'),
+            because: "a new entry with empty SourceFile must be routed to the primary file");
+
+        // The mod file must NOT have gained NewGun
+        var modFile = File.ReadAllText(Path.Combine(missionDir, "ce", "MyMod", "mymod_types.xml"));
+        modFile.Should().NotContain("NewGun");
+    }
+
+    /// <summary>M4 — Remove("AKM") touches only the mod file; the vanilla file is left completely
+    /// unchanged (Apple survives, keep-me comment survives).</summary>
+    [Fact]
+    public void Remove_touches_only_the_file_containing_the_named_type()
+    {
+        var (configPath, missionDir) = Scaffold();
+        var svc = new TypesService(configPath);
+
+        var result = svc.Remove("AKM");
+        result.Ok.Should().BeTrue();
+
+        // Reload: AKM gone, Apple present
+        var reloaded = new TypesService(configPath).List();
+        reloaded.Should().NotContain(t => t.Name == "AKM");
+        reloaded.Should().ContainSingle(t => t.Name == "Apple");
+
+        // Vanilla file is byte-for-byte untouched — comment must still be there, AKM never mentioned
+        var vanilla = File.ReadAllText(Path.Combine(missionDir, "db", "types.xml"));
+        vanilla.Should().Contain("vanilla keep-me comment");
+        vanilla.Should().NotContain("AKM");
+    }
 }

@@ -36,43 +36,42 @@ public sealed class TypesService
     /// <summary>All Types <see cref="CeFileRef"/>s for the active mission that exist on disk: the files
     /// referenced by <c>cfgeconomycore.xml</c> (filtered to Types), plus vanilla <c>db/types.xml</c> as
     /// <see cref="CeOrigin.Vanilla"/> if present and not already referenced. Empty when no mission.</summary>
-    private List<CeFileRef> ResolveTypesFiles()
+    private List<CeFileRef> ResolveTypesFiles() => ResolveAll().Files;
+
+    /// <summary>Resolves the Types file list and primary path in one config read.
+    /// Primary = vanilla db/types.xml when present, else first resolved file.</summary>
+    private (List<CeFileRef> Files, string? Primary) ResolveAll()
     {
         var mp = Mission();
-        if (mp is null) return new();
-
-        var refs = new List<CeFileRef>();
-        if (File.Exists(mp.EconomyCore))
+        var files = new List<CeFileRef>();
+        if (mp is not null)
         {
-            try
+            if (File.Exists(mp.EconomyCore))
             {
-                refs.AddRange(EconomyCore.Parse(File.ReadAllText(mp.EconomyCore), mp.MissionDir)
-                    .Where(r => r.Kind == CeKind.Types));
+                try
+                {
+                    files.AddRange(EconomyCore.Parse(File.ReadAllText(mp.EconomyCore), mp.MissionDir)
+                        .Where(r => r.Kind == CeKind.Types));
+                }
+                catch { /* malformed cfgeconomycore.xml → fall back to vanilla only */ }
             }
-            catch { /* malformed cfgeconomycore.xml → fall back to vanilla only */ }
+
+            if (mp.Vanilla is not null &&
+                !files.Any(r => string.Equals(r.Path, mp.Vanilla, StringComparison.OrdinalIgnoreCase)))
+            {
+                files.Insert(0, new CeFileRef(mp.Vanilla, CeKind.Types, CeOrigin.Vanilla, "vanilla"));
+            }
+
+            files = files.Where(r => File.Exists(r.Path)).ToList();
         }
 
-        if (mp.Vanilla is not null &&
-            !refs.Any(r => string.Equals(r.Path, mp.Vanilla, StringComparison.OrdinalIgnoreCase)))
-        {
-            refs.Insert(0, new CeFileRef(mp.Vanilla, CeKind.Types, CeOrigin.Vanilla, "vanilla"));
-        }
-
-        return refs.Where(r => File.Exists(r.Path)).ToList();
-    }
-
-    /// <summary>The file new/auto-targeted entries write to: vanilla db/types.xml when present,
-    /// else the first resolved Types file. Null when there are no Types files.</summary>
-    private string? PrimaryFile()
-    {
-        var mp = Mission();
-        if (mp?.Vanilla is not null) return mp.Vanilla;
-        return ResolveTypesFiles().FirstOrDefault()?.Path;
+        string? primary = mp?.Vanilla ?? files.FirstOrDefault()?.Path;
+        return (files, primary);
     }
 
     /// <summary>The active mission's primary types file (vanilla db\types.xml, or the first resolved
     /// Types file). Kept for back-compat with callers that probe a single "the types file".</summary>
-    public string? TypesFile() => PrimaryFile();
+    public string? TypesFile() => ResolveAll().Primary;
 
     // ------------------------------------------------------------------
     // Read
@@ -117,19 +116,25 @@ public sealed class TypesService
     // ------------------------------------------------------------------
 
     /// <summary>Sync every resolved Types file to the edited set: entries are grouped by their
-    /// <see cref="TypeEntry.SourceFile"/> (empty → the primary file). Each target file is loaded
-    /// (or created as <c>&lt;types/&gt;</c>), pruned of types no longer kept for it, upserted, snapshotted,
-    /// and written back. Per-file try/catch; ok only when no file failed.</summary>
+    /// <see cref="TypeEntry.SourceFile"/> (empty → the primary file; a path not in the resolved CE
+    /// set → the primary file, preventing writes to stray/orphan paths the server never loads).
+    /// Each target file is loaded (or created as <c>&lt;types/&gt;</c>), pruned of types no longer
+    /// kept for it, upserted, snapshotted, and written back. Per-file try/catch; ok only when no
+    /// file failed.</summary>
     public TypesOp SaveAll(IReadOnlyList<TypeEntry> entries)
     {
-        var primary = PrimaryFile();
-        if (primary is null) return new(false, "no types.xml for the active server's mission");
+        var (resolved, primary) = ResolveAll();   // I1: resolve once
+        if (primary is null) return new(false, "no types.xml files resolved");
 
-        var groups = entries
-            .GroupBy(e => string.IsNullOrEmpty(e.SourceFile) ? primary : e.SourceFile,
-                     StringComparer.OrdinalIgnoreCase);
+        // C1: build the set of valid write targets; route orphan SourceFile paths to primary.
+        var valid = new HashSet<string>(resolved.Select(r => r.Path), StringComparer.OrdinalIgnoreCase) { primary };
+        var groups = entries.GroupBy(e =>
+            string.IsNullOrEmpty(e.SourceFile) ? primary
+            : valid.Contains(e.SourceFile) ? e.SourceFile
+            : primary,
+            StringComparer.OrdinalIgnoreCase);
 
-        var saved = 0;
+        var saved = new List<string>();
         var failed = new List<string>();
         foreach (var g in groups)
         {
@@ -145,26 +150,32 @@ public sealed class TypesService
                 foreach (var e in g) TypesXml.Upsert(doc, e);
                 CeBackup.Snapshot(file);
                 File.WriteAllText(file, TypesXml.ToXml(doc));
-                saved++;
+                saved.Add(Path.GetFileName(file));
             }
             catch { failed.Add(Path.GetFileName(file)); }
         }
 
-        return failed.Count == 0
-            ? new(true, $"saved {entries.Count} types across {saved} file(s)")
-            : new(false, $"failed: {string.Join(", ", failed)}");
+        // I4: informative partial result
+        if (failed.Count == 0)
+            return new(true, $"saved {entries.Count} types across {saved.Count} file(s)");
+        if (saved.Count > 0)
+            return new(false, $"partial save: {saved.Count} ok, failed: {string.Join(", ", failed)}");
+        return new(false, $"failed: {string.Join(", ", failed)}");
     }
 
     /// <summary>Set/insert one type with nullable overrides (CLI/MCP). Writes to the entry's existing
     /// source file if the type already exists, else to <paramref name="file"/> if given, else the primary
-    /// file. Unspecified fields keep their current value (or the default for a new entry).</summary>
+    /// file. Unspecified fields keep their current value (or the default for a new entry).
+    /// <para><b>Not concurrency-safe:</b> concurrent calls may interleave reads and writes; callers
+    /// must serialize if needed.</para></summary>
     public TypesOp Set(string name, int? nominal = null, int? min = null, int? lifetime = null,
                        int? restock = null, int? cost = null, string? category = null, string? file = null)
     {
         if (string.IsNullOrWhiteSpace(name)) return new(false, "type name required");
 
+        var (_, primary) = ResolveAll();   // I1: resolve once
         var existing = Rows().FirstOrDefault(r => string.Equals(r.Entry.Name, name, StringComparison.OrdinalIgnoreCase));
-        var target = existing?.Entry.SourceFile ?? file ?? PrimaryFile();
+        var target = existing?.Entry.SourceFile ?? file ?? primary;
         if (string.IsNullOrEmpty(target)) return new(false, "no types.xml for the active server's mission");
 
         try
@@ -223,15 +234,23 @@ public sealed class TypesService
     // Backups / restore (primary file)
     // ------------------------------------------------------------------
 
+    /// <summary>Lists versioned backups for the <b>primary</b> types file only (vanilla
+    /// <c>db\types.xml</c> or the first resolved file). Mod/custom CE files maintain their own
+    /// backup snapshots in <c>.dzl-&lt;stem&gt;-backups/</c> directories next to each file; full
+    /// multi-file backup browsing is a future sub-project.</summary>
     public List<TypesBackupInfo> Backups()
     {
-        var f = PrimaryFile();
+        var f = ResolveAll().Primary;
         return f is null ? new() : TypesBackup.List(f);
     }
 
+    /// <summary>Restores the <b>primary</b> types file from a specific backup snapshot. Operates
+    /// on the primary file only (vanilla <c>db\types.xml</c> or the first resolved file). Mod/custom
+    /// CE files maintain their own backup snapshots in <c>.dzl-&lt;stem&gt;-backups/</c> directories
+    /// next to each file; full multi-file restore browsing is a future sub-project.</summary>
     public TypesOp Restore(string backupFile)
     {
-        var f = PrimaryFile();
+        var f = ResolveAll().Primary;
         if (f is null) return new(false, "no types.xml for the active server's mission");
         return TypesBackup.Restore(f, backupFile)
             ? new(true, $"restored {Path.GetFileName(backupFile)}")
