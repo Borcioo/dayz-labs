@@ -188,8 +188,24 @@
               <ui:Button Content="Download" Icon="{ui:SymbolIcon ArrowDownload24}" Tag="{Binding Id}" Click="OnDownload" Margin="0,0,8,0"
                          ToolTip="Download via steamcmd (configure steamcmd to enable)"
                          IsEnabled="{Binding DataContext.SteamCmdConfigured, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}" />
-              <ui:Button Icon="{ui:SymbolIcon Open24}" ToolTip="Open the Steam page (description, changelog, screenshots)"
-                         Tag="{Binding Id}" Click="OnOpenInSteam" />
+              <ui:DropDownButton Content="Open" Icon="{ui:SymbolIcon Open24}" ToolTip="Open…">
+                <ui:DropDownButton.Flyout>
+                  <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                    <MenuItem Header="Open in Steam (client)" Tag="{Binding Id}" Click="OnOpenInSteam">
+                      <MenuItem.Icon><ui:SymbolIcon Symbol="Open24" /></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Steam page (web)" Tag="{Binding Id}" Click="OnOpenSteamWeb">
+                      <MenuItem.Icon><ui:SymbolIcon Symbol="Globe24" /></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Show details in dzl" Tag="{Binding Id}" Click="OnShowInDzl">
+                      <MenuItem.Icon><ui:SymbolIcon Symbol="Info24" /></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Open folder (Explorer)" Tag="{Binding Id}" Click="OnOpenSubscribedFolder">
+                      <MenuItem.Icon><ui:SymbolIcon Symbol="FolderOpen24" /></MenuItem.Icon>
+                    </MenuItem>
+                  </ContextMenu>
+                </ui:DropDownButton.Flyout>
+              </ui:DropDownButton>
             </StackPanel>
             <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="12"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -214,8 +230,24 @@
                       <TextBlock Text="{Binding Id}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                      <ui:Button Icon="{ui:SymbolIcon Open24}" ToolTip="Open in Steam (manage)" Tag="{Binding Id}" Click="OnOpenInSteam" Margin="0,0,8,0" />
-                      <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open folder" Tag="{Binding Id}" Click="OnOpenSubscribedFolder" Margin="0,0,8,0" />
+                      <ui:DropDownButton Icon="{ui:SymbolIcon Open24}" ToolTip="Open…" Margin="0,0,8,0">
+                        <ui:DropDownButton.Flyout>
+                          <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Header="Open in Steam (client)" Tag="{Binding Id}" Click="OnOpenInSteam">
+                              <MenuItem.Icon><ui:SymbolIcon Symbol="Open24" /></MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Steam page (web)" Tag="{Binding Id}" Click="OnOpenSteamWeb">
+                              <MenuItem.Icon><ui:SymbolIcon Symbol="Globe24" /></MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Show details in dzl" Tag="{Binding Id}" Click="OnShowInDzl">
+                              <MenuItem.Icon><ui:SymbolIcon Symbol="Info24" /></MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Open folder (Explorer)" Tag="{Binding Id}" Click="OnOpenSubscribedFolder">
+                              <MenuItem.Icon><ui:SymbolIcon Symbol="FolderOpen24" /></MenuItem.Icon>
+                            </MenuItem>
+                          </ContextMenu>
+                        </ui:DropDownButton.Flyout>
+                      </ui:DropDownButton>
                       <ui:Button Icon="{ui:SymbolIcon ArrowDownload24}" ToolTip="Update via steamcmd" Tag="{Binding Id}" Click="OnDownload" Margin="0,0,8,0"
                                  IsEnabled="{Binding DataContext.SteamCmdConfigured, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}" />
                       <ui:Button Icon="{ui:SymbolIcon LinkDismiss24}" Appearance="Danger" ToolTip="Unsubscribe" Tag="{Binding Id}" Click="OnUnsubscribe" />
@@ -256,8 +288,24 @@
                         <TextBlock Text="{Binding Id}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                       </StackPanel>
                       <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <ui:Button Icon="{ui:SymbolIcon Open24}" ToolTip="Open in Steam (page)" Tag="{Binding Id}" Click="OnOpenInSteam" Margin="0,0,8,0" />
-                        <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open folder" Tag="{Binding Id}" Click="OnOpenSubscribedFolder" Margin="0,0,8,0" />
+                        <ui:DropDownButton Icon="{ui:SymbolIcon Open24}" ToolTip="Open…" Margin="0,0,8,0">
+                          <ui:DropDownButton.Flyout>
+                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                              <MenuItem Header="Open in Steam (client)" Tag="{Binding Id}" Click="OnOpenInSteam">
+                                <MenuItem.Icon><ui:SymbolIcon Symbol="Open24" /></MenuItem.Icon>
+                              </MenuItem>
+                              <MenuItem Header="Steam page (web)" Tag="{Binding Id}" Click="OnOpenSteamWeb">
+                                <MenuItem.Icon><ui:SymbolIcon Symbol="Globe24" /></MenuItem.Icon>
+                              </MenuItem>
+                              <MenuItem Header="Show details in dzl" Tag="{Binding Id}" Click="OnShowInDzl">
+                                <MenuItem.Icon><ui:SymbolIcon Symbol="Info24" /></MenuItem.Icon>
+                              </MenuItem>
+                              <MenuItem Header="Open folder (Explorer)" Tag="{Binding Id}" Click="OnOpenSubscribedFolder">
+                                <MenuItem.Icon><ui:SymbolIcon Symbol="FolderOpen24" /></MenuItem.Icon>
+                              </MenuItem>
+                            </ContextMenu>
+                          </ui:DropDownButton.Flyout>
+                        </ui:DropDownButton>
                         <ui:Button Icon="{ui:SymbolIcon ArrowSync24}" ToolTip="Update (re-download via steamcmd)" Tag="{Binding Id}" Click="OnDownload" Margin="0,0,8,0"
                                    IsEnabled="{Binding DataContext.SteamCmdConfigured, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}" />
                         <ui:Button Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" ToolTip="Delete (remove the downloaded files)" Tag="{Binding Id}" Click="OnDeleteDownloaded" />

@@ -76,12 +76,26 @@ public partial class WorkshopWindow : FluentWindow
         catch { /* best-effort */ }
     }
 
-    // Always open the item's Steam page (manage/unsubscribe there) — distinct from Subscribe (which acts in-app).
+    // Open the item's page in the Steam client (steam:// protocol).
     private void OnOpenInSteam(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string id }) return;
         try { Process.Start(new ProcessStartInfo(WorkshopService.SteamPageUrl(id)) { UseShellExecute = true }); }
         catch { /* best-effort */ }
+    }
+
+    // Open the item's Steam Community page in the default browser.
+    private void OnOpenSteamWeb(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string id }) return;
+        try { Process.Start(new ProcessStartInfo($"https://steamcommunity.com/sharedfiles/filedetails/?id={id}") { UseShellExecute = true }); }
+        catch { /* best-effort */ }
+    }
+
+    // Show the item's details in the right pane (useful from the Subscribed/Downloaded lists).
+    private async void OnShowInDzl(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string id }) await _vm.ShowDetailAsync(id);
     }
 
     private async void OnUnsubscribe(object sender, RoutedEventArgs e)

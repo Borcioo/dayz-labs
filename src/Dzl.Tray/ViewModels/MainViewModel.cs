@@ -1065,6 +1065,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>Show an item's details in the right pane by id (e.g. from the Subscribed/Downloaded lists).
+    /// Selects it in the results when present (which loads details), otherwise fetches details directly.</summary>
+    public async Task ShowDetailAsync(string id)
+    {
+        var inResults = WorkshopResults.FirstOrDefault(r => r.Id == id);
+        if (inResults is not null) { SelectedWorkshopItem = inResults; return; }
+        WorkshopDetail = new WorkshopItem(id, id);   // placeholder until the fetch lands
+        var full = await new WorkshopService(_configPath).DetailsAsync(id);
+        if (full is not null) WorkshopDetail = full;
+    }
+
     // Show the list item immediately in the details pane, then enrich (subs/description/tags) keylessly.
     private async Task LoadDetailAsync(WorkshopItem? item)
     {
