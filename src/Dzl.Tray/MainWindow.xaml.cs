@@ -38,10 +38,14 @@ public partial class MainWindow : FluentWindow
         // Logs list-view row heights from the panes' initial IsExpanded state.
         Loaded += (_, _) =>
         {
-            NavTop.SelectedIndex = 0;
+            NavGeneral.SelectedIndex = 0;   // Dashboard
             UpdateLogListRowHeights();
         };
     }
+
+    /// <summary>Every nav rail (grouped sections + pinned system group). Selection is single across all of
+    /// them — selecting in one clears the others.</summary>
+    private ListBox[] NavRails => new[] { NavGeneral, NavServer, NavBottom };
 
     // --- Navigation: swap the visible content panel based on the selected rail item ---
 
@@ -66,9 +70,9 @@ public partial class MainWindow : FluentWindow
                 return;
             }
 
-            // Clear the other rail's selection so only one item looks active.
-            if (ReferenceEquals(lb, NavTop)) NavBottom.SelectedItem = null;
-            else NavTop.SelectedItem = null;
+            // Clear every other rail's selection so only one item looks active.
+            foreach (var rail in NavRails)
+                if (!ReferenceEquals(rail, lb)) rail.SelectedItem = null;
             _currentPageTag = tag;
             ShowPage(tag);
         }
@@ -81,10 +85,9 @@ public partial class MainWindow : FluentWindow
         _restoringNav = true;
         try
         {
-            NavTop.SelectedItem = null;
-            NavBottom.SelectedItem = null;
-            if (!TrySelect(NavTop, _currentPageTag))
-                TrySelect(NavBottom, _currentPageTag);
+            foreach (var rail in NavRails) rail.SelectedItem = null;
+            foreach (var rail in NavRails)
+                if (TrySelect(rail, _currentPageTag)) break;
         }
         finally { _restoringNav = false; }
     }
@@ -131,17 +134,6 @@ public partial class MainWindow : FluentWindow
 
     /// <summary>"Edit params" shortcut → open the active server's editor on the Params tab.</summary>
     private void OnEditParams(object sender, RoutedEventArgs e) => OpenServerEditor(2);
-
-    /// <summary>Select the NavTop rail item whose Tag matches (raises OnNavChanged).</summary>
-    private void SelectNavTop(string tag)
-    {
-        foreach (var obj in NavTop.Items)
-            if (obj is ListBoxItem { Tag: string t } item && t == tag)
-            {
-                NavTop.SelectedItem = item;
-                return;
-            }
-    }
 
     // --- Top action bar handlers ------------------------------------------
 

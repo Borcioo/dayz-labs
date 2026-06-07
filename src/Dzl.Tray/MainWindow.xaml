@@ -355,75 +355,12 @@
               BorderBrush="{DynamicResource ControlElevationBorderBrush}"
               Background="{DynamicResource ControlFillColorDefaultBrush}">
         <DockPanel LastChildFill="True">
-          <!-- Pinned Settings at the bottom -->
+          <!-- System group, pinned at the bottom: Setup (wizard), MCP (conditional), Settings. -->
           <ListBox x:Name="NavBottom" DockPanel.Dock="Bottom"
                    Style="{StaticResource NavListBox}"
                    ItemContainerStyle="{StaticResource NavListBoxItem}"
                    Margin="0,0,0,8"
                    SelectionChanged="OnNavChanged">
-            <ListBoxItem Tag="settings">
-              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <ui:SymbolIcon Symbol="Settings24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
-                <TextBlock Text="Settings" VerticalAlignment="Center" />
-              </StackPanel>
-            </ListBoxItem>
-          </ListBox>
-
-          <!-- Main sections -->
-          <ListBox x:Name="NavTop"
-                   Style="{StaticResource NavListBox}"
-                   ItemContainerStyle="{StaticResource NavListBoxItem}"
-                   Margin="0,8,0,0"
-                   VerticalAlignment="Top"
-                   SelectionChanged="OnNavChanged">
-            <ListBoxItem Tag="dashboard">
-              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <ui:SymbolIcon Symbol="Gauge24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
-                <TextBlock Text="Dashboard" VerticalAlignment="Center" />
-              </StackPanel>
-            </ListBoxItem>
-            <ListBoxItem Tag="mods">
-              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <ui:SymbolIcon Symbol="Apps24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
-                <TextBlock Text="Mods" VerticalAlignment="Center" />
-              </StackPanel>
-            </ListBoxItem>
-            <ListBoxItem Tag="mymods">
-              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <ui:SymbolIcon Symbol="FolderOpen24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
-                <TextBlock Text="My Mods" VerticalAlignment="Center" />
-              </StackPanel>
-            </ListBoxItem>
-            <ListBoxItem Tag="servers">
-              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <ui:SymbolIcon Symbol="Server24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
-                <TextBlock Text="Servers" VerticalAlignment="Center" />
-              </StackPanel>
-            </ListBoxItem>
-            <ListBoxItem Tag="bases">
-              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <ui:SymbolIcon Symbol="Layer24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
-                <TextBlock Text="Bases" VerticalAlignment="Center" />
-              </StackPanel>
-            </ListBoxItem>
-            <ListBoxItem Tag="economy">
-              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <ui:SymbolIcon Symbol="Money24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
-                <TextBlock Text="Economy" VerticalAlignment="Center" />
-              </StackPanel>
-            </ListBoxItem>
-            <ListBoxItem Tag="logs">
-              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <ui:SymbolIcon Symbol="TextBulletListLtr24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
-                <TextBlock Text="Logs" VerticalAlignment="Center" />
-              </StackPanel>
-            </ListBoxItem>
-            <ListBoxItem Tag="tools">
-              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <ui:SymbolIcon Symbol="Toolbox24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
-                <TextBlock Text="Tools" VerticalAlignment="Center" />
-              </StackPanel>
-            </ListBoxItem>
             <!-- Setup: not a page — selecting it opens the Setup Wizard (modal), then the rail
                  selection is restored to the previously-shown page (OnNavChanged). -->
             <ListBoxItem Tag="setup">
@@ -439,7 +376,80 @@
                 <TextBlock Text="MCP" VerticalAlignment="Center" />
               </StackPanel>
             </ListBoxItem>
+            <ListBoxItem Tag="settings">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:SymbolIcon Symbol="Settings24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                <TextBlock Text="Settings" VerticalAlignment="Center" />
+              </StackPanel>
+            </ListBoxItem>
           </ListBox>
+
+          <!-- Grouped sections: GENERAL (modding) vs SERVER (a server instance's content). -->
+          <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,8,0,0">
+            <StackPanel>
+              <TextBlock Text="GENERAL" FontSize="11" FontWeight="SemiBold" Opacity="0.55" Margin="14,2,0,4" />
+              <ListBox x:Name="NavGeneral"
+                       Style="{StaticResource NavListBox}"
+                       ItemContainerStyle="{StaticResource NavListBoxItem}"
+                       SelectionChanged="OnNavChanged">
+                <ListBoxItem Tag="dashboard">
+                  <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:SymbolIcon Symbol="Gauge24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                    <TextBlock Text="Dashboard" VerticalAlignment="Center" />
+                  </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Tag="mods">
+                  <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:SymbolIcon Symbol="Apps24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                    <TextBlock Text="Mods" VerticalAlignment="Center" />
+                  </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Tag="mymods">
+                  <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:SymbolIcon Symbol="FolderOpen24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                    <TextBlock Text="My Mods" VerticalAlignment="Center" />
+                  </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Tag="tools">
+                  <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:SymbolIcon Symbol="Toolbox24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                    <TextBlock Text="Tools" VerticalAlignment="Center" />
+                  </StackPanel>
+                </ListBoxItem>
+              </ListBox>
+
+              <TextBlock Text="SERVER" FontSize="11" FontWeight="SemiBold" Opacity="0.55" Margin="14,14,0,4" />
+              <ListBox x:Name="NavServer"
+                       Style="{StaticResource NavListBox}"
+                       ItemContainerStyle="{StaticResource NavListBoxItem}"
+                       SelectionChanged="OnNavChanged">
+                <ListBoxItem Tag="servers">
+                  <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:SymbolIcon Symbol="Server24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                    <TextBlock Text="Servers" VerticalAlignment="Center" />
+                  </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Tag="bases">
+                  <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:SymbolIcon Symbol="Layer24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                    <TextBlock Text="Bases" VerticalAlignment="Center" />
+                  </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Tag="economy">
+                  <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:SymbolIcon Symbol="Money24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                    <TextBlock Text="Economy" VerticalAlignment="Center" />
+                  </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Tag="logs">
+                  <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:SymbolIcon Symbol="TextBulletListLtr24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                    <TextBlock Text="Logs" VerticalAlignment="Center" />
+                  </StackPanel>
+                </ListBoxItem>
+              </ListBox>
+            </StackPanel>
+          </ScrollViewer>
         </DockPanel>
       </Border>
 
