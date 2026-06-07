@@ -1088,6 +1088,9 @@
                                       <MenuItem Header="Open in editor" Tag="{Binding Path}" Click="OnOpenInEditor">
                                         <MenuItem.Icon><ui:SymbolIcon Symbol="Code24" /></MenuItem.Icon>
                                       </MenuItem>
+                                      <MenuItem Header="Git…" Tag="{Binding Name}" Click="OnOpenGit">
+                                        <MenuItem.Icon><ui:SymbolIcon Symbol="BranchFork24" /></MenuItem.Icon>
+                                      </MenuItem>
                                       <Separator />
                                       <MenuItem Header="Link (P:)" Tag="{Binding Name}" Click="OnQuickJunction">
                                         <MenuItem.Icon><ui:SymbolIcon Symbol="Link24" /></MenuItem.Icon>

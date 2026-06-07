@@ -6,6 +6,23 @@ using Xunit;
 
 public class GitTests
 {
+    [Fact]
+    public void ParseChangedFiles_reads_staged_unstaged_untracked_renamed()
+    {
+        const string porcelain =
+            "# branch.head main\n" +
+            "1 .M N... 100644 100644 100644 aaa bbb config.cpp\n" +     // unstaged modify
+            "1 M. N... 100644 100644 100644 aaa bbb scripts/Main.c\n" + // staged modify
+            "2 R. N... 100644 100644 100644 aaa bbb R100 new name.c\told name.c\n" + // staged rename (spaces in path)
+            "? notes.txt\n";
+        var files = Git.ParseChangedFiles(porcelain);
+        files.Should().HaveCount(4);
+        files[0].Path.Should().Be("config.cpp"); files[0].Staged.Should().BeFalse(); files[0].Status.Should().Be(".M");
+        files[1].Path.Should().Be("scripts/Main.c"); files[1].Staged.Should().BeTrue();
+        files[2].Path.Should().Be("new name.c"); files[2].Staged.Should().BeTrue();   // new path, spaces kept
+        files[3].Untracked.Should().BeTrue(); files[3].Status.Should().Be("??");
+    }
+
     [Theory]
     [InlineData("git@github.com:foreto/dzl.git", "https://github.com/foreto/dzl")]
     [InlineData("https://github.com/foreto/dzl.git", "https://github.com/foreto/dzl")]

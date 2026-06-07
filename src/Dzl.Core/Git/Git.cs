@@ -84,6 +84,92 @@ public static class Git
         return url.EndsWith(".git", StringComparison.OrdinalIgnoreCase) ? url[..^4] : url;
     }
 
+    /// <summary>One changed path from <c>git status --porcelain=v2</c>. <see cref="Index"/>/<see cref="Worktree"/>
+    /// are the staged/worktree status chars ('.', 'M', 'A', 'D', 'R', …); untracked is '?', unmerged 'U'.</summary>
+    public sealed record ChangedFile(string Path, char Index, char Worktree)
+    {
+        public bool Untracked => Index == '?';
+        public bool Conflicted => Index == 'U' || Worktree == 'U';
+        /// <summary>In the commit as-is (index has a change, and it's not untracked/unresolved).</summary>
+        public bool Staged => Index is not '.' and not '?' and not 'U';
+        /// <summary>Two-letter status for display ("M.", ".M", "A.", "??", "UU", …).</summary>
+        public string Status => Untracked ? "??" : $"{Index}{Worktree}";
+    }
+
+    /// <summary>Parse the file entries of <c>git status --porcelain=v2</c> (ignores branch headers). Pure.</summary>
+    public static List<ChangedFile> ParseChangedFiles(string porcelain)
+    {
+        var list = new List<ChangedFile>();
+        foreach (var raw in porcelain.Split('\n'))
+        {
+            var line = raw.TrimEnd('\r');
+            if (line.Length < 2) continue;
+            switch (line[0])
+            {
+                case '1':   // "1 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>"
+                {
+                    var p = line.Split(' ', 9);
+                    if (p.Length == 9 && p[1].Length >= 2) list.Add(new ChangedFile(p[8], p[1][0], p[1][1]));
+                    break;
+                }
+                case '2':   // "2 <XY> ... <Xscore> <path><TAB><orig>"
+                {
+                    var p = line.Split(' ', 10);
+                    if (p.Length == 10 && p[1].Length >= 2)
+                    {
+                        var path = p[9]; var tab = path.IndexOf('\t'); if (tab >= 0) path = path[..tab];
+                        list.Add(new ChangedFile(path, p[1][0], p[1][1]));
+                    }
+                    break;
+                }
+                case 'u':   // unmerged
+                {
+                    var p = line.Split(' ', 11);
+                    if (p.Length == 11) list.Add(new ChangedFile(p[10], 'U', 'U'));
+                    break;
+                }
+                case '?':   // untracked: "? <path>"
+                    list.Add(new ChangedFile(line[2..], '?', '?'));
+                    break;
+            }
+        }
+        return list;
+    }
+
+    /// <summary>Changed files in the work tree (staged + unstaged + untracked).</summary>
+    public static List<ChangedFile> ChangedFiles(string dir)
+    {
+        var (code, outp, _) = Proc.Run("git", dir, "status", "--porcelain=v2");
+        return code == 0 ? ParseChangedFiles(outp) : new();
+    }
+
+    /// <summary>Current branch + all local branches.</summary>
+    public static (string current, List<string> all) Branches(string dir)
+    {
+        var cur = Proc.Run("git", dir, "rev-parse", "--abbrev-ref", "HEAD");
+        var (code, outp, _) = Proc.Run("git", dir, "branch", "--format=%(refname:short)");
+        var all = code == 0
+            ? outp.Split('\n').Select(s => s.Trim()).Where(s => s.Length > 0).ToList()
+            : new List<string>();
+        return (cur.code == 0 ? cur.stdout.Trim() : "", all);
+    }
+
+    public static (bool ok, string msg) Checkout(string dir, string branch) => Run(dir, "checkout", branch);
+    public static (bool ok, string msg) CreateBranch(string dir, string name) => Run(dir, "checkout", "-b", name);
+    public static (bool ok, string msg) Stage(string dir, string path) => Run(dir, "add", "--", path);
+    public static (bool ok, string msg) Unstage(string dir, string path) => Run(dir, "restore", "--staged", "--", path);
+    public static (bool ok, string msg) StageAll(string dir) => Run(dir, "add", "-A");
+    public static (bool ok, string msg) CommitStaged(string dir, string message) => Run(dir, "commit", "-m", message);
+    public static (bool ok, string msg) Pull(string dir) => Run(dir, "pull");
+    /// <summary>Push the current branch, setting upstream if it has none (<c>push -u origin HEAD</c>).</summary>
+    public static (bool ok, string msg) Push(string dir) => Run(dir, "push", "-u", "origin", "HEAD");
+
+    private static (bool ok, string msg) Run(string dir, params string[] args)
+    {
+        var (code, outp, err) = Proc.Run("git", dir, args);
+        return (code == 0, code == 0 ? (outp.Length > 0 ? outp.Trim() : "ok") : (err.Length > 0 ? err.Trim() : outp.Trim()));
+    }
+
     public static (bool ok, string msg) Init(string dir)
     {
         var (code, _, err) = Proc.Run("git", dir, "init", "-b", "main");

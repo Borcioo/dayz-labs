@@ -865,6 +865,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>True when gh is installed + logged in (drives the "From GitHub" tab availability).</summary>
     public bool GitHubReady => Dzl.Core.Vcs.GitHub.AuthStatus().LoggedIn;
 
+    /// <summary>The source folder for a mod project (for the per-mod git window).</summary>
+    public string ModDirOf(string name) => ProjectPaths.ModDir(ProjectsRoot, name);
+
     private static string DeriveRepoName(string repo)
     {
         var s = repo.TrimEnd('/');

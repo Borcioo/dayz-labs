@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 
 namespace Dzl.Tray;
 
@@ -17,5 +18,23 @@ internal static class ShellOpen
             return true;
         }
         catch { return false; }
+    }
+
+    /// <summary>Open a terminal in <paramref name="dir"/> — Windows Terminal, then PowerShell, then cmd.</summary>
+    public static bool Terminal(string? dir)
+    {
+        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir)) return false;
+        var attempts = new (string file, string args)[]
+        {
+            ("wt.exe", $"-d \"{dir}\""),
+            ("powershell.exe", $"-NoExit -Command \"Set-Location -LiteralPath '{dir}'\""),
+            ("cmd.exe", $"/k cd /d \"{dir}\""),
+        };
+        foreach (var (file, args) in attempts)
+        {
+            try { Process.Start(new ProcessStartInfo(file, args) { UseShellExecute = true }); return true; }
+            catch { /* try the next shell */ }
+        }
+        return false;
     }
 }
