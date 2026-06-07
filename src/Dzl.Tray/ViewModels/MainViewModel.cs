@@ -1311,9 +1311,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private bool FilterType(object o)
     {
         if (o is not TypeRowVm t) return true;
-        if (TypesFilter.Length > 0 && !t.Name.Contains(TypesFilter, StringComparison.OrdinalIgnoreCase)) return false;
-        if (TypesCategoryFilter.Length > 0 && !string.Equals(t.Category, TypesCategoryFilter, StringComparison.OrdinalIgnoreCase)) return false;
-        if (TypesSourceFilter.Length > 0 && !string.Equals(OriginUi.Label(t.Origin), TypesSourceFilter, StringComparison.OrdinalIgnoreCase)) return false;
+        // A CollectionView filter predicate runs during collection mutation (e.g. while LoadTypes adds
+        // rows) — at which point a bound filter ComboBox may have written null into one of these
+        // properties (WPF clears SelectedItem when TypeCategories is repopulated). Guard with
+        // IsNullOrEmpty, never `.Length`, so the predicate can't NRE on transient null state.
+        if (!string.IsNullOrEmpty(TypesFilter) && !t.Name.Contains(TypesFilter, StringComparison.OrdinalIgnoreCase)) return false;
+        if (!string.IsNullOrEmpty(TypesCategoryFilter) && !string.Equals(t.Category, TypesCategoryFilter, StringComparison.OrdinalIgnoreCase)) return false;
+        if (!string.IsNullOrEmpty(TypesSourceFilter) && !string.Equals(OriginUi.Label(t.Origin), TypesSourceFilter, StringComparison.OrdinalIgnoreCase)) return false;
         return true;
     }
 
