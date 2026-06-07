@@ -553,25 +553,6 @@ public partial class MainWindow : FluentWindow
         await _vm.BuildModAsync(name, opt.Value.clean, opt.Value.binarize, opt.Value.sign);
     }
 
-    private async void OnPublishRepo(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string name }) return;
-        var ok = System.Windows.MessageBox.Show(
-            $"Publish \"{name}\" to GitHub?\n\nThis runs git init (if needed), makes a first commit, then " +
-            "'gh repo create --private --push' under your logged-in GitHub account.",
-            "Publish to GitHub", System.Windows.MessageBoxButton.OKCancel,
-            System.Windows.MessageBoxImage.Question) == System.Windows.MessageBoxResult.OK;
-        if (!ok) return;
-        await _vm.PublishRepoAsync(name);
-    }
-
-    private async void OnReleaseRepo(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string name }) return;
-        var tag = PromptDialog.Show(this, "Create GitHub release", $"Tag for {name} (e.g. v1.0.0):");
-        if (string.IsNullOrWhiteSpace(tag)) return;
-        await _vm.ReleaseRepoAsync(name, tag.Trim(), null);
-    }
 
     // GitHub OAuth login is interactive (device code + browser), so run it in a real terminal the
     // user can complete; afterwards they can re-open Settings to see the refreshed account.

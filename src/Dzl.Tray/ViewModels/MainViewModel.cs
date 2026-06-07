@@ -877,6 +877,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return (r.Ok, r.Message);
     }
 
+    /// <summary>Cut a GitHub release (tag) for a project from the git window. Returns the result.</summary>
+    public async Task<(bool ok, string msg)> ReleaseForGitAsync(string name, string tag, string? notes)
+    {
+        var cp = _configPath;
+        var r = await Task.Run(() => new RepoService(cp).Release(name, tag, notes));
+        return (r.Ok, r.Message);
+    }
+
     private static string DeriveRepoName(string repo)
     {
         var s = repo.TrimEnd('/');
@@ -1213,18 +1221,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Detected editors on this machine (for the Settings Detect button).</summary>
     public List<EditorInfo> DetectEditors() => EditorDetect.Detect();
 
-    /// <summary>Publish a mod project to GitHub (init + first commit + gh repo create) off the UI thread.</summary>
-    public async Task PublishRepoAsync(string name)
-    {
-        if (Building) return;
-        Building = true;
-        BuildLog = $"▸ Publishing {name} to GitHub …\n";
-        var cp = _configPath;
-        var r = await Task.Run(() => new RepoService(cp).Publish(name));
-        BuildLog += (r.Ok ? "✓ " : "✗ ") + r.Message + "\n";
-        Building = false;
-        RefreshModProjects();
-    }
 
     /// <summary>GitHub account label for the Settings → Accounts row (keyless; reflects gh's OAuth login).</summary>
     [ObservableProperty] private string _ghAccount = "checking…";
@@ -1247,17 +1243,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         await RefreshGitHubAuthAsync();
     }
 
-    /// <summary>Cut a GitHub release for a mod project off the UI thread.</summary>
-    public async Task ReleaseRepoAsync(string name, string tag, string? notes)
-    {
-        if (Building) return;
-        Building = true;
-        BuildLog = $"▸ Releasing {name} {tag} …\n";
-        var cp = _configPath;
-        var r = await Task.Run(() => new RepoService(cp).Release(name, tag, notes));
-        BuildLog += (r.Ok ? "✓ " : "✗ ") + r.Message + "\n";
-        Building = false;
-    }
 
     // === Economy (types.xml) page =========================================
 

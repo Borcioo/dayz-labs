@@ -1076,6 +1076,8 @@
                                            ToolTip="Build → PBO and add to the active server's run-list (needs P: mounted)"
                                            Tag="{Binding Name}" Click="OnBuildMod" Margin="0,0,8,0"
                                            IsEnabled="{Binding DataContext.WorkDriveMounted, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
+                                <ui:Button Icon="{ui:SymbolIcon BranchFork24}" Margin="0,0,8,0" Tag="{Binding Name}" Click="OnOpenGit"
+                                           ToolTip="Git — branches, stage &amp; commit, push, release, terminal" />
                                 <ui:Button Icon="{ui:SymbolIcon Open24}" Margin="0,0,8,0" Tag="{Binding RepoUrl}" Click="OnOpenRepoUrl"
                                            IsEnabled="{Binding HasRepoUrl}"
                                            ToolTip="Open the repo on GitHub (disabled when the project has no git remote)" />
@@ -1087,9 +1089,6 @@
                                       </MenuItem>
                                       <MenuItem Header="Open in editor" Tag="{Binding Path}" Click="OnOpenInEditor">
                                         <MenuItem.Icon><ui:SymbolIcon Symbol="Code24" /></MenuItem.Icon>
-                                      </MenuItem>
-                                      <MenuItem Header="Git…" Tag="{Binding Name}" Click="OnOpenGit">
-                                        <MenuItem.Icon><ui:SymbolIcon Symbol="BranchFork24" /></MenuItem.Icon>
                                       </MenuItem>
                                       <Separator />
                                       <MenuItem Header="Link (P:)" Tag="{Binding Name}" Click="OnQuickJunction">
@@ -1117,13 +1116,6 @@
                                             </Style.Triggers>
                                           </Style>
                                         </MenuItem.Style>
-                                      </MenuItem>
-                                      <Separator />
-                                      <MenuItem Header="Publish to GitHub" Tag="{Binding Name}" Click="OnPublishRepo">
-                                        <MenuItem.Icon><ui:SymbolIcon Symbol="Branch24" /></MenuItem.Icon>
-                                      </MenuItem>
-                                      <MenuItem Header="Create release" Tag="{Binding Name}" Click="OnReleaseRepo">
-                                        <MenuItem.Icon><ui:SymbolIcon Symbol="Tag24" /></MenuItem.Icon>
                                       </MenuItem>
                                       <Separator />
                                       <MenuItem Header="Delete project…" Tag="{Binding Name}" Click="OnDeleteProject"

@@ -54,6 +54,7 @@ public partial class GitWindow : FluentWindow
         PushBtn.Visibility = hasRemote ? Visibility.Visible : Visibility.Collapsed;
         PublishBtn.Visibility = hasRemote ? Visibility.Collapsed : Visibility.Visible;
         PullBtn.IsEnabled = hasRemote;
+        ReleaseBtn.Visibility = hasRemote ? Visibility.Visible : Visibility.Collapsed;
 
         var rows = Git.ChangedFiles(_dir).Select(f => new GitFileRow(f)).ToList();
         FilesList.ItemsSource = rows;
@@ -120,6 +121,16 @@ public partial class GitWindow : FluentWindow
         try { Report(await _vm.PublishForGitAsync(_name)); }
         finally { PublishBtn.IsEnabled = true; }
         Refresh();
+    }
+
+    private async void OnRelease(object sender, RoutedEventArgs e)
+    {
+        var tag = PromptDialog.Show(this, "Create GitHub release", $"Tag for {_name} (e.g. v1.0.0):");
+        if (string.IsNullOrWhiteSpace(tag)) return;
+        StatusText.Text = "creating release…";
+        ReleaseBtn.IsEnabled = false;
+        try { Report(await _vm.ReleaseForGitAsync(_name, tag.Trim(), null)); }
+        finally { ReleaseBtn.IsEnabled = true; }
     }
 
     private void OnInit(object sender, RoutedEventArgs e)
