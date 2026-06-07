@@ -1595,7 +1595,8 @@
               </StackPanel>
               <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <TextBlock Text="{Binding TypesLintSummary}" VerticalAlignment="Center" FontSize="12"
-                           Margin="0,0,16,0" Foreground="#F0C04A" />
+                           Margin="0,0,16,0" Foreground="#F0C04A"
+                           Visibility="{Binding HasLintFindings, Converter={StaticResource BoolToVis}}" />
                 <TextBlock Text="{Binding TypesStatus}" VerticalAlignment="Center"
                            FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
               </StackPanel>

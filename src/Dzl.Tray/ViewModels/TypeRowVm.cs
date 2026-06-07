@@ -31,7 +31,8 @@ public sealed partial class TypeRowVm : ObservableObject
     /// <summary>Origin of the source file (Vanilla / Mod / Custom) — drives the source pill + filter.</summary>
     public CeOrigin Origin { get; }
 
-    /// <summary>Mod/folder this file belongs to (e.g. "vanilla", a mod name) — used for per-source chips.</summary>
+    /// <summary>Mod/folder this file belongs to (e.g. "vanilla", a mod name).
+    /// Currently unbound/reserved — will feed per-mod-source chips in SP-CE1.</summary>
     public string ModSource { get; }
 
     /// <summary>Just the file name of <see cref="SourceFile"/>, shown in the File column.</summary>
@@ -44,7 +45,6 @@ public sealed partial class TypeRowVm : ObservableObject
 
     // --- lint summary (per-row; refreshed from MainViewModel after load/edit) ---
     [ObservableProperty] private int _lintCount;
-    [ObservableProperty] private int _lintErrorCount;
     [ObservableProperty] private string _lintTooltip = "";
 
     public bool HasLint => LintCount > 0;

@@ -1281,21 +1281,27 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     // --- lint summary across the whole loaded set ---
     [ObservableProperty] private string _typesLintSummary = "";
+    /// <summary>True when the last lint pass found at least one warning or error; drives the lint-summary
+    /// TextBlock's Visibility so it is hidden when there are no findings.</summary>
+    [ObservableProperty] private bool _hasLintFindings;
 
     /// <summary>Maps each loaded source file → its CE origin, so undo/redo snapshots (which carry only
     /// <see cref="TypeEntry.SourceFile"/>) can re-derive the right origin pill.</summary>
     private readonly Dictionary<string, CeOrigin> _originByFile = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Distinct source files in the loaded set (file name → absolute path) for the Add-type target picker.</summary>
+    /// <summary>Distinct source files in the loaded set (file name → absolute path) for the Add-type target picker.
+    /// The primary/vanilla file is always index 0 so the dialog defaults to it; row source files follow.</summary>
     public IReadOnlyList<(string Name, string Path)> TypesSourceFiles()
     {
         var svc = new TypesService(_configPath);
         var primary = svc.TypesFile();
         var list = new List<(string, string)>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var f in svc.Rows().Select(r => r.Entry.SourceFile)
-                             .Concat(primary is null ? Array.Empty<string>() : new[] { primary })
-                             .Where(p => !string.IsNullOrEmpty(p)))
+        // Primary first so SelectedIndex=0 always picks the primary/vanilla file.
+        var ordered = (primary is null ? Array.Empty<string>() : new[] { primary })
+                      .Concat(svc.Rows().Select(r => r.Entry.SourceFile))
+                      .Where(p => !string.IsNullOrEmpty(p));
+        foreach (var f in ordered)
             if (seen.Add(f)) list.Add((System.IO.Path.GetFileName(f), f));
         return list;
     }
@@ -1453,22 +1459,21 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             if (byName.TryGetValue(row.Name, out var list))
             {
                 row.LintCount = list.Count;
-                row.LintErrorCount = list.Count(f => f.Severity == Dzl.Core.Economy.Lint.LintSeverity.Error);
                 row.LintTooltip = string.Join("\n", list.Select(f => $"[{f.Severity}] {f.Message}"));
             }
             else
             {
                 row.LintCount = 0;
-                row.LintErrorCount = 0;
                 row.LintTooltip = "";
             }
         }
 
         var errors = findings.Count(f => f.Severity == Dzl.Core.Economy.Lint.LintSeverity.Error);
         var warnings = findings.Count(f => f.Severity == Dzl.Core.Economy.Lint.LintSeverity.Warning);
-        TypesLintSummary = (errors == 0 && warnings == 0)
-            ? "no lint findings"
-            : $"{warnings} warning(s) / {errors} error(s)";
+        HasLintFindings = errors > 0 || warnings > 0;
+        TypesLintSummary = HasLintFindings
+            ? $"{warnings} warning(s) / {errors} error(s)"
+            : "";
     }
 
     /// <summary>Persist the full edited set (snapshots a versioned backup first).</summary>

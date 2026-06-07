@@ -31,8 +31,8 @@ internal static class NewTypeDialog
         root.Children.Add(nameBox);
 
         root.Children.Add(new TextBlock { Text = "Target file:", FontSize = 11, Opacity = 0.7 });
-        var fileCombo = new ComboBox { Margin = new Thickness(0, 2, 0, 4), DisplayMemberPath = "Name" };
-        foreach (var t in targets) fileCombo.Items.Add(t);
+        var fileCombo = new ComboBox { Margin = new Thickness(0, 2, 0, 4) };
+        foreach (var t in targets) fileCombo.Items.Add(new ComboBoxItem { Content = t.Name, Tag = t.Path });
         if (fileCombo.Items.Count > 0) fileCombo.SelectedIndex = 0;
         root.Children.Add(fileCombo);
 
@@ -57,7 +57,7 @@ internal static class NewTypeDialog
         nameBox.Focus();
 
         if (win.ShowDialog() != true || string.IsNullOrWhiteSpace(nameBox.Text)) return null;
-        var target = fileCombo.SelectedItem is ValueTuple<string, string> sel ? sel.Item2 : "";
+        var target = (fileCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? "";
         return (nameBox.Text.Trim(), target);
     }
 }
