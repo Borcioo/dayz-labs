@@ -1259,19 +1259,55 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _typesCategoryFilter = "";
     [ObservableProperty] private string _typesStatus = "";
 
+    /// <summary>Source-origin filter: "" = all, "Vanilla" / "Mod" / "Custom".</summary>
+    [ObservableProperty] private string _typesSourceFilter = "";
+
     partial void OnTypesFilterChanged(string value) => TypesView.Refresh();
     partial void OnTypesCategoryFilterChanged(string value) => TypesView.Refresh();
+    partial void OnTypesSourceFilterChanged(string value) => TypesView.Refresh();
 
     /// <summary>Path of the active mission's types.xml (or a hint), shown on the Economy page.</summary>
     public string TypesFile => new TypesService(_configPath).TypesFile() ?? "(no types.xml — pick/scaffold a server mission)";
 
     public bool HasTypes => new TypesService(_configPath).TypesFile() is not null;
 
+    // --- limits (valid usage/value/tag/category names) for the editor dropdowns ---
+    /// <summary>Valid usage names from cfglimitsdefinition.xml (selectable in the Usage editor; free-text still allowed).</summary>
+    public ObservableCollection<string> LimitsUsage { get; } = new();
+    /// <summary>Valid value/tier names (selectable in the Tiers editor).</summary>
+    public ObservableCollection<string> LimitsValue { get; } = new();
+    /// <summary>Valid category names (selectable in the Category editor).</summary>
+    public ObservableCollection<string> LimitsCategory { get; } = new();
+
+    // --- lint summary across the whole loaded set ---
+    [ObservableProperty] private string _typesLintSummary = "";
+
+    /// <summary>Maps each loaded source file → its CE origin, so undo/redo snapshots (which carry only
+    /// <see cref="TypeEntry.SourceFile"/>) can re-derive the right origin pill.</summary>
+    private readonly Dictionary<string, CeOrigin> _originByFile = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Distinct source files in the loaded set (file name → absolute path) for the Add-type target picker.</summary>
+    public IReadOnlyList<(string Name, string Path)> TypesSourceFiles()
+    {
+        var svc = new TypesService(_configPath);
+        var primary = svc.TypesFile();
+        var list = new List<(string, string)>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var f in svc.Rows().Select(r => r.Entry.SourceFile)
+                             .Concat(primary is null ? Array.Empty<string>() : new[] { primary })
+                             .Where(p => !string.IsNullOrEmpty(p)))
+            if (seen.Add(f)) list.Add((System.IO.Path.GetFileName(f), f));
+        return list;
+    }
+
+    private TypeRowVm MakeRow(TypeRow r) => new(r);
+
     private bool FilterType(object o)
     {
         if (o is not TypeRowVm t) return true;
         if (TypesFilter.Length > 0 && !t.Name.Contains(TypesFilter, StringComparison.OrdinalIgnoreCase)) return false;
         if (TypesCategoryFilter.Length > 0 && !string.Equals(t.Category, TypesCategoryFilter, StringComparison.OrdinalIgnoreCase)) return false;
+        if (TypesSourceFilter.Length > 0 && !string.Equals(OriginUi.Label(t.Origin), TypesSourceFilter, StringComparison.OrdinalIgnoreCase)) return false;
         return true;
     }
 
@@ -1305,8 +1341,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void RestoreTypeSnapshot(List<Dzl.Core.Economy.TypeEntry> snap)
     {
         Types.Clear();
-        foreach (var e in snap) Types.Add(new TypeRowVm(e));
+        foreach (var e in snap)
+        {
+            var origin = _originByFile.TryGetValue(e.SourceFile ?? "", out var o) ? o : CeOrigin.Custom;
+            Types.Add(new TypeRowVm(e, origin));
+        }
         RefreshTypeCategories();
+        RefreshTypesLint();
         TypesView.Refresh();
     }
 
@@ -1357,18 +1398,77 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (!TypeCategories.Contains(sel)) TypesCategoryFilter = "";
     }
 
-    /// <summary>(Re)load types from the active mission's types.xml. Clears the undo history.</summary>
+    /// <summary>(Re)load types from the active mission's Types files (multi-file). Clears the undo history,
+    /// reloads the limits dropdowns, and recomputes lint.</summary>
     public void LoadTypes()
     {
+        var svc = new TypesService(_configPath);
         Types.Clear();
-        foreach (var e in new TypesService(_configPath).List()) Types.Add(new TypeRowVm(e));
+        _originByFile.Clear();
+        foreach (var r in svc.Rows())
+        {
+            _originByFile[r.Entry.SourceFile] = r.Origin;
+            Types.Add(MakeRow(r));
+        }
         RefreshTypeCategories();
+        RefreshLimits(svc);
         _typesUndo.Clear(); _typesRedo.Clear(); _pendingEdit = null;
         AfterTypeHistoryChange();
         OnPropertyChanged(nameof(TypesFile));
         OnPropertyChanged(nameof(HasTypes));
+        RefreshTypesLint();
         TypesView.Refresh();
         TypesStatus = $"{Types.Count} types";
+    }
+
+    private void RefreshLimits(TypesService svc)
+    {
+        var limits = svc.Limits();
+        FillSet(LimitsUsage, limits.Usage);
+        FillSet(LimitsValue, limits.Value);
+        FillSet(LimitsCategory, limits.Category);
+
+        static void FillSet(ObservableCollection<string> target, IReadOnlySet<string> src)
+        {
+            target.Clear();
+            foreach (var v in src.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)) target.Add(v);
+        }
+    }
+
+    /// <summary>Recompute lint over the active mission's Types files and stamp each row with its findings.
+    /// Lint runs against on-disk files (the saved state); unsaved edits are reflected after the next Save.</summary>
+    private void RefreshTypesLint()
+    {
+        IReadOnlyList<Dzl.Core.Economy.Lint.LintFinding> findings;
+        try { findings = new TypesService(_configPath).Lint(); }
+        catch { findings = Array.Empty<Dzl.Core.Economy.Lint.LintFinding>(); }
+
+        var byName = findings
+            .Where(f => !string.IsNullOrEmpty(f.EntryName))
+            .GroupBy(f => f.EntryName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var row in Types)
+        {
+            if (byName.TryGetValue(row.Name, out var list))
+            {
+                row.LintCount = list.Count;
+                row.LintErrorCount = list.Count(f => f.Severity == Dzl.Core.Economy.Lint.LintSeverity.Error);
+                row.LintTooltip = string.Join("\n", list.Select(f => $"[{f.Severity}] {f.Message}"));
+            }
+            else
+            {
+                row.LintCount = 0;
+                row.LintErrorCount = 0;
+                row.LintTooltip = "";
+            }
+        }
+
+        var errors = findings.Count(f => f.Severity == Dzl.Core.Economy.Lint.LintSeverity.Error);
+        var warnings = findings.Count(f => f.Severity == Dzl.Core.Economy.Lint.LintSeverity.Warning);
+        TypesLintSummary = (errors == 0 && warnings == 0)
+            ? "no lint findings"
+            : $"{warnings} warning(s) / {errors} error(s)";
     }
 
     /// <summary>Persist the full edited set (snapshots a versioned backup first).</summary>
@@ -1379,14 +1479,23 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (r.Ok) LoadTypes();
     }
 
-    public void AddType(string name)
+    /// <summary>Add a new in-memory type. <paramref name="targetFile"/> (a resolved CE file path; empty →
+    /// the primary/vanilla file) is stamped onto the row's <see cref="TypeEntry.SourceFile"/> so SaveAll
+    /// routes it to that file.</summary>
+    public void AddType(string name, string? targetFile = null)
     {
         if (string.IsNullOrWhiteSpace(name)) return;
         PushTypeUndo();
-        var row = new TypeRowVm(new Dzl.Core.Economy.TypeEntry { Name = name.Trim(), Nominal = 1, Min = 0, Lifetime = 3888000, Cost = 100 });
+        var file = string.IsNullOrEmpty(targetFile)
+            ? (new TypesService(_configPath).TypesFile() ?? "")
+            : targetFile;
+        var origin = _originByFile.TryGetValue(file, out var o) ? o : CeOrigin.Custom;
+        var row = new TypeRowVm(
+            new Dzl.Core.Economy.TypeEntry { Name = name.Trim(), Nominal = 1, Min = 0, Lifetime = 3888000, Cost = 100, SourceFile = file },
+            origin);
         Types.Add(row);
         TypesView.Refresh();
-        TypesStatus = $"added {name} (unsaved)";
+        TypesStatus = $"added {name} → {row.FileName} (unsaved)";
     }
 
     public void RemoveTypes(IReadOnlyList<TypeRowVm> rows)

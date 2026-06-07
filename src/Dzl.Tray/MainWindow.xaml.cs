@@ -596,8 +596,8 @@ public partial class MainWindow : FluentWindow
 
     private void OnAddType(object sender, RoutedEventArgs e)
     {
-        var name = PromptDialog.Show(this, "Add type", "Class name (e.g. AKM):");
-        if (!string.IsNullOrWhiteSpace(name)) _vm.AddType(name.Trim());
+        var result = NewTypeDialog.Show(this, _vm.TypesSourceFiles());
+        if (result is { } r) _vm.AddType(r.name, r.targetFile);
     }
 
     private void OnRemoveTypes(object sender, RoutedEventArgs e) => _vm.RemoveTypes(SelectedTypes());
