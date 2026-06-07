@@ -1,0 +1,42 @@
+<UserControl x:Class="Dzl.Tray.Controls.ChipMultiSelect"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             x:Name="Root">
+  <!-- Wrapping chip list + an editable typeahead combo for adding. Bound collections are mutated in
+       place from the code-behind (see ChipMultiSelect.xaml.cs). The chips re-render off the private
+       Chips mirror so the control stays correct even mid-edit. -->
+  <StackPanel>
+    <ItemsControl ItemsSource="{Binding Chips, ElementName=Root}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <WrapPanel Orientation="Horizontal" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate>
+          <Border CornerRadius="9" Padding="8,2,3,2" Margin="0,0,4,4"
+                  Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                  BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="{Binding}" FontSize="11" VerticalAlignment="Center"
+                         Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+              <Button Content="✕" FontSize="9" Padding="0" Margin="5,0,0,0"
+                      Width="16" Height="16" VerticalAlignment="Center"
+                      Background="Transparent" BorderThickness="0" Cursor="Hand"
+                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                      ToolTip="Remove"
+                      Tag="{Binding}" Click="OnRemoveChip" />
+            </StackPanel>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <ComboBox IsEditable="True" StaysOpenOnEdit="True" IsTextSearchEnabled="True"
+              MinWidth="120" Margin="0,2,0,0" FontSize="11"
+              ItemsSource="{Binding Suggestions, ElementName=Root}"
+              KeyDown="OnAddKeyDown" SelectionChanged="OnAddSelectionChanged"
+              ToolTip="{Binding AddHint, ElementName=Root}" />
+  </StackPanel>
+</UserControl>

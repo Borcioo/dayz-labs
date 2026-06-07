@@ -1262,9 +1262,42 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Source-origin filter: "" = all, "Vanilla" / "Mod" / "Custom".</summary>
     [ObservableProperty] private string _typesSourceFilter = "";
 
-    partial void OnTypesFilterChanged(string value) => TypesView.Refresh();
-    partial void OnTypesCategoryFilterChanged(string value) => TypesView.Refresh();
-    partial void OnTypesSourceFilterChanged(string value) => TypesView.Refresh();
+    // --- advanced filters (all substring/contains; blank = ignored) ---
+    [ObservableProperty] private string _typesUsageFilter = "";
+    [ObservableProperty] private string _typesValueFilter = "";
+    [ObservableProperty] private string _typesTagFilter = "";
+    /// <summary>Flag-presence filter: "" = any, else cargo/hoarder/map/player/crafted/deloot (row must have it set).</summary>
+    [ObservableProperty] private string _typesFlagFilter = "";
+    /// <summary>Nominal range filters as raw text (parsed leniently; blank/non-numeric = ignored).</summary>
+    [ObservableProperty] private string _typesNominalMin = "";
+    [ObservableProperty] private string _typesNominalMax = "";
+
+    partial void OnTypesUsageFilterChanged(string value) => RefreshTypesView();
+    partial void OnTypesValueFilterChanged(string value) => RefreshTypesView();
+    partial void OnTypesTagFilterChanged(string value) => RefreshTypesView();
+    partial void OnTypesFlagFilterChanged(string value) => RefreshTypesView();
+    partial void OnTypesNominalMinChanged(string value) => RefreshTypesView();
+    partial void OnTypesNominalMaxChanged(string value) => RefreshTypesView();
+
+    /// <summary>Reset every Economy filter to its empty (show-all) state.</summary>
+    public void ClearTypeFilters()
+    {
+        TypesFilter = ""; TypesCategoryFilter = ""; TypesSourceFilter = "";
+        TypesUsageFilter = ""; TypesValueFilter = ""; TypesTagFilter = "";
+        TypesFlagFilter = ""; TypesNominalMin = ""; TypesNominalMax = "";
+    }
+
+    partial void OnTypesFilterChanged(string value) => RefreshTypesView();
+    partial void OnTypesCategoryFilterChanged(string value) => RefreshTypesView();
+    partial void OnTypesSourceFilterChanged(string value) => RefreshTypesView();
+
+    /// <summary>Re-run the filter predicate and update the "showing X / N" count together, so every
+    /// filter change keeps the count label in sync.</summary>
+    private void RefreshTypesView()
+    {
+        TypesView.Refresh();
+        OnPropertyChanged(nameof(TypesCountLabel));
+    }
 
     /// <summary>Path of the active mission's types.xml (or a hint), shown on the Economy page.</summary>
     public string TypesFile => new TypesService(_configPath).TypesFile() ?? "(no types.xml — pick/scaffold a server mission)";
@@ -1278,6 +1311,41 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<string> LimitsValue { get; } = new();
     /// <summary>Valid category names (selectable in the Category editor).</summary>
     public ObservableCollection<string> LimitsCategory { get; } = new();
+    /// <summary>Valid tag names from cfglimitsdefinition.xml (selectable in the Tag editor).</summary>
+    public ObservableCollection<string> LimitsTag { get; } = new();
+
+    /// <summary>The row shown in the master–detail edit panel (the grid's primary selected item).
+    /// Null = no selection → panel shows its "select a type" placeholder.</summary>
+    [ObservableProperty] private TypeRowVm? _selectedType;
+
+    /// <summary>All currently selected grid rows (multi-select), pushed from the grid's SelectedItems by
+    /// the code-behind. Drives batch operations. Not an ObservableCollection — replaced wholesale per
+    /// selection change.</summary>
+    public System.Collections.Generic.IReadOnlyList<TypeRowVm> SelectedTypes { get; private set; }
+        = System.Array.Empty<TypeRowVm>();
+
+    /// <summary>Count of rows passing the current filter vs. the total loaded — drives "showing X / N".</summary>
+    public string TypesCountLabel
+    {
+        get
+        {
+            var shown = TypesView.Cast<object>().Count();
+            return $"showing {shown} / {Types.Count}";
+        }
+    }
+
+    /// <summary>Called by the code-behind when the grid selection changes; updates the detail panel
+    /// target and the batch selection.</summary>
+    public void SetSelectedTypes(System.Collections.Generic.IReadOnlyList<TypeRowVm> rows, TypeRowVm? primary)
+    {
+        SelectedTypes = rows;
+        SelectedType = primary;
+        OnPropertyChanged(nameof(SelectedTypeCount));
+        OnPropertyChanged(nameof(HasSelection));
+    }
+
+    public int SelectedTypeCount => SelectedTypes.Count;
+    public bool HasSelection => SelectedTypes.Count > 0;
 
     // --- lint summary across the whole loaded set ---
     [ObservableProperty] private string _typesLintSummary = "";
@@ -1322,6 +1390,32 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (!string.IsNullOrEmpty(TypesFilter) && !t.Name.Contains(TypesFilter, StringComparison.OrdinalIgnoreCase)) return false;
         if (!string.IsNullOrEmpty(TypesCategoryFilter) && !string.Equals(t.Category, TypesCategoryFilter, StringComparison.OrdinalIgnoreCase)) return false;
         if (!string.IsNullOrEmpty(TypesSourceFilter) && !string.Equals(OriginUi.Label(t.Origin), TypesSourceFilter, StringComparison.OrdinalIgnoreCase)) return false;
+
+        // List filters: a row passes if any of its values contains the filter substring.
+        if (!string.IsNullOrEmpty(TypesUsageFilter) && !t.Usage.Any(u => u.Contains(TypesUsageFilter, StringComparison.OrdinalIgnoreCase))) return false;
+        if (!string.IsNullOrEmpty(TypesValueFilter) && !t.Value.Any(v => v.Contains(TypesValueFilter, StringComparison.OrdinalIgnoreCase))) return false;
+        if (!string.IsNullOrEmpty(TypesTagFilter) && !t.Tag.Any(g => g.Contains(TypesTagFilter, StringComparison.OrdinalIgnoreCase))) return false;
+
+        // Flag presence: row must have the chosen flag set.
+        if (!string.IsNullOrEmpty(TypesFlagFilter))
+        {
+            var hasFlag = TypesFlagFilter switch
+            {
+                "cargo" => t.CountInCargo,
+                "hoarder" => t.CountInHoarder,
+                "map" => t.CountInMap,
+                "player" => t.CountInPlayer,
+                "crafted" => t.Crafted,
+                "deloot" => t.Deloot,
+                _ => true,
+            };
+            if (!hasFlag) return false;
+        }
+
+        // Nominal range (lenient parse; ignored when blank/non-numeric).
+        if (int.TryParse(TypesNominalMin, out var nmin) && t.Nominal < nmin) return false;
+        if (int.TryParse(TypesNominalMax, out var nmax) && t.Nominal > nmax) return false;
+
         return true;
     }
 
@@ -1362,7 +1456,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         RefreshTypeCategories();
         RefreshTypesLint();
-        TypesView.Refresh();
+        RefreshTypesView();
+        SetSelectedTypes(System.Array.Empty<TypeRowVm>(), null);
     }
 
     /// <summary>Capture the pre-edit state when a grid cell starts editing (committed on edit-commit).</summary>
@@ -1432,7 +1527,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(TypesFile));
         OnPropertyChanged(nameof(HasTypes));
         RefreshTypesLint();
-        TypesView.Refresh();
+        RefreshTypesView();
         TypesStatus = $"{Types.Count} types";
     }
 
@@ -1442,6 +1537,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         FillSet(LimitsUsage, _limits.Usage);
         FillSet(LimitsValue, _limits.Value);
         FillSet(LimitsCategory, _limits.Category);
+        FillSet(LimitsTag, _limits.Tag);
 
         static void FillSet(ObservableCollection<string> target, IReadOnlySet<string> src)
         {
@@ -1514,7 +1610,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             new Dzl.Core.Economy.TypeEntry { Name = name.Trim(), Nominal = 1, Min = 0, Lifetime = 3888000, Cost = 100, SourceFile = file },
             origin);
         Types.Add(row);
-        TypesView.Refresh();
+        RefreshTypesView();
         RefreshTypesLint();   // new row may introduce or resolve lint findings
         TypesStatus = $"added {name} → {row.FileName} (unsaved)";
     }
@@ -1524,13 +1620,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (rows.Count == 0) return;
         PushTypeUndo();
         foreach (var r in rows) Types.Remove(r);
-        TypesView.Refresh();
+        RefreshTypesView();
         RefreshTypesLint();   // removed rows may have carried lint findings
         TypesStatus = $"removed {rows.Count} (unsaved — Save to persist)";
     }
 
     /// <summary>Batch-apply a numeric field across selected rows: set to <paramref name="value"/>, or
-    /// multiply (nominal) by it. In-memory only until Save.</summary>
+    /// multiply by it (when <paramref name="multiply"/>). Covers every numeric field. In-memory only
+    /// until Save. One undo step.</summary>
     public void BatchApply(IReadOnlyList<TypeRowVm> rows, string field, double value, bool multiply)
     {
         if (rows.Count == 0) return;
@@ -1539,15 +1636,127 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             switch (field)
             {
-                case "nominal": t.Nominal = multiply ? Math.Max(0, (int)Math.Round(t.Nominal * value)) : (int)value; break;
-                case "min": t.Min = multiply ? Math.Max(0, (int)Math.Round(t.Min * value)) : (int)value; break;
-                case "lifetime": t.Lifetime = (int)value; break;
-                case "restock": t.Restock = (int)value; break;
-                case "cost": t.Cost = (int)value; break;
+                case "nominal": t.Nominal = Apply(t.Nominal); break;
+                case "min": t.Min = Apply(t.Min); break;
+                case "quantmin": t.QuantMin = ApplyAllowNeg(t.QuantMin); break;
+                case "quantmax": t.QuantMax = ApplyAllowNeg(t.QuantMax); break;
+                case "lifetime": t.Lifetime = Apply(t.Lifetime); break;
+                case "restock": t.Restock = Apply(t.Restock); break;
+                case "cost": t.Cost = Apply(t.Cost); break;
             }
         }
         RefreshTypesLint();   // batch edits may cross lint thresholds (nominal/min rules)
         TypesStatus = $"batch {(multiply ? "×" : "=")}{value} {field} on {rows.Count} (unsaved)";
+
+        int Apply(int cur) => multiply ? Math.Max(0, (int)Math.Round(cur * value)) : Math.Max(0, (int)value);
+        int ApplyAllowNeg(int cur) => multiply ? (int)Math.Round(cur * value) : (int)value;
+    }
+
+    /// <summary>Batch flag op across selected rows. <paramref name="op"/> ∈ {set, clear, toggle}.
+    /// <paramref name="flag"/> ∈ {cargo, hoarder, map, player, crafted, deloot}. One undo step.</summary>
+    public void BatchFlag(IReadOnlyList<TypeRowVm> rows, string flag, string op)
+    {
+        if (rows.Count == 0) return;
+        PushTypeUndo();
+        foreach (var t in rows)
+        {
+            switch (flag)
+            {
+                case "cargo":   t.CountInCargo   = Next(t.CountInCargo);   break;
+                case "hoarder": t.CountInHoarder = Next(t.CountInHoarder); break;
+                case "map":     t.CountInMap     = Next(t.CountInMap);     break;
+                case "player":  t.CountInPlayer  = Next(t.CountInPlayer);  break;
+                case "crafted": t.Crafted        = Next(t.Crafted);        break;
+                case "deloot":  t.Deloot         = Next(t.Deloot);         break;
+            }
+        }
+        RefreshTypesLint();
+        TypesStatus = $"batch flag {op} {flag} on {rows.Count} (unsaved)";
+
+        bool Next(bool cur) => op switch { "set" => true, "clear" => false, _ => !cur };
+    }
+
+    /// <summary>Batch add/remove a list value (usage/value/tag) across selected rows. One undo step.</summary>
+    public void BatchList(IReadOnlyList<TypeRowVm> rows, string list, string value, bool add)
+    {
+        value = value.Trim();
+        if (rows.Count == 0 || string.IsNullOrEmpty(value)) return;
+        PushTypeUndo();
+        foreach (var t in rows)
+        {
+            var col = list switch { "usage" => t.Usage, "value" => t.Value, "tag" => t.Tag, _ => null };
+            if (col is null) continue;
+            if (add)
+            {
+                if (!col.Any(s => string.Equals(s, value, StringComparison.OrdinalIgnoreCase))) col.Add(value);
+            }
+            else
+            {
+                var hit = col.FirstOrDefault(s => string.Equals(s, value, StringComparison.OrdinalIgnoreCase));
+                if (hit is not null) col.Remove(hit);
+            }
+            t.NotifyListText();
+        }
+        RefreshTypesLint();
+        TypesStatus = $"batch {(add ? "add" : "remove")} {list}='{value}' on {rows.Count} (unsaved)";
+    }
+
+    /// <summary>Batch set the category across selected rows. One undo step.</summary>
+    public void BatchCategory(IReadOnlyList<TypeRowVm> rows, string category)
+    {
+        if (rows.Count == 0) return;
+        PushTypeUndo();
+        foreach (var t in rows) t.Category = category.Trim();
+        RefreshTypeCategories();
+        RefreshTypesLint();
+        TypesStatus = $"batch category='{category}' on {rows.Count} (unsaved)";
+    }
+
+    /// <summary>Adjust one numeric field on one row by a delta (the detail panel's +/- steppers go through
+    /// this so each click is its own undo step and re-lints). Field names match the detail panel.</summary>
+    public void StepField(TypeRowVm row, string field, int delta)
+    {
+        PushTypeUndo();
+        switch (field)
+        {
+            case "nominal":  row.Nominal  = Math.Max(0, row.Nominal + delta);  break;
+            case "min":      row.Min      = Math.Max(0, row.Min + delta);      break;
+            case "quantmin": row.QuantMin = row.QuantMin + delta;              break;
+            case "quantmax": row.QuantMax = row.QuantMax + delta;              break;
+            case "lifetime": row.Lifetime = Math.Max(0, row.Lifetime + delta); break;
+            case "restock":  row.Restock  = Math.Max(0, row.Restock + delta);  break;
+            case "cost":     row.Cost     = Math.Max(0, row.Cost + delta);     break;
+        }
+        RefreshTypesLint();
+    }
+
+    /// <summary>Duplicate a row under a new name into a target file (empty → the source row's file).
+    /// Copies the FULL field set (numbers, flags, all three lists). New row lints immediately.</summary>
+    public void DuplicateType(TypeRowVm src, string newName, string? targetFile = null)
+    {
+        if (string.IsNullOrWhiteSpace(newName)) return;
+        PushTypeUndo();
+        var file = string.IsNullOrEmpty(targetFile) ? src.SourceFile : targetFile!;
+        var origin = _originByFile.TryGetValue(file, out var o) ? o : src.Origin;
+        var entry = src.ToEntry() with { Name = newName.Trim(), SourceFile = file };
+        var row = new TypeRowVm(entry, origin);
+        Types.Add(row);
+        RefreshTypesView();
+        RefreshTypesLint();
+        TypesStatus = $"duplicated {src.Name} → {newName} (unsaved)";
+    }
+
+    /// <summary>Snapshot the current state as one undo step before a detail-panel edit (numeric typing,
+    /// category, flag toggle). Called by the code-behind when a detail field gains focus / a toggle flips.</summary>
+    public void PushDetailEditUndo() => PushTypeUndo();
+
+    /// <summary>Re-lint + refresh after a detail-panel / chip edit (no new undo step — used after a value
+    /// that was already snapshotted, or for chip edits which snapshot themselves via PushDetailEditUndo).</summary>
+    public void AfterDetailEdit()
+    {
+        SelectedType?.NotifyListText();
+        RefreshTypesLint();
+        RefreshTypeCategories();
     }
 
     public List<Dzl.Core.Economy.TypesBackupInfo> TypesBackups() => new TypesService(_configPath).Backups();

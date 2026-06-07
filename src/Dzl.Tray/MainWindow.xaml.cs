@@ -600,7 +600,31 @@ public partial class MainWindow : FluentWindow
         if (result is { } r) _vm.AddType(r.name, r.targetFile);
     }
 
+    private void OnDuplicateType(object sender, RoutedEventArgs e)
+    {
+        if (_vm.SelectedType is not { } src)
+        { System.Windows.MessageBox.Show("Select a row to duplicate first.", "Duplicate", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information); return; }
+        var result = NewTypeDialog.Show(this, _vm.TypesSourceFiles(),
+            title: "Duplicate type", defaultName: src.Name + "_Copy", okLabel: "Duplicate");
+        if (result is { } r) _vm.DuplicateType(src, r.name, r.targetFile);
+    }
+
     private void OnRemoveTypes(object sender, RoutedEventArgs e) => _vm.RemoveTypes(SelectedTypes());
+
+    private void OnClearFilters(object sender, RoutedEventArgs e) => _vm.ClearTypeFilters();
+
+    // Push the grid's multi-selection into the VM (for batch + detail panel) on every selection change.
+    private void OnTypesSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        => _vm.SetSelectedTypes(SelectedTypes(), TypesGrid.SelectedItem as TypeRowVm);
+
+    // Jump to (and select) the first row with lint findings.
+    private void OnJumpToLint(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        var hit = _vm.TypesView.Cast<TypeRowVm>().FirstOrDefault(r => r.HasLint);
+        if (hit is null) return;
+        TypesGrid.SelectedItem = hit;
+        TypesGrid.ScrollIntoView(hit);
+    }
 
     private void OnBatchSet(object sender, RoutedEventArgs e) => Batch(multiply: false);
     private void OnBatchMultiply(object sender, RoutedEventArgs e) => Batch(multiply: true);
@@ -608,12 +632,55 @@ public partial class MainWindow : FluentWindow
     private void Batch(bool multiply)
     {
         var rows = SelectedTypes();
-        if (rows.Count == 0) { System.Windows.MessageBox.Show("Select one or more rows first.", "Batch", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information); return; }
+        if (!RequireSelection(rows)) return;
         var field = (BatchFieldBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "nominal";
         if (!double.TryParse(BatchValueBox.Text.Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var val))
         { System.Windows.MessageBox.Show("Enter a numeric value.", "Batch", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information); return; }
         _vm.BatchApply(rows, field, val, multiply);
         TypesGrid.Items.Refresh();
+    }
+
+    private void OnBatchFlagSet(object sender, RoutedEventArgs e) => BatchFlag("set");
+    private void OnBatchFlagClear(object sender, RoutedEventArgs e) => BatchFlag("clear");
+    private void OnBatchFlagToggle(object sender, RoutedEventArgs e) => BatchFlag("toggle");
+
+    private void BatchFlag(string op)
+    {
+        var rows = SelectedTypes();
+        if (!RequireSelection(rows)) return;
+        var flag = (BatchFlagBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "map";
+        _vm.BatchFlag(rows, flag, op);
+        TypesGrid.Items.Refresh();
+    }
+
+    private void OnBatchListAdd(object sender, RoutedEventArgs e) => BatchList(add: true);
+    private void OnBatchListRemove(object sender, RoutedEventArgs e) => BatchList(add: false);
+
+    private void BatchList(bool add)
+    {
+        var rows = SelectedTypes();
+        if (!RequireSelection(rows)) return;
+        var list = (BatchListBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "usage";
+        var val = BatchListValueBox.Text.Trim();
+        if (val.Length == 0) { System.Windows.MessageBox.Show("Enter a list value.", "Batch", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information); return; }
+        _vm.BatchList(rows, list, val, add);
+        TypesGrid.Items.Refresh();
+    }
+
+    private void OnBatchCategorySet(object sender, RoutedEventArgs e)
+    {
+        var rows = SelectedTypes();
+        if (!RequireSelection(rows)) return;
+        var cat = BatchCategoryBox.Text?.Trim() ?? "";
+        _vm.BatchCategory(rows, cat);
+        TypesGrid.Items.Refresh();
+    }
+
+    private bool RequireSelection(System.Collections.Generic.IReadOnlyList<TypeRowVm> rows)
+    {
+        if (rows.Count > 0) return true;
+        System.Windows.MessageBox.Show("Select one or more rows first.", "Batch", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        return false;
     }
 
     // Undo granularity for in-grid cell edits: snapshot the pre-edit state, commit it on edit-commit.

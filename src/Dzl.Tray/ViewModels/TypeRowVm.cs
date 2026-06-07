@@ -99,6 +99,16 @@ public sealed partial class TypeRowVm : ObservableObject
         }
     }
 
+    /// <summary>Raise change notifications for the comma-joined text proxies after the underlying
+    /// <see cref="Usage"/>/<see cref="Value"/>/<see cref="Tag"/> collections were mutated directly
+    /// (chip add/remove, batch list ops). The grid columns bind to *Text so they must be told to refresh.</summary>
+    public void NotifyListText()
+    {
+        OnPropertyChanged(nameof(UsageText));
+        OnPropertyChanged(nameof(ValueText));
+        OnPropertyChanged(nameof(TagText));
+    }
+
     // --- origin / source metadata ---
 
     /// <summary>Absolute path of the CE file this entry was read from / saves to.</summary>

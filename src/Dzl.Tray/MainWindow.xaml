@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Dzl.Tray"
+        xmlns:ctl="clr-namespace:Dzl.Tray.Controls"
         xmlns:vm="clr-namespace:Dzl.Tray.ViewModels"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:dd="urn:gong-wpf-dragdrop"
@@ -31,6 +32,9 @@
       <local:StringEqualsConverter x:Key="StringEquals" />
       <local:StringEqualsVisibilityConverter x:Key="StringEqualsVis" />
       <local:StringMatchVisibilityConverter x:Key="StringMatchVis" />
+      <local:FlagBrushConverter x:Key="FlagBrush" />
+      <local:NotNullToVisibilityConverter x:Key="NotNullToVis" />
+      <local:NullToVisibilityConverter x:Key="NullToVis" />
 
       <!-- ===== Nav rail (plain-WPF ListBox; deterministic page switching) ===== -->
       <!-- A transparent ListBox whose items are pill-shaped rows with an icon + label.
@@ -1444,162 +1448,244 @@
               <KeyBinding Modifiers="Control" Key="Y" Command="{Binding RedoTypesCommand}" />
             </Grid.InputBindings>
             <Grid.RowDefinitions>
-              <RowDefinition Height="Auto" />
-              <RowDefinition Height="Auto" />
-              <RowDefinition Height="*" />
-              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />  <!-- header -->
+              <RowDefinition Height="Auto" />  <!-- toolbar -->
+              <RowDefinition Height="Auto" />  <!-- filters -->
+              <RowDefinition Height="*" />     <!-- master + detail -->
+              <RowDefinition Height="Auto" />  <!-- batch bar -->
+              <RowDefinition Height="Auto" />  <!-- status -->
             </Grid.RowDefinitions>
 
             <!-- Header + actions -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,8">
-              <TextBlock Text="Economy — types.xml" FontSize="20" FontWeight="SemiBold" />
-              <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                         Text="{Binding TypesFile}" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-
-            <!-- Toolbar: filter + undo/redo + add/remove/save/backups -->
-            <Grid Grid.Row="1" Margin="0,0,0,8">
+            <Grid Grid.Row="0" Margin="0,0,0,8">
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
-              <StackPanel Grid.Column="0" Orientation="Horizontal">
-                <ui:TextBox x:Name="TypesFilterBox" Width="200" PlaceholderText="filter name…" Margin="0,0,8,0"
+              <StackPanel Grid.Column="0">
+                <TextBlock Text="Economy — types.xml" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                           Text="{Binding TypesFile}" TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+              <TextBlock Grid.Column="1" Text="{Binding TypesCountLabel}" VerticalAlignment="Bottom"
+                         FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </Grid>
+
+            <!-- Toolbar: undo/redo + add/duplicate/remove/reload/backups/save -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,8">
+              <ui:Button Icon="{ui:SymbolIcon ArrowUndo24}" ToolTip="Undo (Ctrl+Z)" Margin="0,0,4,0"
+                         Command="{Binding UndoTypesCommand}" />
+              <ui:Button Icon="{ui:SymbolIcon ArrowRedo24}" ToolTip="Redo (Ctrl+Y)" Margin="0,0,8,0"
+                         Command="{Binding RedoTypesCommand}" />
+              <ui:Button Content="Add" Icon="{ui:SymbolIcon Add24}" Margin="0,0,4,0" Click="OnAddType" />
+              <ui:Button Content="Duplicate" Icon="{ui:SymbolIcon Copy24}" Margin="0,0,4,0" Click="OnDuplicateType"
+                         ToolTip="Copy the selected row's full field set under a new name" />
+              <ui:Button Content="Remove" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" Margin="0,0,8,0" Click="OnRemoveTypes" />
+              <ui:Button Content="Reload" Icon="{ui:SymbolIcon ArrowSync24}" Margin="0,0,4,0" Click="OnReloadTypes" />
+              <ui:DropDownButton Content="Backups" Icon="{ui:SymbolIcon History24}" Margin="0,0,4,0">
+                <ui:DropDownButton.Flyout>
+                  <ContextMenu x:Name="TypesBackupsMenu" />
+                </ui:DropDownButton.Flyout>
+              </ui:DropDownButton>
+              <ui:Button Content="Save" Appearance="Primary" Icon="{ui:SymbolIcon Save24}" Click="OnSaveTypes" />
+            </StackPanel>
+
+            <!-- Advanced filters -->
+            <Border Grid.Row="2" Margin="0,0,0,8" Padding="10,8" CornerRadius="6"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
+              <WrapPanel Orientation="Horizontal">
+                <ui:TextBox x:Name="TypesFilterBox" Width="170" PlaceholderText="filter name…" Margin="0,0,8,4"
                             Text="{Binding TypesFilter, UpdateSourceTrigger=PropertyChanged}" />
-                <ComboBox Width="150" Margin="0,0,8,0" VerticalAlignment="Center"
+                <ComboBox Width="140" Margin="0,0,8,4" VerticalAlignment="Center"
                           ItemsSource="{Binding TypeCategories}" SelectedItem="{Binding TypesCategoryFilter}"
-                          ToolTip="Filter by category (blank = all)" />
-                <ComboBox Width="110" Margin="0,0,8,0" VerticalAlignment="Center"
+                          ToolTip="Category (blank = all)" />
+                <ComboBox Width="105" Margin="0,0,8,4" VerticalAlignment="Center"
                           SelectedValuePath="Tag" SelectedValue="{Binding TypesSourceFilter}"
-                          ToolTip="Filter by source origin">
+                          ToolTip="Source origin">
                   <ComboBoxItem Content="All sources" Tag="" />
                   <ComboBoxItem Content="Vanilla" Tag="Vanilla" />
                   <ComboBoxItem Content="Mod" Tag="Mod" />
                   <ComboBoxItem Content="Custom" Tag="Custom" />
                 </ComboBox>
-              </StackPanel>
-              <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <ui:Button Icon="{ui:SymbolIcon ArrowUndo24}" ToolTip="Undo (Ctrl+Z)" Margin="0,0,4,0"
-                           Command="{Binding UndoTypesCommand}" />
-                <ui:Button Icon="{ui:SymbolIcon ArrowRedo24}" ToolTip="Redo (Ctrl+Y)" Margin="0,0,8,0"
-                           Command="{Binding RedoTypesCommand}" />
-                <ui:Button Content="Add" Icon="{ui:SymbolIcon Add24}" Margin="0,0,4,0" Click="OnAddType" />
-                <ui:Button Content="Remove" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" Margin="0,0,8,0" Click="OnRemoveTypes" />
-                <ui:Button Content="Reload" Icon="{ui:SymbolIcon ArrowSync24}" Margin="0,0,4,0" Click="OnReloadTypes" />
-                <ui:DropDownButton Content="Backups" Icon="{ui:SymbolIcon History24}" Margin="0,0,4,0">
-                  <ui:DropDownButton.Flyout>
-                    <ContextMenu x:Name="TypesBackupsMenu" />
-                  </ui:DropDownButton.Flyout>
-                </ui:DropDownButton>
-                <ui:Button Content="Save" Appearance="Primary" Icon="{ui:SymbolIcon Save24}" Click="OnSaveTypes" />
-              </StackPanel>
+                <ComboBox Width="130" Margin="0,0,8,4" VerticalAlignment="Center" IsEditable="True"
+                          Text="{Binding TypesUsageFilter, UpdateSourceTrigger=PropertyChanged}"
+                          ItemsSource="{Binding LimitsUsage}" ToolTip="Usage contains…" />
+                <ComboBox Width="120" Margin="0,0,8,4" VerticalAlignment="Center" IsEditable="True"
+                          Text="{Binding TypesValueFilter, UpdateSourceTrigger=PropertyChanged}"
+                          ItemsSource="{Binding LimitsValue}" ToolTip="Tier (value) contains…" />
+                <ComboBox Width="120" Margin="0,0,8,4" VerticalAlignment="Center" IsEditable="True"
+                          Text="{Binding TypesTagFilter, UpdateSourceTrigger=PropertyChanged}"
+                          ItemsSource="{Binding LimitsTag}" ToolTip="Tag contains…" />
+                <ComboBox Width="120" Margin="0,0,8,4" VerticalAlignment="Center"
+                          SelectedValuePath="Tag" SelectedValue="{Binding TypesFlagFilter}"
+                          ToolTip="Has flag set">
+                  <ComboBoxItem Content="Any flag" Tag="" />
+                  <ComboBoxItem Content="CountInCargo" Tag="cargo" />
+                  <ComboBoxItem Content="CountInHoarder" Tag="hoarder" />
+                  <ComboBoxItem Content="CountInMap" Tag="map" />
+                  <ComboBoxItem Content="CountInPlayer" Tag="player" />
+                  <ComboBoxItem Content="Crafted" Tag="crafted" />
+                  <ComboBoxItem Content="Deloot" Tag="deloot" />
+                </ComboBox>
+                <ui:TextBox Width="80" PlaceholderText="nom ≥" Margin="0,0,4,4"
+                            Text="{Binding TypesNominalMin, UpdateSourceTrigger=PropertyChanged}" ToolTip="Nominal minimum" />
+                <ui:TextBox Width="80" PlaceholderText="nom ≤" Margin="0,0,8,4"
+                            Text="{Binding TypesNominalMax, UpdateSourceTrigger=PropertyChanged}" ToolTip="Nominal maximum" />
+                <ui:Button Content="Clear" Icon="{ui:SymbolIcon Eraser24}" Margin="0,0,0,4" Click="OnClearFilters"
+                           ToolTip="Reset all filters" />
+              </WrapPanel>
+            </Border>
+
+            <!-- Master (grid) + Detail panel -->
+            <Grid Grid.Row="3">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="360" />
+              </Grid.ColumnDefinitions>
+
+              <DataGrid x:Name="TypesGrid" Grid.Column="0" ItemsSource="{Binding TypesView}"
+                        Style="{StaticResource DarkDataGrid}"
+                        ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeader}"
+                        RowStyle="{StaticResource DarkDataGridRow}"
+                        CellStyle="{StaticResource DarkDataGridCell}"
+                        AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Extended"
+                        CanUserSortColumns="True"
+                        SelectedItem="{Binding SelectedType, Mode=TwoWay}"
+                        SelectionChanged="OnTypesSelectionChanged"
+                        GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                        BeginningEdit="OnTypesBeginEdit" CellEditEnding="OnTypesCellEditEnding">
+                <DataGrid.Columns>
+                  <!-- Lint indicator: ⚠ + count, tooltip lists this row's findings -->
+                  <DataGridTemplateColumn Header="" Width="40" IsReadOnly="True" CanUserSort="False">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding LintGlyph}" FontSize="11" FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Foreground="#F0C04A" ToolTip="{Binding LintTooltip}" />
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="2*" SortMemberPath="Name" />
+                  <!-- Origin pill (matches the mod-source pills on the Mods/Servers pages) -->
+                  <DataGridTemplateColumn Header="Source" Width="84" IsReadOnly="True" SortMemberPath="OriginLabel">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <Border CornerRadius="9" Padding="7,1" Margin="2,0" VerticalAlignment="Center"
+                                HorizontalAlignment="Left" Background="{Binding OriginBg}">
+                          <TextBlock Text="{Binding OriginLabel}" FontSize="10" FontWeight="SemiBold"
+                                     Foreground="{Binding OriginFg}" />
+                        </Border>
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="110" IsReadOnly="True" />
+                  <DataGridTextColumn Header="Nominal" Binding="{Binding Nominal}" Width="64" />
+                  <DataGridTextColumn Header="Min" Binding="{Binding Min}" Width="54" />
+                  <DataGridTextColumn Header="QMin" Binding="{Binding QuantMin}" Width="54" />
+                  <DataGridTextColumn Header="QMax" Binding="{Binding QuantMax}" Width="54" />
+                  <DataGridTextColumn Header="Lifetime" Binding="{Binding Lifetime}" Width="80" />
+                  <DataGridTextColumn Header="Restock" Binding="{Binding Restock}" Width="70" />
+                  <DataGridTextColumn Header="Cost" Binding="{Binding Cost}" Width="54" />
+                  <!-- Compact flags: active letters highlighted (C H M P · Cr De) -->
+                  <DataGridTemplateColumn Header="Flags" Width="110" IsReadOnly="True" CanUserSort="False">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                          <TextBlock Text="C"  FontSize="11" FontWeight="SemiBold" Margin="0,0,3,0" ToolTip="CountInCargo"
+                                     Foreground="{Binding CountInCargo, Converter={StaticResource FlagBrush}}" />
+                          <TextBlock Text="H"  FontSize="11" FontWeight="SemiBold" Margin="0,0,3,0" ToolTip="CountInHoarder"
+                                     Foreground="{Binding CountInHoarder, Converter={StaticResource FlagBrush}}" />
+                          <TextBlock Text="M"  FontSize="11" FontWeight="SemiBold" Margin="0,0,3,0" ToolTip="CountInMap"
+                                     Foreground="{Binding CountInMap, Converter={StaticResource FlagBrush}}" />
+                          <TextBlock Text="P"  FontSize="11" FontWeight="SemiBold" Margin="0,0,5,0" ToolTip="CountInPlayer"
+                                     Foreground="{Binding CountInPlayer, Converter={StaticResource FlagBrush}}" />
+                          <TextBlock Text="Cr" FontSize="11" FontWeight="SemiBold" Margin="0,0,3,0" ToolTip="Crafted"
+                                     Foreground="{Binding Crafted, Converter={StaticResource FlagBrush}}" />
+                          <TextBlock Text="De" FontSize="11" FontWeight="SemiBold" ToolTip="Deloot"
+                                     Foreground="{Binding Deloot, Converter={StaticResource FlagBrush}}" />
+                        </StackPanel>
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="*" />
+                  <DataGridTextColumn Header="Usage" Binding="{Binding UsageText}" Width="*" IsReadOnly="True" />
+                  <DataGridTextColumn Header="Tiers" Binding="{Binding ValueText}" Width="*" IsReadOnly="True" />
+                  <DataGridTextColumn Header="Tag" Binding="{Binding TagText}" Width="*" IsReadOnly="True" />
+                </DataGrid.Columns>
+              </DataGrid>
+
+              <!-- Detail panel (full editor for the selected row) -->
+              <ctl:TypeDetailPanel x:Name="TypeDetail" Grid.Column="1" Margin="10,0,0,0"
+                                   DataContext="{Binding SelectedType}"
+                                   Vm="{Binding}"
+                                   Categories="{Binding LimitsCategory}"
+                                   UsageSuggestions="{Binding LimitsUsage}"
+                                   ValueSuggestions="{Binding LimitsValue}"
+                                   TagSuggestions="{Binding LimitsTag}" />
             </Grid>
 
-            <!-- Grid -->
-            <DataGrid x:Name="TypesGrid" Grid.Row="2" ItemsSource="{Binding TypesView}"
-                      AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Extended"
-                      GridLinesVisibility="Horizontal" HeadersVisibility="Column"
-                      BeginningEdit="OnTypesBeginEdit" CellEditEnding="OnTypesCellEditEnding">
-              <DataGrid.Columns>
-                <!-- Lint indicator: ⚠ + count, tooltip lists this row's findings -->
-                <DataGridTemplateColumn Header="" Width="44" IsReadOnly="True" CanUserSort="False">
-                  <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                      <TextBlock Text="{Binding LintGlyph}" FontSize="11" FontWeight="SemiBold"
-                                 HorizontalAlignment="Center" VerticalAlignment="Center"
-                                 Foreground="#F0C04A" ToolTip="{Binding LintTooltip}" />
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="2*" />
-                <!-- Origin pill (matches the mod-source pills on the Mods/Servers pages) -->
-                <DataGridTemplateColumn Header="Source" Width="90" IsReadOnly="True">
-                  <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                      <Border CornerRadius="9" Padding="7,1" Margin="2,0" VerticalAlignment="Center"
-                              HorizontalAlignment="Left" Background="{Binding OriginBg}">
-                        <TextBlock Text="{Binding OriginLabel}" FontSize="10" FontWeight="SemiBold"
-                                   Foreground="{Binding OriginFg}" />
-                      </Border>
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="120" IsReadOnly="True" />
-                <DataGridTextColumn Header="Nominal" Binding="{Binding Nominal}" Width="70" />
-                <DataGridTextColumn Header="Min" Binding="{Binding Min}" Width="60" />
-                <DataGridTextColumn Header="Lifetime" Binding="{Binding Lifetime}" Width="90" />
-                <DataGridTextColumn Header="Restock" Binding="{Binding Restock}" Width="80" />
-                <DataGridTextColumn Header="Cost" Binding="{Binding Cost}" Width="60" />
-                <!-- Category / Usage / Tiers: editable combos seeded from cfglimitsdefinition (free-text allowed) -->
-                <DataGridTemplateColumn Header="Category" Width="*">
-                  <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                      <TextBlock Text="{Binding Category}" VerticalAlignment="Center" Margin="6,0" TextTrimming="CharacterEllipsis" />
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellTemplate>
-                  <DataGridTemplateColumn.CellEditingTemplate>
-                    <DataTemplate>
-                      <ComboBox IsEditable="True" StaysOpenOnEdit="True"
-                                Text="{Binding Category, UpdateSourceTrigger=PropertyChanged}"
-                                ItemsSource="{Binding DataContext.LimitsCategory, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellEditingTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="Usage" Width="*">
-                  <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                      <TextBlock Text="{Binding UsageText}" VerticalAlignment="Center" Margin="6,0" TextTrimming="CharacterEllipsis" />
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellTemplate>
-                  <DataGridTemplateColumn.CellEditingTemplate>
-                    <DataTemplate>
-                      <ComboBox IsEditable="True" StaysOpenOnEdit="True"
-                                Text="{Binding UsageText, UpdateSourceTrigger=PropertyChanged}"
-                                ToolTip="Comma-separated; pick from cfglimitsdefinition or type freely"
-                                ItemsSource="{Binding DataContext.LimitsUsage, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellEditingTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="Tiers (value)" Width="*">
-                  <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                      <TextBlock Text="{Binding ValueText}" VerticalAlignment="Center" Margin="6,0" TextTrimming="CharacterEllipsis" />
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellTemplate>
-                  <DataGridTemplateColumn.CellEditingTemplate>
-                    <DataTemplate>
-                      <ComboBox IsEditable="True" StaysOpenOnEdit="True"
-                                Text="{Binding ValueText, UpdateSourceTrigger=PropertyChanged}"
-                                ToolTip="Comma-separated; pick from cfglimitsdefinition or type freely"
-                                ItemsSource="{Binding DataContext.LimitsValue, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellEditingTemplate>
-                </DataGridTemplateColumn>
-              </DataGrid.Columns>
-            </DataGrid>
+            <!-- Advanced batch bar (acts on the multi-row selection) -->
+            <Border Grid.Row="4" Margin="0,8,0,0" Padding="10,8" CornerRadius="6"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
+              <StackPanel>
+                <TextBlock Text="{Binding SelectedTypeCount, StringFormat='Batch on {0} selected row(s):'}"
+                           FontSize="12" FontWeight="SemiBold" Margin="0,0,0,6"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <WrapPanel Orientation="Horizontal">
+                  <!-- Numeric -->
+                  <ComboBox x:Name="BatchFieldBox" Width="100" Margin="0,0,6,4" VerticalAlignment="Center" SelectedIndex="0">
+                    <ComboBoxItem Content="nominal" /><ComboBoxItem Content="min" />
+                    <ComboBoxItem Content="quantmin" /><ComboBoxItem Content="quantmax" />
+                    <ComboBoxItem Content="lifetime" /><ComboBoxItem Content="restock" /><ComboBoxItem Content="cost" />
+                  </ComboBox>
+                  <ui:TextBox x:Name="BatchValueBox" Width="72" PlaceholderText="value" Margin="0,0,4,4" />
+                  <ui:Button Content="Set" Margin="0,0,4,4" Click="OnBatchSet" />
+                  <ui:Button Content="×" Margin="0,0,12,4" Click="OnBatchMultiply"
+                             ToolTip="Multiply the field by the value on selected rows" />
 
-            <!-- Batch bar + status -->
-            <Grid Grid.Row="3" Margin="0,8,0,0">
+                  <!-- Flags -->
+                  <ComboBox x:Name="BatchFlagBox" Width="120" Margin="0,0,4,4" VerticalAlignment="Center" SelectedValuePath="Tag" SelectedIndex="0">
+                    <ComboBoxItem Content="CountInCargo" Tag="cargo" />
+                    <ComboBoxItem Content="CountInHoarder" Tag="hoarder" />
+                    <ComboBoxItem Content="CountInMap" Tag="map" />
+                    <ComboBoxItem Content="CountInPlayer" Tag="player" />
+                    <ComboBoxItem Content="Crafted" Tag="crafted" />
+                    <ComboBoxItem Content="Deloot" Tag="deloot" />
+                  </ComboBox>
+                  <ui:Button Content="Set" Margin="0,0,4,4" Click="OnBatchFlagSet" ToolTip="Set the chosen flag on selected rows" />
+                  <ui:Button Content="Clear" Margin="0,0,4,4" Click="OnBatchFlagClear" ToolTip="Clear the chosen flag" />
+                  <ui:Button Content="Toggle" Margin="0,0,12,4" Click="OnBatchFlagToggle" ToolTip="Toggle the chosen flag" />
+
+                  <!-- Lists -->
+                  <ComboBox x:Name="BatchListBox" Width="80" Margin="0,0,4,4" VerticalAlignment="Center" SelectedValuePath="Tag" SelectedIndex="0">
+                    <ComboBoxItem Content="usage" Tag="usage" />
+                    <ComboBoxItem Content="value" Tag="value" />
+                    <ComboBoxItem Content="tag" Tag="tag" />
+                  </ComboBox>
+                  <ui:TextBox x:Name="BatchListValueBox" Width="100" PlaceholderText="list value" Margin="0,0,4,4" />
+                  <ui:Button Content="+ Add" Margin="0,0,4,4" Click="OnBatchListAdd" ToolTip="Add this value to the list on selected rows" />
+                  <ui:Button Content="− Rem" Margin="0,0,12,4" Click="OnBatchListRemove" ToolTip="Remove this value from the list on selected rows" />
+
+                  <!-- Category -->
+                  <ComboBox x:Name="BatchCategoryBox" Width="130" Margin="0,0,4,4" VerticalAlignment="Center" IsEditable="True"
+                            ItemsSource="{Binding LimitsCategory}" ToolTip="category" />
+                  <ui:Button Content="Set cat" Margin="0,0,0,4" Click="OnBatchCategorySet" ToolTip="Set category on selected rows" />
+                </WrapPanel>
+              </StackPanel>
+            </Border>
+
+            <!-- Status + lint summary -->
+            <Grid Grid.Row="5" Margin="0,6,0,0">
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" />
               </Grid.ColumnDefinitions>
-              <StackPanel Grid.Column="0" Orientation="Horizontal">
-                <TextBlock Text="Batch on selected:" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12" />
-                <ComboBox x:Name="BatchFieldBox" Width="100" Margin="0,0,8,0" VerticalAlignment="Center" SelectedIndex="0">
-                  <ComboBoxItem Content="nominal" /><ComboBoxItem Content="min" />
-                  <ComboBoxItem Content="lifetime" /><ComboBoxItem Content="restock" /><ComboBoxItem Content="cost" />
-                </ComboBox>
-                <ui:TextBox x:Name="BatchValueBox" Width="80" PlaceholderText="value" Margin="0,0,8,0" />
-                <ui:Button Content="Set" Margin="0,0,4,0" Click="OnBatchSet" />
-                <ui:Button Content="× Multiply" Click="OnBatchMultiply"
-                           ToolTip="Multiply nominal/min by the value on selected rows" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                <TextBlock Text="{Binding TypesLintSummary}" VerticalAlignment="Center" FontSize="12"
-                           Margin="0,0,16,0" Foreground="#F0C04A"
-                           Visibility="{Binding HasLintFindings, Converter={StaticResource BoolToVis}}" />
-                <TextBlock Text="{Binding TypesStatus}" VerticalAlignment="Center"
-                           FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-              </StackPanel>
+              <TextBlock Grid.Column="0" Text="{Binding TypesLintSummary}" VerticalAlignment="Center" FontSize="12"
+                         Foreground="#F0C04A" Cursor="Hand" MouseLeftButtonUp="OnJumpToLint"
+                         ToolTip="Click to jump to the first row with findings"
+                         Visibility="{Binding HasLintFindings, Converter={StaticResource BoolToVis}}" />
+              <TextBlock Grid.Column="1" Text="{Binding TypesStatus}" VerticalAlignment="Center" HorizontalAlignment="Right"
+                         FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             </Grid>
           </Grid>
 
