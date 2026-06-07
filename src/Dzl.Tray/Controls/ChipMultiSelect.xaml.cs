@@ -91,9 +91,13 @@ public partial class ChipMultiSelect : UserControl
             // Remove the first matching value (case-sensitive, mirrors XML semantics).
             for (int i = 0; i < Items.Count; i++)
             {
-                if (Items[i] is string s && s == val) { Items.RemoveAt(i); break; }
+                if (Items[i] is string s && s == val)
+                {
+                    RaiseBeforeChange();
+                    Items.RemoveAt(i);
+                    break;
+                }
             }
-            SyncChips();
             RaiseChanged();
         }
     }
@@ -134,10 +138,16 @@ public partial class ChipMultiSelect : UserControl
         // No duplicates (case-insensitive) — matches what the engine would dedupe anyway.
         foreach (var o in Items)
             if (o is string s && string.Equals(s, val, System.StringComparison.OrdinalIgnoreCase)) return;
+        RaiseBeforeChange();
         Items.Add(val);
-        SyncChips();
         RaiseChanged();
     }
+
+    /// <summary>Raised immediately BEFORE the bound collection is mutated (add or remove), so the host
+    /// can snapshot the pre-change state for undo.</summary>
+    public event System.EventHandler? BeforeChange;
+
+    private void RaiseBeforeChange() => BeforeChange?.Invoke(this, System.EventArgs.Empty);
 
     /// <summary>Raised after the bound collection is mutated, so the host (detail panel / VM) can re-lint
     /// and refresh the grid's text proxy. Carries the changed <see cref="Items"/> as a courtesy.</summary>

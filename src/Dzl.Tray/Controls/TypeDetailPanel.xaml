@@ -155,12 +155,18 @@
           <!-- Flags -->
           <TextBlock Text="Flags" Style="{StaticResource DetailLabel}" Margin="0,0,0,4" />
           <UniformGrid Columns="2">
-            <ui:ToggleSwitch Content="CountInCargo"   IsChecked="{Binding CountInCargo}"   Click="OnFlagToggled" Margin="0,0,0,4" />
-            <ui:ToggleSwitch Content="CountInHoarder" IsChecked="{Binding CountInHoarder}" Click="OnFlagToggled" Margin="0,0,0,4" />
-            <ui:ToggleSwitch Content="CountInMap"     IsChecked="{Binding CountInMap}"     Click="OnFlagToggled" Margin="0,0,0,4" />
-            <ui:ToggleSwitch Content="CountInPlayer"  IsChecked="{Binding CountInPlayer}"  Click="OnFlagToggled" Margin="0,0,0,4" />
-            <ui:ToggleSwitch Content="Crafted"        IsChecked="{Binding Crafted}"        Click="OnFlagToggled" Margin="0,0,0,4" />
-            <ui:ToggleSwitch Content="Deloot"         IsChecked="{Binding Deloot}"         Click="OnFlagToggled" Margin="0,0,0,4" />
+            <ui:ToggleSwitch Content="CountInCargo"   IsChecked="{Binding CountInCargo}"   Click="OnFlagToggled"
+                             PreviewMouseLeftButtonDown="OnFlagPreviewMouse" PreviewKeyDown="OnFlagPreviewKey" Margin="0,0,0,4" />
+            <ui:ToggleSwitch Content="CountInHoarder" IsChecked="{Binding CountInHoarder}" Click="OnFlagToggled"
+                             PreviewMouseLeftButtonDown="OnFlagPreviewMouse" PreviewKeyDown="OnFlagPreviewKey" Margin="0,0,0,4" />
+            <ui:ToggleSwitch Content="CountInMap"     IsChecked="{Binding CountInMap}"     Click="OnFlagToggled"
+                             PreviewMouseLeftButtonDown="OnFlagPreviewMouse" PreviewKeyDown="OnFlagPreviewKey" Margin="0,0,0,4" />
+            <ui:ToggleSwitch Content="CountInPlayer"  IsChecked="{Binding CountInPlayer}"  Click="OnFlagToggled"
+                             PreviewMouseLeftButtonDown="OnFlagPreviewMouse" PreviewKeyDown="OnFlagPreviewKey" Margin="0,0,0,4" />
+            <ui:ToggleSwitch Content="Crafted"        IsChecked="{Binding Crafted}"        Click="OnFlagToggled"
+                             PreviewMouseLeftButtonDown="OnFlagPreviewMouse" PreviewKeyDown="OnFlagPreviewKey" Margin="0,0,0,4" />
+            <ui:ToggleSwitch Content="Deloot"         IsChecked="{Binding Deloot}"         Click="OnFlagToggled"
+                             PreviewMouseLeftButtonDown="OnFlagPreviewMouse" PreviewKeyDown="OnFlagPreviewKey" Margin="0,0,0,4" />
           </UniformGrid>
 
         </StackPanel>

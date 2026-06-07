@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using Wpf.Ui.Controls;
 
 namespace Dzl.Tray;
 
@@ -13,7 +14,9 @@ internal static class NewTypeDialog
         Window owner, IReadOnlyList<(string Name, string Path)> targets,
         string title = "Add type", string defaultName = "", string okLabel = "Add")
     {
-        var win = new Window
+        // Use FluentWindow so it inherits the app's WPF-UI Fluent dark theme resources (Mica backdrop,
+        // correct control styles) — consistent with other dialogs (ReleaseDialog, ServerEditorWindow, etc.).
+        var win = new FluentWindow
         {
             Title = title,
             Owner = owner,
@@ -21,17 +24,28 @@ internal static class NewTypeDialog
             SizeToContent = SizeToContent.Height,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             ResizeMode = ResizeMode.NoResize,
-            WindowStyle = WindowStyle.ToolWindow,
             ShowInTaskbar = false,
+            WindowBackdropType = WindowBackdropType.Mica,
+            ExtendsContentIntoTitleBar = true,
         };
 
-        var root = new StackPanel { Margin = new Thickness(16) };
+        var root = new StackPanel { Margin = new Thickness(16, 8, 16, 16) };
 
-        root.Children.Add(new TextBlock { Text = "Class name (e.g. AKM):", FontSize = 11, Opacity = 0.7 });
-        var nameBox = new TextBox { Margin = new Thickness(0, 2, 0, 12), Text = defaultName };
+        // TitleBar matches the rest of the app's Fluent dialogs.
+        var titleBar = new TitleBar
+        {
+            Title = title,
+            ShowMaximize = false,
+            ShowMinimize = false,
+            Margin = new Thickness(0, 0, 0, 12),
+        };
+        root.Children.Add(titleBar);
+
+        root.Children.Add(new System.Windows.Controls.TextBlock { Text = "Class name (e.g. AKM):", FontSize = 11, Opacity = 0.7 });
+        var nameBox = new Wpf.Ui.Controls.TextBox { Margin = new Thickness(0, 2, 0, 12), Text = defaultName };
         root.Children.Add(nameBox);
 
-        root.Children.Add(new TextBlock { Text = "Target file:", FontSize = 11, Opacity = 0.7 });
+        root.Children.Add(new System.Windows.Controls.TextBlock { Text = "Target file:", FontSize = 11, Opacity = 0.7 });
         var fileCombo = new ComboBox { Margin = new Thickness(0, 2, 0, 4) };
         foreach (var t in targets) fileCombo.Items.Add(new ComboBoxItem { Content = t.Name, Tag = t.Path });
         if (fileCombo.Items.Count > 0) fileCombo.SelectedIndex = 0;
@@ -43,8 +57,8 @@ internal static class NewTypeDialog
             HorizontalAlignment = HorizontalAlignment.Right,
             Margin = new Thickness(0, 12, 0, 0),
         };
-        var add = new Button { Content = okLabel, Width = 90, IsDefault = true, Margin = new Thickness(0, 0, 8, 0) };
-        var cancel = new Button { Content = "Cancel", Width = 90, IsCancel = true };
+        var add = new Wpf.Ui.Controls.Button { Content = okLabel, Width = 90, IsDefault = true, Margin = new Thickness(0, 0, 8, 0), Appearance = ControlAppearance.Primary };
+        var cancel = new Wpf.Ui.Controls.Button { Content = "Cancel", Width = 90, IsCancel = true };
         buttons.Children.Add(add);
         buttons.Children.Add(cancel);
         root.Children.Add(buttons);

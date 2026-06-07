@@ -1646,6 +1646,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             }
         }
         RefreshTypesLint();   // batch edits may cross lint thresholds (nominal/min rules)
+        RefreshTypesView();
         TypesStatus = $"batch {(multiply ? "×" : "=")}{value} {field} on {rows.Count} (unsaved)";
 
         int Apply(int cur) => multiply ? Math.Max(0, (int)Math.Round(cur * value)) : Math.Max(0, (int)value);
@@ -1671,6 +1672,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             }
         }
         RefreshTypesLint();
+        RefreshTypesView();
         TypesStatus = $"batch flag {op} {flag} on {rows.Count} (unsaved)";
 
         bool Next(bool cur) => op switch { "set" => true, "clear" => false, _ => !cur };
@@ -1698,6 +1700,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             t.NotifyListText();
         }
         RefreshTypesLint();
+        RefreshTypesView();
         TypesStatus = $"batch {(add ? "add" : "remove")} {list}='{value}' on {rows.Count} (unsaved)";
     }
 
@@ -1709,6 +1712,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         foreach (var t in rows) t.Category = category.Trim();
         RefreshTypeCategories();
         RefreshTypesLint();
+        RefreshTypesView();
         TypesStatus = $"batch category='{category}' on {rows.Count} (unsaved)";
     }
 

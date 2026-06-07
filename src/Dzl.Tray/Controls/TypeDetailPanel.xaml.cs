@@ -15,6 +15,17 @@ public partial class TypeDetailPanel : UserControl
     public TypeDetailPanel()
     {
         InitializeComponent();
+        // Reset _editPending when the row changes so a pending snapshot from the previous row
+        // can't suppress the next row's first pre-edit capture.
+        DataContextChanged += (_, _) => _editPending = false;
+        // Subscribe BeforeChange on each chip control so we snapshot BEFORE the collection mutates.
+        // Changed is already wired in XAML for the post-mutation re-lint step.
+        Loaded += (_, _) =>
+        {
+            UsageChips.BeforeChange += OnChipsBeforeChange;
+            ValueChips.BeforeChange += OnChipsBeforeChange;
+            TagChips.BeforeChange += OnChipsBeforeChange;
+        };
     }
 
     /// <summary>The owning view-model (for undo snapshots + re-lint after edits).</summary>
@@ -84,17 +95,56 @@ public partial class TypeDetailPanel : UserControl
             Vm?.StepField(row, field, delta);
     }
 
+    // --- Flag toggle undo: snapshot BEFORE the value flips ---
+
+    // True once we have snapshotted the pre-toggle state for the current user gesture (mouse click or
+    // Space/Enter key). Reset by OnFlagToggled (the post-flip Click handler) so the next gesture can
+    // capture again.
+    private bool _flagSnapshotPending;
+
+    /// <summary>Called on PreviewMouseLeftButtonDown for each flag ToggleSwitch — fires BEFORE the
+    /// IsChecked binding flips, so this is the right moment to capture the pre-change state.</summary>
+    private void OnFlagPreviewMouse(object sender, MouseButtonEventArgs e)
+    {
+        if (_flagSnapshotPending) return;
+        Vm?.PushDetailEditUndo();
+        _flagSnapshotPending = true;
+    }
+
+    /// <summary>Called on PreviewKeyDown for each flag ToggleSwitch (Space/Enter activate the toggle).
+    /// Fires before the checked state changes.</summary>
+    private void OnFlagPreviewKey(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Space && e.Key != Key.Enter) return;
+        if (_flagSnapshotPending) return;
+        Vm?.PushDetailEditUndo();
+        _flagSnapshotPending = true;
+    }
+
+    /// <summary>Click fires AFTER IsChecked has already flipped. We no longer push the undo snapshot
+    /// here (that was the bug — it was post-change). We only call AfterDetailEdit (re-lint) and reset
+    /// the per-gesture snapshot guard so the next toggle can snapshot again.</summary>
     private void OnFlagToggled(object sender, RoutedEventArgs e)
     {
-        // The IsChecked binding already wrote the new value; snapshot + re-lint as one step.
-        Vm?.PushDetailEditUndo();
+        _flagSnapshotPending = false;
         Vm?.AfterDetailEdit();
     }
 
-    private void OnChipsChanged(object sender, System.EventArgs e)
+    // --- Chip undo: snapshot via BeforeChange (pre-mutation), re-lint via Changed (post-mutation) ---
+
+    /// <summary>Wires up both BeforeChange and Changed on a chip control. Called from XAML via
+    /// the Loaded event pattern — but since the controls are created in XAML we subscribe in code-behind
+    /// via the Loaded event on the UserControl itself.</summary>
+    private void OnChipsBeforeChange(object? sender, System.EventArgs e)
     {
-        // Chip add/remove already mutated the row collection; snapshot + re-lint, and refresh grid text.
+        // Raised by ChipMultiSelect immediately BEFORE the collection mutation — perfect snapshot moment.
         Vm?.PushDetailEditUndo();
+    }
+
+    private void OnChipsChanged(object? sender, System.EventArgs e)
+    {
+        // Collection already mutated; re-lint and refresh grid text. No undo push here — that was
+        // the original bug (snapshot was taken post-change). BeforeChange handles it above.
         Vm?.AfterDetailEdit();
     }
 }
