@@ -17,8 +17,7 @@ public static class MissionLocator
         string? missionDir = null;
         if (!string.IsNullOrWhiteSpace(cfg.Mission))
         {
-            var rel = cfg.Mission.Replace('/', Path.DirectorySeparatorChar).TrimStart('.', Path.DirectorySeparatorChar);
-            var candidate = Path.GetFullPath(Path.Combine(instanceDir, rel));
+            var candidate = Path.GetFullPath(Path.Combine(instanceDir, cfg.Mission));
             if (Directory.Exists(candidate)) missionDir = candidate;
         }
         if (missionDir is null)

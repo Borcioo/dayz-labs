@@ -39,4 +39,18 @@ public class MissionLocatorTests
         var (cfg, missionDir) = Scaffold("");
         MissionLocator.Resolve(cfg)!.MissionDir.Should().Be(missionDir);
     }
+
+    [Fact]
+    public void Resolve_sets_Vanilla_only_when_db_types_xml_exists()
+    {
+        var (cfg, missionDir) = Scaffold("./mpmissions/dayzOffline.chernarusplus");
+        var typesXml = Path.Combine(missionDir, "db", "types.xml");
+
+        // No types.xml yet — Vanilla should be null.
+        MissionLocator.Resolve(cfg)!.Vanilla.Should().BeNull();
+
+        // Create types.xml — Vanilla should now be populated.
+        File.WriteAllText(typesXml, "<types/>");
+        MissionLocator.Resolve(cfg)!.Vanilla.Should().Be(typesXml);
+    }
 }
