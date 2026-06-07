@@ -918,6 +918,33 @@
                 <!-- Add a mod: New / Import folder / From GitHub -->
                 <ui:Card Margin="0,0,0,12" Padding="16">
                   <TabControl>
+                    <TabControl.Resources>
+                      <Style TargetType="TabItem">
+                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                        <Setter Property="FontSize" Value="13" />
+                        <Setter Property="Template">
+                          <Setter.Value>
+                            <ControlTemplate TargetType="TabItem">
+                              <Border x:Name="Bd" Padding="12,7" Margin="0,0,4,0" CornerRadius="4,4,0,0"
+                                      Background="Transparent" BorderThickness="0,0,0,2" BorderBrush="Transparent">
+                                <ContentPresenter ContentSource="Header" VerticalAlignment="Center" />
+                              </Border>
+                              <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                  <Setter TargetName="Bd" Property="Background" Value="#14FFFFFF" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                  <Setter TargetName="Bd" Property="Background" Value="#1F2A3A" />
+                                  <Setter TargetName="Bd" Property="BorderBrush" Value="#4FA3FF" />
+                                  <Setter Property="Foreground" Value="#FFFFFF" />
+                                  <Setter Property="FontWeight" Value="SemiBold" />
+                                </Trigger>
+                              </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                          </Setter.Value>
+                        </Setter>
+                      </Style>
+                    </TabControl.Resources>
                     <!-- New -->
                     <TabItem Header="New">
                       <StackPanel Margin="0,12,0,0">
