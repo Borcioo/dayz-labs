@@ -28,6 +28,9 @@ public partial class WorkshopWindow : FluentWindow
             _vm.RefreshSubscribed();
             await _vm.WorkshopBrowseAsync();   // open on the current sort (Most Popular / One Week)
         };
+        // steamcmd downloads finish in an external console, so we can't know exactly when — re-scan the
+        // Subscribed/Downloaded lists whenever the user comes back to this window.
+        Activated += (_, _) => _vm.RefreshSubscribed();
     }
 
     // ⚙ — open the Workshop settings modal (Steam sign-in + steamcmd); refresh gating after.
