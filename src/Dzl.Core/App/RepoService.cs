@@ -124,6 +124,30 @@ public sealed class RepoService
         return new RepoOp(r.ok, r.msg);
     }
 
+    /// <summary>Current branch + all local branches of a mod's repo.</summary>
+    public (bool ok, string error, string current, List<string> branches) Branches(string mod)
+    {
+        var dir = ResolveProject(mod, out var err);
+        if (dir is null) return (false, err, "", new());
+        if (!Git.IsRepo(dir)) return (false, "not a git repo", "", new());
+        var (cur, all) = Git.Branches(dir);
+        return (true, "", cur, all);
+    }
+
+    private RepoOp OnRepo(string mod, Func<string, (bool ok, string msg)> op)
+    {
+        var dir = ResolveProject(mod, out var err);
+        if (dir is null) return new RepoOp(false, err);
+        if (!Git.IsRepo(dir)) return new RepoOp(false, "not a git repo");
+        var (ok, msg) = op(dir);
+        return new RepoOp(ok, msg);
+    }
+
+    public RepoOp Checkout(string mod, string branch) => OnRepo(mod, d => Git.Checkout(d, branch));
+    public RepoOp CreateBranch(string mod, string name) => OnRepo(mod, d => Git.CreateBranch(d, name));
+    public RepoOp Push(string mod) => OnRepo(mod, Git.Push);
+    public RepoOp Pull(string mod) => OnRepo(mod, Git.Pull);
+
     /// <summary>Cut a GitHub release with full options, optionally uploading the built <c>@&lt;mod&gt;</c> PBOs
     /// as release assets.</summary>
     public RepoOp Release(string mod, ReleaseOptions opts, bool attachBuiltAddons)

@@ -138,6 +138,31 @@ public static class DzlMcpTools
                                    [Description("stage everything first")] bool all = true)
         => J(new RepoService(ConfigPath()).Commit(mod, message, all));
 
+    [McpServerTool, Description("List a mod's local git branches + the current one.")]
+    public static string GitBranches([Description("Mod project name")] string mod)
+    {
+        var (ok, error, current, branches) = new RepoService(ConfigPath()).Branches(mod);
+        return J(new { ok, error, current, branches });
+    }
+
+    [McpServerTool, Description("Check out an existing branch in a mod's repo.")]
+    public static string GitCheckout([Description("Mod project name")] string mod,
+                                     [Description("branch name")] string branch)
+        => J(new RepoService(ConfigPath()).Checkout(mod, branch));
+
+    [McpServerTool, Description("Create and switch to a new branch in a mod's repo.")]
+    public static string GitCreateBranch([Description("Mod project name")] string mod,
+                                         [Description("new branch name")] string name)
+        => J(new RepoService(ConfigPath()).CreateBranch(mod, name));
+
+    [McpServerTool, Description("Push the current branch of a mod's repo (sets upstream if missing). Needs a remote.")]
+    public static string GitPush([Description("Mod project name")] string mod)
+        => J(new RepoService(ConfigPath()).Push(mod));
+
+    [McpServerTool, Description("Pull the current branch of a mod's repo. Needs a remote.")]
+    public static string GitPull([Description("Mod project name")] string mod)
+        => J(new RepoService(ConfigPath()).Pull(mod));
+
     [McpServerTool, Description("Init git (with .gitignore + first commit) and create & push a GitHub repo named after the mod.")]
     public static string CreateRepo([Description("Mod project name")] string mod,
                                     [Description("private repo (false = public)")] bool @private = true,
