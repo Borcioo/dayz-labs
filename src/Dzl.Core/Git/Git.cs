@@ -51,8 +51,10 @@ public static class Git
     public static RepoStatus Status(string dir)
     {
         if (!Directory.Exists(dir)) return new RepoStatus(false, "", 0, 0, false, false, "no such folder");
-        var (code, outp, _) = Proc.Run("git", dir, "status", "--porcelain=v2", "--branch");
-        return code == 0 ? ParseStatus(outp) : new RepoStatus(false, "", 0, 0, false, false, "not a git repo");
+        var (code, outp, err) = Proc.Run("git", dir, "status", "--porcelain=v2", "--branch");
+        if (code == 0) return ParseStatus(outp);
+        var why = string.IsNullOrWhiteSpace(err) ? "not a git repo" : err.Replace("\n", " ").Trim();
+        return new RepoStatus(false, "", 0, 0, false, false, $"git failed (code {code}): {why}");
     }
 
     /// <summary>Browsable URL of the <c>origin</c> remote, or null when there's no remote. Shells out for the
@@ -153,8 +155,9 @@ public static class Git
         var (code, outp, _) = Proc.Run("git", dir, "log", $"-n{count}", "--date=short", "--pretty=format:%h%an%ad%s");
         if (code != 0) return new();
         var list = new List<Commit>();
-        foreach (var line in outp.Split('\n'))
+        foreach (var raw in outp.Split('\n'))
         {
+            var line = raw.TrimEnd('\r');   // Proc captures via AppendLine → CRLF on Windows
             if (line.Trim().Length == 0) continue;
             var p = line.Split('');
             if (p.Length >= 4) list.Add(new Commit(p[0], p[1], p[2], p[3]));

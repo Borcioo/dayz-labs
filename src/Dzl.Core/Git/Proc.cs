@@ -12,6 +12,11 @@ internal static class Proc
     /// caller forever — the process is killed and a timeout error returned past this.</summary>
     private const int DefaultTimeoutMs = 60_000;
 
+    /// <summary>Serialises the spawn (handle setup + <c>Start</c>) across threads. Without this, two concurrent
+    /// <c>Start</c>s can leak each other's inheritable redirected pipe handles into the sibling child, so a
+    /// reader never sees EOF and the call hangs. Only the launch is locked; the children run in parallel.</summary>
+    private static readonly object SpawnLock = new();
+
     /// <summary>Resolve a bare command name (git/gh) to a full path so it works even when the host process
     /// inherited a reduced PATH (e.g. the MCP server launched without Git on PATH). Falls back to the common
     /// Windows install locations; returns the name unchanged if nothing matches (let it fail with its own error).</summary>
@@ -41,8 +46,9 @@ internal static class Proc
             var psi = new ProcessStartInfo(Resolve(exe))
             {
                 WorkingDirectory = Directory.Exists(workdir) ? workdir : Environment.CurrentDirectory,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                RedirectStandardInput = true,    // own the child's stdin so it can't inherit the host's
+                RedirectStandardOutput = true,   // (a stdio MCP server's stdin is a live JSON-RPC pipe — an
+                RedirectStandardError = true,    // inherited one makes git block forever instead of seeing EOF)
                 UseShellExecute = false,
                 CreateNoWindow = true,
             };
@@ -60,9 +66,13 @@ internal static class Proc
             using var p = new Process { StartInfo = psi };
             p.OutputDataReceived += (_, e) => { if (e.Data is not null) so.AppendLine(e.Data); };
             p.ErrorDataReceived += (_, e) => { if (e.Data is not null) se.AppendLine(e.Data); };
-            p.Start();
-            p.BeginOutputReadLine();
-            p.BeginErrorReadLine();
+            lock (SpawnLock)
+            {
+                p.Start();
+                p.StandardInput.Close();   // signal EOF — these tools never feed git on stdin
+                p.BeginOutputReadLine();
+                p.BeginErrorReadLine();
+            }
 
             if (!p.WaitForExit(DefaultTimeoutMs))
             {
