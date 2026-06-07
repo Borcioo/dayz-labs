@@ -1,80 +1,180 @@
+using System.Xml.Linq;
 using Dzl.Core.Config;
 using Dzl.Core.Economy;
+using Dzl.Core.Economy.Lint;
 
 namespace Dzl.Core.App;
 
 public sealed record TypesOp(bool Ok, string Message);
 
+/// <summary>One Types entry plus the origin/source of the CE file it came from (for source-aware
+/// listing/filtering in the CLI/MCP/tray).</summary>
+public sealed record TypeRow(TypeEntry Entry, CeOrigin Origin, string ModSource);
+
 /// <summary>
-/// SP6 Central Economy editor: read + edit the active server instance's mission <c>db\types.xml</c>.
-/// Every write snapshots a versioned backup (<see cref="TypesBackup"/>) and edits the file in place
-/// (preserving comments/order via <see cref="TypesXml"/>). One facade per frontend (CLI/MCP/tray).
+/// Central Economy editor over ALL Types files of the active server instance's mission — the vanilla
+/// <c>db\types.xml</c> plus every <c>type="types"</c> file referenced from <c>cfgeconomycore.xml</c>.
+/// Reads union entries (each stamped with its <see cref="TypeEntry.SourceFile"/>); writes route each
+/// entry back to its own file. Every write snapshots a versioned backup (<see cref="CeBackup"/>) and
+/// edits in place (preserving comments/order via <see cref="TypesXml"/>). One facade per frontend.
 /// </summary>
 public sealed class TypesService
 {
     private readonly string _configPath;
     public TypesService(string configPath) { _configPath = configPath; }
 
-    /// <summary>The active instance mission's <c>db\types.xml</c> (first match under its mpmissions), or null.</summary>
-    public string? TypesFile()
+    // ------------------------------------------------------------------
+    // File resolution
+    // ------------------------------------------------------------------
+
+    private MissionPaths? Mission()
     {
         var (cfg, _, _) = Profiles.ResolveActive(_configPath);
-        var cfgPath = cfg.ConfigName;
-        if (string.IsNullOrWhiteSpace(cfgPath) || !Path.IsPathRooted(cfgPath)) return null;
-        var instanceDir = Path.GetDirectoryName(cfgPath);
-        var mp = instanceDir is null ? null : Path.Combine(instanceDir, "mpmissions");
-        if (mp is null || !Directory.Exists(mp)) return null;
-        foreach (var mission in Directory.GetDirectories(mp))
-        {
-            var t = Path.Combine(mission, "db", "types.xml");
-            if (File.Exists(t)) return t;
-        }
-        return null;
+        return MissionLocator.Resolve(cfg);
     }
 
-    /// <summary>All entries from the active mission's types.xml (empty if none/unreadable).</summary>
-    public List<TypeEntry> List()
+    /// <summary>All Types <see cref="CeFileRef"/>s for the active mission that exist on disk: the files
+    /// referenced by <c>cfgeconomycore.xml</c> (filtered to Types), plus vanilla <c>db/types.xml</c> as
+    /// <see cref="CeOrigin.Vanilla"/> if present and not already referenced. Empty when no mission.</summary>
+    private List<CeFileRef> ResolveTypesFiles()
     {
-        var f = TypesFile();
-        if (f is null || !File.Exists(f)) return new();
-        try { return TypesXml.Parse(File.ReadAllText(f)); }
-        catch { return new(); }
+        var mp = Mission();
+        if (mp is null) return new();
+
+        var refs = new List<CeFileRef>();
+        if (File.Exists(mp.EconomyCore))
+        {
+            try
+            {
+                refs.AddRange(EconomyCore.Parse(File.ReadAllText(mp.EconomyCore), mp.MissionDir)
+                    .Where(r => r.Kind == CeKind.Types));
+            }
+            catch { /* malformed cfgeconomycore.xml → fall back to vanilla only */ }
+        }
+
+        if (mp.Vanilla is not null &&
+            !refs.Any(r => string.Equals(r.Path, mp.Vanilla, StringComparison.OrdinalIgnoreCase)))
+        {
+            refs.Insert(0, new CeFileRef(mp.Vanilla, CeKind.Types, CeOrigin.Vanilla, "vanilla"));
+        }
+
+        return refs.Where(r => File.Exists(r.Path)).ToList();
     }
 
-    /// <summary>Sync the file to the full edited set (upsert each, drop types no longer present), snapshotting
-    /// first. Used by the tray grid editor.</summary>
+    /// <summary>The file new/auto-targeted entries write to: vanilla db/types.xml when present,
+    /// else the first resolved Types file. Null when there are no Types files.</summary>
+    private string? PrimaryFile()
+    {
+        var mp = Mission();
+        if (mp?.Vanilla is not null) return mp.Vanilla;
+        return ResolveTypesFiles().FirstOrDefault()?.Path;
+    }
+
+    /// <summary>The active mission's primary types file (vanilla db\types.xml, or the first resolved
+    /// Types file). Kept for back-compat with callers that probe a single "the types file".</summary>
+    public string? TypesFile() => PrimaryFile();
+
+    // ------------------------------------------------------------------
+    // Read
+    // ------------------------------------------------------------------
+
+    /// <summary>Union of every resolved Types file's entries, each stamped with its source file path.
+    /// Per-file parse errors are skipped.</summary>
+    public List<TypeEntry> List() => Rows().Select(r => r.Entry).ToList();
+
+    /// <summary>Like <see cref="List"/> but each entry carries the origin + mod source of its file.</summary>
+    public List<TypeRow> Rows()
+    {
+        var rows = new List<TypeRow>();
+        foreach (var fileRef in ResolveTypesFiles())
+        {
+            List<TypeEntry> entries;
+            try { entries = TypesXml.Parse(File.ReadAllText(fileRef.Path)); }
+            catch { continue; }   // skip the bad file
+            foreach (var e in entries)
+                rows.Add(new TypeRow(e with { SourceFile = fileRef.Path }, fileRef.Origin, fileRef.ModSource));
+        }
+        return rows;
+    }
+
+    /// <summary>Valid usage/value/tag/category names from the mission's <c>cfglimitsdefinition.xml</c>
+    /// (<see cref="LimitsDef.Empty"/> when absent).</summary>
+    public LimitsDef Limits()
+    {
+        var mp = Mission();
+        if (mp is null) return LimitsDef.Empty;
+        var path = Path.Combine(mp.MissionDir, "cfglimitsdefinition.xml");
+        if (!File.Exists(path)) return LimitsDef.Empty;
+        try { return LimitsXml.Parse(File.ReadAllText(path)); }
+        catch { return LimitsDef.Empty; }
+    }
+
+    /// <summary>Run the CE lint rules over the full multi-file Types set against the mission's limits.</summary>
+    public IReadOnlyList<LintFinding> Lint() => new LintEngine().Run(new CeFileSet(List()), Limits());
+
+    // ------------------------------------------------------------------
+    // Write
+    // ------------------------------------------------------------------
+
+    /// <summary>Sync every resolved Types file to the edited set: entries are grouped by their
+    /// <see cref="TypeEntry.SourceFile"/> (empty → the primary file). Each target file is loaded
+    /// (or created as <c>&lt;types/&gt;</c>), pruned of types no longer kept for it, upserted, snapshotted,
+    /// and written back. Per-file try/catch; ok only when no file failed.</summary>
     public TypesOp SaveAll(IReadOnlyList<TypeEntry> entries)
     {
-        var f = TypesFile();
-        if (f is null) return new(false, "no types.xml for the active server's mission");
-        try
+        var primary = PrimaryFile();
+        if (primary is null) return new(false, "no types.xml for the active server's mission");
+
+        var groups = entries
+            .GroupBy(e => string.IsNullOrEmpty(e.SourceFile) ? primary : e.SourceFile,
+                     StringComparer.OrdinalIgnoreCase);
+
+        var saved = 0;
+        var failed = new List<string>();
+        foreach (var g in groups)
         {
-            var doc = TypesXml.ParseDoc(File.ReadAllText(f));
-            var keep = new HashSet<string>(entries.Select(e => e.Name), StringComparer.OrdinalIgnoreCase);
-            foreach (var t in doc.Root!.Elements("type").ToList())
-                if (!keep.Contains(t.Attribute("name")?.Value ?? "")) t.Remove();
-            foreach (var e in entries) TypesXml.Upsert(doc, e);
-            TypesBackup.Snapshot(f);
-            File.WriteAllText(f, TypesXml.ToXml(doc));
-            return new(true, $"saved {entries.Count} types → {Path.GetFileName(f)}");
+            var file = g.Key;
+            try
+            {
+                var doc = File.Exists(file)
+                    ? TypesXml.ParseDoc(File.ReadAllText(file))
+                    : new XDocument(new XDeclaration("1.0", "UTF-8", null), new XElement("types"));
+                var keep = new HashSet<string>(g.Select(e => e.Name), StringComparer.OrdinalIgnoreCase);
+                foreach (var t in doc.Root!.Elements("type").ToList())
+                    if (!keep.Contains(t.Attribute("name")?.Value ?? "")) t.Remove();
+                foreach (var e in g) TypesXml.Upsert(doc, e);
+                CeBackup.Snapshot(file);
+                File.WriteAllText(file, TypesXml.ToXml(doc));
+                saved++;
+            }
+            catch { failed.Add(Path.GetFileName(file)); }
         }
-        catch (Exception ex) { return new(false, ex.Message); }
+
+        return failed.Count == 0
+            ? new(true, $"saved {entries.Count} types across {saved} file(s)")
+            : new(false, $"failed: {string.Join(", ", failed)}");
     }
 
-    /// <summary>Set/insert one type with nullable field overrides (CLI/MCP). Unspecified fields keep their
-    /// current value (or the default for a new entry).</summary>
+    /// <summary>Set/insert one type with nullable overrides (CLI/MCP). Writes to the entry's existing
+    /// source file if the type already exists, else to <paramref name="file"/> if given, else the primary
+    /// file. Unspecified fields keep their current value (or the default for a new entry).</summary>
     public TypesOp Set(string name, int? nominal = null, int? min = null, int? lifetime = null,
-                       int? restock = null, int? cost = null, string? category = null)
+                       int? restock = null, int? cost = null, string? category = null, string? file = null)
     {
-        var f = TypesFile();
-        if (f is null) return new(false, "no types.xml for the active server's mission");
         if (string.IsNullOrWhiteSpace(name)) return new(false, "type name required");
+
+        var existing = Rows().FirstOrDefault(r => string.Equals(r.Entry.Name, name, StringComparison.OrdinalIgnoreCase));
+        var target = existing?.Entry.SourceFile ?? file ?? PrimaryFile();
+        if (string.IsNullOrEmpty(target)) return new(false, "no types.xml for the active server's mission");
+
         try
         {
-            var doc = TypesXml.ParseDoc(File.ReadAllText(f));
-            var existing = doc.Root!.Elements("type")
+            var doc = File.Exists(target)
+                ? TypesXml.ParseDoc(File.ReadAllText(target))
+                : new XDocument(new XDeclaration("1.0", "UTF-8", null), new XElement("types"));
+            var el = doc.Root!.Elements("type")
                 .FirstOrDefault(t => string.Equals(t.Attribute("name")?.Value, name, StringComparison.OrdinalIgnoreCase));
-            var cur = existing != null ? TypesXml.ReadType(existing) : new TypeEntry { Name = name };
+            var cur = el != null ? TypesXml.ReadType(el) : new TypeEntry { Name = name };
             var merged = cur with
             {
                 Name = name,
@@ -85,38 +185,53 @@ public sealed class TypesService
                 Cost = cost ?? cur.Cost,
                 Category = category ?? cur.Category,
             };
-            TypesBackup.Snapshot(f);
+            CeBackup.Snapshot(target);
             TypesXml.Upsert(doc, merged);
-            File.WriteAllText(f, TypesXml.ToXml(doc));
-            return new(true, existing != null ? $"updated {name}" : $"added {name}");
+            File.WriteAllText(target, TypesXml.ToXml(doc));
+            return new(true, el != null ? $"updated {name}" : $"added {name}");
         }
         catch (Exception ex) { return new(false, ex.Message); }
     }
 
+    /// <summary>Remove the named type from whichever resolved file(s) contain it (each affected file is
+    /// snapshotted first).</summary>
     public TypesOp Remove(string name)
     {
-        var f = TypesFile();
-        if (f is null) return new(false, "no types.xml for the active server's mission");
-        try
+        var files = ResolveTypesFiles();
+        if (files.Count == 0) return new(false, "no types.xml for the active server's mission");
+
+        var removed = 0;
+        var failed = new List<string>();
+        foreach (var fileRef in files)
         {
-            var doc = TypesXml.ParseDoc(File.ReadAllText(f));
-            if (!TypesXml.Remove(doc, name)) return new(false, $"no such type: {name}");
-            TypesBackup.Snapshot(f);
-            File.WriteAllText(f, TypesXml.ToXml(doc));
-            return new(true, $"removed {name}");
+            try
+            {
+                var doc = TypesXml.ParseDoc(File.ReadAllText(fileRef.Path));
+                if (!TypesXml.Remove(doc, name)) continue;
+                CeBackup.Snapshot(fileRef.Path);
+                File.WriteAllText(fileRef.Path, TypesXml.ToXml(doc));
+                removed++;
+            }
+            catch { failed.Add(Path.GetFileName(fileRef.Path)); }
         }
-        catch (Exception ex) { return new(false, ex.Message); }
+
+        if (failed.Count > 0) return new(false, $"failed: {string.Join(", ", failed)}");
+        return removed > 0 ? new(true, $"removed {name}") : new(false, $"no such type: {name}");
     }
+
+    // ------------------------------------------------------------------
+    // Backups / restore (primary file)
+    // ------------------------------------------------------------------
 
     public List<TypesBackupInfo> Backups()
     {
-        var f = TypesFile();
+        var f = PrimaryFile();
         return f is null ? new() : TypesBackup.List(f);
     }
 
     public TypesOp Restore(string backupFile)
     {
-        var f = TypesFile();
+        var f = PrimaryFile();
         if (f is null) return new(false, "no types.xml for the active server's mission");
         return TypesBackup.Restore(f, backupFile)
             ? new(true, $"restored {Path.GetFileName(backupFile)}")
