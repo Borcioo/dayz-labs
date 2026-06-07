@@ -17,6 +17,17 @@ public sealed partial class TypeRowVm : ObservableObject
 {
     private readonly TypeEntry _original;
 
+    /// <summary>Checkbox-selection state (the leftmost grid column binds to this TwoWay). Drives BATCH
+    /// operations — distinct from the grid's SelectedItem (which drives the single-row detail form).
+    /// Not persisted; reset on (re)load.</summary>
+    [ObservableProperty] private bool _isSelected;
+
+    /// <summary>Raised when <see cref="IsSelected"/> flips (so the owning VM can update its checked-count
+    /// and select-all tri-state). The VM subscribes per-row at load time.</summary>
+    public event Action? SelectionToggled;
+
+    partial void OnIsSelectedChanged(bool value) => SelectionToggled?.Invoke();
+
     // --- core numeric fields ---
     [ObservableProperty] private string _name;
     [ObservableProperty] private int _nominal;

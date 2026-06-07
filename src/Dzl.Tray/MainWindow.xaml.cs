@@ -588,8 +588,11 @@ public partial class MainWindow : FluentWindow
 
     // === Economy (types.xml) editor =======================================
 
-    private System.Collections.Generic.List<TypeRowVm> SelectedTypes() =>
-        TypesGrid.SelectedItems.Cast<TypeRowVm>().ToList();
+    // Batch + remove operate on the CHECKED rows (checkbox column), NOT the grid's focused/edited row.
+    // The detail form edits the single focused row (grid SelectedItem) — selection-for-edit and
+    // selection-for-batch are separate concepts now.
+    private System.Collections.Generic.List<TypeRowVm> CheckedTypes() =>
+        _vm.CheckedTypes.ToList();
 
     private void OnReloadTypes(object sender, RoutedEventArgs e) { _vm.LoadTypes(); RefreshTypesBackupsMenu(); }
     private void OnSaveTypes(object sender, RoutedEventArgs e) { _vm.SaveTypes(); RefreshTypesBackupsMenu(); }
@@ -609,13 +612,21 @@ public partial class MainWindow : FluentWindow
         if (result is { } r) _vm.DuplicateType(src, r.name, r.targetFile);
     }
 
-    private void OnRemoveTypes(object sender, RoutedEventArgs e) => _vm.RemoveTypes(SelectedTypes());
+    // Remove acts on the checked rows; falls back to the single focused row when nothing is checked.
+    private void OnRemoveTypes(object sender, RoutedEventArgs e)
+    {
+        var rows = CheckedTypes();
+        if (rows.Count == 0 && TypesGrid.SelectedItem is TypeRowVm sel) rows = new() { sel };
+        _vm.RemoveTypes(rows);
+    }
 
     private void OnClearFilters(object sender, RoutedEventArgs e) => _vm.ClearTypeFilters();
 
-    // Push the grid's multi-selection into the VM (for batch + detail panel) on every selection change.
+    // Push the grid's focused row into the VM (drives the detail form). Batch selection is the checkbox set.
     private void OnTypesSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-        => _vm.SetSelectedTypes(SelectedTypes(), TypesGrid.SelectedItem as TypeRowVm);
+        => _vm.SetSelectedTypes(
+            TypesGrid.SelectedItem is TypeRowVm row ? new[] { row } : System.Array.Empty<TypeRowVm>(),
+            TypesGrid.SelectedItem as TypeRowVm);
 
     // Jump to (and select) the first row with lint findings.
     private void OnJumpToLint(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -631,7 +642,7 @@ public partial class MainWindow : FluentWindow
 
     private void Batch(bool multiply)
     {
-        var rows = SelectedTypes();
+        var rows = CheckedTypes();
         if (!RequireSelection(rows)) return;
         var field = (BatchFieldBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "nominal";
         if (!double.TryParse(BatchValueBox.Text.Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var val))
@@ -646,7 +657,7 @@ public partial class MainWindow : FluentWindow
 
     private void BatchFlag(string op)
     {
-        var rows = SelectedTypes();
+        var rows = CheckedTypes();
         if (!RequireSelection(rows)) return;
         var flag = (BatchFlagBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "map";
         _vm.BatchFlag(rows, flag, op);
@@ -658,7 +669,7 @@ public partial class MainWindow : FluentWindow
 
     private void BatchList(bool add)
     {
-        var rows = SelectedTypes();
+        var rows = CheckedTypes();
         if (!RequireSelection(rows)) return;
         var list = (BatchListBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "usage";
         var val = BatchListValueBox.Text.Trim();
@@ -669,7 +680,7 @@ public partial class MainWindow : FluentWindow
 
     private void OnBatchCategorySet(object sender, RoutedEventArgs e)
     {
-        var rows = SelectedTypes();
+        var rows = CheckedTypes();
         if (!RequireSelection(rows)) return;
         var cat = BatchCategoryBox.Text?.Trim() ?? "";
         _vm.BatchCategory(rows, cat);
@@ -679,7 +690,7 @@ public partial class MainWindow : FluentWindow
     private bool RequireSelection(System.Collections.Generic.IReadOnlyList<TypeRowVm> rows)
     {
         if (rows.Count > 0) return true;
-        System.Windows.MessageBox.Show("Select one or more rows first.", "Batch", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        System.Windows.MessageBox.Show("Check one or more rows first (the checkbox column).", "Batch", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
         return false;
     }
 

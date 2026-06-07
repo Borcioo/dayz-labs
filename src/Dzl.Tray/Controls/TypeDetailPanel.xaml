@@ -5,27 +5,43 @@
              xmlns:ctl="clr-namespace:Dzl.Tray.Controls"
              xmlns:local="clr-namespace:Dzl.Tray"
              x:Name="Root">
-  <!-- Master-detail editor for one TypeRowVm. DataContext is the selected row (set by the host); the
-       MainViewModel (for limits suggestions + edit plumbing) is passed via the Vm DP. All edits are live
-       on the shared row instance; numeric +/- and toggles route through Vm so each is an undo step. -->
+  <!-- Form-based master-detail editor for one TypeRowVm. DataContext is the selected row (set by the host);
+       the MainViewModel (for limits suggestions + undo/lint plumbing) is passed via the Vm DP. Numeric
+       fields are Slider + validated TextBox pairs; category is a select; usage/value/tag are chip
+       multiselects; flags are labeled toggles. Each change is one undo step (snapshot BEFORE change). -->
   <UserControl.Resources>
     <!-- A UserControl does NOT inherit the host window's resources at realize time — StaticResource
-         resolves against this control's own scope + App resources. These converters live in MainWindow
-         too, but must be declared locally so {StaticResource NullToVis/NotNullToVis} resolve here. -->
+         resolves against this control's own scope + App resources. Declare everything used here locally. -->
     <local:NullToVisibilityConverter x:Key="NullToVis" />
     <local:NotNullToVisibilityConverter x:Key="NotNullToVis" />
+
     <Style x:Key="DetailLabel" TargetType="TextBlock">
       <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
       <Setter Property="Margin" Value="0,0,0,2" />
     </Style>
-    <Style x:Key="StepBtn" TargetType="Button">
-      <Setter Property="Width" Value="26" />
-      <Setter Property="Height" Value="26" />
-      <Setter Property="Padding" Value="0" />
-      <Setter Property="FontSize" Value="13" />
-      <Setter Property="VerticalContentAlignment" Value="Center" />
-      <Setter Property="HorizontalContentAlignment" Value="Center" />
+
+    <!-- Numeric TextBox with a red invalid state when the validation rule fails. -->
+    <Style x:Key="NumBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+      <Setter Property="Width" Value="72" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="HorizontalContentAlignment" Value="Right" />
+      <Setter Property="Validation.ErrorTemplate">
+        <Setter.Value>
+          <ControlTemplate>
+            <AdornedElementPlaceholder />
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+      <Style.Triggers>
+        <Trigger Property="Validation.HasError" Value="True">
+          <Setter Property="BorderBrush" Value="#E06C75" />
+          <Setter Property="BorderThickness" Value="1.5" />
+          <Setter Property="ToolTip"
+                  Value="{Binding (Validation.Errors)[0].ErrorContent, RelativeSource={RelativeSource Self}}" />
+        </Trigger>
+      </Style.Triggers>
     </Style>
   </UserControl.Resources>
 
@@ -33,22 +49,23 @@
           BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
           CornerRadius="8" Padding="0">
     <Grid>
-      <!-- Placeholder when nothing selected -->
-      <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+      <!-- Compact hint when nothing selected (NOT a giant placeholder). -->
+      <StackPanel VerticalAlignment="Top" HorizontalAlignment="Left" Margin="14,14,14,0"
+                  Orientation="Horizontal"
                   Visibility="{Binding DataContext, ElementName=Root, Converter={StaticResource NullToVis}}">
-        <ui:SymbolIcon Symbol="DocumentSearch24" FontSize="32" HorizontalAlignment="Center"
+        <ui:SymbolIcon Symbol="DocumentSearch24" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"
                        Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-        <TextBlock Text="Select a type to edit" Margin="0,8,0,0" FontSize="13"
-                   Foreground="{DynamicResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" />
+        <TextBlock Text="Select a row to edit it here." FontSize="12" VerticalAlignment="Center"
+                   Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" />
       </StackPanel>
 
-      <!-- Editor (only when a row is selected) -->
+      <!-- Editor form (only when a row is selected) -->
       <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14"
                     Visibility="{Binding DataContext, ElementName=Root, Converter={StaticResource NotNullToVis}}">
         <StackPanel>
 
-          <!-- Header: name + origin pill + file + lint -->
-          <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+          <!-- Header: origin pill + lint -->
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
             <Border CornerRadius="9" Padding="7,1" VerticalAlignment="Center" Margin="0,0,8,0"
                     Background="{Binding OriginBg}">
               <TextBlock Text="{Binding OriginLabel}" FontSize="10" FontWeight="SemiBold"
@@ -58,87 +75,158 @@
                        Foreground="#F0C04A" VerticalAlignment="Center"
                        ToolTip="{Binding LintTooltip}" />
           </StackPanel>
+
           <TextBlock Text="Name" Style="{StaticResource DetailLabel}" />
           <ui:TextBox Text="{Binding Name, UpdateSourceTrigger=LostFocus}" Margin="0,0,0,4"
                       GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit" />
           <TextBlock Text="{Binding FileName, StringFormat='file: {0}'}" Style="{StaticResource DetailLabel}"
-                     Margin="0,0,0,10" />
+                     FontWeight="Normal" Margin="0,0,0,12" />
 
-          <!-- Numeric grid: 2 columns of stepper fields -->
-          <UniformGrid Columns="2" Margin="0,0,0,6">
-            <StackPanel Margin="0,0,6,8">
-              <TextBlock Text="Nominal" Style="{StaticResource DetailLabel}" />
-              <StackPanel Orientation="Horizontal">
-                <Button Content="−" Style="{StaticResource StepBtn}" Tag="nominal" Click="OnStepDown" />
-                <ui:TextBox Width="64" Margin="3,0" Text="{Binding Nominal, UpdateSourceTrigger=LostFocus}"
-                            GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit" />
-                <Button Content="+" Style="{StaticResource StepBtn}" Tag="nominal" Click="OnStepUp" />
-              </StackPanel>
-            </StackPanel>
-            <StackPanel Margin="0,0,0,8">
-              <TextBlock Text="Min" Style="{StaticResource DetailLabel}" />
-              <StackPanel Orientation="Horizontal">
-                <Button Content="−" Style="{StaticResource StepBtn}" Tag="min" Click="OnStepDown" />
-                <ui:TextBox Width="64" Margin="3,0" Text="{Binding Min, UpdateSourceTrigger=LostFocus}"
-                            GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit" />
-                <Button Content="+" Style="{StaticResource StepBtn}" Tag="min" Click="OnStepUp" />
-              </StackPanel>
-            </StackPanel>
-            <StackPanel Margin="0,0,6,8">
+          <!-- Numeric fields: Slider + validated TextBox pairs.
+               Soft-capped sliders (0-100) for nominal/min/cost; the TextBox accepts higher values.
+               lifetime/restock are large → wide slider with a high cap + free TextBox. -->
+          <TextBlock Text="Nominal" Style="{StaticResource DetailLabel}" />
+          <Grid Margin="0,0,0,10">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <Slider Grid.Column="0" Minimum="0" Maximum="100" VerticalAlignment="Center" Margin="0,0,8,0"
+                    SmallChange="1" LargeChange="10" IsSnapToTickEnabled="True" TickFrequency="1"
+                    Value="{Binding Nominal, Mode=TwoWay}"
+                    PreviewMouseLeftButtonDown="OnSliderPreviewMouse"
+                    Thumb.DragCompleted="OnSliderCommit" LostMouseCapture="OnSliderCommit" />
+            <TextBox Grid.Column="1" Style="{StaticResource NumBox}"
+                     GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit">
+              <TextBox.Text>
+                <Binding Path="Nominal" UpdateSourceTrigger="LostFocus">
+                  <Binding.ValidationRules><local:NonNegativeIntRule /></Binding.ValidationRules>
+                </Binding>
+              </TextBox.Text>
+            </TextBox>
+          </Grid>
+
+          <TextBlock Text="Min" Style="{StaticResource DetailLabel}" />
+          <Grid Margin="0,0,0,10">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <Slider Grid.Column="0" Minimum="0" Maximum="100" VerticalAlignment="Center" Margin="0,0,8,0"
+                    SmallChange="1" LargeChange="10" IsSnapToTickEnabled="True" TickFrequency="1"
+                    Value="{Binding Min, Mode=TwoWay}"
+                    PreviewMouseLeftButtonDown="OnSliderPreviewMouse"
+                    Thumb.DragCompleted="OnSliderCommit" LostMouseCapture="OnSliderCommit" />
+            <TextBox Grid.Column="1" Style="{StaticResource NumBox}"
+                     GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit">
+              <TextBox.Text>
+                <Binding Path="Min" UpdateSourceTrigger="LostFocus">
+                  <Binding.ValidationRules><local:NonNegativeIntRule /></Binding.ValidationRules>
+                </Binding>
+              </TextBox.Text>
+            </TextBox>
+          </Grid>
+
+          <!-- QuantMin / QuantMax: -1 means "not set" → allow negative; numeric TextBox (+ slider 0-100). -->
+          <UniformGrid Columns="2">
+            <StackPanel Margin="0,0,6,10">
               <TextBlock Text="QuantMin" Style="{StaticResource DetailLabel}" />
-              <StackPanel Orientation="Horizontal">
-                <Button Content="−" Style="{StaticResource StepBtn}" Tag="quantmin" Click="OnStepDown" />
-                <ui:TextBox Width="64" Margin="3,0" Text="{Binding QuantMin, UpdateSourceTrigger=LostFocus}"
-                            GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit" />
-                <Button Content="+" Style="{StaticResource StepBtn}" Tag="quantmin" Click="OnStepUp" />
-              </StackPanel>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <Slider Grid.Column="0" Minimum="-1" Maximum="100" VerticalAlignment="Center" Margin="0,0,6,0"
+                        SmallChange="1" LargeChange="10" IsSnapToTickEnabled="True" TickFrequency="1"
+                        Value="{Binding QuantMin, Mode=TwoWay}"
+                        PreviewMouseLeftButtonDown="OnSliderPreviewMouse"
+                        Thumb.DragCompleted="OnSliderCommit" LostMouseCapture="OnSliderCommit" />
+                <TextBox Grid.Column="1" Style="{StaticResource NumBox}" Width="56"
+                         GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit">
+                  <TextBox.Text>
+                    <Binding Path="QuantMin" UpdateSourceTrigger="LostFocus">
+                      <Binding.ValidationRules><local:NonNegativeIntRule AllowNegative="True" /></Binding.ValidationRules>
+                    </Binding>
+                  </TextBox.Text>
+                </TextBox>
+              </Grid>
             </StackPanel>
-            <StackPanel Margin="0,0,0,8">
+            <StackPanel Margin="0,0,0,10">
               <TextBlock Text="QuantMax" Style="{StaticResource DetailLabel}" />
-              <StackPanel Orientation="Horizontal">
-                <Button Content="−" Style="{StaticResource StepBtn}" Tag="quantmax" Click="OnStepDown" />
-                <ui:TextBox Width="64" Margin="3,0" Text="{Binding QuantMax, UpdateSourceTrigger=LostFocus}"
-                            GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit" />
-                <Button Content="+" Style="{StaticResource StepBtn}" Tag="quantmax" Click="OnStepUp" />
-              </StackPanel>
-            </StackPanel>
-            <StackPanel Margin="0,0,6,8">
-              <TextBlock Text="Lifetime" Style="{StaticResource DetailLabel}" />
-              <StackPanel Orientation="Horizontal">
-                <Button Content="−" Style="{StaticResource StepBtn}" Tag="lifetime" Click="OnStepDown" />
-                <ui:TextBox Width="64" Margin="3,0" Text="{Binding Lifetime, UpdateSourceTrigger=LostFocus}"
-                            GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit" />
-                <Button Content="+" Style="{StaticResource StepBtn}" Tag="lifetime" Click="OnStepUp" />
-              </StackPanel>
-            </StackPanel>
-            <StackPanel Margin="0,0,0,8">
-              <TextBlock Text="Restock" Style="{StaticResource DetailLabel}" />
-              <StackPanel Orientation="Horizontal">
-                <Button Content="−" Style="{StaticResource StepBtn}" Tag="restock" Click="OnStepDown" />
-                <ui:TextBox Width="64" Margin="3,0" Text="{Binding Restock, UpdateSourceTrigger=LostFocus}"
-                            GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit" />
-                <Button Content="+" Style="{StaticResource StepBtn}" Tag="restock" Click="OnStepUp" />
-              </StackPanel>
-            </StackPanel>
-            <StackPanel Margin="0,0,6,8">
-              <TextBlock Text="Cost" Style="{StaticResource DetailLabel}" />
-              <StackPanel Orientation="Horizontal">
-                <Button Content="−" Style="{StaticResource StepBtn}" Tag="cost" Click="OnStepDown" />
-                <ui:TextBox Width="64" Margin="3,0" Text="{Binding Cost, UpdateSourceTrigger=LostFocus}"
-                            GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit" />
-                <Button Content="+" Style="{StaticResource StepBtn}" Tag="cost" Click="OnStepUp" />
-              </StackPanel>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <Slider Grid.Column="0" Minimum="-1" Maximum="100" VerticalAlignment="Center" Margin="0,0,6,0"
+                        SmallChange="1" LargeChange="10" IsSnapToTickEnabled="True" TickFrequency="1"
+                        Value="{Binding QuantMax, Mode=TwoWay}"
+                        PreviewMouseLeftButtonDown="OnSliderPreviewMouse"
+                        Thumb.DragCompleted="OnSliderCommit" LostMouseCapture="OnSliderCommit" />
+                <TextBox Grid.Column="1" Style="{StaticResource NumBox}" Width="56"
+                         GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit">
+                  <TextBox.Text>
+                    <Binding Path="QuantMax" UpdateSourceTrigger="LostFocus">
+                      <Binding.ValidationRules><local:NonNegativeIntRule AllowNegative="True" /></Binding.ValidationRules>
+                    </Binding>
+                  </TextBox.Text>
+                </TextBox>
+              </Grid>
             </StackPanel>
           </UniformGrid>
 
-          <!-- Category -->
+          <!-- Cost: 0-100 soft-cap slider + TextBox -->
+          <TextBlock Text="Cost" Style="{StaticResource DetailLabel}" />
+          <Grid Margin="0,0,0,10">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <Slider Grid.Column="0" Minimum="0" Maximum="100" VerticalAlignment="Center" Margin="0,0,8,0"
+                    SmallChange="1" LargeChange="10" IsSnapToTickEnabled="True" TickFrequency="1"
+                    Value="{Binding Cost, Mode=TwoWay}"
+                    PreviewMouseLeftButtonDown="OnSliderPreviewMouse"
+                    Thumb.DragCompleted="OnSliderCommit" LostMouseCapture="OnSliderCommit" />
+            <TextBox Grid.Column="1" Style="{StaticResource NumBox}"
+                     GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit">
+              <TextBox.Text>
+                <Binding Path="Cost" UpdateSourceTrigger="LostFocus">
+                  <Binding.ValidationRules><local:NonNegativeIntRule /></Binding.ValidationRules>
+                </Binding>
+              </TextBox.Text>
+            </TextBox>
+          </Grid>
+
+          <!-- Lifetime / Restock: large values → validated TextBox + a wide high-cap slider. -->
+          <TextBlock Text="Lifetime (seconds)" Style="{StaticResource DetailLabel}" />
+          <Grid Margin="0,0,0,10">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <Slider Grid.Column="0" Minimum="0" Maximum="3888000" VerticalAlignment="Center" Margin="0,0,8,0"
+                    SmallChange="3600" LargeChange="86400"
+                    Value="{Binding Lifetime, Mode=TwoWay}"
+                    PreviewMouseLeftButtonDown="OnSliderPreviewMouse"
+                    Thumb.DragCompleted="OnSliderCommit" LostMouseCapture="OnSliderCommit" />
+            <TextBox Grid.Column="1" Style="{StaticResource NumBox}" Width="90"
+                     GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit">
+              <TextBox.Text>
+                <Binding Path="Lifetime" UpdateSourceTrigger="LostFocus">
+                  <Binding.ValidationRules><local:NonNegativeIntRule /></Binding.ValidationRules>
+                </Binding>
+              </TextBox.Text>
+            </TextBox>
+          </Grid>
+
+          <TextBlock Text="Restock (seconds)" Style="{StaticResource DetailLabel}" />
+          <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <Slider Grid.Column="0" Minimum="0" Maximum="3888000" VerticalAlignment="Center" Margin="0,0,8,0"
+                    SmallChange="3600" LargeChange="86400"
+                    Value="{Binding Restock, Mode=TwoWay}"
+                    PreviewMouseLeftButtonDown="OnSliderPreviewMouse"
+                    Thumb.DragCompleted="OnSliderCommit" LostMouseCapture="OnSliderCommit" />
+            <TextBox Grid.Column="1" Style="{StaticResource NumBox}" Width="90"
+                     GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit">
+              <TextBox.Text>
+                <Binding Path="Restock" UpdateSourceTrigger="LostFocus">
+                  <Binding.ValidationRules><local:NonNegativeIntRule /></Binding.ValidationRules>
+                </Binding>
+              </TextBox.Text>
+            </TextBox>
+          </Grid>
+
+          <!-- Category (select) -->
           <TextBlock Text="Category" Style="{StaticResource DetailLabel}" />
-          <ComboBox IsEditable="True" StaysOpenOnEdit="True" Margin="0,0,0,10"
+          <ComboBox IsEditable="True" StaysOpenOnEdit="True" Margin="0,0,0,12"
                     Text="{Binding Category, UpdateSourceTrigger=LostFocus}"
                     ItemsSource="{Binding Categories, ElementName=Root}"
                     GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit" />
 
-          <!-- Chip editors -->
+          <!-- Chip multiselects -->
           <TextBlock Text="Usage" Style="{StaticResource DetailLabel}" />
           <ctl:ChipMultiSelect x:Name="UsageChips" Margin="0,0,0,10" AddHint="add usage…"
                                Items="{Binding Usage}"
@@ -157,7 +245,7 @@
                                Suggestions="{Binding TagSuggestions, ElementName=Root}"
                                Changed="OnChipsChanged" />
 
-          <!-- Flags -->
+          <!-- Flags (labeled toggles) -->
           <TextBlock Text="Flags" Style="{StaticResource DetailLabel}" Margin="0,0,0,4" />
           <UniformGrid Columns="2">
             <ui:ToggleSwitch Content="CountInCargo"   IsChecked="{Binding CountInCargo}"   Click="OnFlagToggled"

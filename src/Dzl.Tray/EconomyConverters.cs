@@ -1,9 +1,30 @@
 using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 
 namespace Dzl.Tray;
+
+/// <summary>Validates a CE numeric field. Rejects non-integers and (unless <see cref="AllowNegative"/>)
+/// negatives, so the binding never commits a bad value and the field shows its invalid (red) state.
+/// Used by the form-based <see cref="Controls.TypeDetailPanel"/> numeric TextBoxes.</summary>
+public sealed class NonNegativeIntRule : ValidationRule
+{
+    /// <summary>When true, negative integers are accepted (e.g. quantmin/quantmax use -1 = "not set").</summary>
+    public bool AllowNegative { get; set; }
+
+    public override ValidationResult Validate(object value, CultureInfo cultureInfo)
+    {
+        var s = (value as string)?.Trim() ?? "";
+        if (s.Length == 0) return new ValidationResult(false, "required");
+        if (!int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n)
+            && !int.TryParse(s, NumberStyles.Integer, cultureInfo, out n))
+            return new ValidationResult(false, "must be a whole number");
+        if (!AllowNegative && n < 0) return new ValidationResult(false, "must be ≥ 0");
+        return ValidationResult.ValidResult;
+    }
+}
 
 /// <summary>Highlights a flag glyph: foreground accent when the bound bool is true, muted when false.
 /// Drives the compact Flags column letters in the grid (C H M P · Cr De).</summary>

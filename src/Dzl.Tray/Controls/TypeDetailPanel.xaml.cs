@@ -86,13 +86,26 @@ public partial class TypeDetailPanel : UserControl
         Vm?.AfterDetailEdit();
     }
 
-    private void OnStepUp(object sender, RoutedEventArgs e) => Step(sender, +1);
-    private void OnStepDown(object sender, RoutedEventArgs e) => Step(sender, -1);
+    // --- Slider undo: snapshot once at the start of a drag gesture, re-lint when it ends ---
 
-    private void Step(object sender, int delta)
+    // True once we've snapshotted the pre-drag state for the current slider gesture. Reset on commit.
+    private bool _sliderSnapshotPending;
+
+    /// <summary>Fires on PreviewMouseLeftButtonDown over a Slider — before the thumb moves. Snapshot the
+    /// pre-drag state once so the whole drag collapses to a single undo step.</summary>
+    private void OnSliderPreviewMouse(object sender, MouseButtonEventArgs e)
     {
-        if (DataContext is TypeRowVm row && sender is FrameworkElement { Tag: string field })
-            Vm?.StepField(row, field, delta);
+        if (_sliderSnapshotPending) return;
+        Vm?.PushDetailEditUndo();
+        _sliderSnapshotPending = true;
+    }
+
+    /// <summary>Fires when a slider drag completes (or it loses mouse capture). Re-lint + reset the guard.
+    /// If no snapshot was taken (e.g. value unchanged), this is a cheap no-op re-lint.</summary>
+    private void OnSliderCommit(object sender, RoutedEventArgs e)
+    {
+        _sliderSnapshotPending = false;
+        Vm?.AfterDetailEdit();
     }
 
     // --- Flag toggle undo: snapshot BEFORE the value flips ---

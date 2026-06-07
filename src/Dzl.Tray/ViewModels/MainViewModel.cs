@@ -1262,6 +1262,34 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Source-origin filter: "" = all, "Vanilla" / "Mod" / "Custom".</summary>
     [ObservableProperty] private string _typesSourceFilter = "";
 
+    /// <summary>Main file selector at the TOP of the tab: the absolute path of the single CE file to scope
+    /// the grid to, or "" = All files (union). Wired into <see cref="FilterType"/>.</summary>
+    [ObservableProperty] private string _typesFileFilter = "";
+
+    partial void OnTypesFileFilterChanged(string value) => RefreshTypesView();
+
+    /// <summary>Options for the main file selector: (Label, Path). Index 0 is always ("All files (union)", "").
+    /// Rebuilt on load from the distinct source files present in the loaded set.</summary>
+    public ObservableCollection<FileFilterOption> TypesFileOptions { get; } = new();
+
+    /// <summary>One entry in the top-of-tab file selector. <see cref="Path"/> = "" means "All files".</summary>
+    public sealed record FileFilterOption(string Label, string Path);
+
+    private void RefreshTypesFileOptions()
+    {
+        var keep = TypesFileFilter;
+        TypesFileOptions.Clear();
+        TypesFileOptions.Add(new FileFilterOption($"All files ({Types.Select(t => t.SourceFile).Distinct().Count()})", ""));
+        foreach (var (name, path) in TypesSourceFiles())
+        {
+            var origin = _originByFile.TryGetValue(path, out var o) ? OriginUi.Label(o) : "Custom";
+            TypesFileOptions.Add(new FileFilterOption($"{name}  ·  {origin}", path));
+        }
+        // Keep the prior selection if it still exists; else fall back to All.
+        if (TypesFileOptions.All(opt => !string.Equals(opt.Path, keep, StringComparison.OrdinalIgnoreCase)))
+            TypesFileFilter = "";
+    }
+
     // --- advanced filters (all substring/contains; blank = ignored) ---
     [ObservableProperty] private string _typesUsageFilter = "";
     [ObservableProperty] private string _typesValueFilter = "";
@@ -1283,6 +1311,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void ClearTypeFilters()
     {
         TypesFilter = ""; TypesCategoryFilter = ""; TypesSourceFilter = "";
+        TypesFileFilter = "";
         TypesUsageFilter = ""; TypesValueFilter = ""; TypesTagFilter = "";
         TypesFlagFilter = ""; TypesNominalMin = ""; TypesNominalMax = "";
     }
@@ -1297,6 +1326,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         TypesView.Refresh();
         OnPropertyChanged(nameof(TypesCountLabel));
+        OnPropertyChanged(nameof(AllFilteredChecked));   // the filtered set (and thus tri-state) changed
     }
 
     /// <summary>Path of the active mission's types.xml (or a hint), shown on the Economy page.</summary>
@@ -1347,6 +1377,62 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public int SelectedTypeCount => SelectedTypes.Count;
     public bool HasSelection => SelectedTypes.Count > 0;
 
+    // --- checkbox selection (batch target) --------------------------------
+    // Selection-for-edit (grid SelectedItem → detail form) and selection-for-batch (checkboxes → many
+    // rows) are SEPARATE concepts. Batch ops act on the CHECKED rows below, not the grid's SelectedItems.
+
+    /// <summary>Rows currently checked (the batch target), among the FULL loaded set.</summary>
+    public IReadOnlyList<TypeRowVm> CheckedTypes => Types.Where(t => t.IsSelected).ToList();
+
+    /// <summary>Count of checked rows — drives the "on N checked" batch-bar label.</summary>
+    public int CheckedTypeCount => Types.Count(t => t.IsSelected);
+
+    /// <summary>True when at least one row is checked (gates the batch buttons / select-all tri-state).</summary>
+    public bool HasChecked => Types.Any(t => t.IsSelected);
+
+    /// <summary>Header "select all" tri-state over the rows currently passing the filter:
+    /// true = all filtered rows checked, false = none, null = mixed. Setting it (from the header
+    /// CheckBox) checks/unchecks every filtered row.</summary>
+    public bool? AllFilteredChecked
+    {
+        get
+        {
+            var filtered = TypesView.Cast<TypeRowVm>().ToList();
+            if (filtered.Count == 0) return false;
+            var n = filtered.Count(t => t.IsSelected);
+            if (n == 0) return false;
+            if (n == filtered.Count) return true;
+            return null;   // mixed
+        }
+        set
+        {
+            // A header three-state CheckBox cycles to null; treat null as "check all".
+            var want = value ?? true;
+            _suppressSelectionNotify = true;
+            try { foreach (var t in TypesView.Cast<TypeRowVm>()) t.IsSelected = want; }
+            finally { _suppressSelectionNotify = false; }
+            NotifyCheckedChanged();
+        }
+    }
+
+    private bool _suppressSelectionNotify;
+
+    /// <summary>Wired to every row's <see cref="TypeRowVm.SelectionToggled"/>; refreshes the checked
+    /// counters + select-all tri-state when a single row's checkbox flips.</summary>
+    private void OnRowSelectionToggled()
+    {
+        if (_suppressSelectionNotify) return;
+        NotifyCheckedChanged();
+    }
+
+    private void NotifyCheckedChanged()
+    {
+        OnPropertyChanged(nameof(CheckedTypes));
+        OnPropertyChanged(nameof(CheckedTypeCount));
+        OnPropertyChanged(nameof(HasChecked));
+        OnPropertyChanged(nameof(AllFilteredChecked));
+    }
+
     // --- lint summary across the whole loaded set ---
     [ObservableProperty] private string _typesLintSummary = "";
     /// <summary>True when the last lint pass found at least one warning or error; drives the lint-summary
@@ -1378,7 +1464,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return list;
     }
 
-    private TypeRowVm MakeRow(TypeRow r) => new(r);
+    private TypeRowVm MakeRow(TypeRow r) => Track(new TypeRowVm(r));
+
+    /// <summary>Subscribe a row's checkbox toggle to the VM's checked-counter refresh and return it
+    /// (so it can be used inline in Add()). Rows are GC'd with the VM, so we don't bother unsubscribing.</summary>
+    private TypeRowVm Track(TypeRowVm row)
+    {
+        row.SelectionToggled += OnRowSelectionToggled;
+        return row;
+    }
 
     private bool FilterType(object o)
     {
@@ -1390,6 +1484,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (!string.IsNullOrEmpty(TypesFilter) && !t.Name.Contains(TypesFilter, StringComparison.OrdinalIgnoreCase)) return false;
         if (!string.IsNullOrEmpty(TypesCategoryFilter) && !string.Equals(t.Category, TypesCategoryFilter, StringComparison.OrdinalIgnoreCase)) return false;
         if (!string.IsNullOrEmpty(TypesSourceFilter) && !string.Equals(OriginUi.Label(t.Origin), TypesSourceFilter, StringComparison.OrdinalIgnoreCase)) return false;
+        if (!string.IsNullOrEmpty(TypesFileFilter) && !string.Equals(t.SourceFile, TypesFileFilter, StringComparison.OrdinalIgnoreCase)) return false;
 
         // List filters: a row passes if any of its values contains the filter substring.
         if (!string.IsNullOrEmpty(TypesUsageFilter) && !t.Usage.Any(u => u.Contains(TypesUsageFilter, StringComparison.OrdinalIgnoreCase))) return false;
@@ -1452,12 +1547,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         foreach (var e in snap)
         {
             var origin = _originByFile.TryGetValue(e.SourceFile ?? "", out var o) ? o : CeOrigin.Custom;
-            Types.Add(new TypeRowVm(e, origin));
+            Types.Add(Track(new TypeRowVm(e, origin)));
         }
         RefreshTypeCategories();
         RefreshTypesLint();
         RefreshTypesView();
         SetSelectedTypes(System.Array.Empty<TypeRowVm>(), null);
+        NotifyCheckedChanged();
     }
 
     /// <summary>Capture the pre-edit state when a grid cell starts editing (committed on edit-commit).</summary>
@@ -1471,7 +1567,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _typesRedo.Clear();
         _pendingEdit = null;
         AfterTypeHistoryChange();
-        RefreshTypesLint();   // reflect in-memory edits immediately after a cell commit
+        ScheduleLint();   // reflect in-memory edits after a cell commit (debounced for rapid edits)
     }
 
     public void CancelTypeEdit() => _pendingEdit = null;
@@ -1521,6 +1617,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             Types.Add(MakeRow(r));
         }
         RefreshTypeCategories();
+        RefreshTypesFileOptions();
         RefreshLimits(svc);
         _typesUndo.Clear(); _typesRedo.Clear(); _pendingEdit = null;
         AfterTypeHistoryChange();
@@ -1544,6 +1641,26 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             target.Clear();
             foreach (var v in src.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)) target.Add(v);
         }
+    }
+
+    // --- debounced lint ---------------------------------------------------
+    // RefreshTypesLint walks ~2000 rows; running it per keystroke freezes the editor. Rapid-edit paths
+    // (detail typing, steppers, batch) call ScheduleLint() which restarts a ~300 ms timer so bursts
+    // coalesce into ONE lint pass. Load / undo / redo still lint immediately (RefreshTypesLint directly).
+    private DispatcherTimer? _lintTimer;
+
+    private void ScheduleLint()
+    {
+        _lintTimer ??= CreateLintTimer();
+        _lintTimer.Stop();
+        _lintTimer.Start();
+    }
+
+    private DispatcherTimer CreateLintTimer()
+    {
+        var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+        t.Tick += (_, _) => { t.Stop(); if (!_disposed) RefreshTypesLint(); };
+        return t;
     }
 
     /// <summary>Recompute lint over the CURRENT in-memory rows (reflects unsaved edits immediately).
@@ -1606,9 +1723,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             ? (new TypesService(_configPath).TypesFile() ?? "")
             : targetFile;
         var origin = _originByFile.TryGetValue(file, out var o) ? o : CeOrigin.Custom;
-        var row = new TypeRowVm(
+        var row = Track(new TypeRowVm(
             new Dzl.Core.Economy.TypeEntry { Name = name.Trim(), Nominal = 1, Min = 0, Lifetime = 3888000, Cost = 100, SourceFile = file },
-            origin);
+            origin));
         Types.Add(row);
         RefreshTypesView();
         RefreshTypesLint();   // new row may introduce or resolve lint findings
@@ -1622,6 +1739,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         foreach (var r in rows) Types.Remove(r);
         RefreshTypesView();
         RefreshTypesLint();   // removed rows may have carried lint findings
+        NotifyCheckedChanged();
         TypesStatus = $"removed {rows.Count} (unsaved — Save to persist)";
     }
 
@@ -1731,7 +1849,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             case "restock":  row.Restock  = Math.Max(0, row.Restock + delta);  break;
             case "cost":     row.Cost     = Math.Max(0, row.Cost + delta);     break;
         }
-        RefreshTypesLint();
+        ScheduleLint();
     }
 
     /// <summary>Duplicate a row under a new name into a target file (empty → the source row's file).
@@ -1743,7 +1861,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var file = string.IsNullOrEmpty(targetFile) ? src.SourceFile : targetFile!;
         var origin = _originByFile.TryGetValue(file, out var o) ? o : src.Origin;
         var entry = src.ToEntry() with { Name = newName.Trim(), SourceFile = file };
-        var row = new TypeRowVm(entry, origin);
+        var row = Track(new TypeRowVm(entry, origin));
         Types.Add(row);
         RefreshTypesView();
         RefreshTypesLint();
@@ -1759,7 +1877,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void AfterDetailEdit()
     {
         SelectedType?.NotifyListText();
-        RefreshTypesLint();
+        ScheduleLint();
         RefreshTypeCategories();
     }
 
@@ -1936,6 +2054,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (_disposed) return;
         _disposed = true;
         _statusTimer.Stop();
+        _lintTimer?.Stop();
         _cts.Cancel();
         _cts.Dispose();
         _logCts.Cancel();
