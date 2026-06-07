@@ -9,6 +9,11 @@
        MainViewModel (for limits suggestions + edit plumbing) is passed via the Vm DP. All edits are live
        on the shared row instance; numeric +/- and toggles route through Vm so each is an undo step. -->
   <UserControl.Resources>
+    <!-- A UserControl does NOT inherit the host window's resources at realize time — StaticResource
+         resolves against this control's own scope + App resources. These converters live in MainWindow
+         too, but must be declared locally so {StaticResource NullToVis/NotNullToVis} resolve here. -->
+    <local:NullToVisibilityConverter x:Key="NullToVis" />
+    <local:NotNullToVisibilityConverter x:Key="NotNullToVis" />
     <Style x:Key="DetailLabel" TargetType="TextBlock">
       <Setter Property="FontSize" Value="11" />
       <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
