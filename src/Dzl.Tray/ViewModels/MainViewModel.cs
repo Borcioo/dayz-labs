@@ -134,12 +134,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Enabled mods that run on the SERVER (side in {both, server}), formatted as the
     /// mod Name with a "(side)" suffix when the side isn't "both" (e.g. "@Admin (server)").
     /// Drives the Dashboard left column's active-mods card. Refreshed by <see cref="RefreshActiveMods"/>.</summary>
-    public ObservableCollection<string> ServerMods { get; } = new();
+    public ObservableCollection<ActiveModVm> ServerMods { get; } = new();
 
     /// <summary>Enabled mods that run on the CLIENT (side in {both, client}), formatted as the
     /// mod Name with a "(side)" suffix when the side isn't "both" (e.g. "@UI (client)").
     /// Drives the Dashboard right column's active-mods card. Refreshed by <see cref="RefreshActiveMods"/>.</summary>
-    public ObservableCollection<string> ClientMods { get; } = new();
+    public ObservableCollection<ActiveModVm> ClientMods { get; } = new();
 
     /// <summary>Count of <see cref="ServerMods"/> (for the "Active mods (N)" header).</summary>
     public int ServerModsCount => ServerMods.Count;
@@ -229,6 +229,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 Path = m.Path,
                 Side = m.Side,
                 Missing = m.Missing,
+                Kind = Dzl.Core.Mods.ModClassify.Classify(m.Path, _cfg),
             };
             row.Changed += OnModChanged;
             Mods.Add(row);
@@ -308,8 +309,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             {
                 if (!m.Enabled) continue;
                 var label = m.Side == "both" ? m.Name : $"{m.Name} ({m.Side})";
-                if (m.Side is "both" or "server") ServerMods.Add(label);
-                if (m.Side is "both" or "client") ClientMods.Add(label);
+                if (m.Side is "both" or "server") ServerMods.Add(new ActiveModVm(label, m.Kind));
+                if (m.Side is "both" or "client") ClientMods.Add(new ActiveModVm(label, m.Kind));
             }
             OnPropertyChanged(nameof(ServerModsCount));
             OnPropertyChanged(nameof(ClientModsCount));

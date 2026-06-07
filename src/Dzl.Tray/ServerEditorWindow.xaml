@@ -256,6 +256,15 @@
                     </Style>
                   </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
+                <DataGridTemplateColumn Width="92" Header="Type">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <Border CornerRadius="9" Padding="7,1" HorizontalAlignment="Left" VerticalAlignment="Center" Background="{Binding KindBg}">
+                        <TextBlock Text="{Binding KindLabel}" FontSize="10" FontWeight="SemiBold" Foreground="{Binding KindFg}" />
+                      </Border>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
                 <DataGridTemplateColumn Width="110" Header="Side">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate>

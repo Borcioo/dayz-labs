@@ -1,4 +1,6 @@
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Dzl.Core.Mods;
 
 namespace Dzl.Tray.ViewModels;
 
@@ -19,6 +21,21 @@ public sealed partial class ModRowVm : ObservableObject
     /// after every reorder/rescan so the grid's "#" column stays correct. Not persisted
     /// itself — order is implied by the position in the saved mod list.</summary>
     [ObservableProperty] private int _order;
+
+    /// <summary>What this mod is, by where it lives (Source / Build / Workshop / steamcmd / External).</summary>
+    [ObservableProperty] private ModKind _kind = ModKind.External;
+
+    /// <summary>Badge text + colors for <see cref="Kind"/>.</summary>
+    public string KindLabel => ModKindUi.Label(Kind);
+    public Brush KindBg => ModKindUi.Bg(Kind);
+    public Brush KindFg => ModKindUi.Fg(Kind);
+
+    partial void OnKindChanged(ModKind value)
+    {
+        OnPropertyChanged(nameof(KindLabel));
+        OnPropertyChanged(nameof(KindBg));
+        OnPropertyChanged(nameof(KindFg));
+    }
 
     /// <summary>Raised when a persisted field (Enabled/Side) changes.</summary>
     public event Action? Changed;

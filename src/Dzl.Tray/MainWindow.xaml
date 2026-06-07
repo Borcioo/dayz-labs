@@ -585,8 +585,12 @@
                             <ItemsControl ItemsSource="{Binding ServerMods}">
                               <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                  <TextBlock Text="{Binding}" Margin="8,3" FontSize="13"
-                                             TextTrimming="CharacterEllipsis" />
+                                  <StackPanel Orientation="Horizontal" Margin="8,3">
+                                    <TextBlock Text="{Binding Label}" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    <Border CornerRadius="9" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center" Background="{Binding KindBg}">
+                                      <TextBlock Text="{Binding KindLabel}" FontSize="9" FontWeight="SemiBold" Foreground="{Binding KindFg}" />
+                                    </Border>
+                                  </StackPanel>
                                 </DataTemplate>
                               </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -695,8 +699,12 @@
                             <ItemsControl ItemsSource="{Binding ClientMods}">
                               <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                  <TextBlock Text="{Binding}" Margin="8,3" FontSize="13"
-                                             TextTrimming="CharacterEllipsis" />
+                                  <StackPanel Orientation="Horizontal" Margin="8,3">
+                                    <TextBlock Text="{Binding Label}" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    <Border CornerRadius="9" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center" Background="{Binding KindBg}">
+                                      <TextBlock Text="{Binding KindLabel}" FontSize="9" FontWeight="SemiBold" Foreground="{Binding KindFg}" />
+                                    </Border>
+                                  </StackPanel>
                                 </DataTemplate>
                               </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -794,7 +802,12 @@
                                 <ColumnDefinition Width="Auto" />
                               </Grid.ColumnDefinitions>
                               <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding Name}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                                <StackPanel Orientation="Horizontal">
+                                  <TextBlock Text="{Binding Name}" FontWeight="Medium" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                  <Border CornerRadius="9" Padding="7,1" Margin="8,0,0,0" VerticalAlignment="Center" Background="{Binding KindBg}">
+                                    <TextBlock Text="{Binding KindLabel}" FontSize="10" FontWeight="SemiBold" Foreground="{Binding KindFg}" />
+                                  </Border>
+                                </StackPanel>
                                 <TextBlock Text="{Binding Path}" FontSize="11" TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                               </StackPanel>
@@ -976,7 +989,12 @@
                                 <ColumnDefinition Width="Auto" />
                               </Grid.ColumnDefinitions>
                               <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                <StackPanel Orientation="Horizontal">
+                                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                  <Border CornerRadius="9" Padding="7,1" Margin="8,0,0,0" VerticalAlignment="Center" Background="{Binding KindBg}">
+                                    <TextBlock Text="{Binding KindLabel}" FontSize="10" FontWeight="SemiBold" Foreground="{Binding KindFg}" />
+                                  </Border>
+                                </StackPanel>
                                 <TextBlock Text="{Binding Path}" FontSize="11" TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                                 <TextBlock FontSize="11" Margin="0,2,0,0"

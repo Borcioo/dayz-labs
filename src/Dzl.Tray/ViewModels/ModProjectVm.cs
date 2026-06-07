@@ -1,4 +1,6 @@
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Dzl.Core.Mods;
 using Dzl.Core.Projects;
 
 namespace Dzl.Tray.ViewModels;
@@ -14,6 +16,11 @@ public sealed partial class ModProjectVm : ObservableObject
 
     /// <summary>Short git summary, e.g. "main • clean", "main • dirty ↑1", "no repo", "main • clean (local)".</summary>
     [ObservableProperty] private string _git = "…";
+
+    // My Mods are always the uncompiled source — its compiled counterpart shows as "Build" in the Mods library.
+    public string KindLabel => Dzl.Tray.ModKindUi.Label(ModKind.Source);
+    public Brush KindBg => Dzl.Tray.ModKindUi.Bg(ModKind.Source);
+    public Brush KindFg => Dzl.Tray.ModKindUi.Fg(ModKind.Source);
 
     public ModProjectVm(ModProject p)
     {
