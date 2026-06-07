@@ -41,6 +41,39 @@ public class LintTests
     }
 
     [Fact]
+    public void Empty_name_is_an_error()
+    {
+        var set = new CeFileSet(new[] { new TypeEntry { Name = "", SourceFile = "f" } });
+        new LintEngine().Run(set, Limits)
+            .Should().Contain(f => f.Code == "empty-name" && f.Severity == LintSeverity.Error);
+    }
+
+    [Fact]
+    public void Unknown_value_and_tag_are_warnings()
+    {
+        var set = new CeFileSet(new[]
+        {
+            new TypeEntry { Name = "X", SourceFile = "f", Value = new[] { "BadTier" }, Tag = new[] { "BadTag" } }
+        });
+        var findings = new LintEngine().Run(set, Limits);
+        findings.Should().Contain(f => f.Code == "unknown-value" && f.Severity == LintSeverity.Warning);
+        findings.Should().Contain(f => f.Code == "unknown-tag" && f.Severity == LintSeverity.Warning);
+    }
+
+    [Fact]
+    public void Quantmin_greater_than_quantmax_is_a_warning()
+    {
+        var set = new CeFileSet(new[] { new TypeEntry { Name = "Y", SourceFile = "f", QuantMin = 10, QuantMax = 2 } });
+        new LintEngine().Run(set, Limits)
+            .Should().Contain(f => f.Code == "quant-min-gt-max");
+
+        // defaults (QuantMin=-1, QuantMax=-1) must not produce a quant finding
+        var clean = new CeFileSet(new[] { new TypeEntry { Name = "Y", SourceFile = "f" } });
+        new LintEngine().Run(clean, Limits)
+            .Should().NotContain(f => f.Code == "quant-min-gt-max");
+    }
+
+    [Fact]
     public void Clean_entry_with_known_values_produces_no_findings()
     {
         var set = new CeFileSet(new[]
