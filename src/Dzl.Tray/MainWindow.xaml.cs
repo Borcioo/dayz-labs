@@ -479,6 +479,14 @@ public partial class MainWindow : FluentWindow
             NewModStatus.Text = _vm.QuickJunction(name);
     }
 
+    // Open the per-module settings modal (⚙ on a page). Phase 1: "mods".
+    private void OnModuleSettings(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string module }) return;
+        new ModuleSettingsWindow(_vm, module) { Owner = this }.ShowDialog();
+        LoadSettingsFields();   // keep the global Settings page in sync if it was already populated
+    }
+
     private void OnOpenModFolder(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string dir } || string.IsNullOrWhiteSpace(dir)) return;

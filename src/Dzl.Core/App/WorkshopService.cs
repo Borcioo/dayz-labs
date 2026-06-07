@@ -109,12 +109,10 @@ public sealed class WorkshopService
     /// <summary>Forget the stored Steam session.</summary>
     public void SignOut() { SteamTokenStore.Clear(_configPath); _accessCache = null; }
 
-    /// <summary>steamcmd's install root for Workshop downloads — the Steam install (so items land in the same
-    /// <c>steamapps\workshop\content\221100</c> folder as client subscriptions, which the Launcher loads and the
-    /// Subscribed list shows). Falls back to <c>&lt;ProjectsRoot&gt;\workshop</c> only when Steam can't be found.</summary>
-    private string WorkshopInstallDir() =>
-        Dzl.Core.Env.EnvDetect.SteamPath()
-        ?? Dzl.Core.Projects.ProjectPaths.WorkshopDir(Dzl.Core.Projects.ProjectPaths.Root(Cfg));
+    /// <summary>steamcmd's install root for Workshop downloads — <c>&lt;ProjectsRoot&gt;\workshop</c>. Items end up
+    /// at the clean <c>&lt;ProjectsRoot&gt;\workshop\&lt;id&gt;</c> (a junction to the hidden <c>.steamcmd</c> cache),
+    /// not the deep <c>steamapps\workshop\content\221100</c> path steamcmd would otherwise use.</summary>
+    private string WorkshopInstallDir() => Dzl.Core.Projects.ProjectPaths.WorkshopDir(Dzl.Core.Projects.ProjectPaths.Root(Cfg));
 
     /// <summary>Download (or re-download to update) a Workshop item via steamcmd, spawning a console for login.</summary>
     public WorkshopOp Download(string id)
@@ -134,14 +132,21 @@ public sealed class WorkshopService
             : new(false, "could not launch steamcmd");
     }
 
-    /// <summary>Workshop item ids already downloaded into the projects-tree workshop folder.</summary>
+    /// <summary>Workshop item ids already downloaded into <c>&lt;ProjectsRoot&gt;\workshop</c> (clean <c>&lt;id&gt;</c>
+    /// folders; the hidden <c>.steamcmd</c> cache is skipped).</summary>
     public List<string> Downloaded()
     {
         var cfg = Cfg;
         if (string.IsNullOrWhiteSpace(cfg.SteamCmdPath)) return new();
-        var dir = Path.Combine(WorkshopInstallDir(), "steamapps", "workshop", "content", WorkshopCmd.AppId);
+        var dir = WorkshopInstallDir();
         if (!Directory.Exists(dir)) return new();
-        try { return Directory.GetDirectories(dir).Select(d => Path.GetFileName(d)!).Where(s => s.Length > 0).ToList(); }
+        try
+        {
+            return Directory.GetDirectories(dir)
+                .Select(d => Path.GetFileName(d)!)
+                .Where(s => s.Length > 0 && !s.StartsWith('.'))
+                .ToList();
+        }
         catch { return new(); }
     }
 

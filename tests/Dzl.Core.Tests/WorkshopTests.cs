@@ -75,9 +75,11 @@ public class WorkshopTests
     }
 
     [Fact]
-    public void SteamCmd_content_dir_is_under_install_root_steamapps_workshop_content()
+    public void SteamCmd_content_dir_is_the_clean_install_root_id_path()
     {
-        WorkshopCmd.ContentDir(@"D:\Proj\workshop", "123")
-            .Should().Be(@"D:\Proj\workshop\steamapps\workshop\content\221100\123");
+        // The user-facing path is clean; steamcmd's deep nesting lives in the hidden .steamcmd cache.
+        WorkshopCmd.ContentDir(@"D:\Proj\workshop", "123").Should().Be(@"D:\Proj\workshop\123");
+        WorkshopCmd.RawDir(@"D:\Proj\workshop", "123")
+            .Should().Be(@"D:\Proj\workshop\.steamcmd\steamapps\workshop\content\221100\123");
     }
 }

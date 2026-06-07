@@ -595,6 +595,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ResolvedWorkDriveSource));   // cfg overrides may have changed
         OnPropertyChanged(nameof(ResolvedKeysDir));
         OnPropertyChanged(nameof(ResolvedSigningKey));
+        OnPropertyChanged(nameof(ProjectsRoot));
+        OnPropertyChanged(nameof(ModsBlocked));
         RetailLogs();   // logs follow the active server's profiles
     }
 
@@ -761,6 +763,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>Cached author handle (for prefilling the New mod form), or "".</summary>
     public string CachedAuthor => ModScaffold.CachedAuthor(ConfigDir) ?? "";
+
+    // --- Mods page requirement gating -------------------------------------
+    // Blocking (no projects root → the page can't create/manage anything) shows a full overlay; the lighter
+    // "P: not mounted" case stays a banner (Build/Link disabled). See ModuleSettingsWindow for the gear modal.
+
+    /// <summary>True when the Mods page has no usable projects root configured — show the blocking overlay.</summary>
+    public bool ModsBlocked => string.IsNullOrWhiteSpace(_cfg.ProjectsRoot);
+
+    /// <summary>Why the Mods page is blocked (shown in the overlay).</summary>
+    public string ModsBlockMessage =>
+        "Set your projects root first — that's where dzl creates and manages your mod source folders.";
 
     /// <summary>The always-live work-drive source folder P: is mounted from / junctions are anchored on:
     /// the explicit config override if set, else auto-derived from DayZ Tools settings.ini

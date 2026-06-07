@@ -825,7 +825,12 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" Margin="0,0,0,12">
-              <TextBlock Text="My Mods" FontSize="20" FontWeight="SemiBold" />
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="My Mods" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <ui:Button Grid.Column="1" Icon="{ui:SymbolIcon Settings24}" ToolTip="Mods settings"
+                           Appearance="Secondary" Padding="8,4" Tag="mods" Click="OnModuleSettings" />
+              </Grid>
               <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
                 <Run Text="Source projects under " /><Run Text="{Binding ProjectsRoot, Mode=OneWay}" FontWeight="SemiBold" />
               </TextBlock>
@@ -1066,6 +1071,24 @@
 
               </StackPanel>
             </ScrollViewer>
+
+            <!-- Blocking overlay: no projects root configured → the page can't do anything useful -->
+            <Border Grid.Row="0" Grid.RowSpan="2" Background="#CC1A1A1A"
+                    Visibility="{Binding ModsBlocked, Converter={StaticResource BoolToVis}}">
+              <Border CornerRadius="8" Padding="28" MaxWidth="440" VerticalAlignment="Center" HorizontalAlignment="Center"
+                      Background="{DynamicResource ApplicationBackgroundBrush}" BorderThickness="1"
+                      BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+                <StackPanel>
+                  <ui:SymbolIcon Symbol="Settings24" FontSize="34" HorizontalAlignment="Center" Foreground="#F0C04A" />
+                  <TextBlock Text="Mods aren't set up yet" FontSize="16" FontWeight="SemiBold"
+                             HorizontalAlignment="Center" Margin="0,10,0,6" />
+                  <TextBlock Text="{Binding ModsBlockMessage}" TextWrapping="Wrap" TextAlignment="Center"
+                             Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,16" />
+                  <ui:Button Content="Configure mods" Appearance="Primary" Icon="{ui:SymbolIcon Settings24}"
+                             HorizontalAlignment="Center" Tag="mods" Click="OnModuleSettings" />
+                </StackPanel>
+              </Border>
+            </Border>
           </Grid>
 
           <!-- ===== SERVERS (instances) ===== -->
