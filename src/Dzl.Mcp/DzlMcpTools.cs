@@ -199,13 +199,47 @@ public static class DzlMcpTools
 
     // --- Central Economy (types.xml) (SP6) ---
 
-    [McpServerTool, Description("List types from the active server mission's types.xml (optionally filtered by name substring).")]
-    public static string TypesList([Description("name substring filter (optional)")] string? filter = null)
+    [McpServerTool, Description("List types from the active server mission's CE files. Filters: name (substring), source (vanilla|mod|custom), file (basename substring). Each entry includes source_file (basename) and origin in addition to name/nominal/min/lifetime/restock/cost/category/usage/value/tag.")]
+    public static string TypesList([Description("name substring filter (optional)")] string? filter = null,
+                                   [Description("origin filter: vanilla|mod|custom (optional)")] string? source = null,
+                                   [Description("source file basename substring filter (optional)")] string? file = null)
     {
-        var all = new TypesService(ConfigPath()).List();
-        var list = filter is null ? all
-            : all.Where(t => t.Name.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToList();
-        return J(list);
+        var rows = new TypesService(ConfigPath()).Rows();
+        if (filter is not null)
+            rows = rows.Where(r => r.Entry.Name.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (source is not null)
+            rows = rows.Where(r => r.Origin.ToString().Equals(source, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (file is not null)
+            rows = rows.Where(r => Path.GetFileName(r.Entry.SourceFile).Contains(file, StringComparison.OrdinalIgnoreCase)).ToList();
+        return J(rows.Select(r => new
+        {
+            name       = r.Entry.Name,
+            nominal    = r.Entry.Nominal,
+            min        = r.Entry.Min,
+            lifetime   = r.Entry.Lifetime,
+            restock    = r.Entry.Restock,
+            cost       = r.Entry.Cost,
+            category   = r.Entry.Category,
+            usage      = r.Entry.Usage,
+            value      = r.Entry.Value,
+            tag        = r.Entry.Tag,
+            source_file = Path.GetFileName(r.Entry.SourceFile),
+            origin     = r.Origin.ToString().ToLowerInvariant(),
+        }).ToList());
+    }
+
+    [McpServerTool, Description("Lint the active mission's Central Economy: unknown usage/value/tag/category vs cfglimitsdefinition, duplicate type names, structural issues.")]
+    public static string TypesLint()
+    {
+        var findings = new TypesService(ConfigPath()).Lint();
+        return J(findings.Select(f => new
+        {
+            severity = f.Severity.ToString().ToLowerInvariant(),
+            code     = f.Code,
+            message  = f.Message,
+            entry    = f.EntryName,
+            file     = Path.GetFileName(f.File),
+        }).ToList());
     }
 
     [McpServerTool, Description("Set/insert a type in the active mission's types.xml (only given fields change; versioned backup first).")]
@@ -215,8 +249,9 @@ public static class DzlMcpTools
                                   [Description("lifetime (despawn seconds)")] int? lifetime = null,
                                   [Description("restock seconds")] int? restock = null,
                                   [Description("spawn cost")] int? cost = null,
-                                  [Description("category name")] string? category = null)
-        => J(new TypesService(ConfigPath()).Set(cls, nominal, min, lifetime, restock, cost, category));
+                                  [Description("category name")] string? category = null,
+                                  [Description("target CE file basename (optional; used only when type is new)")] string? file = null)
+        => J(new TypesService(ConfigPath()).Set(cls, nominal, min, lifetime, restock, cost, category, file));
 
     [McpServerTool, Description("Remove a type from the active mission's types.xml (versioned backup first).")]
     public static string TypesRemove([Description("Type/class name")] string cls)
