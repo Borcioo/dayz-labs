@@ -1547,13 +1547,13 @@
                 <DataGridTemplateColumn Header="Usage" Width="*">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate>
-                      <TextBlock Text="{Binding Usage}" VerticalAlignment="Center" Margin="6,0" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding UsageText}" VerticalAlignment="Center" Margin="6,0" TextTrimming="CharacterEllipsis" />
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                   <DataGridTemplateColumn.CellEditingTemplate>
                     <DataTemplate>
                       <ComboBox IsEditable="True" StaysOpenOnEdit="True"
-                                Text="{Binding Usage, UpdateSourceTrigger=PropertyChanged}"
+                                Text="{Binding UsageText, UpdateSourceTrigger=PropertyChanged}"
                                 ToolTip="Comma-separated; pick from cfglimitsdefinition or type freely"
                                 ItemsSource="{Binding DataContext.LimitsUsage, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
                     </DataTemplate>
@@ -1562,13 +1562,13 @@
                 <DataGridTemplateColumn Header="Tiers (value)" Width="*">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate>
-                      <TextBlock Text="{Binding Value}" VerticalAlignment="Center" Margin="6,0" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding ValueText}" VerticalAlignment="Center" Margin="6,0" TextTrimming="CharacterEllipsis" />
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                   <DataGridTemplateColumn.CellEditingTemplate>
                     <DataTemplate>
                       <ComboBox IsEditable="True" StaysOpenOnEdit="True"
-                                Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                Text="{Binding ValueText, UpdateSourceTrigger=PropertyChanged}"
                                 ToolTip="Comma-separated; pick from cfglimitsdefinition or type freely"
                                 ItemsSource="{Binding DataContext.LimitsValue, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
                     </DataTemplate>

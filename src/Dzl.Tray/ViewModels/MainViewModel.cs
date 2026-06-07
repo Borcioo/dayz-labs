@@ -1289,6 +1289,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <see cref="TypeEntry.SourceFile"/>) can re-derive the right origin pill.</summary>
     private readonly Dictionary<string, CeOrigin> _originByFile = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>CE limits loaded on <see cref="LoadTypes"/>; cached so <see cref="RefreshTypesLint"/> can
+    /// re-run in-memory without re-reading cfglimitsdefinition.xml on every keystroke.</summary>
+    private Dzl.Core.Economy.LimitsDef _limits = Dzl.Core.Economy.LimitsDef.Empty;
+
     /// <summary>Distinct source files in the loaded set (file name → absolute path) for the Add-type target picker.
     /// The primary/vanilla file is always index 0 so the dialog defaults to it; row source files follow.</summary>
     public IReadOnlyList<(string Name, string Path)> TypesSourceFiles()
@@ -1372,6 +1376,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _typesRedo.Clear();
         _pendingEdit = null;
         AfterTypeHistoryChange();
+        RefreshTypesLint();   // reflect in-memory edits immediately after a cell commit
     }
 
     public void CancelTypeEdit() => _pendingEdit = null;
@@ -1433,10 +1438,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private void RefreshLimits(TypesService svc)
     {
-        var limits = svc.Limits();
-        FillSet(LimitsUsage, limits.Usage);
-        FillSet(LimitsValue, limits.Value);
-        FillSet(LimitsCategory, limits.Category);
+        _limits = svc.Limits();
+        FillSet(LimitsUsage, _limits.Usage);
+        FillSet(LimitsValue, _limits.Value);
+        FillSet(LimitsCategory, _limits.Category);
 
         static void FillSet(ObservableCollection<string> target, IReadOnlySet<string> src)
         {
@@ -1445,12 +1450,18 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Recompute lint over the active mission's Types files and stamp each row with its findings.
-    /// Lint runs against on-disk files (the saved state); unsaved edits are reflected after the next Save.</summary>
+    /// <summary>Recompute lint over the CURRENT in-memory rows (reflects unsaved edits immediately).
+    /// Uses <see cref="_limits"/> cached at load time so no disk read is needed per call.
+    /// Called on load, undo/redo, add, remove, batch-apply, and cell-commit.</summary>
     private void RefreshTypesLint()
     {
         IReadOnlyList<Dzl.Core.Economy.Lint.LintFinding> findings;
-        try { findings = new TypesService(_configPath).Lint(); }
+        try
+        {
+            var entries = Types.Select(t => t.ToEntry());
+            findings = new Dzl.Core.Economy.Lint.LintEngine().Run(
+                new Dzl.Core.Economy.CeFileSet(entries), _limits);
+        }
         catch { findings = Array.Empty<Dzl.Core.Economy.Lint.LintFinding>(); }
 
         var byName = findings
@@ -1504,6 +1515,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             origin);
         Types.Add(row);
         TypesView.Refresh();
+        RefreshTypesLint();   // new row may introduce or resolve lint findings
         TypesStatus = $"added {name} → {row.FileName} (unsaved)";
     }
 
@@ -1513,6 +1525,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         PushTypeUndo();
         foreach (var r in rows) Types.Remove(r);
         TypesView.Refresh();
+        RefreshTypesLint();   // removed rows may have carried lint findings
         TypesStatus = $"removed {rows.Count} (unsaved — Save to persist)";
     }
 
@@ -1533,6 +1546,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 case "cost": t.Cost = (int)value; break;
             }
         }
+        RefreshTypesLint();   // batch edits may cross lint thresholds (nominal/min rules)
         TypesStatus = $"batch {(multiply ? "×" : "=")}{value} {field} on {rows.Count} (unsaved)";
     }
 
