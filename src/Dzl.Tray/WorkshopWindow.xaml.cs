@@ -48,8 +48,6 @@ public partial class WorkshopWindow : FluentWindow
 
     private async void OnSearch(object sender, RoutedEventArgs e) => await _vm.WorkshopBrowseAsync();
 
-    private async void OnLoadMore(object sender, RoutedEventArgs e) => await _vm.WorkshopLoadMoreAsync();
-
     // Infinite scroll: auto-load the next page when the results list is scrolled near the bottom. With a
     // virtualizing ListBox the ScrollViewer offsets are in item units, so "within 3 of the end" works.
     private bool _loadingMore;
