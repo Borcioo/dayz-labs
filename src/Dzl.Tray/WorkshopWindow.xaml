@@ -214,8 +214,9 @@
                       <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <ui:Button Icon="{ui:SymbolIcon Open24}" ToolTip="Open in Steam (page)" Tag="{Binding Id}" Click="OnOpenInSteam" Margin="0,0,8,0" />
                         <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open folder" Tag="{Binding Id}" Click="OnOpenSubscribedFolder" Margin="0,0,8,0" />
-                        <ui:Button Icon="{ui:SymbolIcon ArrowSync24}" ToolTip="Update (re-download via steamcmd)" Tag="{Binding Id}" Click="OnDownload"
+                        <ui:Button Icon="{ui:SymbolIcon ArrowSync24}" ToolTip="Update (re-download via steamcmd)" Tag="{Binding Id}" Click="OnDownload" Margin="0,0,8,0"
                                    IsEnabled="{Binding DataContext.SteamCmdConfigured, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}" />
+                        <ui:Button Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" ToolTip="Delete (remove the downloaded files)" Tag="{Binding Id}" Click="OnDeleteDownloaded" />
                       </StackPanel>
                     </Grid>
                   </DataTemplate>

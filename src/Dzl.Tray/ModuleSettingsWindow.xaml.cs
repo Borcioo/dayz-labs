@@ -43,6 +43,9 @@ public partial class ModuleSettingsWindow : FluentWindow
             WorkshopPanel.Visibility = Visibility.Visible;
             CfgSteamCmdPath.Text = c.SteamCmdPath;
             CfgSteamLogin.Text = c.SteamLogin;
+            CfgWorkshopDir.Text = c.WorkshopDir;
+            var def = Dzl.Core.Projects.ProjectPaths.WorkshopDir(Dzl.Core.Projects.ProjectPaths.Root(c));
+            WorkshopDirHint.Text = $"Where steamcmd downloads land. Blank = {def}";
             RefreshSteamStatus();
         }
     }
@@ -59,6 +62,7 @@ public partial class ModuleSettingsWindow : FluentWindow
         if (dlg.ShowDialog(this) != true) return;
         if (target == "CfgProjectsRoot") CfgProjectsRoot.Text = dlg.FolderName;
         else if (target == "CfgWorkDriveSource") CfgWorkDriveSource.Text = dlg.FolderName;
+        else if (target == "CfgWorkshopDir") CfgWorkshopDir.Text = dlg.FolderName;
     }
 
     private void OnBrowseFile(object sender, RoutedEventArgs e)
@@ -115,6 +119,7 @@ public partial class ModuleSettingsWindow : FluentWindow
             {
                 SteamCmdPath = CfgSteamCmdPath.Text.Trim(),
                 SteamLogin = CfgSteamLogin.Text.Trim(),
+                WorkshopDir = CfgWorkshopDir.Text.Trim(),
             });
         }
         DialogResult = true;

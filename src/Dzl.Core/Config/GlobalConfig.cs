@@ -54,6 +54,10 @@ public sealed record GlobalConfig
     /// <summary>Path to steamcmd.exe — required for Workshop download/update. snake_case: steamcmd_path.</summary>
     public string SteamCmdPath { get; init; } = "";
 
+    /// <summary>Override folder where steamcmd Workshop downloads land (blank = &lt;ProjectsRoot&gt;\workshop).
+    /// snake_case: workshop_dir.</summary>
+    public string WorkshopDir { get; init; } = "";
+
     /// <summary>steamcmd login username for Workshop downloads (empty = anonymous; owned/DayZ items usually
     /// need a login — password/Steam Guard are entered in the spawned console). snake_case: steam_login.</summary>
     public string SteamLogin { get; init; } = "";

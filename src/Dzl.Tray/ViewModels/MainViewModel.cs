@@ -1096,6 +1096,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// download under ProjectsRoot), or null if it isn't downloaded yet.</summary>
     public string? ResolveModFolder(string id) => new WorkshopService(_configPath).ResolveContentDir(id);
 
+    /// <summary>Delete a steamcmd-downloaded item (junction + cached files), then refresh the lists.</summary>
+    public string DeleteDownloaded(string id)
+    {
+        var (ok, msg) = new WorkshopService(_configPath).DeleteDownloaded(id);
+        WorkshopStatus = (ok ? "✓ " : "✗ ") + msg;
+        if (ok) RefreshSubscribed();
+        return WorkshopStatus;
+    }
+
     // === Code editor ======================================================
 
     /// <summary>True when a code editor is configured (drives the "Open in editor" buttons).</summary>

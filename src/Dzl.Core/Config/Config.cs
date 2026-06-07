@@ -61,6 +61,9 @@ public sealed record DzlConfig
     /// <summary>Path to steamcmd.exe (Workshop download). snake_case: steamcmd_path.</summary>
     public string SteamCmdPath { get; init; } = "";
 
+    /// <summary>Override folder for steamcmd downloads (blank = &lt;ProjectsRoot&gt;\workshop). snake_case: workshop_dir.</summary>
+    public string WorkshopDir { get; init; } = "";
+
     /// <summary>steamcmd login username (empty = anonymous). snake_case: steam_login.</summary>
     public string SteamLogin { get; init; } = "";
 
@@ -94,6 +97,7 @@ public sealed record DzlConfig
         SigningKey = SigningKey,
         EditorPath = EditorPath,
         SteamCmdPath = SteamCmdPath,
+        WorkshopDir = WorkshopDir,
         SteamLogin = SteamLogin,
         SteamAccessToken = SteamAccessToken,
         ActiveInstance = activeInstance,
@@ -138,6 +142,7 @@ public sealed record DzlConfig
         SigningKey = g.SigningKey,
         EditorPath = g.EditorPath,
         SteamCmdPath = g.SteamCmdPath,
+        WorkshopDir = g.WorkshopDir,
         SteamLogin = g.SteamLogin,
         SteamAccessToken = g.SteamAccessToken,
         ProfilesPath = i.ProfilesPath,

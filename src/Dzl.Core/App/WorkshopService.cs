@@ -112,7 +112,32 @@ public sealed class WorkshopService
     /// <summary>steamcmd's install root for Workshop downloads — <c>&lt;ProjectsRoot&gt;\workshop</c>. Items end up
     /// at the clean <c>&lt;ProjectsRoot&gt;\workshop\&lt;id&gt;</c> (a junction to the hidden <c>.steamcmd</c> cache),
     /// not the deep <c>steamapps\workshop\content\221100</c> path steamcmd would otherwise use.</summary>
-    private string WorkshopInstallDir() => Dzl.Core.Projects.ProjectPaths.WorkshopDir(Dzl.Core.Projects.ProjectPaths.Root(Cfg));
+    private string WorkshopInstallDir()
+    {
+        var cfg = Cfg;
+        return string.IsNullOrWhiteSpace(cfg.WorkshopDir)
+            ? Dzl.Core.Projects.ProjectPaths.WorkshopDir(Dzl.Core.Projects.ProjectPaths.Root(cfg))
+            : cfg.WorkshopDir;
+    }
+
+    /// <summary>The resolved Workshop download folder (for display in Settings).</summary>
+    public string ResolvedWorkshopDir() => WorkshopInstallDir();
+
+    /// <summary>Delete a downloaded item — removes the clean junction and the cached steamcmd content. Never throws.</summary>
+    public (bool ok, string message) DeleteDownloaded(string id)
+    {
+        try
+        {
+            var root = WorkshopInstallDir();
+            var dest = WorkshopCmd.ContentDir(root, id);   // the clean <root>\<id> junction
+            var raw = WorkshopCmd.RawDir(root, id);         // the cached real files in .steamcmd
+            // On net6+ deleting a junction removes the link only (does not recurse into the target).
+            if (Directory.Exists(dest)) Directory.Delete(dest, true);
+            if (Directory.Exists(raw)) Directory.Delete(raw, true);
+            return (true, $"deleted {id}");
+        }
+        catch (Exception ex) { return (false, ex.Message); }
+    }
 
     /// <summary>Download (or re-download to update) a Workshop item via steamcmd, spawning a console for login.</summary>
     public WorkshopOp Download(string id)

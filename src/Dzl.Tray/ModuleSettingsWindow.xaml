@@ -82,6 +82,16 @@
           <TextBlock x:Name="SteamCmdStatus" FontSize="11" Margin="0,4,0,12" TextWrapping="Wrap"
                      Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
 
+          <TextBlock Text="Download folder" FontWeight="SemiBold" Margin="0,0,0,4" />
+          <TextBlock x:Name="WorkshopDirHint" FontSize="11" Margin="0,0,0,4" TextWrapping="Wrap"
+                     Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+          <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <ui:TextBox x:Name="CfgWorkshopDir" Grid.Column="0" PlaceholderText="blank = default (in your projects folder)" />
+            <ui:Button Grid.Column="1" Content="Browse" Icon="{ui:SymbolIcon FolderOpen24}" Margin="8,0,0,0"
+                       Tag="CfgWorkshopDir" Click="OnBrowse" />
+          </Grid>
+
           <TextBlock Text="Steam account name (for steamcmd login)" FontWeight="SemiBold" Margin="0,0,0,4" />
           <TextBlock FontSize="11" Margin="0,0,0,4" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                      Text="DayZ Workshop items can't be fetched anonymously. Auto-filled when you sign in above; set it here if blank. Password / Steam Guard are entered in the steamcmd console, never stored." />
