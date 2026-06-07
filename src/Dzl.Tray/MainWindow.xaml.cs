@@ -469,7 +469,9 @@ public partial class MainWindow : FluentWindow
     private void OnOpenGit(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string name }) return;
-        new GitWindow(_vm, name, _vm.ModDirOf(name)) { Owner = this }.Show();
+        // No Owner: an owned WPF-UI FluentWindow (Mica) can minimize/hide its owner when closed. As an
+        // independent top-level tool window, closing it can't touch the main window.
+        new GitWindow(_vm, name, _vm.ModDirOf(name)).Show();
     }
 
     private void OnImportFromGitHub(object sender, RoutedEventArgs e)
@@ -582,7 +584,7 @@ public partial class MainWindow : FluentWindow
     // === Steam Workshop ===================================================
 
     private void OnOpenWorkshop(object sender, RoutedEventArgs e)
-        => new WorkshopWindow(_vm) { Owner = this }.Show();
+        => new WorkshopWindow(_vm).Show();   // no Owner — see OnOpenGit (owned FluentWindow can hide its owner)
 
     // === Economy (types.xml) editor =======================================
 

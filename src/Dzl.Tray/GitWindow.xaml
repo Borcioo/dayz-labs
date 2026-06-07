@@ -4,7 +4,7 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         Title="Git" Width="720" Height="640" MinWidth="560" MinHeight="480"
         WindowBackdropType="Mica" ExtendsContentIntoTitleBar="True"
-        WindowStartupLocation="CenterOwner">
+        ShowInTaskbar="True" WindowStartupLocation="CenterScreen">
 
   <Grid Margin="16,8,16,16">
     <Grid.RowDefinitions>
