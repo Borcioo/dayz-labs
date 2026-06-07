@@ -471,6 +471,20 @@ public partial class MainWindow : FluentWindow
             NewModStatus.Text = _vm.QuickJunction(name);
     }
 
+    // Capture the app (main window + any open child windows) to a PNG under the screenshots folder.
+    private async void OnScreenshot(object sender, RoutedEventArgs e)
+    {
+        ScreenshotStatus.Text = "capturing…";
+        await System.Threading.Tasks.Task.Delay(150);   // let the button's pressed state clear before the grab
+        try
+        {
+            var path = AppScreenshot.Capture(App.ConfigPath());
+            ScreenshotStatus.Text = $"✓ saved {System.IO.Path.GetFileName(path)}";
+            ScreenshotStatus.ToolTip = path;
+        }
+        catch (Exception ex) { ScreenshotStatus.Text = "✗ " + ex.Message; }
+    }
+
     // Open the per-module settings modal (⚙ on a page). Phase 1: "mods".
     private void OnModuleSettings(object sender, RoutedEventArgs e)
     {
