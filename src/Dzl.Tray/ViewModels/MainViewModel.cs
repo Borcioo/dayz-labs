@@ -877,11 +877,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return (r.Ok, r.Message);
     }
 
-    /// <summary>Cut a GitHub release (tag) for a project from the git window. Returns the result.</summary>
-    public async Task<(bool ok, string msg)> ReleaseForGitAsync(string name, string tag, string? notes)
+    /// <summary>Cut a GitHub release for a project from the git window (full options + optional built-PBO assets).</summary>
+    public async Task<(bool ok, string msg)> ReleaseForGitAsync(string name, Dzl.Core.Vcs.ReleaseOptions opts, bool attachBuiltAddons)
     {
         var cp = _configPath;
-        var r = await Task.Run(() => new RepoService(cp).Release(name, tag, notes));
+        var r = await Task.Run(() => new RepoService(cp).Release(name, opts, attachBuiltAddons));
         return (r.Ok, r.Message);
     }
 

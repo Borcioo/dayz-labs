@@ -83,4 +83,32 @@ public sealed class RepoService
         var (ok, msg) = GitHub.Release(dir, tag, $"{mod} {tag}", notes);
         return new RepoOp(ok, ok ? $"released {tag} → {msg}" : $"gh release failed: {msg}");
     }
+
+    /// <summary>Cut a GitHub release with full options, optionally uploading the built <c>@&lt;mod&gt;</c> PBOs
+    /// as release assets.</summary>
+    public RepoOp Release(string mod, ReleaseOptions opts, bool attachBuiltAddons)
+    {
+        if (string.IsNullOrWhiteSpace(opts.Tag)) return new RepoOp(false, "tag required (e.g. v1.0.0)");
+        var dir = ResolveProject(mod, out var err);
+        if (dir is null) return new RepoOp(false, err);
+        if (!GitHub.IsAvailable()) return new RepoOp(false, "gh (GitHub CLI) not found");
+        if (!Git.IsRepo(dir) || !Git.HasCommits(dir)) return new RepoOp(false, "not a published repo yet — publish first");
+
+        List<string>? assets = null;
+        if (attachBuiltAddons)
+        {
+            var root = ProjectPaths.Root(Profiles.ResolveActive(_configPath).cfg);
+            var addons = ProjectPaths.BuildAddonsDir(root, mod);
+            if (Directory.Exists(addons))
+            {
+                try { assets = Directory.GetFiles(addons, "*.pbo").ToList(); } catch { /* ignore */ }
+                if (assets is { Count: 0 }) assets = null;
+            }
+        }
+
+        var title = string.IsNullOrWhiteSpace(opts.Title) ? $"{mod} {opts.Tag}" : opts.Title;
+        var (ok, msg) = GitHub.Release(dir, opts with { Title = title }, assets);
+        var assetNote = assets is { Count: > 0 } ? $" (+{assets.Count} asset{(assets.Count > 1 ? "s" : "")})" : "";
+        return new RepoOp(ok, ok ? $"released {opts.Tag} → {msg}{assetNote}" : $"gh release failed: {msg}");
+    }
 }

@@ -5,6 +5,16 @@ namespace Dzl.Core.Vcs;
 /// <summary>GitHub CLI auth state. <see cref="LoggedIn"/> false means no <c>gh</c> token (or gh missing).</summary>
 public sealed record GhAuth(bool LoggedIn, string Account, string Detail);
 
+/// <summary>Options for a GitHub release (<c>gh release create</c>).</summary>
+public sealed record ReleaseOptions(
+    string Tag,
+    string? Title = null,
+    string? Notes = null,
+    bool GenerateNotes = false,
+    bool Prerelease = false,
+    bool Draft = false,
+    string? Target = null);
+
 public static class GitHub
 {
     public static bool IsAvailable() => Proc.Run("gh", ".", "--version").code == 0;
@@ -59,13 +69,23 @@ public static class GitHub
         return (code == 0, Join(outp, err));
     }
 
-    /// <summary>Cut a GitHub release at HEAD (creates and pushes the tag): wraps
-    /// <c>gh release create &lt;tag&gt;</c>. With no notes, GitHub auto-generates them.</summary>
+    /// <summary>Cut a GitHub release at HEAD (creates and pushes the tag) — simple form. With no notes, GitHub
+    /// auto-generates them. Kept for the CLI/MCP; the UI uses the <see cref="ReleaseOptions"/> overload.</summary>
     public static (bool ok, string msg) Release(string dir, string tag, string? title, string? notes)
+        => Release(dir, new ReleaseOptions(tag, title, notes, GenerateNotes: string.IsNullOrWhiteSpace(notes)), null);
+
+    /// <summary>Cut a GitHub release with full options: wraps <c>gh release create &lt;tag&gt;</c> with
+    /// title/notes (or auto-generated), prerelease/draft flags, an optional target branch, and any number of
+    /// uploaded <paramref name="assets"/> (file paths).</summary>
+    public static (bool ok, string msg) Release(string dir, ReleaseOptions o, IEnumerable<string>? assets)
     {
-        var args = new List<string> { "release", "create", tag, "--title", string.IsNullOrWhiteSpace(title) ? tag : title! };
-        if (string.IsNullOrWhiteSpace(notes)) args.Add("--generate-notes");
-        else { args.Add("--notes"); args.Add(notes!); }
+        var args = new List<string> { "release", "create", o.Tag, "--title", string.IsNullOrWhiteSpace(o.Title) ? o.Tag : o.Title! };
+        if (o.GenerateNotes || string.IsNullOrWhiteSpace(o.Notes)) args.Add("--generate-notes");
+        else { args.Add("--notes"); args.Add(o.Notes!); }
+        if (o.Prerelease) args.Add("--prerelease");
+        if (o.Draft) args.Add("--draft");
+        if (!string.IsNullOrWhiteSpace(o.Target)) { args.Add("--target"); args.Add(o.Target!); }
+        if (assets is not null) args.AddRange(assets);   // positional asset files
 
         var (code, outp, err) = Proc.Run("gh", dir, args.ToArray());
         return (code == 0, Join(outp, err));

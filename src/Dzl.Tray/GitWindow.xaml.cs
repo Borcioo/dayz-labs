@@ -125,12 +125,13 @@ public partial class GitWindow : FluentWindow
 
     private async void OnRelease(object sender, RoutedEventArgs e)
     {
-        var tag = PromptDialog.Show(this, "Create GitHub release", $"Tag for {_name} (e.g. v1.0.0):");
-        if (string.IsNullOrWhiteSpace(tag)) return;
+        var choice = ReleaseDialog.Show(this, _name);
+        if (choice is not { } c) return;
         StatusText.Text = "creating release…";
         ReleaseBtn.IsEnabled = false;
-        try { Report(await _vm.ReleaseForGitAsync(_name, tag.Trim(), null)); }
+        try { Report(await _vm.ReleaseForGitAsync(_name, c.opts, c.attach)); }
         finally { ReleaseBtn.IsEnabled = true; }
+        Refresh();
     }
 
     private void OnInit(object sender, RoutedEventArgs e)
