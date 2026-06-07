@@ -76,6 +76,7 @@ $"# {mod}\n\nDayZ mod scaffolded by dzl.\n\n- Source: this folder (under your Pr
             WriteIfAbsent(Path.Combine(modDir, "config.cpp"), ConfigCpp(mod, author));
             WriteIfAbsent(Path.Combine(modDir, "$PBOPREFIX$"), mod);
             WriteIfAbsent(Path.Combine(modDir, "README.md"), Readme(mod));
+            WriteIfAbsent(Path.Combine(modDir, ".gitignore"), GitIgnore());
             foreach (var sub in new[] { @"scripts\3_Game", @"scripts\4_World", @"scripts\5_Mission", "data", "gui" })
             {
                 var d = Path.Combine(modDir, sub);
@@ -100,4 +101,30 @@ $"# {mod}\n\nDayZ mod scaffolded by dzl.\n\n- Source: this folder (under your Pr
     {
         if (!File.Exists(path)) File.WriteAllText(path, content);
     }
+
+    /// <summary>Sensible default .gitignore for a DayZ mod source — above all it keeps the private signing key
+    /// out of the repo. (.git itself is ignored by git automatically and never needs listing.)</summary>
+    private static string GitIgnore() =>
+        """
+        # dzl — DayZ mod
+
+        # Signing keys — NEVER commit your private key
+        *.biprivatekey
+
+        # Build output
+        *.pbo
+        *.pbo.*
+
+        # Logs & temporary files
+        *.log
+        *.tmp
+        *.bak
+
+        # OS / editor cruft
+        Thumbs.db
+        desktop.ini
+        .vs/
+        .idea/
+        *.user
+        """;
 }
