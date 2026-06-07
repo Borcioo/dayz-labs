@@ -119,13 +119,13 @@ public sealed class WorkshopService
     {
         var cfg = Cfg;
         if (string.IsNullOrWhiteSpace(cfg.SteamCmdPath) || !File.Exists(cfg.SteamCmdPath))
-            return new(false, "steamcmd not found — set its path in Settings");
+            return new(false, "steamcmd not found — set or install it via the ⚙ here (Workshop settings)");
         if (string.IsNullOrWhiteSpace(id))
             return new(false, "workshop id required");
         // DayZ Workshop content is owner-gated: an anonymous steamcmd login fails with "Download item … failed
         // (Failure)". Require a Steam account name (auto-filled on sign-in, or set in Settings → Steam).
         if (string.IsNullOrWhiteSpace(cfg.SteamLogin))
-            return new(false, "DayZ Workshop items can't be downloaded anonymously — sign in to Steam (Settings → Steam) so steamcmd uses your account");
+            return new(false, "DayZ Workshop items can't be downloaded anonymously — sign in to Steam (the ⚙ here, or Settings → Accounts) so steamcmd uses your account");
         var dir = WorkshopInstallDir();
         return WorkshopCmd.Download(cfg.SteamCmdPath, cfg.SteamLogin, id, dir)
             ? new(true, $"launched steamcmd for {id} as {cfg.SteamLogin} → {WorkshopCmd.ContentDir(dir, id)} — complete any password / Steam Guard prompt in the console window")
