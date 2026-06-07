@@ -457,6 +457,14 @@ public partial class MainWindow : FluentWindow
         if (NewModStatus.Text.StartsWith('✓')) NewModNameBox.Text = "";
     }
 
+    // Open the project's git remote in the browser (button disabled when there's no remote).
+    private void OnOpenRepoUrl(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string url } || string.IsNullOrWhiteSpace(url)) return;
+        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
+        catch { /* best-effort */ }
+    }
+
     private void OnImportFromGitHub(object sender, RoutedEventArgs e)
     {
         var repo = GhRepoBox.Text.Trim();

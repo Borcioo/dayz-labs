@@ -6,6 +6,17 @@ using Xunit;
 
 public class GitTests
 {
+    [Theory]
+    [InlineData("git@github.com:foreto/dzl.git", "https://github.com/foreto/dzl")]
+    [InlineData("https://github.com/foreto/dzl.git", "https://github.com/foreto/dzl")]
+    [InlineData("https://github.com/foreto/dzl", "https://github.com/foreto/dzl")]
+    [InlineData("ssh://git@github.com/foreto/dzl.git", "https://github.com/foreto/dzl")]
+    [InlineData("", null)]
+    [InlineData("not-a-remote", null)]
+    public void ToBrowserUrl_normalises_remotes(string remote, string? expected)
+        => Git.ToBrowserUrl(remote).Should().Be(expected);
+
+
     private static (string configPath, string root) TmpConfig()
     {
         var dir = Directory.CreateTempSubdirectory().FullName;

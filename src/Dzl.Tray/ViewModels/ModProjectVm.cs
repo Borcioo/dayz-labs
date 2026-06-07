@@ -17,6 +17,13 @@ public sealed partial class ModProjectVm : ObservableObject
     /// <summary>Short git summary, e.g. "main • clean", "main • dirty ↑1", "no repo", "main • clean (local)".</summary>
     [ObservableProperty] private string _git = "…";
 
+    /// <summary>Browsable URL of the project's git remote, or null when there's no remote (drives the
+    /// "Open on GitHub" button — disabled when null).</summary>
+    [ObservableProperty] private string? _repoUrl;
+
+    public bool HasRepoUrl => !string.IsNullOrEmpty(RepoUrl);
+    partial void OnRepoUrlChanged(string? value) => OnPropertyChanged(nameof(HasRepoUrl));
+
     // My Mods are always the uncompiled source — its compiled counterpart shows as "Build" in the Mods library.
     public string KindLabel => Dzl.Tray.ModKindUi.Label(ModKind.Source);
     public Brush KindBg => Dzl.Tray.ModKindUi.Bg(ModKind.Source);

@@ -1076,6 +1076,9 @@
                                            ToolTip="Build → PBO and add to the active server's run-list (needs P: mounted)"
                                            Tag="{Binding Name}" Click="OnBuildMod" Margin="0,0,8,0"
                                            IsEnabled="{Binding DataContext.WorkDriveMounted, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
+                                <ui:Button Icon="{ui:SymbolIcon Open24}" Margin="0,0,8,0" Tag="{Binding RepoUrl}" Click="OnOpenRepoUrl"
+                                           IsEnabled="{Binding HasRepoUrl}"
+                                           ToolTip="Open the repo on GitHub (disabled when the project has no git remote)" />
                                 <ui:DropDownButton Icon="{ui:SymbolIcon MoreHorizontal24}" ToolTip="More actions">
                                   <ui:DropDownButton.Flyout>
                                     <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">

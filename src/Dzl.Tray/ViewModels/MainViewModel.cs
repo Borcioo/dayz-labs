@@ -815,10 +815,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             var dir = ProjectPaths.ModDir(root, vm.Name);
             var s = await Task.Run(() => Git.Status(dir));
-            if (!s.IsRepo) { vm.Git = "no repo"; continue; }
+            if (!s.IsRepo) { vm.Git = "no repo"; vm.RepoUrl = null; continue; }
             var ab = (s.Ahead > 0 || s.Behind > 0) ? $" ↑{s.Ahead}↓{s.Behind}" : "";
             var local = s.HasRemote ? "" : " (local)";
             vm.Git = $"{s.Branch} • {s.Detail}{ab}{local}";
+            vm.RepoUrl = s.HasRemote ? await Task.Run(() => Git.RemoteUrl(dir)) : null;
         }
     }
 

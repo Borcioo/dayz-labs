@@ -55,6 +55,35 @@ public static class Git
         return code == 0 ? ParseStatus(outp) : new RepoStatus(false, "", 0, 0, false, false, "not a git repo");
     }
 
+    /// <summary>Browsable URL of the <c>origin</c> remote, or null when there's no remote. Shells out for the
+    /// raw remote then normalises via <see cref="ToBrowserUrl"/>.</summary>
+    public static string? RemoteUrl(string dir)
+    {
+        var (code, outp, _) = Proc.Run("git", dir, "remote", "get-url", "origin");
+        return code == 0 ? ToBrowserUrl(outp.Trim()) : null;
+    }
+
+    /// <summary>Normalise a git remote (scp-like <c>git@host:owner/repo.git</c>, https, or ssh://) to a browsable
+    /// https URL with any trailing <c>.git</c> stripped. Null when it isn't a recognisable remote. Pure.</summary>
+    public static string? ToBrowserUrl(string? remote)
+    {
+        if (string.IsNullOrWhiteSpace(remote)) return null;
+        remote = remote.Trim();
+        string url;
+        if (remote.StartsWith("git@", StringComparison.Ordinal))            // git@github.com:owner/repo.git
+        {
+            var at = remote.IndexOf('@'); var colon = remote.IndexOf(':');
+            if (colon <= at) return null;
+            url = $"https://{remote[(at + 1)..colon]}/{remote[(colon + 1)..]}";
+        }
+        else if (remote.StartsWith("ssh://", StringComparison.Ordinal))     // ssh://git@host/owner/repo.git
+            url = "https://" + remote["ssh://".Length..].Replace("git@", "");
+        else if (remote.StartsWith("http://", StringComparison.Ordinal) || remote.StartsWith("https://", StringComparison.Ordinal))
+            url = remote;
+        else return null;
+        return url.EndsWith(".git", StringComparison.OrdinalIgnoreCase) ? url[..^4] : url;
+    }
+
     public static (bool ok, string msg) Init(string dir)
     {
         var (code, _, err) = Proc.Run("git", dir, "init", "-b", "main");
