@@ -42,6 +42,7 @@ public partial class ModuleSettingsWindow : FluentWindow
         {
             WorkshopPanel.Visibility = Visibility.Visible;
             CfgSteamCmdPath.Text = c.SteamCmdPath;
+            CfgSteamLogin.Text = c.SteamLogin;
             RefreshSteamStatus();
         }
     }
@@ -110,7 +111,11 @@ public partial class ModuleSettingsWindow : FluentWindow
         }
         else if (_module == "workshop")
         {
-            _vm.ApplyConfig(_vm.Cfg with { SteamCmdPath = CfgSteamCmdPath.Text.Trim() });
+            _vm.ApplyConfig(_vm.Cfg with
+            {
+                SteamCmdPath = CfgSteamCmdPath.Text.Trim(),
+                SteamLogin = CfgSteamLogin.Text.Trim(),
+            });
         }
         DialogResult = true;
         Close();

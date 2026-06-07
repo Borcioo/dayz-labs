@@ -79,8 +79,13 @@
             <ui:Button Grid.Column="2" Content="Browse" Icon="{ui:SymbolIcon FolderOpen24}" Margin="8,0,0,0"
                        Tag="CfgSteamCmdPath" Click="OnBrowseFile" />
           </Grid>
-          <TextBlock x:Name="SteamCmdStatus" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap"
+          <TextBlock x:Name="SteamCmdStatus" FontSize="11" Margin="0,4,0,12" TextWrapping="Wrap"
                      Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+
+          <TextBlock Text="Steam account name (for steamcmd login)" FontWeight="SemiBold" Margin="0,0,0,4" />
+          <TextBlock FontSize="11" Margin="0,0,0,4" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                     Text="DayZ Workshop items can't be fetched anonymously. Auto-filled when you sign in above; set it here if blank. Password / Steam Guard are entered in the steamcmd console, never stored." />
+          <ui:TextBox x:Name="CfgSteamLogin" PlaceholderText="steam username" Margin="0,0,0,4" />
         </StackPanel>
       </Grid>
     </ScrollViewer>
