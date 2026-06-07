@@ -12,11 +12,33 @@ internal static class Proc
     /// caller forever — the process is killed and a timeout error returned past this.</summary>
     private const int DefaultTimeoutMs = 60_000;
 
+    /// <summary>Resolve a bare command name (git/gh) to a full path so it works even when the host process
+    /// inherited a reduced PATH (e.g. the MCP server launched without Git on PATH). Falls back to the common
+    /// Windows install locations; returns the name unchanged if nothing matches (let it fail with its own error).</summary>
+    private static string Resolve(string exe)
+    {
+        if (exe.Contains('\\') || exe.Contains('/')) return exe;   // already a path
+        var path = Environment.GetEnvironmentVariable("PATH") ?? "";
+        foreach (var dir in path.Split(Path.PathSeparator))
+        {
+            if (string.IsNullOrWhiteSpace(dir)) continue;
+            foreach (var ext in new[] { ".exe", ".cmd", "" })
+                try { var f = Path.Combine(dir.Trim(), exe + ext); if (File.Exists(f)) return f; } catch { /* bad PATH entry */ }
+        }
+        string[] fallbacks = exe.Equals("git", StringComparison.OrdinalIgnoreCase)
+            ? new[] { @"C:\Program Files\Git\cmd\git.exe", @"C:\Program Files (x86)\Git\cmd\git.exe" }
+            : exe.Equals("gh", StringComparison.OrdinalIgnoreCase)
+                ? new[] { @"C:\Program Files\GitHub CLI\gh.exe" }
+                : Array.Empty<string>();
+        foreach (var f in fallbacks) if (File.Exists(f)) return f;
+        return exe;
+    }
+
     public static (int code, string stdout, string stderr) Run(string exe, string workdir, params string[] args)
     {
         try
         {
-            var psi = new ProcessStartInfo(exe)
+            var psi = new ProcessStartInfo(Resolve(exe))
             {
                 WorkingDirectory = Directory.Exists(workdir) ? workdir : Environment.CurrentDirectory,
                 RedirectStandardOutput = true,
