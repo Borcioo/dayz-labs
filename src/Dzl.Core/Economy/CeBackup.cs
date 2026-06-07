@@ -71,7 +71,7 @@ public static class CeBackup
             var ext  = Ext(filePath);
             var prefix = $"{stem}.";
             return Directory.EnumerateFiles(dir, $"{prefix}*{ext}")
-                .OrderByDescending(f => f, StringComparer.Ordinal)
+                .OrderByDescending(f => File.GetLastWriteTime(f))
                 .Select(f =>
                 {
                     var nameNoExt = Path.GetFileNameWithoutExtension(f);

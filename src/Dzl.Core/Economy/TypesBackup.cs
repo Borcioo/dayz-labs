@@ -7,7 +7,6 @@ public sealed record TypesBackupInfo(string Stamp, string Path);
 /// (<c>.dzl-types-backups\types.&lt;stamp&gt;.xml</c>) and public API so callers and tests are unaffected.</summary>
 public static class TypesBackup
 {
-    public const string DirName = ".dzl-types-backups";
     public const int Keep = CeBackup.Keep;
 
     public static string BackupDir(string typesPath) =>
@@ -24,12 +23,15 @@ public static class TypesBackup
             .Select(s => new TypesBackupInfo(s.Id, s.Path))
             .ToList();
 
-    /// <summary>Restore a snapshot over the live file, snapshotting the current file first so it's undoable.</summary>
+    /// <summary>Restore a snapshot over the live file, snapshotting the current file first so it's undoable.
+    /// <paramref name="backupFile"/> may be a full path (as returned by <see cref="List"/> or <see cref="CeBackup.List"/>)
+    /// or a bare backup filename — both forms are accepted.</summary>
     public static bool Restore(string typesPath, string backupFile)
     {
-        // Extract the id from the backup file name: strip "<stem>." prefix and extension.
+        // Extract the id from the backup file name: derive the filename portion first (handles full paths),
+        // then strip "<stem>." prefix and extension.
         var stem   = Path.GetFileNameWithoutExtension(typesPath);
-        var name   = Path.GetFileNameWithoutExtension(backupFile);
+        var name   = Path.GetFileNameWithoutExtension(Path.GetFileName(backupFile));
         var prefix = $"{stem}.";
         if (!name.StartsWith(prefix, StringComparison.Ordinal)) return false;
         var id = name[prefix.Length..];

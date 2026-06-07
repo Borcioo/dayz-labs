@@ -43,4 +43,15 @@ public class CeBackupTests
         for (int i = 0; i < 25; i++) { File.WriteAllText(f, $"<types n=\"{i}\"/>"); CeBackup.Snapshot(f); }
         CeBackup.List(f).Count.Should().BeLessThanOrEqualTo(20);
     }
+
+    [Fact]
+    public void Restore_accepts_a_full_backup_path_from_List()
+    {
+        var f = TempFile("<types>original</types>");
+        CeBackup.Snapshot(f);
+        File.WriteAllText(f, "<types>changed</types>");
+        var fullPath = CeBackup.List(f)[0].Path;
+        TypesBackup.Restore(f, fullPath).Should().BeTrue();
+        File.ReadAllText(f).Should().Contain("original");
+    }
 }
