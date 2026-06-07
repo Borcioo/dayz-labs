@@ -4,8 +4,8 @@ using System.Text.RegularExpressions;
 
 namespace Dzl.Core.Workshop;
 
-/// <summary>A Workshop item: id + title plus the browse/detail metadata (preview image, subs, dates, tags,
-/// short description) the keyless endpoints return.</summary>
+/// <summary>A Workshop item: id + title plus the browse/detail metadata (preview image, subs, dates, size,
+/// tags, short description) the keyless endpoints return.</summary>
 public sealed record WorkshopItem(
     string Id,
     string Title,
@@ -14,7 +14,21 @@ public sealed record WorkshopItem(
     string PreviewUrl = "",
     long Subscriptions = 0,
     long Created = 0,
-    string Tags = "");
+    string Tags = "",
+    long FileSize = 0)
+{
+    /// <summary>Human file size (e.g. "48.2 MB"), or "" when unknown. Invariant decimal point.</summary>
+    public string SizeText => FileSize <= 0 ? "" :
+        FileSize >= 1L << 20
+            ? (FileSize / 1048576.0).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " MB"
+            : (FileSize / 1024.0).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " KB";
+
+    /// <summary>Posted date (local, yyyy-MM-dd), or "".</summary>
+    public string CreatedText => Created <= 0 ? "" : DateTimeOffset.FromUnixTimeSeconds(Created).LocalDateTime.ToString("yyyy-MM-dd");
+
+    /// <summary>Last-updated date (local, yyyy-MM-dd), or "".</summary>
+    public string UpdatedText => Updated <= 0 ? "" : DateTimeOffset.FromUnixTimeSeconds(Updated).LocalDateTime.ToString("yyyy-MM-dd");
+}
 
 /// <summary>A sort option as the Workshop browse page exposes it (label + its <c>browsesort</c> value).</summary>
 public sealed record WorkshopSort(string Label, string BrowseSort);
@@ -132,16 +146,21 @@ public static class WorkshopWeb
         if (e.ValueKind != JsonValueKind.Object) return null;
 
         string S(string n) => e.TryGetProperty(n, out var v) ? v.GetString() ?? "" : "";
-        long L(string n) => e.TryGetProperty(n, out var v) && v.TryGetInt64(out var x) ? x : 0;
+        long L(string n) => e.TryGetProperty(n, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out var x) ? x : 0;
         var tags = "";
         if (e.TryGetProperty("tags", out var tg) && tg.ValueKind == JsonValueKind.Array)
             tags = string.Join(", ", tg.EnumerateArray()
                 .Select(t => t.TryGetProperty("tag", out var tv) ? tv.GetString() : null)
                 .Where(s => !string.IsNullOrWhiteSpace(s)));
 
+        // file_size is sometimes a JSON number, sometimes a numeric string — handle both.
+        long size = L("file_size");
+        if (size == 0 && e.TryGetProperty("file_size", out var fs) && fs.ValueKind == JsonValueKind.String
+            && long.TryParse(fs.GetString(), out var fsl)) size = fsl;   // numeric string fallback
+
         var realId = S("publishedfileid");
         return new WorkshopItem(realId.Length > 0 ? realId : id, S("title"), S("file_description"),
-            L("time_updated"), S("preview_url"), L("subscriptions"), L("time_created"), tags);
+            L("time_updated"), S("preview_url"), L("subscriptions"), L("time_created"), tags, size);
     }
 
     private static byte[] Varint(ulong v)

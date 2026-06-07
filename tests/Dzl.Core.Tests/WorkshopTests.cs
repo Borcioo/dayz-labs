@@ -39,6 +39,21 @@ public class WorkshopTests
     }
 
     [Fact]
+    public void Web_parse_details_reads_file_size_and_formats_meta()
+    {
+        const string json = """
+        {"response":{"publishedfiledetails":[
+          {"publishedfileid":"42","title":"X","file_size":"50544640","time_created":1717079940}
+        ]}}
+        """;
+        var i = WorkshopWeb.ParseDetails(json, "42")!;
+        i.FileSize.Should().Be(50544640);
+        i.SizeText.Should().Be("48.2 MB");
+        i.CreatedText.Should().NotBeEmpty();   // formatted from the unix timestamp
+        new WorkshopItem("1", "x").SizeText.Should().BeEmpty();   // unknown size → blank
+    }
+
+    [Fact]
     public void Web_parse_extracts_id_title_preview_from_hashed_markup_and_dedupes()
     {
         // Mirrors current Steam markup: hashed classes, title in the img alt, dup links per item.

@@ -130,11 +130,26 @@
               <Image Source="{Binding PreviewUrl}" Stretch="Uniform" />
             </Border>
             <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" />
-            <TextBlock FontSize="11" Margin="0,2,0,6" Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+            <TextBlock FontSize="11" Margin="0,2,0,8" Foreground="{DynamicResource TextFillColorTertiaryBrush}">
               <Run Text="id " /><Run Text="{Binding Id, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding Subscriptions, Mode=OneWay}" /><Run Text=" subscribers" />
             </TextBlock>
+
+            <!-- Meta block (size / dates / tags) -->
+            <Grid Margin="0,0,0,10">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+              <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Size" FontSize="11" Margin="0,0,12,2" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SizeText}" FontSize="11" Margin="0,0,0,2" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="Posted" FontSize="11" Margin="0,0,12,2" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding CreatedText}" FontSize="11" Margin="0,0,0,2" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Updated" FontSize="11" Margin="0,0,12,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding UpdatedText}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </Grid>
+
+            <TextBlock FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="Tags" />
             <TextBlock Text="{Binding Tags}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,10"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
               <ui:Button Content="Subscribe" Icon="{ui:SymbolIcon Star24}" Appearance="Primary"
                          Tag="{Binding Id}" Click="OnSubscribe" Margin="0,0,8,0"
@@ -143,9 +158,11 @@
                          Tag="{Binding Id}" Click="OnUnsubscribe" Margin="0,0,8,0"
                          ToolTip="Subscribed — click to unsubscribe"
                          Visibility="{Binding DataContext.DetailSubscribed, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}, Converter={StaticResource BoolToVis}}" />
-              <ui:Button Content="Download" Icon="{ui:SymbolIcon ArrowDownload24}" Tag="{Binding Id}" Click="OnDownload"
+              <ui:Button Content="Download" Icon="{ui:SymbolIcon ArrowDownload24}" Tag="{Binding Id}" Click="OnDownload" Margin="0,0,8,0"
                          ToolTip="Download via steamcmd (configure steamcmd to enable)"
                          IsEnabled="{Binding DataContext.SteamCmdConfigured, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}" />
+              <ui:Button Icon="{ui:SymbolIcon Open24}" ToolTip="Open the Steam page (description, changelog, screenshots)"
+                         Tag="{Binding Id}" Click="OnOpenInSteam" />
             </StackPanel>
             <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="12"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
