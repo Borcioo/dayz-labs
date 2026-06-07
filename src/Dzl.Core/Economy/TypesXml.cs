@@ -30,6 +30,7 @@ public sealed record TypeEntry
     public IReadOnlyList<string> Usage { get; init; } = new List<string>();
     public IReadOnlyList<string> Value { get; init; } = new List<string>();   // tiers
     public IReadOnlyList<string> Tag { get; init; } = new List<string>();
+    public string SourceFile { get; init; } = "";   // absolute path this entry was read from / saves to
 }
 
 /// <summary>
