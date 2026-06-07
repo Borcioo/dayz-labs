@@ -154,34 +154,78 @@
       </Border>
     </Grid>
 
-    <!-- Subscribed -->
-    <Expander Grid.Row="3" Header="Subscribed (Steam client)" Margin="0,12,0,0" IsExpanded="False">
-      <Border CornerRadius="6" BorderThickness="1" MaxHeight="200" Margin="0,8,0,0"
-              BorderBrush="{DynamicResource ControlElevationBorderBrush}">
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-          <ItemsControl ItemsSource="{Binding WorkshopSubscribed}" Margin="6">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate>
-                <Grid Margin="0,0,0,4">
-                  <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                  <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Name}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{Binding Id}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                  </StackPanel>
-                  <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <ui:Button Icon="{ui:SymbolIcon Open24}" ToolTip="Open in Steam (manage)" Tag="{Binding Id}" Click="OnOpenInSteam" Margin="0,0,8,0" />
-                    <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open folder" Tag="{Binding Id}" Click="OnOpenSubscribedFolder" Margin="0,0,8,0" />
-                    <ui:Button Icon="{ui:SymbolIcon ArrowDownload24}" ToolTip="Update via steamcmd" Tag="{Binding Id}" Click="OnDownload" Margin="0,0,8,0"
-                               IsEnabled="{Binding DataContext.SteamCmdConfigured, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}" />
-                    <ui:Button Icon="{ui:SymbolIcon LinkDismiss24}" Appearance="Danger" ToolTip="Unsubscribe" Tag="{Binding Id}" Click="OnUnsubscribe" />
-                  </StackPanel>
-                </Grid>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </ScrollViewer>
-      </Border>
-    </Expander>
+    <!-- Subscribed (Steam client) + Downloaded (steamcmd) -->
+    <StackPanel Grid.Row="3">
+      <Expander Header="Subscribed (Steam client)" Margin="0,12,0,0" IsExpanded="False">
+        <Border CornerRadius="6" BorderThickness="1" MaxHeight="200" Margin="0,8,0,0"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding WorkshopSubscribed}" Margin="6">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Name}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding Id}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                      <ui:Button Icon="{ui:SymbolIcon Open24}" ToolTip="Open in Steam (manage)" Tag="{Binding Id}" Click="OnOpenInSteam" Margin="0,0,8,0" />
+                      <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open folder" Tag="{Binding Id}" Click="OnOpenSubscribedFolder" Margin="0,0,8,0" />
+                      <ui:Button Icon="{ui:SymbolIcon ArrowDownload24}" ToolTip="Update via steamcmd" Tag="{Binding Id}" Click="OnDownload" Margin="0,0,8,0"
+                                 IsEnabled="{Binding DataContext.SteamCmdConfigured, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}" />
+                      <ui:Button Icon="{ui:SymbolIcon LinkDismiss24}" Appearance="Danger" ToolTip="Unsubscribe" Tag="{Binding Id}" Click="OnUnsubscribe" />
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Border>
+      </Expander>
+
+      <Expander Header="Downloaded (steamcmd)" Margin="0,8,0,0" IsExpanded="False">
+        <Border CornerRadius="6" BorderThickness="1" MaxHeight="200" Margin="0,8,0,0"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <Grid>
+              <TextBlock Text="Nothing downloaded via steamcmd yet — use Download on an item above."
+                         Margin="10" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding WorkshopDownloaded.Count}" Value="0">
+                        <Setter Property="Visibility" Value="Visible" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
+              <ItemsControl ItemsSource="{Binding WorkshopDownloaded}" Margin="6">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid Margin="0,0,0,4">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Id}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <ui:Button Icon="{ui:SymbolIcon Open24}" ToolTip="Open in Steam (page)" Tag="{Binding Id}" Click="OnOpenInSteam" Margin="0,0,8,0" />
+                        <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open folder" Tag="{Binding Id}" Click="OnOpenSubscribedFolder" Margin="0,0,8,0" />
+                        <ui:Button Icon="{ui:SymbolIcon ArrowSync24}" ToolTip="Update (re-download via steamcmd)" Tag="{Binding Id}" Click="OnDownload"
+                                   IsEnabled="{Binding DataContext.SteamCmdConfigured, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}" />
+                      </StackPanel>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Grid>
+          </ScrollViewer>
+        </Border>
+      </Expander>
+    </StackPanel>
 
     <Grid Grid.Row="4" Margin="0,8,0,0">
       <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>

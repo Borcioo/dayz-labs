@@ -902,6 +902,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Items subscribed in the Steam client (its content folder) — what the Launcher loads.</summary>
     public ObservableCollection<SubscribedItem> WorkshopSubscribed { get; } = new();
 
+    /// <summary>Items downloaded manually via steamcmd into &lt;ProjectsRoot&gt;\workshop.</summary>
+    public ObservableCollection<SubscribedItem> WorkshopDownloaded { get; } = new();
+
     /// <summary>Sort options + time frames (from the Workshop browse page) for the toolbar combos.</summary>
     public IReadOnlyList<WorkshopSort> WorkshopSorts => WorkshopWeb.Sorts;
     public IReadOnlyList<WorkshopTimeFrame> WorkshopTimeFrames => WorkshopWeb.TimeFrames;
@@ -956,8 +959,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Reload the subscribed-items list (Steam client content folder).</summary>
     public void RefreshSubscribed()
     {
+        var svc = new WorkshopService(_configPath);
         WorkshopSubscribed.Clear();
-        foreach (var s in new WorkshopService(_configPath).Subscribed()) WorkshopSubscribed.Add(s);
+        foreach (var s in svc.Subscribed()) WorkshopSubscribed.Add(s);
+        WorkshopDownloaded.Clear();
+        foreach (var s in svc.DownloadedItems()) WorkshopDownloaded.Add(s);
         RecomputeDetailSubscribed();
     }
 

@@ -191,6 +191,23 @@ public sealed class WorkshopService
         catch { return new(); }
     }
 
+    /// <summary>Items downloaded via steamcmd into <c>&lt;ProjectsRoot&gt;\workshop</c> (clean <c>&lt;id&gt;</c>
+    /// folders; the hidden <c>.steamcmd</c> cache is skipped). Friendly names via meta.cpp/mod.cpp.</summary>
+    public List<SubscribedItem> DownloadedItems()
+    {
+        var root = WorkshopInstallDir();
+        if (!Directory.Exists(root)) return new();
+        try
+        {
+            return Directory.GetDirectories(root)
+                .Where(d => !Path.GetFileName(d)!.StartsWith('.'))
+                .Select(d => new SubscribedItem(Path.GetFileName(d)!, ModDiscovery.ResolveName(d), d))
+                .OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch { return new(); }
+    }
+
     /// <summary>Steam client URL that opens a Workshop item's page (where the user clicks Subscribe).</summary>
     public static string SteamPageUrl(string id) => $"steam://url/CommunityFilePage/{id}";
 }
