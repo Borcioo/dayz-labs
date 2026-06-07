@@ -43,12 +43,14 @@ public sealed class SteamAuth : IDisposable
         try
         {
             if (!await ConnectAsync(ct)) return new(false, "", "", "", "could not connect to Steam");
-            // MobileApp platform: its access token works against the Steam Web API (Workshop Subscribe) AND its
-            // refresh token can mint new access tokens via GenerateAccessTokenForApp. As of 2025-04, that renewal
-            // ONLY works for MobileApp tokens — WebBrowser/SteamClient refresh tokens fail with AccessDenied.
+            // WebBrowser platform: its access token (aud "web") works against the Steam Web API (Workshop
+            // Subscribe), and a WebBrowser refresh token CAN mint fresh access tokens via GenerateAccessTokenForApp
+            // (supported for WebBrowser + MobileApp; only the *RefreshAccessToken* method is MobileApp-only). Unlike
+            // MobileApp, a WebBrowser sign-in does NOT register as a new mobile device, so it avoids the Steam
+            // security alert / Guard email a MobileApp login triggers.
             var session = await _client.Authentication.BeginAuthSessionViaQRAsync(new AuthSessionDetails
             {
-                PlatformType = EAuthTokenPlatformType.k_EAuthTokenPlatformType_MobileApp,
+                PlatformType = EAuthTokenPlatformType.k_EAuthTokenPlatformType_WebBrowser,
             }).ConfigureAwait(false);
             onChallengeUrl(session.ChallengeURL);
             session.ChallengeURLChanged = () => onChallengeUrl(session.ChallengeURL);
@@ -71,7 +73,7 @@ public sealed class SteamAuth : IDisposable
                 Password = password,
                 IsPersistentSession = true,
                 Authenticator = authenticator,
-                PlatformType = EAuthTokenPlatformType.k_EAuthTokenPlatformType_MobileApp,  // only MobileApp refresh tokens can renew (see QR note)
+                PlatformType = EAuthTokenPlatformType.k_EAuthTokenPlatformType_WebBrowser,  // web-aud token, renewable, no mobile-device alert (see QR note)
             }).ConfigureAwait(false);
             var poll = await session.PollingWaitForResultAsync(ct).ConfigureAwait(false);
             return new(true, poll.AccountName, poll.RefreshToken, poll.AccessToken ?? "", "");
