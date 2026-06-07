@@ -110,7 +110,7 @@ public static class CeBackup
         var stem   = Stem(filePath);
         var ext    = Ext(filePath);
         var files  = Directory.EnumerateFiles(dir, $"{stem}.*{ext}")
-            .OrderByDescending(f => f, StringComparer.Ordinal).ToList();
+            .OrderByDescending(f => File.GetLastWriteTime(f)).ToList();
         foreach (var old in files.Skip(Keep))
             try { File.Delete(old); } catch { /* best-effort */ }
     }

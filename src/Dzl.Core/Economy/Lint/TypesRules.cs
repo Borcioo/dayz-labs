@@ -18,6 +18,8 @@ public sealed class TypesRules : ICeRule
             Unknown(e.Value, limits.Value, "unknown-value", "Value", e, findings);
             Unknown(e.Tag,   limits.Tag,   "unknown-tag",   "Tag",   e, findings);
 
+            if (e.Nominal == 0 && e.Min > 0)
+                findings.Add(new(LintSeverity.Warning, "min-without-nominal", $"min ({e.Min}) > 0 but nominal is 0 (item never spawns)", e.SourceFile, e.Name));
             if (e.Nominal > 0 && e.Min > e.Nominal)
                 findings.Add(new(LintSeverity.Warning, "min-gt-nominal", $"min ({e.Min}) > nominal ({e.Nominal})", e.SourceFile, e.Name));
             if (e.QuantMin >= 0 && e.QuantMax >= 0 && e.QuantMin > e.QuantMax)

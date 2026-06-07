@@ -173,9 +173,32 @@ public sealed class TypesService
     {
         if (string.IsNullOrWhiteSpace(name)) return new(false, "type name required");
 
-        var (_, primary) = ResolveAll();   // I1: resolve once
+        var (resolved, primary) = ResolveAll();   // I1: resolve once
         var existing = Rows().FirstOrDefault(r => string.Equals(r.Entry.Name, name, StringComparison.OrdinalIgnoreCase));
-        var target = existing?.Entry.SourceFile ?? file ?? primary;
+
+        // Resolve the target write path:
+        //   1. Existing type → write back to the file it came from.
+        //   2. file param given → match it against the resolved CE file list (by basename or full path)
+        //      so a basename like "mymod_types.xml" lands in the real CE-registered file, not CWD.
+        //   3. Fall back to the primary types file.
+        string? target;
+        if (existing is not null)
+        {
+            target = existing.Entry.SourceFile;
+        }
+        else if (!string.IsNullOrEmpty(file))
+        {
+            // Try to match against a resolved CE file path.
+            var matched = resolved.FirstOrDefault(r =>
+                Path.GetFileName(r.Path).Equals(file, StringComparison.OrdinalIgnoreCase) ||
+                r.Path.Equals(file, StringComparison.OrdinalIgnoreCase));
+            target = matched?.Path ?? primary;
+        }
+        else
+        {
+            target = primary;
+        }
+
         if (string.IsNullOrEmpty(target)) return new(false, "no types.xml for the active server's mission");
 
         try

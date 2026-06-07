@@ -82,4 +82,15 @@ public class LintTests
         });
         new LintEngine().Run(set, Limits).Should().BeEmpty();
     }
+
+    [Fact]
+    public void Nominal_zero_with_nonzero_min_is_a_warning()
+    {
+        // Nominal=0, Min=5 → "min-without-nominal" Warning
+        var set = new CeFileSet(new[] { new TypeEntry { Name = "W", SourceFile = "f", Nominal = 0, Min = 5 } });
+        var findings = new LintEngine().Run(set, Limits);
+        findings.Should().Contain(f => f.Code == "min-without-nominal" && f.Severity == LintSeverity.Warning);
+        // Must NOT also fire "min-gt-nominal" (they are mutually exclusive)
+        findings.Should().NotContain(f => f.Code == "min-gt-nominal");
+    }
 }

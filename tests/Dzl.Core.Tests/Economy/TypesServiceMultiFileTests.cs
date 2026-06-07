@@ -202,6 +202,32 @@ public class TypesServiceMultiFileTests
         modFile.Should().NotContain("NewGun");
     }
 
+    /// <summary>M5 — Set with a file BASENAME for a NEW type resolves to the real CE-registered file,
+    /// not a stray file in the process CWD. After reload the type must exist and its SourceFile must
+    /// end with the given basename.</summary>
+    [Fact]
+    public void Set_with_basename_resolves_to_registered_ce_file_not_cwd()
+    {
+        var (configPath, _) = Scaffold();
+        var svc = new TypesService(configPath);
+
+        // Act: add a brand-new type using a basename (not a full path)
+        var result = svc.Set("NewByBasename", nominal: 7, file: "mymod_types.xml");
+        result.Ok.Should().BeTrue(because: result.Message);
+
+        // Reload via a fresh service instance to confirm it's really on disk
+        var reloaded = new TypesService(configPath).List();
+        var found = reloaded.Should().ContainSingle(t => t.Name == "NewByBasename").Subject;
+
+        // It must have landed inside the real CE-registered mod file
+        found.SourceFile.Should().EndWith("mymod_types.xml",
+            because: "the basename must resolve to the CE-registered path, not a stray CWD file");
+
+        // Confirm no stray file was created in the current working directory
+        var cwdStray = Path.Combine(Directory.GetCurrentDirectory(), "mymod_types.xml");
+        File.Exists(cwdStray).Should().BeFalse(because: "Set must never create files in CWD");
+    }
+
     /// <summary>M4 — Remove("AKM") touches only the mod file; the vanilla file is left completely
     /// unchanged (Apple survives, keep-me comment survives).</summary>
     [Fact]
