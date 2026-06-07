@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-        Title="Mods settings" Width="640" Height="560"
+        Title="Settings" Width="640" Height="600"
         MinWidth="520" MinHeight="460"
         WindowBackdropType="Mica"
         ExtendsContentIntoTitleBar="True"
@@ -15,49 +15,81 @@
       <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
 
-    <ui:TitleBar Grid.Row="0" Title="Mods settings" ShowMaximize="False" ShowMinimize="False" Margin="0,0,0,8" />
+    <ui:TitleBar Grid.Row="0" x:Name="TitleBarCtl" Title="Settings" ShowMaximize="False" ShowMinimize="False" Margin="0,0,0,8" />
 
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-      <StackPanel Margin="0,0,8,0">
-        <TextBlock FontSize="12" TextWrapping="Wrap" Margin="0,0,0,14"
-                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                   Text="Settings that affect the Mods page. These are the same values as the global Settings — saving here applies immediately." />
+      <Grid Margin="0,0,8,0">
 
-        <TextBlock Text="Projects root" FontWeight="SemiBold" Margin="0,0,0,4" />
-        <TextBlock FontSize="11" Margin="0,0,0,4" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                   Text="Where dzl creates and manages your mod source folders (mods\, build\, keys\)." />
-        <Grid Margin="0,0,0,12">
-          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-          <ui:TextBox x:Name="CfgProjectsRoot" Grid.Column="0" PlaceholderText="e.g. D:\DayzProjects" />
-          <ui:Button Grid.Column="1" Content="Browse" Icon="{ui:SymbolIcon FolderOpen24}" Margin="8,0,0,0"
-                     Tag="CfgProjectsRoot" Click="OnBrowse" />
-        </Grid>
+        <!-- ===== MODS ===== -->
+        <StackPanel x:Name="ModsPanel" Visibility="Collapsed">
+          <TextBlock FontSize="12" TextWrapping="Wrap" Margin="0,0,0,14"
+                     Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                     Text="Settings that affect the Mods pages. Same values as global Settings — saving applies immediately." />
 
-        <TextBlock Text="Work-drive source (P:)" FontWeight="SemiBold" Margin="0,0,0,4" />
-        <TextBlock FontSize="11" Margin="0,0,0,4" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                   Text="The real folder P: is mounted from (junctions are anchored here so they survive unmounts). Blank = auto-detect from DayZ Tools." />
-        <Grid Margin="0,0,0,12">
-          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-          <ui:TextBox x:Name="CfgWorkDriveSource" Grid.Column="0" PlaceholderText="blank = auto-detect" />
-          <ui:Button Grid.Column="1" Content="Browse" Icon="{ui:SymbolIcon FolderOpen24}" Margin="8,0,0,0"
-                     Tag="CfgWorkDriveSource" Click="OnBrowse" />
-        </Grid>
+          <TextBlock Text="Projects root" FontWeight="SemiBold" Margin="0,0,0,4" />
+          <TextBlock FontSize="11" Margin="0,0,0,4" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                     Text="Where dzl creates and manages your mod source folders (mods\, build\, keys\)." />
+          <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <ui:TextBox x:Name="CfgProjectsRoot" Grid.Column="0" PlaceholderText="e.g. D:\DayzProjects" />
+            <ui:Button Grid.Column="1" Content="Browse" Icon="{ui:SymbolIcon FolderOpen24}" Margin="8,0,0,0"
+                       Tag="CfgProjectsRoot" Click="OnBrowse" />
+          </Grid>
 
-        <CheckBox x:Name="CfgAutomountWorkDrive" Content="Auto-mount P: when the app starts" Margin="0,0,0,14" />
+          <TextBlock Text="Work-drive source (P:)" FontWeight="SemiBold" Margin="0,0,0,4" />
+          <TextBlock FontSize="11" Margin="0,0,0,4" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                     Text="The real folder P: is mounted from (junctions are anchored here). Blank = auto-detect from DayZ Tools." />
+          <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <ui:TextBox x:Name="CfgWorkDriveSource" Grid.Column="0" PlaceholderText="blank = auto-detect" />
+            <ui:Button Grid.Column="1" Content="Browse" Icon="{ui:SymbolIcon FolderOpen24}" Margin="8,0,0,0"
+                       Tag="CfgWorkDriveSource" Click="OnBrowse" />
+          </Grid>
 
-        <TextBlock Text="Scan roots" FontWeight="SemiBold" Margin="0,0,0,4" />
-        <TextBlock FontSize="11" Margin="0,0,0,4" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                   Text="Folders scanned to discover existing mods (one per line)." />
-        <ui:TextBox x:Name="CfgScanRoots" MinHeight="92" AcceptsReturn="True" TextWrapping="Wrap"
-                    VerticalScrollBarVisibility="Auto" Margin="0,0,0,4" />
-      </StackPanel>
+          <CheckBox x:Name="CfgAutomountWorkDrive" Content="Auto-mount P: when the app starts" Margin="0,0,0,14" />
+
+          <TextBlock Text="Scan roots" FontWeight="SemiBold" Margin="0,0,0,4" />
+          <TextBlock FontSize="11" Margin="0,0,0,4" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                     Text="Folders scanned to discover existing mods (one per line)." />
+          <ui:TextBox x:Name="CfgScanRoots" MinHeight="92" AcceptsReturn="True" TextWrapping="Wrap"
+                      VerticalScrollBarVisibility="Auto" Margin="0,0,0,4" />
+        </StackPanel>
+
+        <!-- ===== WORKSHOP ===== -->
+        <StackPanel x:Name="WorkshopPanel" Visibility="Collapsed">
+          <TextBlock FontSize="12" TextWrapping="Wrap" Margin="0,0,0,14"
+                     Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                     Text="Browsing the Workshop needs nothing. Subscribe needs a Steam sign-in; Download needs steamcmd." />
+
+          <TextBlock Text="Steam sign-in (for Subscribe)" FontWeight="SemiBold" Margin="0,0,0,4" />
+          <TextBlock x:Name="SteamStatus" FontSize="12" Margin="0,0,0,6"
+                     Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+            <ui:Button Content="Sign in" Icon="{ui:SymbolIcon Person24}" Margin="0,0,8,0" Click="OnSteamSignIn" />
+            <ui:Button Content="Sign out" Click="OnSteamSignOut" />
+          </StackPanel>
+
+          <TextBlock Text="steamcmd (for Download)" FontWeight="SemiBold" Margin="0,0,0,4" />
+          <TextBlock FontSize="11" Margin="0,0,0,4" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                     Text="Optional — only needed to download Workshop items via steamcmd (e.g. for a headless server)." />
+          <Grid Margin="0,0,0,4">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <ui:TextBox x:Name="CfgSteamCmdPath" Grid.Column="0" PlaceholderText="path to steamcmd.exe (or click Install)" />
+            <ui:Button Grid.Column="1" Content="Install" Icon="{ui:SymbolIcon ArrowDownload24}" Margin="8,0,0,0" Click="OnInstallSteamCmd" />
+            <ui:Button Grid.Column="2" Content="Browse" Icon="{ui:SymbolIcon FolderOpen24}" Margin="8,0,0,0"
+                       Tag="CfgSteamCmdPath" Click="OnBrowseFile" />
+          </Grid>
+          <TextBlock x:Name="SteamCmdStatus" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap"
+                     Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+        </StackPanel>
+      </Grid>
     </ScrollViewer>
 
     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
       <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="0,0,12,0" FontSize="12"
                  Foreground="#FF6B6B" />
       <ui:Button Content="Save" Appearance="Primary" Icon="{ui:SymbolIcon Save24}" Click="OnSave" Margin="0,0,8,0" />
-      <ui:Button Content="Cancel" Click="OnCancel" />
+      <ui:Button Content="Close" Click="OnCancel" />
     </StackPanel>
   </Grid>
 </ui:FluentWindow>

@@ -25,23 +25,51 @@
 
     <ui:TitleBar Grid.Row="0" Title="Steam Workshop" ShowMaximize="True" ShowMinimize="False" Margin="0,0,0,8" />
 
-    <!-- Toolbar: sort + time frame + search -->
-    <Grid Grid.Row="1" Margin="0,0,0,10">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
-        <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
-      </Grid.ColumnDefinitions>
-      <ComboBox Grid.Column="0" Width="170" Margin="0,0,8,0" VerticalAlignment="Center"
-                ItemsSource="{Binding WorkshopSorts}" SelectedItem="{Binding SelectedSort}" DisplayMemberPath="Label"
-                ToolTip="Sort order" />
-      <ComboBox Grid.Column="1" Width="130" Margin="0,0,12,0" VerticalAlignment="Center"
-                ItemsSource="{Binding WorkshopTimeFrames}" SelectedItem="{Binding SelectedTimeFrame}" DisplayMemberPath="Label"
-                Visibility="{Binding ShowTimeFrame, Converter={StaticResource BoolToVis}}" ToolTip="Time frame" />
-      <ui:TextBox Grid.Column="2" PlaceholderText="search the DayZ Workshop…" Margin="0,0,8,0"
-                  Text="{Binding WorkshopQuery, UpdateSourceTrigger=PropertyChanged}" />
-      <ui:Button Grid.Column="3" Content="Search" Icon="{ui:SymbolIcon Search24}" Appearance="Primary" Margin="0,0,8,0" Click="OnSearch" />
-      <ui:Button Grid.Column="4" Content="Add by ID" Icon="{ui:SymbolIcon ArrowDownload24}" Click="OnAddById" />
-    </Grid>
+    <!-- Toolbar + gating banners -->
+    <StackPanel Grid.Row="1">
+      <Grid Margin="0,0,0,10">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <ComboBox Grid.Column="0" Width="170" Margin="0,0,8,0" VerticalAlignment="Center"
+                  ItemsSource="{Binding WorkshopSorts}" SelectedItem="{Binding SelectedSort}" DisplayMemberPath="Label"
+                  ToolTip="Sort order" />
+        <ComboBox Grid.Column="1" Width="130" Margin="0,0,12,0" VerticalAlignment="Center"
+                  ItemsSource="{Binding WorkshopTimeFrames}" SelectedItem="{Binding SelectedTimeFrame}" DisplayMemberPath="Label"
+                  Visibility="{Binding ShowTimeFrame, Converter={StaticResource BoolToVis}}" ToolTip="Time frame" />
+        <ui:TextBox Grid.Column="2" PlaceholderText="search the DayZ Workshop…" Margin="0,0,8,0"
+                    Text="{Binding WorkshopQuery, UpdateSourceTrigger=PropertyChanged}" />
+        <ui:Button Grid.Column="3" Content="Search" Icon="{ui:SymbolIcon Search24}" Appearance="Primary" Margin="0,0,8,0" Click="OnSearch" />
+        <ui:Button Grid.Column="4" Content="Add by ID" Icon="{ui:SymbolIcon ArrowDownload24}" Click="OnAddById" />
+        <ui:Button Grid.Column="5" Icon="{ui:SymbolIcon Settings24}" ToolTip="Workshop settings (Steam / steamcmd)"
+                   Margin="8,0,0,0" Appearance="Secondary" Click="OnWorkshopSettings" />
+      </Grid>
+
+      <!-- Warning: not signed in → Subscribe falls back to the Steam page -->
+      <Border Margin="0,0,0,8" Padding="10" CornerRadius="6" Background="#3A2A0F" BorderBrush="#7A5A1F" BorderThickness="1"
+              Visibility="{Binding SteamSignedIn, Converter={StaticResource InverseBoolToVis}}">
+        <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+          <ui:SymbolIcon Grid.Column="0" Symbol="Warning24" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#F0C04A" />
+          <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap" Foreground="#F0D9A8"
+                     Text="Not signed in to Steam — in-app Subscribe / Unsubscribe is disabled (Subscribe opens the Steam page instead)." />
+          <ui:Button Grid.Column="2" Content="Sign in" Appearance="Primary" VerticalAlignment="Center" Margin="10,0,0,0" Click="OnSignInBanner" />
+        </Grid>
+      </Border>
+
+      <!-- Warning: no steamcmd → Download disabled -->
+      <Border Margin="0,0,0,8" Padding="10" CornerRadius="6" Background="#3A2A0F" BorderBrush="#7A5A1F" BorderThickness="1"
+              Visibility="{Binding SteamCmdConfigured, Converter={StaticResource InverseBoolToVis}}">
+        <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+          <ui:SymbolIcon Grid.Column="0" Symbol="Warning24" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#F0C04A" />
+          <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap" Foreground="#F0D9A8"
+                     Text="steamcmd not configured — Download is disabled. Subscribe (Steam client) still works." />
+          <ui:Button Grid.Column="2" Content="Configure" Appearance="Primary" VerticalAlignment="Center" Margin="10,0,0,0" Click="OnWorkshopSettings" />
+        </Grid>
+      </Border>
+    </StackPanel>
 
     <!-- Filters | results | details -->
     <Grid Grid.Row="2">
@@ -115,7 +143,9 @@
                          Tag="{Binding Id}" Click="OnUnsubscribe" Margin="0,0,8,0"
                          ToolTip="Subscribed — click to unsubscribe"
                          Visibility="{Binding DataContext.DetailSubscribed, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}, Converter={StaticResource BoolToVis}}" />
-              <ui:Button Content="Download" Icon="{ui:SymbolIcon ArrowDownload24}" Tag="{Binding Id}" Click="OnDownload" />
+              <ui:Button Content="Download" Icon="{ui:SymbolIcon ArrowDownload24}" Tag="{Binding Id}" Click="OnDownload"
+                         ToolTip="Download via steamcmd (configure steamcmd to enable)"
+                         IsEnabled="{Binding DataContext.SteamCmdConfigured, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}" />
             </StackPanel>
             <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="12"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -141,7 +171,8 @@
                   <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <ui:Button Icon="{ui:SymbolIcon Open24}" ToolTip="Open in Steam (manage)" Tag="{Binding Id}" Click="OnOpenInSteam" Margin="0,0,8,0" />
                     <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open folder" Tag="{Binding Id}" Click="OnOpenSubscribedFolder" Margin="0,0,8,0" />
-                    <ui:Button Icon="{ui:SymbolIcon ArrowDownload24}" ToolTip="Update via steamcmd" Tag="{Binding Id}" Click="OnDownload" Margin="0,0,8,0" />
+                    <ui:Button Icon="{ui:SymbolIcon ArrowDownload24}" ToolTip="Update via steamcmd" Tag="{Binding Id}" Click="OnDownload" Margin="0,0,8,0"
+                               IsEnabled="{Binding DataContext.SteamCmdConfigured, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}" />
                     <ui:Button Icon="{ui:SymbolIcon LinkDismiss24}" Appearance="Danger" ToolTip="Unsubscribe" Tag="{Binding Id}" Click="OnUnsubscribe" />
                   </StackPanel>
                 </Grid>

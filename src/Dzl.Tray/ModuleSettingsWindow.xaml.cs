@@ -8,8 +8,8 @@ namespace Dzl.Tray;
 
 /// <summary>
 /// Per-module settings modal — opened from a page's ⚙ button. Shows only the config a single module needs, as
-/// the same global values (saving applies immediately, like the Settings page). Phase 1 covers the Mods module;
-/// other modules slot in via the <c>module</c> switch.
+/// the same global values (saving applies immediately, like the Settings page). Covers the Mods and Workshop
+/// modules; more slot in via the <c>module</c> switch.
 /// </summary>
 public partial class ModuleSettingsWindow : FluentWindow
 {
@@ -21,20 +21,35 @@ public partial class ModuleSettingsWindow : FluentWindow
         _vm = vm;
         _module = module;
         InitializeComponent();
-        Title = _module == "mods" ? "Mods settings" : "Settings";
+        var title = _module switch { "mods" => "Mods settings", "workshop" => "Workshop settings", _ => "Settings" };
+        Title = title;
+        TitleBarCtl.Title = title;
         Load();
     }
 
     private void Load()
     {
-        // Phase 1: only the Mods module is wired; other modules will branch here.
-        if (_module != "mods") return;
         var c = _vm.Cfg;
-        CfgProjectsRoot.Text = c.ProjectsRoot;
-        CfgWorkDriveSource.Text = c.WorkDriveSource;
-        CfgAutomountWorkDrive.IsChecked = c.AutomountWorkDrive;
-        CfgScanRoots.Text = string.Join("\n", c.ScanRoots);
+        if (_module == "mods")
+        {
+            ModsPanel.Visibility = Visibility.Visible;
+            CfgProjectsRoot.Text = c.ProjectsRoot;
+            CfgWorkDriveSource.Text = c.WorkDriveSource;
+            CfgAutomountWorkDrive.IsChecked = c.AutomountWorkDrive;
+            CfgScanRoots.Text = string.Join("\n", c.ScanRoots);
+        }
+        else if (_module == "workshop")
+        {
+            WorkshopPanel.Visibility = Visibility.Visible;
+            CfgSteamCmdPath.Text = c.SteamCmdPath;
+            RefreshSteamStatus();
+        }
     }
+
+    private void RefreshSteamStatus() =>
+        SteamStatus.Text = _vm.SteamSignedIn
+            ? "✓ Signed in — Subscribe works in-app."
+            : "Not signed in — Subscribe opens the Steam page instead.";
 
     private void OnBrowse(object sender, RoutedEventArgs e)
     {
@@ -45,23 +60,58 @@ public partial class ModuleSettingsWindow : FluentWindow
         else if (target == "CfgWorkDriveSource") CfgWorkDriveSource.Text = dlg.FolderName;
     }
 
+    private void OnBrowseFile(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFileDialog { Filter = "steamcmd.exe|steamcmd.exe|Executables|*.exe|All files|*.*" };
+        if (dlg.ShowDialog(this) == true) CfgSteamCmdPath.Text = dlg.FileName;
+    }
+
+    private void OnSteamSignIn(object sender, RoutedEventArgs e)
+    {
+        new SteamLoginWindow(_vm) { Owner = this }.ShowDialog();
+        _vm.RefreshSteamAccount();
+        _vm.NotifyWorkshopGate();
+        RefreshSteamStatus();
+    }
+
+    private void OnSteamSignOut(object sender, RoutedEventArgs e)
+    {
+        _vm.SteamSignOut();
+        _vm.RefreshSteamAccount();
+        _vm.NotifyWorkshopGate();
+        RefreshSteamStatus();
+    }
+
+    private async void OnInstallSteamCmd(object sender, RoutedEventArgs e)
+    {
+        if (sender is Wpf.Ui.Controls.Button btn) btn.IsEnabled = false;
+        SteamCmdStatus.Text = "installing steamcmd…";
+        var (ok, path, msg) = await _vm.InstallSteamCmdAsync();
+        if (ok) CfgSteamCmdPath.Text = path;
+        SteamCmdStatus.Text = (ok ? "✓ " : "✗ ") + msg + (ok ? "  (Save to apply)" : "");
+        if (sender is Wpf.Ui.Controls.Button b) b.IsEnabled = true;
+    }
+
     private void OnSave(object sender, RoutedEventArgs e)
     {
-        var root = CfgProjectsRoot.Text.Trim();
-        if (root.Length == 0)
+        if (_module == "mods")
         {
-            StatusText.Text = "Projects root is required.";
-            return;
+            var root = CfgProjectsRoot.Text.Trim();
+            if (root.Length == 0) { StatusText.Text = "Projects root is required."; return; }
+            var roots = CfgScanRoots.Text.Replace("\r\n", "\n").Split('\n')
+                .Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
+            _vm.ApplyConfig(_vm.Cfg with
+            {
+                ProjectsRoot = root,
+                WorkDriveSource = CfgWorkDriveSource.Text.Trim(),
+                AutomountWorkDrive = CfgAutomountWorkDrive.IsChecked == true,
+                ScanRoots = roots,
+            });
         }
-        var roots = CfgScanRoots.Text.Replace("\r\n", "\n").Split('\n')
-            .Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
-        _vm.ApplyConfig(_vm.Cfg with
+        else if (_module == "workshop")
         {
-            ProjectsRoot = root,
-            WorkDriveSource = CfgWorkDriveSource.Text.Trim(),
-            AutomountWorkDrive = CfgAutomountWorkDrive.IsChecked == true,
-            ScanRoots = roots,
-        });
+            _vm.ApplyConfig(_vm.Cfg with { SteamCmdPath = CfgSteamCmdPath.Text.Trim() });
+        }
         DialogResult = true;
         Close();
     }

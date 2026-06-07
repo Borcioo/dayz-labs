@@ -597,6 +597,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ResolvedSigningKey));
         OnPropertyChanged(nameof(ProjectsRoot));
         OnPropertyChanged(nameof(ModsBlocked));
+        NotifyWorkshopGate();
         RetailLogs();   // logs follow the active server's profiles
     }
 
@@ -990,6 +991,16 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>True when a Steam session is stored (signed in).</summary>
     public bool SteamSignedIn => new WorkshopService(_configPath).SignedIn;
+
+    /// <summary>True when steamcmd is configured + present (drives the Workshop Download gating).</summary>
+    public bool SteamCmdConfigured => !string.IsNullOrWhiteSpace(_cfg.SteamCmdPath) && File.Exists(_cfg.SteamCmdPath);
+
+    /// <summary>Re-evaluate the Workshop page's gating flags (sign-in / steamcmd) after a change.</summary>
+    public void NotifyWorkshopGate()
+    {
+        OnPropertyChanged(nameof(SteamSignedIn));
+        OnPropertyChanged(nameof(SteamCmdConfigured));
+    }
 
     /// <summary>Steam account label for the Settings → Accounts row (reflects the stored sign-in).</summary>
     [ObservableProperty] private string _steamAccount = "not signed in";

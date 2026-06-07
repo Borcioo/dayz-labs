@@ -30,6 +30,22 @@ public partial class WorkshopWindow : FluentWindow
         };
     }
 
+    // ⚙ — open the Workshop settings modal (Steam sign-in + steamcmd); refresh gating after.
+    private void OnWorkshopSettings(object sender, RoutedEventArgs e)
+    {
+        new ModuleSettingsWindow(_vm, "workshop") { Owner = this }.ShowDialog();
+        _vm.NotifyWorkshopGate();
+        _vm.RefreshSubscribed();
+    }
+
+    // Sign-in banner button — sign in directly, then re-evaluate the gate.
+    private void OnSignInBanner(object sender, RoutedEventArgs e)
+    {
+        new SteamLoginWindow(_vm) { Owner = this }.ShowDialog();
+        _vm.NotifyWorkshopGate();
+        _vm.RefreshSubscribed();
+    }
+
     private async void OnSearch(object sender, RoutedEventArgs e) => await _vm.WorkshopBrowseAsync();
 
     private async void OnLoadMore(object sender, RoutedEventArgs e) => await _vm.WorkshopLoadMoreAsync();
