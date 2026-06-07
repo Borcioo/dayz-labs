@@ -469,7 +469,7 @@ public partial class MainWindow : FluentWindow
     private void OnOpenGit(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string name }) return;
-        new GitWindow(name, _vm.ModDirOf(name)) { Owner = this }.Show();
+        new GitWindow(_vm, name, _vm.ModDirOf(name)) { Owner = this }.Show();
     }
 
     private void OnImportFromGitHub(object sender, RoutedEventArgs e)

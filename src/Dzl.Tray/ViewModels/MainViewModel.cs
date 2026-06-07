@@ -868,6 +868,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>The source folder for a mod project (for the per-mod git window).</summary>
     public string ModDirOf(string name) => ProjectPaths.ModDir(ProjectsRoot, name);
 
+    /// <summary>Publish a project to GitHub (init + commit + gh repo create) for the git window. Returns the result.</summary>
+    public async Task<(bool ok, string msg)> PublishForGitAsync(string name)
+    {
+        var cp = _configPath;
+        var r = await Task.Run(() => new RepoService(cp).Publish(name));
+        RefreshModProjects();
+        return (r.Ok, r.Message);
+    }
+
     private static string DeriveRepoName(string repo)
     {
         var s = repo.TrimEnd('/');

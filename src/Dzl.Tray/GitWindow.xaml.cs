@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Dzl.Core.Vcs;
+using Dzl.Tray.ViewModels;
 using Wpf.Ui.Controls;
 
 namespace Dzl.Tray;
@@ -15,9 +16,11 @@ public partial class GitWindow : FluentWindow
 {
     private readonly string _dir;
     private readonly string _name;
+    private readonly MainViewModel _vm;
 
-    public GitWindow(string name, string dir)
+    public GitWindow(MainViewModel vm, string name, string dir)
     {
+        _vm = vm;
         _name = name;
         _dir = dir;
         InitializeComponent();
@@ -44,8 +47,13 @@ public partial class GitWindow : FluentWindow
         BranchCombo.SelectedItem = current;
 
         var s = Git.Status(_dir);
-        AheadBehind.Text = s.HasRemote && (s.Ahead > 0 || s.Behind > 0) ? $"↑{s.Ahead} ↓{s.Behind}"
-            : s.HasRemote ? "· up to date" : "· no remote";
+        var hasRemote = Git.RemoteUrl(_dir) is not null;   // an 'origin' remote exists at all
+        AheadBehind.Text = !hasRemote ? "· no remote (Publish to create one)"
+            : (s.Ahead > 0 || s.Behind > 0) ? $"↑{s.Ahead} ↓{s.Behind}" : "· up to date";
+        // No remote yet → offer Publish (creates the GitHub repo); otherwise Push.
+        PushBtn.Visibility = hasRemote ? Visibility.Visible : Visibility.Collapsed;
+        PublishBtn.Visibility = hasRemote ? Visibility.Collapsed : Visibility.Visible;
+        PullBtn.IsEnabled = hasRemote;
 
         var rows = Git.ChangedFiles(_dir).Select(f => new GitFileRow(f)).ToList();
         FilesList.ItemsSource = rows;
@@ -102,6 +110,15 @@ public partial class GitWindow : FluentWindow
         PushBtn.IsEnabled = false;
         try { Report(await Task.Run(() => Git.Push(_dir))); }
         finally { PushBtn.IsEnabled = true; }
+        Refresh();
+    }
+
+    private async void OnPublish(object sender, RoutedEventArgs e)
+    {
+        StatusText.Text = "publishing to GitHub…";
+        PublishBtn.IsEnabled = false;
+        try { Report(await _vm.PublishForGitAsync(_name)); }
+        finally { PublishBtn.IsEnabled = true; }
         Refresh();
     }
 
