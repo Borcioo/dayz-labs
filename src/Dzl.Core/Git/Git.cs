@@ -143,6 +143,34 @@ public static class Git
         return code == 0 ? ParseChangedFiles(outp) : new();
     }
 
+    /// <summary>A recent commit (for log views / MCP).</summary>
+    public sealed record Commit(string Hash, string Author, string Date, string Subject);
+
+    /// <summary>Recent commits, newest first (<c>git log</c>). Empty when not a repo / no commits.</summary>
+    public static List<Commit> Log(string dir, int count = 20)
+    {
+        // Unit-separator (0x1f) between fields so subjects with spaces parse cleanly.
+        var (code, outp, _) = Proc.Run("git", dir, "log", $"-n{count}", "--date=short", "--pretty=format:%h%an%ad%s");
+        if (code != 0) return new();
+        var list = new List<Commit>();
+        foreach (var line in outp.Split('\n'))
+        {
+            if (line.Trim().Length == 0) continue;
+            var p = line.Split('');
+            if (p.Length >= 4) list.Add(new Commit(p[0], p[1], p[2], p[3]));
+        }
+        return list;
+    }
+
+    /// <summary>Diff of the work tree vs the last commit (<c>git diff HEAD</c>), optionally for one file.</summary>
+    public static string Diff(string dir, string? file = null)
+    {
+        var args = new List<string> { "diff", "HEAD" };
+        if (!string.IsNullOrWhiteSpace(file)) { args.Add("--"); args.Add(file!); }
+        var (code, outp, err) = Proc.Run("git", dir, args.ToArray());
+        return code == 0 ? outp : (err.Length > 0 ? err : outp);
+    }
+
     /// <summary>Current branch + all local branches.</summary>
     public static (string current, List<string> all) Branches(string dir)
     {

@@ -84,6 +84,46 @@ public sealed class RepoService
         return new RepoOp(ok, ok ? $"released {tag} → {msg}" : $"gh release failed: {msg}");
     }
 
+    /// <summary>Changed files in a mod's repo (staged + unstaged + untracked).</summary>
+    public (bool ok, string error, List<Git.ChangedFile> files) Changes(string mod)
+    {
+        var dir = ResolveProject(mod, out var err);
+        if (dir is null) return (false, err, new());
+        if (!Git.IsRepo(dir)) return (false, "not a git repo", new());
+        return (true, "", Git.ChangedFiles(dir));
+    }
+
+    /// <summary>Recent commits in a mod's repo (newest first).</summary>
+    public (bool ok, string error, List<Git.Commit> commits) Log(string mod, int count = 20)
+    {
+        var dir = ResolveProject(mod, out var err);
+        if (dir is null) return (false, err, new());
+        if (!Git.IsRepo(dir)) return (false, "not a git repo", new());
+        return (true, "", Git.Log(dir, count));
+    }
+
+    /// <summary>Diff of a mod's work tree vs HEAD (optionally one file).</summary>
+    public (bool ok, string error, string diff) Diff(string mod, string? file = null)
+    {
+        var dir = ResolveProject(mod, out var err);
+        if (dir is null) return (false, err, "");
+        if (!Git.IsRepo(dir)) return (false, "not a git repo", "");
+        return (true, "", Git.Diff(dir, file));
+    }
+
+    /// <summary>Stage + commit a mod's changes. <paramref name="all"/> stages everything first; otherwise only
+    /// the already-staged index is committed.</summary>
+    public RepoOp Commit(string mod, string message, bool all = true)
+    {
+        if (string.IsNullOrWhiteSpace(message)) return new RepoOp(false, "commit message required");
+        var dir = ResolveProject(mod, out var err);
+        if (dir is null) return new RepoOp(false, err);
+        if (!Git.IsRepo(dir)) return new RepoOp(false, "not a git repo");
+        if (all) { var s = Git.StageAll(dir); if (!s.ok) return new RepoOp(false, s.msg); }
+        var r = Git.CommitStaged(dir, message);
+        return new RepoOp(r.ok, r.msg);
+    }
+
     /// <summary>Cut a GitHub release with full options, optionally uploading the built <c>@&lt;mod&gt;</c> PBOs
     /// as release assets.</summary>
     public RepoOp Release(string mod, ReleaseOptions opts, bool attachBuiltAddons)

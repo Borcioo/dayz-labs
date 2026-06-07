@@ -109,6 +109,35 @@ public static class DzlMcpTools
     public static string RepoStatus([Description("Mod project name")] string mod)
         => J(new RepoService(ConfigPath()).Status(mod));
 
+    [McpServerTool, Description("Changed files in a mod's git repo (staged + unstaged + untracked): Path, Index/Worktree status, Staged, Untracked.")]
+    public static string GitChanges([Description("Mod project name")] string mod)
+    {
+        var (ok, error, files) = new RepoService(ConfigPath()).Changes(mod);
+        return J(new { ok, error, files });
+    }
+
+    [McpServerTool, Description("Recent commits in a mod's git repo (newest first): Hash, Author, Date, Subject.")]
+    public static string GitLog([Description("Mod project name")] string mod,
+                                [Description("how many commits")] int count = 20)
+    {
+        var (ok, error, commits) = new RepoService(ConfigPath()).Log(mod, count);
+        return J(new { ok, error, commits });
+    }
+
+    [McpServerTool, Description("Diff of a mod's work tree vs HEAD (unified). Optionally limit to one file path.")]
+    public static string GitDiff([Description("Mod project name")] string mod,
+                                 [Description("file path within the mod (omit = whole repo)")] string? file = null)
+    {
+        var (ok, error, diff) = new RepoService(ConfigPath()).Diff(mod, file);
+        return J(new { ok, error, diff });
+    }
+
+    [McpServerTool, Description("Stage and commit a mod's changes. all=true stages everything first; all=false commits only the staged index.")]
+    public static string GitCommit([Description("Mod project name")] string mod,
+                                   [Description("commit message")] string message,
+                                   [Description("stage everything first")] bool all = true)
+        => J(new RepoService(ConfigPath()).Commit(mod, message, all));
+
     [McpServerTool, Description("Init git (with .gitignore + first commit) and create & push a GitHub repo named after the mod.")]
     public static string CreateRepo([Description("Mod project name")] string mod,
                                     [Description("private repo (false = public)")] bool @private = true,
