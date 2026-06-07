@@ -33,6 +33,15 @@ public static class GitHub
         return (code == 0, Join(outp, err));
     }
 
+    /// <summary>Clone a GitHub repo into <paramref name="destDir"/> (which must not yet exist) via
+    /// <c>gh repo clone &lt;repo&gt; &lt;dir&gt;</c> — gh accepts an <c>owner/name</c> or a full URL and reuses
+    /// its own auth. Returns (ok, message); never throws.</summary>
+    public static (bool ok, string msg) Clone(string repo, string destDir)
+    {
+        var (code, outp, err) = Proc.Run("gh", ".", "repo", "clone", repo, destDir);
+        return (code == 0, Join(outp, err));
+    }
+
     /// <summary>Create a GitHub repo from an existing local repo and push it: wraps
     /// <c>gh repo create &lt;name&gt; --source=. --remote=origin --push</c>. The dir must already be a
     /// git repo with at least one commit.</summary>

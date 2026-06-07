@@ -452,9 +452,18 @@ public partial class MainWindow : FluentWindow
         var author = NewModAuthorBox.Text.Trim();
         if (name.Length == 0) { NewModStatus.Text = "Enter a mod name."; return; }
         NewModButton.IsEnabled = false;
-        try { NewModStatus.Text = _vm.CreateModProject(name, author); }
+        try { NewModStatus.Text = _vm.CreateModProject(name, author, NewModInitGit.IsChecked == true); }
         finally { NewModButton.IsEnabled = true; }
         if (NewModStatus.Text.StartsWith('✓')) NewModNameBox.Text = "";
+    }
+
+    private void OnImportFromGitHub(object sender, RoutedEventArgs e)
+    {
+        var repo = GhRepoBox.Text.Trim();
+        if (repo.Length == 0) { GhImportStatus.Text = "Enter a GitHub repo (owner/name or URL)."; return; }
+        GhImportStatus.Text = "cloning…";
+        GhImportStatus.Text = _vm.ImportFromGitHub(repo, GhNameBox.Text);
+        if (GhImportStatus.Text.StartsWith('✓')) { GhRepoBox.Text = ""; GhNameBox.Text = ""; }
     }
 
     private void OnImportMod(object sender, RoutedEventArgs e)

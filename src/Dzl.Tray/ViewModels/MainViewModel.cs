@@ -822,18 +822,62 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Scaffold a new mod project + link P:\&lt;Mod&gt;. Caches the author. Returns a status line.</summary>
-    public string CreateModProject(string name, string author)
+    /// <summary>Scaffold a new mod project + link P:\&lt;Mod&gt;. Caches the author. Optionally initialises a
+    /// local git repo with a first commit. Returns a status line.</summary>
+    public string CreateModProject(string name, string author, bool initGit = false)
     {
         var root = ProjectsRoot;
         var res = ModScaffold.Scaffold(root, name, author);
         if (!res.Ok) return $"✗ {res.Message}";
         if (!string.IsNullOrWhiteSpace(author)) ModScaffold.SaveAuthor(ConfigDir, author);
-        var link = Junction.Ensure(ProjectPaths.JunctionPath(WorkDriveSource, name), ProjectPaths.ModDir(root, name));
+        var dir = ProjectPaths.ModDir(root, name);
+        var link = Junction.Ensure(ProjectPaths.JunctionPath(WorkDriveSource, name), dir);
+        var msg = link.Ok ? $"✓ created {name} + linked P:\\{name}" : $"✓ created {name}  (⚠ P:\\ link: {link.Detail})";
+        if (initGit)
+        {
+            var gi = Dzl.Core.Vcs.Git.Init(dir);
+            if (gi.ok) Dzl.Core.Vcs.Git.CommitAll(dir, "Initial commit (dzl scaffold)");
+            msg += gi.ok ? "  + git repo" : $"  (⚠ git: {gi.msg})";
+        }
         RefreshModProjects();
-        return link.Ok
-            ? $"✓ created {name} + linked P:\\{name}"
-            : $"✓ created {name}  (⚠ P:\\ link: {link.Detail})";
+        return msg;
+    }
+
+    /// <summary>Clone a GitHub repo into the projects tree as a mod (folder named <paramref name="name"/> or
+    /// derived from the repo), then link P:\&lt;Mod&gt;. Needs gh installed + logged in. Returns a status line.</summary>
+    public string ImportFromGitHub(string repo, string? name)
+    {
+        repo = repo?.Trim() ?? "";
+        if (repo.Length == 0) return "✗ enter a GitHub repo (owner/name or URL)";
+        var modName = SanitizeModName(string.IsNullOrWhiteSpace(name) ? DeriveRepoName(repo) : name!.Trim());
+        if (!ProjectPaths.IsValidName(modName)) return $"✗ couldn't derive a valid mod name — type one (letters, digits, _)";
+        var root = ProjectsRoot;
+        var dest = ProjectPaths.ModDir(root, modName);
+        if (Directory.Exists(dest)) return $"✗ {modName} already exists";
+        var clone = Dzl.Core.Vcs.GitHub.Clone(repo, dest);
+        if (!clone.ok) { RefreshModProjects(); return $"✗ clone failed: {clone.msg}"; }
+        var link = Junction.Ensure(ProjectPaths.JunctionPath(WorkDriveSource, modName), dest);
+        RefreshModProjects();
+        return link.Ok ? $"✓ imported {modName} from GitHub + linked P:\\{modName}" : $"✓ imported {modName}  (⚠ link: {link.Detail})";
+    }
+
+    /// <summary>True when gh is installed + logged in (drives the "From GitHub" tab availability).</summary>
+    public bool GitHubReady => Dzl.Core.Vcs.GitHub.AuthStatus().LoggedIn;
+
+    private static string DeriveRepoName(string repo)
+    {
+        var s = repo.TrimEnd('/');
+        var slash = s.LastIndexOf('/');
+        if (slash >= 0) s = s[(slash + 1)..];
+        return s.EndsWith(".git", StringComparison.OrdinalIgnoreCase) ? s[..^4] : s;
+    }
+
+    private static string SanitizeModName(string s)
+    {
+        var chars = s.Select(c => char.IsLetterOrDigit(c) || c == '_' ? c : '_').ToArray();
+        var name = new string(chars).Trim('_');
+        if (name.Length > 0 && !char.IsLetter(name[0])) name = "Mod_" + name;
+        return name;
     }
 
     /// <summary>Import an external mod source folder as a project (non-invasive link). Returns a status line.</summary>
