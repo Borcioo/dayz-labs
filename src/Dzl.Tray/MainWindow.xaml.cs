@@ -507,6 +507,20 @@ public partial class MainWindow : FluentWindow
             NewModStatus.Text = _vm.UnlinkMod(name);
     }
 
+    // Delete a mod project (destructive). Yes = source + build, No = source only, Cancel = abort.
+    private void OnDeleteProject(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string name }) return;
+        var r = System.Windows.MessageBox.Show(
+            $"Delete project \"{name}\"?\n\nThis removes its P: link and deletes the source folder — this can't be undone.\n\n" +
+            "Yes  → also delete the built @" + name + " output\n" +
+            "No   → delete the source only\n" +
+            "Cancel → keep everything",
+            "Delete project", System.Windows.MessageBoxButton.YesNoCancel, System.Windows.MessageBoxImage.Warning);
+        if (r == System.Windows.MessageBoxResult.Cancel) return;
+        NewModStatus.Text = _vm.DeleteModProject(name, alsoBuild: r == System.Windows.MessageBoxResult.Yes);
+    }
+
     private async void OnBuildMod(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string name }) return;

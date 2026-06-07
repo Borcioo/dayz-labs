@@ -1077,6 +1077,11 @@
                                       <MenuItem Header="Create release" Tag="{Binding Name}" Click="OnReleaseRepo">
                                         <MenuItem.Icon><ui:SymbolIcon Symbol="Tag24" /></MenuItem.Icon>
                                       </MenuItem>
+                                      <Separator />
+                                      <MenuItem Header="Delete project…" Tag="{Binding Name}" Click="OnDeleteProject"
+                                                Foreground="#FF6B6B">
+                                        <MenuItem.Icon><ui:SymbolIcon Symbol="Delete24" /></MenuItem.Icon>
+                                      </MenuItem>
                                     </ContextMenu>
                                   </ui:DropDownButton.Flyout>
                                 </ui:DropDownButton>

@@ -852,6 +852,28 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return link.Ok ? $"✓ {name}: {link.Detail}" : $"✗ {name}: {link.Detail}";
     }
 
+    /// <summary>Delete a mod project: remove its P: source junction (link only), delete the source folder, and
+    /// optionally the build output. Destructive — the caller confirms first. Returns a status line.</summary>
+    public string DeleteModProject(string name, bool alsoBuild)
+    {
+        var root = ProjectsRoot;
+        try
+        {
+            Junction.Remove(ProjectPaths.JunctionPath(WorkDriveSource, name));   // drop the link, never the target
+            var src = ProjectPaths.ModDir(root, name);
+            if (Directory.Exists(src)) Directory.Delete(src, true);
+            if (alsoBuild)
+            {
+                var build = ProjectPaths.BuildDir(root, name);
+                if (Directory.Exists(build)) Directory.Delete(build, true);
+            }
+        }
+        catch (Exception ex) { RefreshModProjects(); return $"✗ {name}: {ex.Message}"; }
+        RefreshModProjects();
+        Reload();   // the mod also drops out of the library / run-list discovery
+        return $"✓ deleted {name}" + (alsoBuild ? " (source + build)" : " (source)");
+    }
+
     /// <summary>Remove a mod's work-drive junction (leaves the source folder untouched). Returns a status line.</summary>
     public string UnlinkMod(string name)
     {
