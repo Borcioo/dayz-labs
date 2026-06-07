@@ -745,11 +745,11 @@
               </StackPanel>
             </Grid>
 
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-              <StackPanel Margin="0,0,14,0">
+            <Grid Grid.Row="1" Margin="0,0,14,0">
+              <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
 
                 <!-- Steam Workshop (SP5) — full browser in its own window -->
-                <ui:Card Margin="0,0,0,12" Padding="16">
+                <ui:Card Grid.Row="0" Margin="0,0,0,12" Padding="16">
                   <Grid>
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
@@ -764,9 +764,10 @@
                 </ui:Card>
 
                 <!-- Discovered library -->
-                <ui:Card Margin="0,0,0,4" Padding="16">
-                  <StackPanel>
-                    <Grid Margin="0,0,0,12">
+                <ui:Card Grid.Row="1" Margin="0,0,0,4" Padding="16">
+                  <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
                       <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -778,6 +779,8 @@
                       </StackPanel>
                       <ui:Button Grid.Column="1" Content="Rescan" Icon="{ui:SymbolIcon ArrowSync24}" Command="{Binding RescanCommand}" />
                     </Grid>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                      <StackPanel>
                     <ItemsControl ItemsSource="{Binding ModsView}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate>
@@ -824,11 +827,11 @@
                         </Style>
                       </TextBlock.Style>
                     </TextBlock>
-                  </StackPanel>
+                      </StackPanel>
+                    </ScrollViewer>
+                  </Grid>
                 </ui:Card>
-
-              </StackPanel>
-            </ScrollViewer>
+            </Grid>
 
             <!-- Blocking overlay: no projects root configured → the mods library can't resolve a home -->
             <Border Grid.Row="0" Grid.RowSpan="2" Background="#CC1A1A1A"
