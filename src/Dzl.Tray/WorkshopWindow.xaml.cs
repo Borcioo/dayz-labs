@@ -108,6 +108,16 @@ public partial class WorkshopWindow : FluentWindow
 
     // Resolve the item's real folder by id (Steam client OR the steamcmd download under ProjectsRoot) — the
     // SubscribedItem.Dir reflects only the Steam client folder and is empty for optimistic / steamcmd-only rows.
+    // Open a specific folder path directly (used by the Downloaded list, so the same id existing as a Steam
+    // subscription doesn't redirect us to the Steam folder via the id resolver).
+    private void OnOpenFolderDirect(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string dir }) return;
+        if (string.IsNullOrWhiteSpace(dir) || !ShellOpen.Folder(dir))
+            System.Windows.MessageBox.Show("Folder not found — it may have been deleted.",
+                "Open folder", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+    }
+
     private void OnOpenSubscribedFolder(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string id }) return;

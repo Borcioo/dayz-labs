@@ -300,7 +300,7 @@
                               <MenuItem Header="Show details in dzl" Tag="{Binding Id}" Click="OnShowInDzl">
                                 <MenuItem.Icon><ui:SymbolIcon Symbol="Info24" /></MenuItem.Icon>
                               </MenuItem>
-                              <MenuItem Header="Open folder (Explorer)" Tag="{Binding Id}" Click="OnOpenSubscribedFolder">
+                              <MenuItem Header="Open folder (Explorer)" Tag="{Binding Dir}" Click="OnOpenFolderDirect">
                                 <MenuItem.Icon><ui:SymbolIcon Symbol="FolderOpen24" /></MenuItem.Icon>
                               </MenuItem>
                             </ContextMenu>
