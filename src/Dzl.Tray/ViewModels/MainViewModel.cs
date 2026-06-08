@@ -1431,7 +1431,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(CheckedTypeCount));
         OnPropertyChanged(nameof(HasChecked));
         OnPropertyChanged(nameof(AllFilteredChecked));
+        OnPropertyChanged(nameof(BatchMode));
     }
+
+    /// <summary>True when 2 or more rows are checked — switches the right panel from the single-row
+    /// edit form to the batch operations panel.</summary>
+    public bool BatchMode => CheckedTypeCount >= 2;
 
     // --- lint summary across the whole loaded set ---
     [ObservableProperty] private string _typesLintSummary = "";
