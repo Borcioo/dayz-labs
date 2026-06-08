@@ -1648,8 +1648,9 @@
                         GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                         BeginningEdit="OnTypesBeginEdit" CellEditEnding="OnTypesCellEditEnding">
                 <DataGrid.Columns>
-                  <!-- Checkbox selection (batch target) + header select-all over the filtered set -->
-                  <DataGridTemplateColumn Width="38" CanUserSort="False" IsReadOnly="True">
+                  <!-- Checkbox selection (batch target) + header select-all over the filtered set.
+                       Width accounts for the 8,0 cell padding (16px) so the checkbox isn't clipped. -->
+                  <DataGridTemplateColumn Width="48" CanUserSort="False" IsReadOnly="True">
                     <DataGridTemplateColumn.HeaderTemplate>
                       <DataTemplate>
                         <CheckBox HorizontalAlignment="Center" IsThreeState="True"
