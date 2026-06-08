@@ -50,7 +50,7 @@
       <StackPanel Grid.Column="1" Orientation="Horizontal">
         <TextBlock Text="Category" VerticalAlignment="Center" Margin="0,0,6,0"
                    Style="{StaticResource PsHint}" />
-        <ComboBox Width="130" Margin="0,0,8,0" VerticalAlignment="Center"
+        <ComboBox MinWidth="130" Margin="0,0,8,0" VerticalAlignment="Center"
                   ItemsSource="{Binding Categories}"
                   SelectedItem="{Binding SelectedCategory, Mode=TwoWay}"
                   ToolTip="Spawn category present in the file" />

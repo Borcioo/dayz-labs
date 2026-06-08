@@ -106,7 +106,7 @@
             <ui:TextBox Grid.Column="1" Width="56" Margin="0,0,4,0" FontSize="12"
                         ToolTip="chance 0..1"
                         Text="{Binding NewPresetChance, UpdateSourceTrigger=PropertyChanged}" />
-            <ComboBox Grid.Column="2" Width="120" Margin="0,0,4,0" VerticalAlignment="Center"
+            <ComboBox Grid.Column="2" MinWidth="110" Margin="0,0,4,0" VerticalAlignment="Center"
                       SelectedIndex="0"
                       SelectionChanged="OnNewKindChanged" ToolTip="preset kind"
                       x:Name="NewKindCombo">

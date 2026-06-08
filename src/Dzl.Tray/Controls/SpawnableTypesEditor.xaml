@@ -253,7 +253,7 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="Cargo blocks" Style="{StaticResource StBlockLabel}"
                            VerticalAlignment="Center" />
-                <ComboBox Grid.Column="1" Width="150" Margin="0,0,4,0" FontSize="12" x:Name="CargoPresetCombo"
+                <ComboBox Grid.Column="1" MinWidth="150" Margin="0,0,4,0" FontSize="12" x:Name="CargoPresetCombo"
                           ItemsSource="{Binding CargoPresetNames}" ToolTip="pick a cargo preset to add"
                           IsEditable="True" />
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
@@ -273,7 +273,7 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="Attachments blocks" Style="{StaticResource StBlockLabel}"
                            VerticalAlignment="Center" />
-                <ComboBox Grid.Column="1" Width="150" Margin="0,0,4,0" FontSize="12" x:Name="AttPresetCombo"
+                <ComboBox Grid.Column="1" MinWidth="150" Margin="0,0,4,0" FontSize="12" x:Name="AttPresetCombo"
                           ItemsSource="{Binding AttachmentsPresetNames}" ToolTip="pick an attachments preset to add"
                           IsEditable="True" />
                 <StackPanel Grid.Column="2" Orientation="Horizontal">

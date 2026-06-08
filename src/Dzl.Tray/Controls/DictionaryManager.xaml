@@ -102,7 +102,7 @@
           <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="260" /><ColumnDefinition Width="*" />
+          <ColumnDefinition Width="300" /><ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
         <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,8"
@@ -123,9 +123,9 @@
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <ui:TextBox Grid.Column="0" Margin="0,0,4,0" FontSize="12" PlaceholderText="new combo name"
+            <ui:TextBox Grid.Column="0" MinWidth="150" Margin="0,0,4,0" FontSize="12" PlaceholderText="new combo name"
                         Text="{Binding NewComboName, UpdateSourceTrigger=PropertyChanged}" />
-            <ComboBox Grid.Column="1" Width="76" Margin="0,0,4,0" VerticalAlignment="Center"
+            <ComboBox Grid.Column="1" MinWidth="90" Margin="0,0,4,0" VerticalAlignment="Center"
                       SelectedValuePath="Tag" SelectedValue="{Binding NewComboIsUsage, Mode=TwoWay, Converter={x:Static ctl:DictionaryManager.UsageBoolConv}}"
                       ToolTip="combo kind">
               <ComboBoxItem Content="usage" Tag="usage" />

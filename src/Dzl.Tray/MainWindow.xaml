@@ -1512,7 +1512,7 @@
                     <StackPanel Orientation="Horizontal" Margin="0,0,16,4">
                       <TextBlock Text="File:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="SemiBold"
                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                      <ComboBox Width="280" VerticalAlignment="Center"
+                      <ComboBox MinWidth="160" VerticalAlignment="Center"
                                 ItemsSource="{Binding TypesFileOptions}"
                                 DisplayMemberPath="Label" SelectedValuePath="Path"
                                 SelectedValue="{Binding TypesFileFilter}"
@@ -1521,7 +1521,7 @@
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                       <TextBlock Text="Source:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="SemiBold"
                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                      <ComboBox Width="110" VerticalAlignment="Center"
+                      <ComboBox MinWidth="110" VerticalAlignment="Center"
                                 SelectedValuePath="Tag" SelectedValue="{Binding TypesSourceFilter}"
                                 ToolTip="Vanilla / Mod / Custom origin">
                         <ComboBoxItem Content="All sources" Tag="" />
@@ -1574,35 +1574,35 @@
                 <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
                   <TextBlock Text="Category:" VerticalAlignment="Center" Margin="0,0,6,0"
                              Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                  <ComboBox Width="130" VerticalAlignment="Center"
+                  <ComboBox MinWidth="130" VerticalAlignment="Center"
                             ItemsSource="{Binding TypeCategories}" SelectedItem="{Binding TypesCategoryFilter}"
                             ToolTip="Category (blank = all)" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
                   <TextBlock Text="Usage:" VerticalAlignment="Center" Margin="0,0,6,0"
                              Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                  <ComboBox Width="120" VerticalAlignment="Center" IsEditable="True"
+                  <ComboBox MinWidth="140" VerticalAlignment="Center" IsEditable="True"
                             Text="{Binding TypesUsageFilter, UpdateSourceTrigger=PropertyChanged}"
                             ItemsSource="{Binding LimitsUsage}" ToolTip="Usage contains…" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
                   <TextBlock Text="Tier:" VerticalAlignment="Center" Margin="0,0,6,0"
                              Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                  <ComboBox Width="110" VerticalAlignment="Center" IsEditable="True"
+                  <ComboBox MinWidth="110" VerticalAlignment="Center" IsEditable="True"
                             Text="{Binding TypesValueFilter, UpdateSourceTrigger=PropertyChanged}"
                             ItemsSource="{Binding LimitsValue}" ToolTip="Tier (value) contains…" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
                   <TextBlock Text="Tag:" VerticalAlignment="Center" Margin="0,0,6,0"
                              Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                  <ComboBox Width="110" VerticalAlignment="Center" IsEditable="True"
+                  <ComboBox MinWidth="110" VerticalAlignment="Center" IsEditable="True"
                             Text="{Binding TypesTagFilter, UpdateSourceTrigger=PropertyChanged}"
                             ItemsSource="{Binding LimitsTag}" ToolTip="Tag contains…" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
                   <TextBlock Text="Flag:" VerticalAlignment="Center" Margin="0,0,6,0"
                              Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                  <ComboBox Width="120" VerticalAlignment="Center"
+                  <ComboBox MinWidth="140" VerticalAlignment="Center"
                             SelectedValuePath="Tag" SelectedValue="{Binding TypesFlagFilter}"
                             ToolTip="Has flag set">
                     <ComboBoxItem Content="Any flag" Tag="" />
@@ -1776,7 +1776,7 @@
                           <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                             <TextBlock Text="Field:" VerticalAlignment="Center" Margin="0,0,6,0"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                            <ComboBox x:Name="BatchFieldBox" Width="100" VerticalAlignment="Center" SelectedIndex="0">
+                            <ComboBox x:Name="BatchFieldBox" MinWidth="100" VerticalAlignment="Center" SelectedIndex="0">
                               <ComboBoxItem Content="nominal" /><ComboBoxItem Content="min" />
                               <ComboBoxItem Content="quantmin" /><ComboBoxItem Content="quantmax" />
                               <ComboBoxItem Content="lifetime" /><ComboBoxItem Content="restock" /><ComboBoxItem Content="cost" />
@@ -1826,7 +1826,7 @@
                           <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                             <TextBlock Text="List:" VerticalAlignment="Center" Margin="0,0,6,0"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                            <ComboBox x:Name="BatchListBox" Width="80" VerticalAlignment="Center" SelectedValuePath="Tag" SelectedIndex="0">
+                            <ComboBox x:Name="BatchListBox" MinWidth="80" VerticalAlignment="Center" SelectedValuePath="Tag" SelectedIndex="0">
                               <ComboBoxItem Content="usage" Tag="usage" />
                               <ComboBoxItem Content="value" Tag="value" />
                               <ComboBoxItem Content="tag" Tag="tag" />
