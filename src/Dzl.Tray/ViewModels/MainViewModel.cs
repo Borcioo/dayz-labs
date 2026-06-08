@@ -1674,6 +1674,16 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>(Re)load the Random Presets tab from disk. Called when its tab is activated.</summary>
     public void RefreshRandomPresets() => RandomPresets.Reload();
 
+    // --- CE Events tab (db/events.xml) -------------------------------------
+    private Dzl.Tray.Controls.EventsVm? _events;
+
+    /// <summary>Backs the Events tab (CE spawn events + children). Created lazily so it shares this VM's config path.</summary>
+    public Dzl.Tray.Controls.EventsVm Events =>
+        _events ??= new Dzl.Tray.Controls.EventsVm(_configPath, ConfirmDictionaryAction);
+
+    /// <summary>(Re)load the Events tab from disk. Called when its tab is activated.</summary>
+    public void RefreshEvents() => Events.Reload();
+
     // --- CE Globals tab (db/globals.xml) ------------------------------------
     private Dzl.Tray.Controls.GlobalsVm? _globals;
 

@@ -1844,6 +1844,12 @@
               <TabItem Header="Globals">
                 <ctl:GlobalsEditor DataContext="{Binding Globals}" />
               </TabItem>
+
+              <!-- Events: edit db/events.xml — CE spawn events (nominal counts, radii, flags, children).
+                   DataContext = MainViewModel.Events (an EventsVm). -->
+              <TabItem Header="Events">
+                <ctl:EventsEditor DataContext="{Binding Events}" />
+              </TabItem>
             </TabControl>
           </Grid>
 

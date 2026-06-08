@@ -613,6 +613,8 @@ public partial class MainWindow : FluentWindow
             _vm.RefreshSpawnableTypes();
         else if (EconomyTabControl.SelectedItem is TabItem { Header: "Globals" })
             _vm.RefreshGlobals();
+        else if (EconomyTabControl.SelectedItem is TabItem { Header: "Events" })
+            _vm.RefreshEvents();
     }
 
     private void OnAddType(object sender, RoutedEventArgs e)
