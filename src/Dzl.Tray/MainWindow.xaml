@@ -1744,14 +1744,16 @@
               <!-- Right column: contextual panel — single-row edit form OR batch operations -->
               <Grid Grid.Column="1" Margin="10,0,0,0">
                 <!-- Single-row edit form — visible when 0 or 1 rows are checked -->
+                <!-- DataContext is the selected row, but Vm/suggestions/Visibility must come from the page
+                     VM (not the row) — bind them explicitly via the PageEconomy element's DataContext. -->
                 <ctl:TypeDetailPanel x:Name="TypeDetail"
                                      DataContext="{Binding SelectedType}"
-                                     Vm="{Binding}"
-                                     Categories="{Binding LimitsCategory}"
-                                     UsageSuggestions="{Binding LimitsUsage}"
-                                     ValueSuggestions="{Binding LimitsValue}"
-                                     TagSuggestions="{Binding LimitsTag}"
-                                     Visibility="{Binding BatchMode, Converter={StaticResource InverseBoolToVis}}" />
+                                     Vm="{Binding DataContext, ElementName=PageEconomy}"
+                                     Categories="{Binding DataContext.LimitsCategory, ElementName=PageEconomy}"
+                                     UsageSuggestions="{Binding DataContext.LimitsUsage, ElementName=PageEconomy}"
+                                     ValueSuggestions="{Binding DataContext.LimitsValue, ElementName=PageEconomy}"
+                                     TagSuggestions="{Binding DataContext.LimitsTag, ElementName=PageEconomy}"
+                                     Visibility="{Binding DataContext.BatchMode, ElementName=PageEconomy, Converter={StaticResource InverseBoolToVis}}" />
 
                 <!-- Batch operations panel — visible when 2+ rows are checked -->
                 <Border Visibility="{Binding BatchMode, Converter={StaticResource BoolToVis}}"
