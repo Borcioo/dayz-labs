@@ -224,7 +224,8 @@
           <ComboBox IsEditable="True" StaysOpenOnEdit="True" Margin="0,0,0,12"
                     Text="{Binding Category, UpdateSourceTrigger=LostFocus}"
                     ItemsSource="{Binding Categories, ElementName=Root}"
-                    GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit" />
+                    GotKeyboardFocus="OnFieldFocus" LostFocus="OnCategoryCommit"
+                    SelectionChanged="OnCategorySelectionChanged" />
 
           <!-- Chip multiselects -->
           <TextBlock Text="Usage" Style="{StaticResource DetailLabel}" />

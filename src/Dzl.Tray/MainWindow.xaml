@@ -1456,7 +1456,8 @@
             <TextBlock Grid.Row="0" Text="Central Economy" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,8" />
 
             <!-- CE editor tab shell: one tab per CE file KIND (Types now; more kinds slot in later). -->
-            <TabControl Grid.Row="1" BorderThickness="0" Background="Transparent" Padding="0">
+            <TabControl x:Name="EconomyTabControl" Grid.Row="1" BorderThickness="0" Background="Transparent" Padding="0"
+                        SelectionChanged="OnEconomyTabSelectionChanged">
               <TabControl.Resources>
                 <Style TargetType="TabItem">
                   <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />

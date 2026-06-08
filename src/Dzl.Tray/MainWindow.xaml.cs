@@ -597,6 +597,18 @@ public partial class MainWindow : FluentWindow
     private void OnReloadTypes(object sender, RoutedEventArgs e) { _vm.LoadTypes(); RefreshTypesBackupsMenu(); }
     private void OnSaveTypes(object sender, RoutedEventArgs e) { _vm.SaveTypes(); RefreshTypesBackupsMenu(); }
 
+    /// <summary>Reload the Dictionaries data when the user switches to the Dictionaries sub-tab of the
+    /// Economy tab shell, so stale limits (e.g. after types/limits edits) are refreshed immediately.
+    /// Guarded against child SelectionChanged bubbling by checking e.OriginalSource is this TabControl.</summary>
+    private void OnEconomyTabSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        // Only react to selection changes on the exact Economy TabControl, not bubbled events from
+        // child controls (DataGrid, ComboBox, etc.) whose SelectionChanged also bubbles up.
+        if (!ReferenceEquals(e.OriginalSource, EconomyTabControl)) return;
+        if (EconomyTabControl.SelectedItem is TabItem { Header: "Dictionaries" })
+            _vm.RefreshDictionaries();
+    }
+
     private void OnAddType(object sender, RoutedEventArgs e)
     {
         var result = NewTypeDialog.Show(this, _vm.TypesSourceFiles());

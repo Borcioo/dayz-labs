@@ -207,7 +207,46 @@ public partial class TypeDetailPanel : UserControl
     private void OnRegisterToDictionary(object sender, RoutedEventArgs e)
     {
         if (Vm is null || string.IsNullOrWhiteSpace(_pendingValue)) { HideRegister(); return; }
-        Vm.AddToDictionary(_pendingKind, _pendingValue);   // refreshes suggestions + re-lints on success
-        HideRegister();
+        var r = Vm.AddToDictionary(_pendingKind, _pendingValue);   // refreshes suggestions + re-lints on success
+        if (!r.ok)
+        {
+            // Show the error message in-place; leave the bar visible so the user can see it.
+            RegisterText.Text = r.msg;
+        }
+        else
+        {
+            HideRegister();
+        }
+    }
+
+    // --- Category free-add → dictionary affordance -------------------------
+    // When the Category editable ComboBox commits a value that is not in the live category
+    // dictionary (LimitsCategory), surface the same RegisterBar so the user can add it.
+
+    private void OnCategoryCommit(object sender, RoutedEventArgs e)
+    {
+        // Perform the standard field-commit (re-lint, clear pending snapshot flag).
+        OnFieldCommit(sender, e);
+        if (sender is not ComboBox combo) return;
+        var val = combo.Text?.Trim() ?? "";
+        MaybeOfferRegisterForCategory(val);
+    }
+
+    private void OnCategorySelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is not ComboBox combo) return;
+        var val = (combo.SelectedItem as string) ?? combo.Text?.Trim() ?? "";
+        MaybeOfferRegisterForCategory(val);
+    }
+
+    private void MaybeOfferRegisterForCategory(string val)
+    {
+        if (string.IsNullOrWhiteSpace(val) || Vm is null) return;
+        // Only offer if the category is not already in the live category dictionary.
+        if (!Vm.IsUnknownLimit(Dzl.Core.Economy.LimitsKind.Category, val)) return;
+        _pendingKind = Dzl.Core.Economy.LimitsKind.Category;
+        _pendingValue = val;
+        RegisterText.Text = $"'{val}' isn't in the category dictionary yet.";
+        RegisterBar.Visibility = Visibility.Visible;
     }
 }
