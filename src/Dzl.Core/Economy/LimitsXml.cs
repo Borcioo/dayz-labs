@@ -61,6 +61,11 @@ public static class LimitsXml
         _                   => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 
+    /// <summary>Find the container element for the given <paramref name="kind"/> under the document root,
+    /// or return null if it does not exist. Never mutates the document.</summary>
+    private static XElement? FindContainer(XElement root, string containerName) =>
+        root.Element(containerName);
+
     /// <summary>Find or create the container element for the given <paramref name="kind"/> under the document root.</summary>
     private static XElement GetOrCreateContainer(XDocument doc, LimitsKind kind)
     {
@@ -89,11 +94,15 @@ public static class LimitsXml
         return true;
     }
 
-    /// <summary>Remove the named entry from the appropriate container. Returns true if an entry was removed.</summary>
+    /// <summary>Remove the named entry from the appropriate container. Returns true if an entry was removed.
+    /// If the container does not exist the document is not mutated and false is returned.</summary>
     public static bool RemoveName(XDocument doc, LimitsKind kind, string name)
     {
-        var (_, child) = KindNames(kind);
-        var container = GetOrCreateContainer(doc, kind);
+        var (containerName, child) = KindNames(kind);
+        var root = doc.Root;
+        if (root is null) return false;
+        var container = FindContainer(root, containerName);
+        if (container is null) return false;
         var el = container.Elements(child)
             .FirstOrDefault(e => string.Equals(e.Attribute("name")?.Value, name, StringComparison.OrdinalIgnoreCase));
         if (el is null) return false;
@@ -102,11 +111,15 @@ public static class LimitsXml
     }
 
     /// <summary>Rename an entry in place (preserves position). Returns true if the rename was performed;
-    /// false if <paramref name="oldName"/> does not exist or <paramref name="newName"/> already exists.</summary>
+    /// false if <paramref name="oldName"/> does not exist or <paramref name="newName"/> already exists.
+    /// If the container does not exist the document is not mutated and false is returned.</summary>
     public static bool RenameName(XDocument doc, LimitsKind kind, string oldName, string newName)
     {
-        var (_, child) = KindNames(kind);
-        var container = GetOrCreateContainer(doc, kind);
+        var (containerName, child) = KindNames(kind);
+        var root = doc.Root;
+        if (root is null) return false;
+        var container = FindContainer(root, containerName);
+        if (container is null) return false;
         var el = container.Elements(child)
             .FirstOrDefault(e => string.Equals(e.Attribute("name")?.Value, oldName, StringComparison.OrdinalIgnoreCase));
         if (el is null) return false;
@@ -118,6 +131,10 @@ public static class LimitsXml
         return true;
     }
 
-    /// <summary>Serialize back to text with the XML declaration preserved.</summary>
-    public static string ToXml(XDocument doc) => doc.Declaration + Environment.NewLine + doc.Root;
+    /// <summary>Serialize back to text. Preserves the XML declaration if one is present;
+    /// returns only the root element text when no declaration exists (avoids a leading bare newline).</summary>
+    public static string ToXml(XDocument doc) =>
+        doc.Declaration is null
+            ? doc.Root!.ToString()
+            : doc.Declaration + Environment.NewLine + doc.Root;
 }

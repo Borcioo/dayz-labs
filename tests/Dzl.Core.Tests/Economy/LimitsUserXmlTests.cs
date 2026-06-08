@@ -216,4 +216,19 @@ public class LimitsUserXmlTests
         var groups = LimitsUserXml.Parse(LimitsUserXml.ToXml(doc));
         groups.Select(g => g.Name).Should().BeEquivalentTo("TownVillage", "UrbanArea", "Tier123");
     }
+
+    // ------------------------------------------------------------------
+    // Fix #2 — ToXml does not emit a leading newline when no declaration
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public void ToXml_no_declaration_starts_with_angle_bracket_not_newline()
+    {
+        // Parse XML that has no <?xml ...?> declaration.
+        var doc = LimitsUserXml.ParseDoc("<user_lists><usageflags/></user_lists>");
+        doc.Declaration.Should().BeNull();
+        var xml = LimitsUserXml.ToXml(doc);
+        xml.Should().StartWith("<");
+        xml[0].Should().Be('<');
+    }
 }

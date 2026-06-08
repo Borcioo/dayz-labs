@@ -27,7 +27,7 @@ public static class LimitsUserXml
     // Internal helpers
     // ------------------------------------------------------------------
 
-    private static (string Container, string MemberElem, LimitsKind Kind)[] Sections =>
+    private static readonly (string Container, string MemberElem, LimitsKind Kind)[] Sections =
     [
         ("usageflags", "usage", LimitsKind.Usage),
         ("valueflags", "value", LimitsKind.Value),
@@ -181,6 +181,10 @@ public static class LimitsUserXml
         return true;
     }
 
-    /// <summary>Serialize back to text with the XML declaration preserved.</summary>
-    public static string ToXml(XDocument doc) => doc.Declaration + Environment.NewLine + doc.Root;
+    /// <summary>Serialize back to text. Preserves the XML declaration if one is present;
+    /// returns only the root element text when no declaration exists (avoids a leading bare newline).</summary>
+    public static string ToXml(XDocument doc) =>
+        doc.Declaration is null
+            ? doc.Root!.ToString()
+            : doc.Declaration + Environment.NewLine + doc.Root;
 }

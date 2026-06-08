@@ -195,4 +195,46 @@ public class LimitsXmlEditTests
         var xml = LimitsXml.ToXml(doc);
         xml.Should().StartWith("<?xml");
     }
+
+    // ------------------------------------------------------------------
+    // Fix #1 — RemoveName / RenameName are non-mutating when container absent
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public void RemoveName_absent_container_returns_false_and_does_not_add_empty_container()
+    {
+        // Doc has no usageflags container.
+        const string NoUsage = "<lists><categories><category name=\"weapons\"/></categories></lists>";
+        var doc = LimitsXml.ParseDoc(NoUsage);
+        var result = LimitsXml.RemoveName(doc, LimitsKind.Usage, "Military");
+        result.Should().BeFalse();
+        // ToXml must not contain a newly-created empty <usageflags/>.
+        LimitsXml.ToXml(doc).Should().NotContain("usageflags");
+    }
+
+    [Fact]
+    public void RenameName_absent_container_returns_false_and_does_not_add_empty_container()
+    {
+        // Doc has no tags container.
+        const string NoTags = "<lists><categories><category name=\"weapons\"/></categories></lists>";
+        var doc = LimitsXml.ParseDoc(NoTags);
+        var result = LimitsXml.RenameName(doc, LimitsKind.Tag, "floor", "ground");
+        result.Should().BeFalse();
+        LimitsXml.ToXml(doc).Should().NotContain("tags");
+    }
+
+    // ------------------------------------------------------------------
+    // Fix #2 — ToXml does not emit a leading newline when no declaration
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public void ToXml_no_declaration_starts_with_angle_bracket_not_newline()
+    {
+        // Parse XML that has no <?xml ...?> declaration.
+        var doc = LimitsXml.ParseDoc("<lists><usageflags><usage name=\"Military\"/></usageflags></lists>");
+        doc.Declaration.Should().BeNull();
+        var xml = LimitsXml.ToXml(doc);
+        xml.Should().StartWith("<");
+        xml[0].Should().Be('<');
+    }
 }
