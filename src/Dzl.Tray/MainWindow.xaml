@@ -235,12 +235,14 @@
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <!-- Default cell padding; bound via the template so a per-column CellStyle can override it
+             (e.g. the checkbox column sets Padding=0 so the box isn't clipped). -->
+        <Setter Property="Padding" Value="8,0" />
         <Setter Property="Template">
           <Setter.Value>
             <ControlTemplate TargetType="DataGridCell">
-              <Border Background="{TemplateBinding Background}" Padding="8,0">
+              <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
                 <ContentPresenter VerticalAlignment="Center" />
-              </Border>
             </ControlTemplate>
           </Setter.Value>
         </Setter>
@@ -1651,7 +1653,7 @@
                   <!-- Checkbox selection (batch target) + header select-all over the filtered set.
                        Fixed width with the cell padding zeroed for this column so the (centered) checkbox is
                        never clipped — the default 8,0 cell padding ate the content width and cut the box. -->
-                  <DataGridTemplateColumn Width="44" CanUserSort="False" IsReadOnly="True">
+                  <DataGridTemplateColumn Width="44" MinWidth="44" CanUserResize="False" CanUserSort="False" IsReadOnly="True">
                     <DataGridTemplateColumn.CellStyle>
                       <Style TargetType="DataGridCell" BasedOn="{StaticResource DarkDataGridCell}">
                         <Setter Property="Padding" Value="0" />
