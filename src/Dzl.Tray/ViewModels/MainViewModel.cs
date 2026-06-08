@@ -1663,6 +1663,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>(Re)load the Dictionaries tab from disk. Called when the Economy page is shown.</summary>
     public void RefreshDictionaries() => Dictionaries.Reload();
 
+    // --- CE Random Presets tab (cfgrandompresets.xml) -----------------------
+    private Dzl.Tray.Controls.RandomPresetsVm? _randomPresets;
+
+    /// <summary>Backs the Random Presets tab (cargo/attachments presets + items). Created lazily so it
+    /// shares this VM's config path.</summary>
+    public Dzl.Tray.Controls.RandomPresetsVm RandomPresets =>
+        _randomPresets ??= new Dzl.Tray.Controls.RandomPresetsVm(_configPath, ConfirmDictionaryAction);
+
+    /// <summary>(Re)load the Random Presets tab from disk. Called when its tab is activated.</summary>
+    public void RefreshRandomPresets() => RandomPresets.Reload();
+
     /// <summary>Re-read cfglimitsdefinition.xml and refresh the Types editor's suggestion lists + re-lint.
     /// Invoked after every dictionary edit so the Types tab stays in sync without a full reload.</summary>
     private void RefreshLimitsFromDisk()

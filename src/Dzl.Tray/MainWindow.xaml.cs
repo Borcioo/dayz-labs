@@ -607,6 +607,8 @@ public partial class MainWindow : FluentWindow
         if (!ReferenceEquals(e.OriginalSource, EconomyTabControl)) return;
         if (EconomyTabControl.SelectedItem is TabItem { Header: "Dictionaries" })
             _vm.RefreshDictionaries();
+        else if (EconomyTabControl.SelectedItem is TabItem { Header: "Random Presets" })
+            _vm.RefreshRandomPresets();
     }
 
     private void OnAddType(object sender, RoutedEventArgs e)
