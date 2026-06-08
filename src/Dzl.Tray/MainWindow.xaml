@@ -1838,6 +1838,12 @@
               <TabItem Header="Spawnable Types">
                 <ctl:SpawnableTypesEditor DataContext="{Binding SpawnableTypes}" />
               </TabItem>
+
+              <!-- Globals: edit db/globals.xml — flat list of simulation variables (animal counts, loot
+                   damage limits, etc.). DataContext = MainViewModel.Globals. -->
+              <TabItem Header="Globals">
+                <ctl:GlobalsEditor DataContext="{Binding Globals}" />
+              </TabItem>
             </TabControl>
           </Grid>
 

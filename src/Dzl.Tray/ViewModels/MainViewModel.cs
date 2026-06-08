@@ -1674,6 +1674,16 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>(Re)load the Random Presets tab from disk. Called when its tab is activated.</summary>
     public void RefreshRandomPresets() => RandomPresets.Reload();
 
+    // --- CE Globals tab (db/globals.xml) ------------------------------------
+    private Dzl.Tray.Controls.GlobalsVm? _globals;
+
+    /// <summary>Backs the Globals tab (simulation vars). Created lazily so it shares this VM's config path.</summary>
+    public Dzl.Tray.Controls.GlobalsVm Globals =>
+        _globals ??= new Dzl.Tray.Controls.GlobalsVm(_configPath, ConfirmDictionaryAction);
+
+    /// <summary>(Re)load the Globals tab from disk. Called when its tab is activated.</summary>
+    public void RefreshGlobals() => Globals.Reload();
+
     // --- CE Spawnable Types tab (cfgspawnabletypes.xml) ---------------------
     private Dzl.Tray.Controls.SpawnableTypesVm? _spawnableTypes;
 
