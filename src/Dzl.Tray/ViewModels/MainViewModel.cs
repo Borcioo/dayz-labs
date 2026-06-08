@@ -1705,6 +1705,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>(Re)load the Spawnable Types tab from disk. Called when its tab is activated.</summary>
     public void RefreshSpawnableTypes() => SpawnableTypes.Reload();
 
+    // --- CE Player Spawns tab (cfgplayerspawnpoints.xml) --------------------
+    private Dzl.Tray.Controls.PlayerSpawnsVm? _playerSpawns;
+
+    /// <summary>Backs the Player Spawns tab (fresh/hop/travel categories, their param bags + position groups).
+    /// Created lazily so it shares this VM's config path.</summary>
+    public Dzl.Tray.Controls.PlayerSpawnsVm PlayerSpawns =>
+        _playerSpawns ??= new Dzl.Tray.Controls.PlayerSpawnsVm(_configPath, ConfirmDictionaryAction);
+
+    /// <summary>(Re)load the Player Spawns tab from disk. Called when its tab is activated.</summary>
+    public void RefreshPlayerSpawns() => PlayerSpawns.Reload();
+
     /// <summary>Re-read cfglimitsdefinition.xml and refresh the Types editor's suggestion lists + re-lint.
     /// Invoked after every dictionary edit so the Types tab stays in sync without a full reload.</summary>
     private void RefreshLimitsFromDisk()

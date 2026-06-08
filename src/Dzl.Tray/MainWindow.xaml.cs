@@ -615,6 +615,8 @@ public partial class MainWindow : FluentWindow
             _vm.RefreshGlobals();
         else if (EconomyTabControl.SelectedItem is TabItem { Header: "Events" })
             _vm.RefreshEvents();
+        else if (EconomyTabControl.SelectedItem is TabItem { Header: "Player Spawns" })
+            _vm.RefreshPlayerSpawns();
     }
 
     private void OnAddType(object sender, RoutedEventArgs e)

@@ -1850,6 +1850,12 @@
               <TabItem Header="Events">
                 <ctl:EventsEditor DataContext="{Binding Events}" />
               </TabItem>
+
+              <!-- Player Spawns: edit cfgplayerspawnpoints.xml — fresh/hop/travel categories, their param
+                   bags (spawn/generator/group) + named position-group bubbles. DataContext = MainViewModel.PlayerSpawns. -->
+              <TabItem Header="Player Spawns">
+                <ctl:PlayerSpawnsEditor DataContext="{Binding PlayerSpawns}" />
+              </TabItem>
             </TabControl>
           </Grid>
 
