@@ -59,6 +59,21 @@ public partial class ChipMultiSelect : UserControl
         set => SetValue(AddHintProperty, value);
     }
 
+    /// <summary>Identifies which dictionary kind this chip control edits ("usage"/"value"/"tag"/"category").
+    /// Used by the host to offer registering a free-added value into the live dictionary. Empty = no kind.</summary>
+    public static readonly DependencyProperty KindProperty = DependencyProperty.Register(
+        nameof(Kind), typeof(string), typeof(ChipMultiSelect), new PropertyMetadata(""));
+
+    public string Kind
+    {
+        get => (string)GetValue(KindProperty);
+        set => SetValue(KindProperty, value);
+    }
+
+    /// <summary>The value most recently ADDED via the add affordance (null after a remove). Lets the host
+    /// detect a just-added free value and offer to register it in the dictionary.</summary>
+    public string? LastAdded { get; private set; }
+
     /// <summary>The display list the ItemsControl binds to. We keep a private mirror so the chips re-render
     /// even when the bound <see cref="Items"/> is a plain IList (no change notification) — though in practice
     /// it is an ObservableCollection. Re-synced on every mutation + when Items changes.</summary>
@@ -95,6 +110,7 @@ public partial class ChipMultiSelect : UserControl
                 {
                     RaiseBeforeChange();
                     Items.RemoveAt(i);
+                    LastAdded = null;   // a remove is not an "add" — clear the free-add affordance
                     break;
                 }
             }
@@ -140,6 +156,7 @@ public partial class ChipMultiSelect : UserControl
             if (o is string s && string.Equals(s, val, System.StringComparison.OrdinalIgnoreCase)) return;
         RaiseBeforeChange();
         Items.Add(val);
+        LastAdded = val;
         RaiseChanged();
     }
 

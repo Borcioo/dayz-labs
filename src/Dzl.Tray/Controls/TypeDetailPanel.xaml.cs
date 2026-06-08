@@ -17,7 +17,7 @@ public partial class TypeDetailPanel : UserControl
         InitializeComponent();
         // Reset _editPending when the row changes so a pending snapshot from the previous row
         // can't suppress the next row's first pre-edit capture.
-        DataContextChanged += (_, _) => _editPending = false;
+        DataContextChanged += (_, _) => { _editPending = false; HideRegister(); };
         // Subscribe BeforeChange on each chip control so we snapshot BEFORE the collection mutates.
         // Changed is already wired in XAML for the post-mutation re-lint step.
         Loaded += (_, _) =>
@@ -159,5 +159,55 @@ public partial class TypeDetailPanel : UserControl
         // Collection already mutated; re-lint and refresh grid text. No undo push here — that was
         // the original bug (snapshot was taken post-change). BeforeChange handles it above.
         Vm?.AfterDetailEdit();
+        MaybeOfferRegister(sender as ChipMultiSelect);
+    }
+
+    // --- Free-add → dictionary affordance ---------------------------------
+    // When a chip add introduces a value not in the live dictionary, surface a one-tap "register it"
+    // bar so the value becomes game-honored (cfglimitsdefinition.xml), not just present on this type.
+
+    private Dzl.Core.Economy.LimitsKind _pendingKind;
+    private string? _pendingValue;
+
+    private void MaybeOfferRegister(ChipMultiSelect? chip)
+    {
+        HideRegister();
+        if (chip is null || Vm is null) return;
+        var val = chip.LastAdded;
+        if (string.IsNullOrWhiteSpace(val)) return;
+        if (!TryKind(chip.Kind, out var kind)) return;
+        if (!Vm.IsUnknownLimit(kind, val)) return;
+
+        _pendingKind = kind;
+        _pendingValue = val;
+        RegisterText.Text = $"'{val}' isn't in the {chip.Kind} dictionary yet.";
+        RegisterBar.Visibility = Visibility.Visible;
+    }
+
+    private static bool TryKind(string? s, out Dzl.Core.Economy.LimitsKind kind)
+    {
+        switch ((s ?? "").ToLowerInvariant())
+        {
+            case "usage": kind = Dzl.Core.Economy.LimitsKind.Usage; return true;
+            case "value": kind = Dzl.Core.Economy.LimitsKind.Value; return true;
+            case "tag": kind = Dzl.Core.Economy.LimitsKind.Tag; return true;
+            case "category": kind = Dzl.Core.Economy.LimitsKind.Category; return true;
+            default: kind = Dzl.Core.Economy.LimitsKind.Usage; return false;
+        }
+    }
+
+    private void HideRegister()
+    {
+        RegisterBar.Visibility = Visibility.Collapsed;
+        _pendingValue = null;
+    }
+
+    private void OnDismissRegister(object sender, RoutedEventArgs e) => HideRegister();
+
+    private void OnRegisterToDictionary(object sender, RoutedEventArgs e)
+    {
+        if (Vm is null || string.IsNullOrWhiteSpace(_pendingValue)) { HideRegister(); return; }
+        Vm.AddToDictionary(_pendingKind, _pendingValue);   // refreshes suggestions + re-lints on success
+        HideRegister();
     }
 }

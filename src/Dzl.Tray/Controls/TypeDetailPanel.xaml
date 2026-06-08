@@ -228,22 +228,36 @@
 
           <!-- Chip multiselects -->
           <TextBlock Text="Usage" Style="{StaticResource DetailLabel}" />
-          <ctl:ChipMultiSelect x:Name="UsageChips" Margin="0,0,0,10" AddHint="add usage…"
+          <ctl:ChipMultiSelect x:Name="UsageChips" Margin="0,0,0,10" AddHint="add usage…" Kind="usage"
                                Items="{Binding Usage}"
                                Suggestions="{Binding UsageSuggestions, ElementName=Root}"
                                Changed="OnChipsChanged" />
 
           <TextBlock Text="Value (tiers)" Style="{StaticResource DetailLabel}" />
-          <ctl:ChipMultiSelect x:Name="ValueChips" Margin="0,0,0,10" AddHint="add tier…"
+          <ctl:ChipMultiSelect x:Name="ValueChips" Margin="0,0,0,10" AddHint="add tier…" Kind="value"
                                Items="{Binding Value}"
                                Suggestions="{Binding ValueSuggestions, ElementName=Root}"
                                Changed="OnChipsChanged" />
 
           <TextBlock Text="Tag" Style="{StaticResource DetailLabel}" />
-          <ctl:ChipMultiSelect x:Name="TagChips" Margin="0,0,0,12" AddHint="add tag…"
+          <ctl:ChipMultiSelect x:Name="TagChips" Margin="0,0,0,12" AddHint="add tag…" Kind="tag"
                                Items="{Binding Tag}"
                                Suggestions="{Binding TagSuggestions, ElementName=Root}"
                                Changed="OnChipsChanged" />
+
+          <!-- Free-add → dictionary affordance: shown when the value just added to a chip list is NOT in the
+               live dictionary, so it can be registered (cfglimitsdefinition.xml) and become game-honored. -->
+          <Border x:Name="RegisterBar" Visibility="Collapsed" Margin="0,0,0,12" Padding="8,6" CornerRadius="6"
+                  Background="#2A2410" BorderBrush="#6E5A1E" BorderThickness="1">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock x:Name="RegisterText" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0"
+                         TextWrapping="Wrap" Foreground="#F0C04A" />
+              <Button Content="＋ Add to dictionary" FontSize="11" Padding="6,2" Click="OnRegisterToDictionary"
+                      ToolTip="Register this value in cfglimitsdefinition.xml so DayZ honors it" />
+              <Button Content="Dismiss" FontSize="11" Padding="6,2" Margin="6,0,0,0" Click="OnDismissRegister"
+                      Background="Transparent" BorderThickness="0" Foreground="#BBBBBB" />
+            </StackPanel>
+          </Border>
 
           <!-- Flags (labeled toggles) -->
           <TextBlock Text="Flags" Style="{StaticResource DetailLabel}" Margin="0,0,0,4" />

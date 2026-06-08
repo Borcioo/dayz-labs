@@ -123,7 +123,7 @@ public partial class MainWindow : FluentWindow
         if (tag == "mymods") { _vm.RefreshModProjects(); if (NewModAuthorBox.Text.Length == 0) NewModAuthorBox.Text = _vm.CachedAuthor; }
         if (tag == "servers") { _vm.RefreshServers(); _vm.RefreshBases(); }   // base dropdown needs bases
         if (tag == "bases") _vm.RefreshBases();
-        if (tag == "economy") { _vm.LoadTypes(); RefreshTypesBackupsMenu(); }
+        if (tag == "economy") { _vm.LoadTypes(); _vm.RefreshDictionaries(); RefreshTypesBackupsMenu(); }
         if (tag == "settings") { LoadSettingsFields(); _ = _vm.RefreshGitHubAuthAsync(); _vm.RefreshSteamAccount(); }
     }
 

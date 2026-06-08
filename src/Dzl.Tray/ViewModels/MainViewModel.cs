@@ -1643,6 +1643,92 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    // --- CE Dictionaries manager ------------------------------------------
+    // The Dictionaries tab edits cfglimitsdefinition.xml (the four base lists) + cfglimitsdefinitionuser.xml
+    // (named combos). It shares the SAME limit names the Types editor suggests + lints against, so after any
+    // dictionary edit we re-pull those (RefreshLimitsFromDisk) and re-lint — removing a value flags types that
+    // used it; adding one clears false "unknown" warnings.
+
+    private Dzl.Tray.Controls.DictionaryManagerVm? _dictionaries;
+
+    /// <summary>Backs the Dictionaries tab. Created lazily on first access so it shares this VM's config path
+    /// and can call back into the Types editor (suggestions + lint) after every dictionary edit.</summary>
+    public Dzl.Tray.Controls.DictionaryManagerVm Dictionaries =>
+        _dictionaries ??= new Dzl.Tray.Controls.DictionaryManagerVm(
+            _configPath,
+            onDictionaryChanged: RefreshLimitsFromDisk,
+            usageCount: CountTypesUsing,
+            confirm: ConfirmDictionaryAction);
+
+    /// <summary>(Re)load the Dictionaries tab from disk. Called when the Economy page is shown.</summary>
+    public void RefreshDictionaries() => Dictionaries.Reload();
+
+    /// <summary>Re-read cfglimitsdefinition.xml and refresh the Types editor's suggestion lists + re-lint.
+    /// Invoked after every dictionary edit so the Types tab stays in sync without a full reload.</summary>
+    private void RefreshLimitsFromDisk()
+    {
+        _limits = new DictionaryService(_configPath).Load();
+        void Fill(ObservableCollection<string> target, IReadOnlySet<string> src)
+        {
+            target.Clear();
+            foreach (var v in src.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)) target.Add(v);
+        }
+        Fill(LimitsUsage, _limits.Usage);
+        Fill(LimitsValue, _limits.Value);
+        Fill(LimitsCategory, _limits.Category);
+        Fill(LimitsTag, _limits.Tag);
+        RefreshTypesLint();
+    }
+
+    /// <summary>Count loaded types referencing <paramref name="name"/> in the list matching <paramref name="kind"/>
+    /// (Category compares the single Category field; Usage/Value/Tag scan the list). Drives the remove-in-use warning.</summary>
+    private int CountTypesUsing(Dzl.Core.Economy.LimitsKind kind, string name)
+    {
+        bool Has(TypeRowVm t) => kind switch
+        {
+            Dzl.Core.Economy.LimitsKind.Category => string.Equals(t.Category, name, StringComparison.OrdinalIgnoreCase),
+            Dzl.Core.Economy.LimitsKind.Usage => t.Usage.Any(u => string.Equals(u, name, StringComparison.OrdinalIgnoreCase)),
+            Dzl.Core.Economy.LimitsKind.Value => t.Value.Any(v => string.Equals(v, name, StringComparison.OrdinalIgnoreCase)),
+            Dzl.Core.Economy.LimitsKind.Tag => t.Tag.Any(g => string.Equals(g, name, StringComparison.OrdinalIgnoreCase)),
+            _ => false,
+        };
+        return Types.Count(Has);
+    }
+
+    private static bool ConfirmDictionaryAction(string message) =>
+        System.Windows.MessageBox.Show(message, "Dictionaries",
+            System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
+        == System.Windows.MessageBoxResult.Yes;
+
+    /// <summary>Add a value to the live dictionary for a given chip kind (the Types editor's free-add →
+    /// dictionary affordance). Returns the service status; refreshes suggestions + lint on success.</summary>
+    public (bool ok, string msg) AddToDictionary(Dzl.Core.Economy.LimitsKind kind, string name)
+    {
+        var r = new DictionaryService(_configPath).AddName(kind, name);
+        if (r.ok)
+        {
+            RefreshLimitsFromDisk();
+            if (_dictionaries is not null) _dictionaries.Reload();
+        }
+        return r;
+    }
+
+    /// <summary>True when <paramref name="name"/> is NOT a known value of the given chip kind (so the
+    /// Types detail panel can offer to register it in the dictionary).</summary>
+    public bool IsUnknownLimit(Dzl.Core.Economy.LimitsKind kind, string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        var set = kind switch
+        {
+            Dzl.Core.Economy.LimitsKind.Usage => _limits.Usage,
+            Dzl.Core.Economy.LimitsKind.Value => _limits.Value,
+            Dzl.Core.Economy.LimitsKind.Tag => _limits.Tag,
+            Dzl.Core.Economy.LimitsKind.Category => _limits.Category,
+            _ => (IReadOnlySet<string>)new HashSet<string>(),
+        };
+        return !set.Contains(name.Trim());
+    }
+
     // --- debounced lint ---------------------------------------------------
     // RefreshTypesLint walks ~2000 rows; running it per keystroke freezes the editor. Rapid-edit paths
     // (detail typing, steppers, batch) call ScheduleLint() which restarts a ~300 ms timer so bursts
