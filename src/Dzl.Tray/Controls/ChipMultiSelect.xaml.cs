@@ -27,9 +27,12 @@ public partial class ChipMultiSelect : UserControl
 
     /// <summary>The bound value collection (the row VM's actual ObservableCollection&lt;string&gt;).
     /// Mutated in place when chips are added/removed.</summary>
+    // OneWay by default: the control NEVER reassigns Items, it only mutates the bound collection's
+    // contents (Items.Add/RemoveAt). TwoWay would force WPF to write the property back and crash when
+    // bound to a get-only ObservableCollection (e.g. TypeRowVm.Usage, ComboVm.Members).
     public static readonly DependencyProperty ItemsProperty = DependencyProperty.Register(
         nameof(Items), typeof(IList), typeof(ChipMultiSelect),
-        new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnItemsChanged));
+        new FrameworkPropertyMetadata(null, OnItemsChanged));
 
     public IList? Items
     {
