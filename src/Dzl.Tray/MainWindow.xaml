@@ -1831,6 +1831,13 @@
               <TabItem Header="Random Presets">
                 <ctl:RandomPresetsEditor DataContext="{Binding RandomPresets}" />
               </TabItem>
+
+              <!-- Spawnable Types: edit cfgspawnabletypes.xml — per-type hoarder/damage + cargo/attachments
+                   blocks (preset-based, referencing cfgrandompresets.xml, or chance-based with inline items).
+                   DataContext = MainViewModel.SpawnableTypes. -->
+              <TabItem Header="Spawnable Types">
+                <ctl:SpawnableTypesEditor DataContext="{Binding SpawnableTypes}" />
+              </TabItem>
             </TabControl>
           </Grid>
 

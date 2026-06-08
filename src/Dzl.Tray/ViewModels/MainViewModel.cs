@@ -1674,6 +1674,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>(Re)load the Random Presets tab from disk. Called when its tab is activated.</summary>
     public void RefreshRandomPresets() => RandomPresets.Reload();
 
+    // --- CE Spawnable Types tab (cfgspawnabletypes.xml) ---------------------
+    private Dzl.Tray.Controls.SpawnableTypesVm? _spawnableTypes;
+
+    /// <summary>Backs the Spawnable Types tab (per-type hoarder/damage + cargo/attachments blocks). Created
+    /// lazily so it shares this VM's config path; its preset dropdowns read cfgrandompresets.xml.</summary>
+    public Dzl.Tray.Controls.SpawnableTypesVm SpawnableTypes =>
+        _spawnableTypes ??= new Dzl.Tray.Controls.SpawnableTypesVm(_configPath, ConfirmDictionaryAction);
+
+    /// <summary>(Re)load the Spawnable Types tab from disk. Called when its tab is activated.</summary>
+    public void RefreshSpawnableTypes() => SpawnableTypes.Reload();
+
     /// <summary>Re-read cfglimitsdefinition.xml and refresh the Types editor's suggestion lists + re-lint.
     /// Invoked after every dictionary edit so the Types tab stays in sync without a full reload.</summary>
     private void RefreshLimitsFromDisk()

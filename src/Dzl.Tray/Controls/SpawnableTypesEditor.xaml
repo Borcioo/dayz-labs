@@ -1,0 +1,299 @@
+<UserControl x:Class="Dzl.Tray.Controls.SpawnableTypesEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             x:Name="Root">
+  <!-- DataContext = SpawnableTypesVm. Edits cfgspawnabletypes.xml: master list of types (left) + a detail
+       pane for the selected type (right) with hoarder/damage and cargo/attachments blocks. Each block is
+       preset-based (a name from cfgrandompresets.xml) or chance-based (chance + inline items). Every edit
+       routes through the VM → SpawnableTypesService (snapshot + write, never throws). Per-tab undo/redo
+       snapshots the whole file. A UserControl does NOT inherit the host window's resources at realize time —
+       declare local styles here; only DynamicResource theme brushes (resolved late) are safe to reference. -->
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    <Style x:Key="StSectionHeader" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+    </Style>
+    <Style x:Key="StHint" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+    </Style>
+    <Style x:Key="StBlockLabel" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+    </Style>
+
+    <!-- One cargo/attachments block: a card showing EITHER a preset combo (preset-based) OR a chance box
+         plus an items grid (chance-based). DataContext = SpawnBlockVm. Items live in a nested DataGrid. -->
+    <DataTemplate x:Key="BlockTemplate">
+      <Border CornerRadius="6" Padding="8" Margin="0,0,0,6"
+              Background="{DynamicResource ControlFillColorSecondaryBrush}"
+              BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
+        <StackPanel>
+          <!-- Row 1: kind switch + remove -->
+          <Grid Margin="0,0,0,6">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
+              <RadioButton Content="preset" FontSize="11" Margin="0,0,8,0"
+                           IsChecked="{Binding IsPreset, Mode=OneWay}"
+                           Checked="OnBlockModePresetChecked" Tag="{Binding}" />
+              <RadioButton Content="chance" FontSize="11"
+                           IsChecked="{Binding IsChance, Mode=OneWay}"
+                           Checked="OnBlockModeChanceChecked" Tag="{Binding}" />
+            </StackPanel>
+            <ui:Button Grid.Column="2" Content="Remove block" FontSize="11" Padding="6,2"
+                       Click="OnRemoveBlockClick" Tag="{Binding}" />
+          </Grid>
+
+          <!-- Preset-based body -->
+          <StackPanel Orientation="Horizontal"
+                      Visibility="{Binding IsPreset, Converter={StaticResource BoolToVis}}">
+            <TextBlock Text="preset" VerticalAlignment="Center" Margin="0,0,6,0"
+                       Style="{StaticResource StHint}" />
+            <ui:TextBox Width="220" FontSize="12" PlaceholderText="preset name (cfgrandompresets.xml)"
+                        Text="{Binding PresetText, UpdateSourceTrigger=LostFocus}"
+                        LostFocus="OnBlockPresetLostFocus" KeyDown="OnBlockPresetKeyDown" Tag="{Binding}" />
+          </StackPanel>
+
+          <!-- Chance-based body -->
+          <StackPanel Visibility="{Binding IsChance, Converter={StaticResource BoolToVis}}">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+              <TextBlock Text="chance" VerticalAlignment="Center" Margin="0,0,6,0"
+                         Style="{StaticResource StHint}" />
+              <ui:TextBox Width="70" FontSize="12" ToolTip="0..1"
+                          Text="{Binding ChanceText, UpdateSourceTrigger=LostFocus}"
+                          LostFocus="OnBlockChanceLostFocus" KeyDown="OnBlockChanceKeyDown" Tag="{Binding}" />
+            </StackPanel>
+            <DataGrid ItemsSource="{Binding Items}"
+                      AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                      HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                      IsReadOnly="False" SelectionMode="Single"
+                      Background="Transparent" BorderThickness="0"
+                      MaxHeight="180"
+                      RowBackground="Transparent" AlternatingRowBackground="Transparent"
+                      CellEditEnding="OnItemCellEditEnding" Tag="{Binding}">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Item name"
+                                    Binding="{Binding Name, UpdateSourceTrigger=LostFocus}" Width="*" />
+                <DataGridTextColumn Header="Chance"
+                                    Binding="{Binding ChanceText, UpdateSourceTrigger=LostFocus}" Width="80" />
+                <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <ui:Button Content="✕" FontSize="11" Padding="6,2"
+                                 Click="OnRemoveItemClick" Tag="{Binding}" />
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+            <!-- Add item -->
+            <Grid Margin="0,4,0,0">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <ui:TextBox Grid.Column="0" Margin="0,0,4,0" FontSize="12"
+                          PlaceholderText="item classname" Tag="{Binding}"
+                          KeyDown="OnAddItemKeyDown" />
+              <ui:TextBox Grid.Column="1" Width="60" Margin="0,0,4,0" FontSize="12"
+                          ToolTip="0..1" Text="1.0" Tag="{Binding}" KeyDown="OnAddItemKeyDown" />
+              <ui:Button Grid.Column="2" Content="Add item" FontSize="11" Padding="6,2"
+                         Click="OnAddItemClick" Tag="{Binding}" />
+            </Grid>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <Grid Margin="0,12,0,0">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />  <!-- toolbar -->
+      <RowDefinition Height="*" />     <!-- master + detail -->
+      <RowDefinition Height="Auto" />  <!-- status -->
+    </Grid.RowDefinitions>
+
+    <!-- Toolbar: file label + Reload/Undo/Redo -->
+    <Grid Grid.Row="0" Margin="0,0,0,8">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+        <ui:SymbolIcon Symbol="Document24" Margin="0,0,6,0"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+        <TextBlock Text="{Binding FileLabel}" VerticalAlignment="Center"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12"
+                   TextTrimming="CharacterEllipsis" MaxWidth="640" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal">
+        <ui:Button Content="Reload" Margin="0,0,6,0" Click="OnReloadClick"
+                   ToolTip="Re-read cfgspawnabletypes.xml from disk (discards the undo history)" />
+        <ui:Button Margin="0,0,6,0" Command="{Binding UndoCommand}" ToolTip="Undo the last edit">
+          <ui:SymbolIcon Symbol="ArrowUndo24" />
+        </ui:Button>
+        <ui:Button Command="{Binding RedoCommand}" ToolTip="Redo">
+          <ui:SymbolIcon Symbol="ArrowRedo24" />
+        </ui:Button>
+      </StackPanel>
+    </Grid>
+
+    <!-- Master (left) + detail (right) -->
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="2*" MinWidth="300" />
+        <ColumnDefinition Width="8" />
+        <ColumnDefinition Width="3*" MinWidth="360" />
+      </Grid.ColumnDefinitions>
+
+      <!-- ===== Master: type list ===== -->
+      <Border Grid.Column="0" CornerRadius="8" Padding="10"
+              Background="{DynamicResource ControlFillColorDefaultBrush}"
+              BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />  <!-- title -->
+            <RowDefinition Height="Auto" />  <!-- filter -->
+            <RowDefinition Height="*" />     <!-- grid -->
+            <RowDefinition Height="Auto" />  <!-- add row -->
+            <RowDefinition Height="Auto" />  <!-- actions -->
+          </Grid.RowDefinitions>
+
+          <TextBlock Grid.Row="0" Text="Spawnable types" Style="{StaticResource StSectionHeader}" Margin="0,0,0,6" />
+
+          <ui:TextBox Grid.Row="1" Margin="0,0,0,6" FontSize="12" PlaceholderText="filter by name…"
+                      Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" />
+
+          <DataGrid Grid.Row="2" x:Name="TypeGrid"
+                    ItemsSource="{Binding Types}"
+                    SelectedItem="{Binding SelectedType, Mode=TwoWay}"
+                    AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                    HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                    IsReadOnly="True" SelectionMode="Single"
+                    Background="Transparent" BorderThickness="0"
+                    EnableRowVirtualization="True"
+                    VirtualizingPanel.IsVirtualizing="True"
+                    VirtualizingPanel.VirtualizationMode="Recycling"
+                    RowBackground="Transparent" AlternatingRowBackground="Transparent">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
+              <DataGridCheckBoxColumn Header="Hoard" Binding="{Binding Hoarder}" Width="Auto" />
+              <DataGridTextColumn Header="Damage" Binding="{Binding DamageLabel}" Width="Auto" />
+              <DataGridTextColumn Header="#cargo" Binding="{Binding CargoCount}" Width="Auto" />
+              <DataGridTextColumn Header="#att" Binding="{Binding AttachmentsCount}" Width="Auto" />
+            </DataGrid.Columns>
+          </DataGrid>
+
+          <!-- Add type -->
+          <Grid Grid.Row="3" Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ui:TextBox Grid.Column="0" Margin="0,0,4,0" FontSize="12" PlaceholderText="new type classname"
+                        Text="{Binding NewTypeName, UpdateSourceTrigger=PropertyChanged}"
+                        KeyDown="OnAddTypeKeyDown" />
+            <ui:Button Grid.Column="1" Content="Add" Click="OnAddTypeClick" />
+          </Grid>
+
+          <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,6,0,0">
+            <ui:Button Content="Rename" Margin="0,0,4,0" FontSize="12" Click="OnRenameTypeClick"
+                       ToolTip="Rename the selected type" />
+            <ui:Button Content="Remove" FontSize="12" Click="OnRemoveTypeClick"
+                       ToolTip="Remove the selected type and its blocks" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Stretch" Background="Transparent" />
+
+      <!-- ===== Detail: selected type ===== -->
+      <Border Grid.Column="2" CornerRadius="8" Padding="10"
+              Background="{DynamicResource ControlFillColorDefaultBrush}"
+              BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
+        <Grid>
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+              <!-- Header -->
+              <TextBlock Style="{StaticResource StSectionHeader}" Margin="0,0,0,6"
+                         Text="{Binding SelectedType.Name, StringFormat='Detail: {0}', FallbackValue='Detail'}" />
+
+              <!-- Hoarder + damage -->
+              <Border CornerRadius="6" Padding="8" Margin="0,0,0,8"
+                      Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                <StackPanel>
+                  <CheckBox Content="Hoarder (count_in_hoarder)" IsChecked="{Binding SelectedHoarder, Mode=TwoWay}"
+                            Click="OnHoarderClick" Margin="0,0,0,4" />
+                  <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Damage" VerticalAlignment="Center" Margin="0,0,8,0"
+                               Style="{StaticResource StBlockLabel}" />
+                    <ui:TextBox Width="70" Margin="0,0,4,0" FontSize="12" PlaceholderText="min"
+                                ToolTip="0..1, empty to clear"
+                                Text="{Binding DamageMin, UpdateSourceTrigger=PropertyChanged}"
+                                LostFocus="OnDamageLostFocus" KeyDown="OnDamageKeyDown" />
+                    <TextBlock Text="–" VerticalAlignment="Center" Margin="0,0,4,0" />
+                    <ui:TextBox Width="70" Margin="0,0,4,0" FontSize="12" PlaceholderText="max"
+                                ToolTip="0..1, empty to clear"
+                                Text="{Binding DamageMax, UpdateSourceTrigger=PropertyChanged}"
+                                LostFocus="OnDamageLostFocus" KeyDown="OnDamageKeyDown" />
+                    <TextBlock VerticalAlignment="Center" Style="{StaticResource StHint}"
+                               Text="(both empty = no damage element)" />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+
+              <!-- Cargo blocks -->
+              <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Cargo blocks" Style="{StaticResource StBlockLabel}"
+                           VerticalAlignment="Center" />
+                <ComboBox Grid.Column="1" Width="150" Margin="0,0,4,0" FontSize="12" x:Name="CargoPresetCombo"
+                          ItemsSource="{Binding CargoPresetNames}" ToolTip="pick a cargo preset to add"
+                          IsEditable="True" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                  <ui:Button Content="+ preset" FontSize="11" Padding="6,2" Margin="0,0,4,0"
+                             Click="OnAddCargoPresetClick" ToolTip="Add a preset-based cargo block" />
+                  <ui:Button Content="+ chance" FontSize="11" Padding="6,2"
+                             Click="OnAddCargoChanceClick" ToolTip="Add a chance-based cargo block" />
+                </StackPanel>
+              </Grid>
+              <ItemsControl ItemsSource="{Binding CargoBlocks}" Margin="0,0,0,8"
+                            ItemTemplate="{StaticResource BlockTemplate}" />
+
+              <!-- Attachments blocks -->
+              <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Attachments blocks" Style="{StaticResource StBlockLabel}"
+                           VerticalAlignment="Center" />
+                <ComboBox Grid.Column="1" Width="150" Margin="0,0,4,0" FontSize="12" x:Name="AttPresetCombo"
+                          ItemsSource="{Binding AttachmentsPresetNames}" ToolTip="pick an attachments preset to add"
+                          IsEditable="True" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                  <ui:Button Content="+ preset" FontSize="11" Padding="6,2" Margin="0,0,4,0"
+                             Click="OnAddAttPresetClick" ToolTip="Add a preset-based attachments block" />
+                  <ui:Button Content="+ chance" FontSize="11" Padding="6,2"
+                             Click="OnAddAttChanceClick" ToolTip="Add a chance-based attachments block" />
+                </StackPanel>
+              </Grid>
+              <ItemsControl ItemsSource="{Binding AttachmentsBlocks}"
+                            ItemTemplate="{StaticResource BlockTemplate}" />
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- Status -->
+    <TextBlock Grid.Row="2" Margin="0,8,0,0" FontSize="12"
+               Text="{Binding Status}"
+               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+  </Grid>
+</UserControl>
