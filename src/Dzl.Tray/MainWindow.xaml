@@ -243,6 +243,7 @@
             <ControlTemplate TargetType="DataGridCell">
               <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
                 <ContentPresenter VerticalAlignment="Center" />
+              </Border>
             </ControlTemplate>
           </Setter.Value>
         </Setter>
