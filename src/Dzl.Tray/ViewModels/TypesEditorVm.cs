@@ -640,6 +640,34 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
         int ApplyAllowNeg(int cur) => multiply ? (int)Math.Round(cur * value) : (int)value;
     }
 
+    /// <summary>Batch-divide a numeric field across selected rows. Guarded: <paramref name="value"/> = 0
+    /// is a no-op (the UI also blocks it) — never throws, never zeroes the column by accident.
+    /// Same rounding/clamping as <see cref="BatchApply"/>. One undo step.</summary>
+    public void BatchDivide(IReadOnlyList<TypeRowVm> rows, string field, double value)
+    {
+        if (rows.Count == 0 || value == 0) return;
+        PushTypeUndo();
+        foreach (var t in rows)
+        {
+            switch (field)
+            {
+                case "nominal": t.Nominal = Div(t.Nominal); break;
+                case "min": t.Min = Div(t.Min); break;
+                case "quantmin": t.QuantMin = DivAllowNeg(t.QuantMin); break;
+                case "quantmax": t.QuantMax = DivAllowNeg(t.QuantMax); break;
+                case "lifetime": t.Lifetime = Div(t.Lifetime); break;
+                case "restock": t.Restock = Div(t.Restock); break;
+                case "cost": t.Cost = Div(t.Cost); break;
+            }
+        }
+        RefreshTypesLint();
+        RefreshTypesView();
+        TypesStatus = $"batch ÷{value} {field} on {rows.Count} (unsaved)";
+
+        int Div(int cur) => Math.Max(0, (int)Math.Round(cur / value));
+        int DivAllowNeg(int cur) => (int)Math.Round(cur / value);
+    }
+
     /// <summary>Batch flag op across selected rows. <paramref name="op"/> ∈ {set, clear, toggle}.
     /// <paramref name="flag"/> ∈ {cargo, hoarder, map, player, crafted, deloot}. One undo step.</summary>
     public void BatchFlag(IReadOnlyList<TypeRowVm> rows, string flag, string op)

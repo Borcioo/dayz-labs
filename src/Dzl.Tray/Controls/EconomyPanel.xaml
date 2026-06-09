@@ -365,8 +365,10 @@
                       <ui:TextBox x:Name="BatchValueBox" PlaceholderText="value" Margin="0,0,0,6" />
                       <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
                         <ui:Button Content="Set" Margin="0,0,4,0" Click="OnBatchSet" ToolTip="Set the field to the value on checked rows" />
-                        <ui:Button Content="× Multiply" Click="OnBatchMultiply"
+                        <ui:Button Content="× Multiply" Margin="0,0,4,0" Click="OnBatchMultiply"
                                    ToolTip="Multiply the field by the value on checked rows" />
+                        <ui:Button Content="÷ Divide" Click="OnBatchDivide"
+                                   ToolTip="Divide the field by the value on checked rows (0 is rejected)" />
                       </StackPanel>
 
                       <TextBlock Text="Flag" Style="{StaticResource BatchLabel}" />

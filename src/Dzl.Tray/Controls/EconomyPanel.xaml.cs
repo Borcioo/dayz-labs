@@ -101,6 +101,19 @@ public partial class EconomyPanel : UserControl
     private void OnBatchSet(object sender, RoutedEventArgs e) => Batch(multiply: false);
     private void OnBatchMultiply(object sender, RoutedEventArgs e) => Batch(multiply: true);
 
+    private void OnBatchDivide(object sender, RoutedEventArgs e)
+    {
+        var rows = CheckedTypes();
+        if (!RequireSelection(rows)) return;
+        var field = (BatchFieldBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "nominal";
+        if (!double.TryParse(BatchValueBox.Text.Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var val))
+        { System.Windows.MessageBox.Show("Enter a numeric value.", "Batch", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information); return; }
+        if (val == 0)
+        { System.Windows.MessageBox.Show("Cannot divide by zero.", "Batch", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning); return; }
+        Vm.TypesEditor.BatchDivide(rows, field, val);
+        TypesGrid.Items.Refresh();
+    }
+
     private void Batch(bool multiply)
     {
         var rows = CheckedTypes();
