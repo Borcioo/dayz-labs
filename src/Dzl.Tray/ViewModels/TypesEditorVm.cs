@@ -206,8 +206,10 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
         }
         set
         {
-            // A header three-state CheckBox cycles to null; treat null as "check all".
-            var want = value ?? true;
+            // The header CheckBox cycles true → null → false. When everything is checked the
+            // getter snaps the visual back to true, so a null click must mean UNCHECK — treating
+            // null as "check all" made it impossible to ever deselect a fully-checked set.
+            var want = value == true;
             _suppressSelectionNotify = true;
             try { foreach (var t in TypesView.Cast<TypeRowVm>()) t.IsSelected = want; }
             finally { _suppressSelectionNotify = false; }
