@@ -498,6 +498,8 @@ public partial class MainWindow : FluentWindow
     }
 
     // Capture the app (main window + any open child windows) to a PNG under the screenshots folder.
+    private string? _lastScreenshotPath;
+
     private async void OnScreenshot(object sender, RoutedEventArgs e)
     {
         ScreenshotStatus.Text = "capturing…";
@@ -505,10 +507,27 @@ public partial class MainWindow : FluentWindow
         try
         {
             var path = AppScreenshot.Capture(App.ConfigPath());
+            _lastScreenshotPath = path;
             ScreenshotStatus.Text = $"✓ saved {System.IO.Path.GetFileName(path)}";
-            ScreenshotStatus.ToolTip = path;
+            ScreenshotStatus.ToolTip = $"{path}\nClick to show in Explorer";
         }
-        catch (Exception ex) { ScreenshotStatus.Text = "✗ " + ex.Message; }
+        catch (Exception ex) { _lastScreenshotPath = null; ScreenshotStatus.Text = "✗ " + ex.Message; }
+    }
+
+    // Click on the "✓ saved …" status → reveal the file in Explorer (or just the screenshots
+    // folder if the file is gone). No-op when nothing was captured yet.
+    private void OnRevealScreenshot(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        var path = _lastScreenshotPath;
+        if (string.IsNullOrEmpty(path)) return;
+        try
+        {
+            if (System.IO.File.Exists(path))
+                System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{path}\"");
+            else if (System.IO.Path.GetDirectoryName(path) is { } dir && System.IO.Directory.Exists(dir))
+                System.Diagnostics.Process.Start("explorer.exe", $"\"{dir}\"");
+        }
+        catch { /* opening Explorer is best-effort; never crash the status bar */ }
     }
 
     // Open the per-module settings modal (⚙ on a page). Phase 1: "mods".

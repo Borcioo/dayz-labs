@@ -2770,7 +2770,8 @@
         <TextBlock Grid.Column="1" Text="{Binding WorkDriveStatus}" VerticalAlignment="Center"
                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
         <TextBlock Grid.Column="2" x:Name="ScreenshotStatus" VerticalAlignment="Center" HorizontalAlignment="Right"
-                   Margin="0,0,12,0" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                   Margin="0,0,12,0" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                   Cursor="Hand" MouseLeftButtonUp="OnRevealScreenshot" />
         <ui:Button Grid.Column="3" Icon="{ui:SymbolIcon Camera24}" Padding="6,2" FontSize="12" Margin="0,0,8,0"
                    ToolTip="Screenshot the app (includes open windows) → saved to the screenshots folder"
                    Click="OnScreenshot" />
