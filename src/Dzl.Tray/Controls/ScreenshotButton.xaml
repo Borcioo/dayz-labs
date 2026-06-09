@@ -8,9 +8,10 @@
     <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12"
                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                Cursor="Hand" MouseLeftButtonUp="OnRevealScreenshot" />
-    <ui:Button x:Name="ShotButton" Icon="{ui:SymbolIcon Camera24}" FontSize="12"
+    <ui:Button x:Name="ShotButton" Icon="{ui:SymbolIcon Camera20}" FontSize="14"
                Appearance="Transparent" Background="Transparent" BorderThickness="0"
-               CornerRadius="0" Padding="14,0" VerticalAlignment="Stretch"
+               CornerRadius="0" Padding="0" Width="46" VerticalAlignment="Stretch"
+               HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                ToolTip="Screenshot the app (includes open windows) → saved to the screenshots folder"
                Click="OnScreenshot" />
   </StackPanel>
