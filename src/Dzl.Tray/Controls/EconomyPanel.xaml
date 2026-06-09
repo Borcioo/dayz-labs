@@ -416,22 +416,23 @@
               </Grid>
             </Grid>
 
-            <!-- Status footer: row count | lint summary | resolved file path | edit status -->
-            <Grid Grid.Row="3" Margin="0,6,0,0">
+            <!-- Status footer (one slim line, uniform 11px): path left, metrics right.
+                 Order: file path (ellipsized) | lint | showing X/N | last-action status. -->
+            <Grid Grid.Row="3" Height="22" Margin="0,6,0,0">
               <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
-              <TextBlock Grid.Column="0" Text="{Binding TypesCountLabel}" VerticalAlignment="Center" Margin="0,0,12,0"
-                         FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-              <TextBlock Grid.Column="1" Text="{Binding TypesLintSummary}" VerticalAlignment="Center" FontSize="12"
-                         Margin="0,0,12,0" Foreground="#F0C04A" Cursor="Hand" MouseLeftButtonUp="OnJumpToLint"
+              <TextBlock Grid.Column="0" Text="{Binding TypesFile}" ToolTip="{Binding TypesFile}"
+                         VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,0,16,0"
+                         Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+              <TextBlock Grid.Column="1" Text="{Binding TypesLintSummary}" VerticalAlignment="Center" FontSize="11"
+                         Margin="0,0,16,0" Foreground="#F0C04A" Cursor="Hand" MouseLeftButtonUp="OnJumpToLint"
                          ToolTip="Click to jump to the first row with findings"
                          Visibility="{Binding HasLintFindings, Converter={StaticResource BoolToVis}}" />
-              <TextBlock Grid.Column="2" Text="{Binding TypesFile}" ToolTip="{Binding TypesFile}"
-                         VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis"
-                         Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-              <TextBlock Grid.Column="3" Text="{Binding TypesStatus}" VerticalAlignment="Center" Margin="12,0,0,0"
-                         FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+              <TextBlock Grid.Column="2" Text="{Binding TypesCountLabel}" VerticalAlignment="Center" Margin="0,0,16,0"
+                         FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+              <TextBlock Grid.Column="3" Text="{Binding TypesStatus}" VerticalAlignment="Center"
+                         FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             </Grid>
                 </Grid>
               </TabItem>
