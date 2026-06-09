@@ -1,4 +1,5 @@
 <ui:FluentWindow x:Class="Dzl.Tray.SetupWizardWindow"
+        xmlns:ctl="clr-namespace:Dzl.Tray.Controls"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -379,6 +380,7 @@
           <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
         <ui:Button Grid.Column="0" Content="Cancel" Click="OnCancel" />
+        <ctl:ScreenshotButton Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0" />
         <StackPanel Grid.Column="2" Orientation="Horizontal">
           <ui:Button x:Name="BackBtn" Content="Back" Icon="{ui:SymbolIcon ArrowLeft24}"
                      Margin="0,0,8,0" Click="OnBack" />

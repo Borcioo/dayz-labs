@@ -2769,12 +2769,8 @@
                  Fill="{Binding WorkDriveMounted, Converter={StaticResource StatusDotConverter}}" />
         <TextBlock Grid.Column="1" Text="{Binding WorkDriveStatus}" VerticalAlignment="Center"
                    FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-        <TextBlock Grid.Column="2" x:Name="ScreenshotStatus" VerticalAlignment="Center" HorizontalAlignment="Right"
-                   Margin="0,0,12,0" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                   Cursor="Hand" MouseLeftButtonUp="OnRevealScreenshot" />
-        <ui:Button Grid.Column="3" Icon="{ui:SymbolIcon Camera24}" Padding="6,2" FontSize="12" Margin="0,0,8,0"
-                   ToolTip="Screenshot the app (includes open windows) → saved to the screenshots folder"
-                   Click="OnScreenshot" />
+        <ctl:ScreenshotButton Grid.Column="2" Grid.ColumnSpan="2" HorizontalAlignment="Right"
+                              VerticalAlignment="Center" Margin="0,0,8,0" />
         <ui:Button Grid.Column="4" Content="Mount P:" Padding="8,2" FontSize="12"
                    Click="OnMountWorkDrive"
                    Visibility="{Binding WorkDriveMounted, Converter={StaticResource InverseBoolToVis}}" />
