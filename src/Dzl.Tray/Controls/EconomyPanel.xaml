@@ -236,8 +236,9 @@
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                   </DataGridTemplateColumn>
-                  <!-- Lint indicator: ⚠ + count, tooltip lists this row's findings -->
-                  <DataGridTemplateColumn Header="" Width="40" IsReadOnly="True" CanUserSort="False">
+                  <!-- Lint indicator: ⚠ + count, tooltip lists this row's findings. Narrow on purpose —
+                       it's empty for clean rows, so any extra width reads as a dead gap before Name. -->
+                  <DataGridTemplateColumn Header="" Width="26" MinWidth="26" MaxWidth="26" IsReadOnly="True" CanUserSort="False">
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
                         <TextBlock Text="{Binding LintGlyph}" FontSize="11" FontWeight="SemiBold"
