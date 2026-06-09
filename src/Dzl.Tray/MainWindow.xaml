@@ -307,7 +307,7 @@
       <!-- Left rail. Plain-WPF ListBox-based nav: deterministic page switching via
            SelectionChanged (the Wpf.Ui NavigationView is page-navigation oriented and
            swallowed clicks when used as a bare rail). Top sections + pinned Settings. -->
-      <Border Grid.Column="0" Width="220"
+      <Border Grid.Column="0" Width="176"
               BorderThickness="0,0,1,0"
               BorderBrush="{DynamicResource ControlElevationBorderBrush}"
               Background="{DynamicResource ControlFillColorDefaultBrush}">
