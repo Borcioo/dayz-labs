@@ -217,9 +217,13 @@
                         <Setter Property="HorizontalContentAlignment" Value="Center" />
                       </Style>
                     </DataGridTemplateColumn.HeaderStyle>
+                    <!-- The WPF-UI CheckBox style carries a large MinWidth (reserves room for content
+                         text); these boxes have no content, so zero it and pin the control to its
+                         22px glyph — otherwise any column narrower than ~44px clips the box. -->
                     <DataGridTemplateColumn.HeaderTemplate>
                       <DataTemplate>
                         <CheckBox HorizontalAlignment="Center" IsThreeState="True"
+                                  MinWidth="0" Width="22" Padding="0"
                                   ToolTip="Select / deselect all rows passing the filter"
                                   IsChecked="{Binding DataContext.AllFilteredChecked, RelativeSource={RelativeSource AncestorType=DataGrid}, Mode=TwoWay}" />
                       </DataTemplate>
@@ -227,6 +231,7 @@
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
                         <CheckBox HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  MinWidth="0" Width="22" Padding="0"
                                   IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
