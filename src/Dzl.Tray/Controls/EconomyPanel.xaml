@@ -239,6 +239,14 @@
                   <!-- Lint indicator: ⚠ + count, tooltip lists this row's findings. Narrow on purpose —
                        it's empty for clean rows, so any extra width reads as a dead gap before Name. -->
                   <DataGridTemplateColumn Width="26" MinWidth="26" MaxWidth="26" IsReadOnly="True" CanUserSort="False">
+                    <!-- Zero the default 8,0 cell padding — in a 26px column it left ~10px and clipped
+                         the ⚠ glyph the moment a finding appeared. -->
+                    <DataGridTemplateColumn.CellStyle>
+                      <Style TargetType="DataGridCell" BasedOn="{StaticResource DarkDataGridCell}">
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="HorizontalContentAlignment" Value="Center" />
+                      </Style>
+                    </DataGridTemplateColumn.CellStyle>
                     <DataGridTemplateColumn.HeaderStyle>
                       <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DarkDataGridColumnHeader}">
                         <Setter Property="Padding" Value="0" />
