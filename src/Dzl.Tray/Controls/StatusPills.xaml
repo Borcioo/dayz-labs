@@ -1,0 +1,81 @@
+<UserControl x:Class="Dzl.Tray.Controls.StatusPills"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:local="clr-namespace:Dzl.Tray">
+  <UserControl.Resources>
+    <!-- UserControls don't see host-window resources; declare the converter locally. -->
+    <local:StatusDotConverter x:Key="PillDot" />
+    <Style x:Key="Pill" TargetType="Border">
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Padding" Value="12,5" />
+      <Setter Property="Margin" Value="0,0,10,0" />
+      <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
+    </Style>
+    <Style x:Key="PillDotStyle" TargetType="Ellipse">
+      <Setter Property="Width" Value="10" />
+      <Setter Property="Height" Value="10" />
+      <Setter Property="Margin" Value="0,0,8,0" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style x:Key="PillLabel" TargetType="TextBlock">
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style x:Key="PillValue" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Margin" Value="6,0,0,0" />
+      <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+    </Style>
+  </UserControl.Resources>
+
+  <!-- One row of status pills (DataContext = MainViewModel, inherited from the host).
+       SERVER / CLIENT / MCP carry their live status text; P: / GitHub / Steam are compact
+       (dot + name) with the detail in the tooltip. -->
+  <StackPanel Orientation="Horizontal">
+    <Border Style="{StaticResource Pill}">
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <Ellipse Style="{StaticResource PillDotStyle}" Fill="{Binding ServerUp, Converter={StaticResource PillDot}}" />
+        <TextBlock Style="{StaticResource PillLabel}" Text="SERVER" />
+        <TextBlock Style="{StaticResource PillValue}" Text="{Binding ServerStatus}" />
+      </StackPanel>
+    </Border>
+    <Border Style="{StaticResource Pill}">
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <Ellipse Style="{StaticResource PillDotStyle}" Fill="{Binding ClientUp, Converter={StaticResource PillDot}}" />
+        <TextBlock Style="{StaticResource PillLabel}" Text="CLIENT" />
+        <TextBlock Style="{StaticResource PillValue}" Text="{Binding ClientStatus}" />
+      </StackPanel>
+    </Border>
+    <Border Style="{StaticResource Pill}"
+            ToolTip="Automation server (lets the dzl CLI and the Claude MCP integration control this app). Toggle in Settings → Automation; applies on next launch.">
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <Ellipse Style="{StaticResource PillDotStyle}" Fill="{Binding AutomationOn, Converter={StaticResource PillDot}}" />
+        <TextBlock Style="{StaticResource PillLabel}" Text="MCP" />
+        <TextBlock Style="{StaticResource PillValue}" Text="{Binding AutomationStatus}" />
+      </StackPanel>
+    </Border>
+    <Border Style="{StaticResource Pill}" ToolTip="{Binding WorkDriveStatus}">
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <Ellipse Style="{StaticResource PillDotStyle}" Fill="{Binding WorkDriveMounted, Converter={StaticResource PillDot}}" />
+        <TextBlock Style="{StaticResource PillLabel}" Text="P:" />
+      </StackPanel>
+    </Border>
+    <Border Style="{StaticResource Pill}" ToolTip="{Binding GhAccount}">
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <Ellipse Style="{StaticResource PillDotStyle}" Fill="{Binding GhLoggedIn, Converter={StaticResource PillDot}}" />
+        <TextBlock Style="{StaticResource PillLabel}" Text="GITHUB" />
+      </StackPanel>
+    </Border>
+    <Border Style="{StaticResource Pill}" Margin="0" ToolTip="{Binding SteamAccount}">
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <Ellipse Style="{StaticResource PillDotStyle}" Fill="{Binding SteamSignedIn, Converter={StaticResource PillDot}}" />
+        <TextBlock Style="{StaticResource PillLabel}" Text="STEAM" />
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

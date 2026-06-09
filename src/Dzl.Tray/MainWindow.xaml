@@ -299,51 +299,9 @@
                     SelectionChanged="OnProfileSelectionChanged" />
         </StackPanel>
 
-        <!-- Status pills -->
-        <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
-          <!-- SERVER pill -->
-          <Border CornerRadius="14" Padding="12,5" Margin="0,0,10,0"
-                  Background="{DynamicResource ControlFillColorDefaultBrush}"
-                  BorderThickness="1"
-                  BorderBrush="{DynamicResource ControlElevationBorderBrush}">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-              <Ellipse Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center"
-                       Fill="{Binding ServerUp, Converter={StaticResource StatusDotConverter}}" />
-              <TextBlock Text="SERVER" FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" />
-              <TextBlock Text="{Binding ServerStatus}" FontSize="11" VerticalAlignment="Center"
-                         Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-            </StackPanel>
-          </Border>
-          <!-- CLIENT pill -->
-          <Border CornerRadius="14" Padding="12,5" Margin="0,0,10,0"
-                  Background="{DynamicResource ControlFillColorDefaultBrush}"
-                  BorderThickness="1"
-                  BorderBrush="{DynamicResource ControlElevationBorderBrush}">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-              <Ellipse Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center"
-                       Fill="{Binding ClientUp, Converter={StaticResource StatusDotConverter}}" />
-              <TextBlock Text="CLIENT" FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" />
-              <TextBlock Text="{Binding ClientStatus}" FontSize="11" VerticalAlignment="Center"
-                         Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-            </StackPanel>
-          </Border>
-          <!-- MCP / automation server pill: reflects whether the named-pipe host (driving the
-               dzl CLI + Claude MCP integration) is actually running this session. -->
-          <Border CornerRadius="14" Padding="12,5"
-                  Background="{DynamicResource ControlFillColorDefaultBrush}"
-                  BorderThickness="1"
-                  BorderBrush="{DynamicResource ControlElevationBorderBrush}"
-                  ToolTip="Automation server (lets the dzl CLI and the Claude MCP integration control this app). Toggle in Settings → Automation; applies on next launch.">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-              <Ellipse Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center"
-                       Fill="{Binding AutomationOn, Converter={StaticResource StatusDotConverter}}" />
-              <TextBlock Text="MCP" FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" />
-              <TextBlock Text="{Binding AutomationStatus}" FontSize="11" VerticalAlignment="Center"
-                         Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-              <local:InfoTip Text="{x:Static local:HelpText.Mcp}" />
-            </StackPanel>
-          </Border>
-        </StackPanel>
+        <!-- Status pills: SERVER/CLIENT/MCP + P:/GitHub/Steam — the same control renders the
+             status footer at the bottom, so both bars always show the same state. -->
+        <ctl:StatusPills Grid.Column="4" VerticalAlignment="Center" />
       </Grid>
     </Border>
 
@@ -2760,18 +2718,14 @@
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto" />
-          <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="*" />
           <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
-        <Ellipse Grid.Column="0" Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,8,0"
-                 Fill="{Binding WorkDriveMounted, Converter={StaticResource StatusDotConverter}}" />
-        <TextBlock Grid.Column="1" Text="{Binding WorkDriveStatus}" VerticalAlignment="Center"
-                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-        <ctl:ScreenshotButton Grid.Column="2" Grid.ColumnSpan="2" HorizontalAlignment="Right"
+        <ctl:StatusPills Grid.Column="0" VerticalAlignment="Center" />
+        <ctl:ScreenshotButton Grid.Column="1" HorizontalAlignment="Right"
                               VerticalAlignment="Center" Margin="0,0,8,0" />
-        <ui:Button Grid.Column="4" Content="Mount P:" Padding="8,2" FontSize="12"
+        <ui:Button Grid.Column="3" Content="Mount P:" Padding="8,2" FontSize="12"
                    Click="OnMountWorkDrive"
                    Visibility="{Binding WorkDriveMounted, Converter={StaticResource InverseBoolToVis}}" />
       </Grid>

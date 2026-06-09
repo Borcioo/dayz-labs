@@ -24,7 +24,11 @@
       <RowDefinition Height="Auto" />  <!-- load more + status -->
     </Grid.RowDefinitions>
 
-    <ui:TitleBar Grid.Row="0" Title="Steam Workshop" ShowMaximize="True" ShowMinimize="False" Margin="0,0,0,8" />
+    <ui:TitleBar Grid.Row="0" Title="Steam Workshop" ShowMaximize="True" ShowMinimize="False" Margin="0,0,0,8">
+      <ui:TitleBar.TrailingContent>
+        <ctl:ScreenshotButton VerticalAlignment="Center" Margin="0,0,8,0" />
+      </ui:TitleBar.TrailingContent>
+    </ui:TitleBar>
 
     <!-- Toolbar + gating banners -->
     <StackPanel Grid.Row="1">
@@ -321,10 +325,7 @@
       </Expander>
     </StackPanel>
 
-    <Grid Grid.Row="4" Margin="0,8,0,0">
-      <ctl:ScreenshotButton HorizontalAlignment="Left" VerticalAlignment="Center" />
-      <TextBlock Text="{Binding WorkshopStatus}" VerticalAlignment="Center" FontSize="12"
-                 HorizontalAlignment="Right" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-    </Grid>
+    <TextBlock Grid.Row="4" Text="{Binding WorkshopStatus}" Margin="0,8,0,0" VerticalAlignment="Center" FontSize="12"
+               HorizontalAlignment="Right" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
   </Grid>
 </ui:FluentWindow>

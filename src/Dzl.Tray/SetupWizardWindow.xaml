@@ -58,6 +58,9 @@
 
     <!-- ============ TITLE BAR ============ -->
     <ui:TitleBar Grid.Row="0" Title="dzl — Setup environment" Margin="0">
+      <ui:TitleBar.TrailingContent>
+        <ctl:ScreenshotButton VerticalAlignment="Center" Margin="0,0,8,0" />
+      </ui:TitleBar.TrailingContent>
       <ui:TitleBar.Icon>
         <ui:SymbolIcon Symbol="Wand24" />
       </ui:TitleBar.Icon>
@@ -380,7 +383,6 @@
           <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
         <ui:Button Grid.Column="0" Content="Cancel" Click="OnCancel" />
-        <ctl:ScreenshotButton Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0" />
         <StackPanel Grid.Column="2" Orientation="Horizontal">
           <ui:Button x:Name="BackBtn" Content="Back" Icon="{ui:SymbolIcon ArrowLeft24}"
                      Margin="0,0,8,0" Click="OnBack" />

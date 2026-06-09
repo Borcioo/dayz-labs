@@ -11,7 +11,11 @@
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
-    <ui:TitleBar Grid.Row="0" Title="Sign in to Steam" ShowMaximize="False" ShowMinimize="False" Margin="0,0,0,8" />
+    <ui:TitleBar Grid.Row="0" Title="Sign in to Steam" ShowMaximize="False" ShowMinimize="False" Margin="0,0,0,8">
+      <ui:TitleBar.TrailingContent>
+        <ctl:ScreenshotButton VerticalAlignment="Center" Margin="0,0,8,0" />
+      </ui:TitleBar.TrailingContent>
+    </ui:TitleBar>
 
     <TabControl Grid.Row="1">
       <TabItem Header="Scan QR">
@@ -48,11 +52,7 @@
       </TabItem>
     </TabControl>
 
-    <Grid Grid.Row="2" Margin="0,8,0,0">
-      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-      <TextBlock Grid.Column="0" FontSize="11" Opacity="0.7" TextWrapping="Wrap"
-                 Text="dzl signs in via SteamKit2; your refresh token is stored encrypted (DPAPI) locally and used only to subscribe to Workshop items. Password is sent encrypted to Steam, never stored." />
-      <ctl:ScreenshotButton Grid.Column="1" VerticalAlignment="Bottom" Margin="8,0,0,0" />
-    </Grid>
+    <TextBlock Grid.Row="2" Margin="0,8,0,0" FontSize="11" Opacity="0.7" TextWrapping="Wrap"
+               Text="dzl signs in via SteamKit2; your refresh token is stored encrypted (DPAPI) locally and used only to subscribe to Workshop items. Password is sent encrypted to Steam, never stored." />
   </Grid>
 </ui:FluentWindow>

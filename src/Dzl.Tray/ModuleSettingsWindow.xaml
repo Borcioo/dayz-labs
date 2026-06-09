@@ -16,7 +16,11 @@
       <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
 
-    <ui:TitleBar Grid.Row="0" x:Name="TitleBarCtl" Title="Settings" ShowMaximize="False" ShowMinimize="False" Margin="0,0,0,8" />
+    <ui:TitleBar Grid.Row="0" x:Name="TitleBarCtl" Title="Settings" ShowMaximize="False" ShowMinimize="False" Margin="0,0,0,8">
+      <ui:TitleBar.TrailingContent>
+        <ctl:ScreenshotButton VerticalAlignment="Center" Margin="0,0,8,0" />
+      </ui:TitleBar.TrailingContent>
+    </ui:TitleBar>
 
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
       <Grid Margin="0,0,8,0">
@@ -102,7 +106,6 @@
     </ScrollViewer>
 
     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-      <ctl:ScreenshotButton VerticalAlignment="Center" Margin="0,0,12,0" />
       <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="0,0,12,0" FontSize="12"
                  Foreground="#FF6B6B" />
       <ui:Button Content="Save" Appearance="Primary" Icon="{ui:SymbolIcon Save24}" Click="OnSave" Margin="0,0,8,0" />

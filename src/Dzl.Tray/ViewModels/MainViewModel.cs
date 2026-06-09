@@ -215,6 +215,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _statusTimer.Start();
         RefreshStatus();
 
+        // Seed the GitHub/Steam pills once at startup (gh shells out — keep it off the UI thread;
+        // login/logout flows re-run these on their own).
+        RefreshSteamAccount();
+        _ = RefreshGitHubAuthAsync();
+
         StartLogTails();
     }
 
