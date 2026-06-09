@@ -268,7 +268,7 @@
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                   </DataGridTemplateColumn>
-                  <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="2*" MinWidth="130" SortMemberPath="Name" />
+                  <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="Auto" MinWidth="130" MaxWidth="300" SortMemberPath="Name" />
                   <!-- Origin pill (matches the mod-source pills on the Mods/Servers pages) -->
                   <DataGridTemplateColumn Header="Source" Width="Auto" IsReadOnly="True" SortMemberPath="OriginLabel">
                     <DataGridTemplateColumn.CellTemplate>
@@ -310,10 +310,10 @@
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                   </DataGridTemplateColumn>
-                  <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="*" MinWidth="90" />
-                  <DataGridTextColumn Header="Usage" Binding="{Binding UsageText}" Width="*" MinWidth="90" IsReadOnly="True" />
-                  <DataGridTextColumn Header="Tiers" Binding="{Binding ValueText}" Width="*" MinWidth="80" IsReadOnly="True" />
-                  <DataGridTextColumn Header="Tag" Binding="{Binding TagText}" Width="*" MinWidth="80" IsReadOnly="True" />
+                  <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="Auto" MinWidth="90" MaxWidth="200" />
+                  <DataGridTextColumn Header="Usage" Binding="{Binding UsageText}" Width="Auto" MinWidth="90" MaxWidth="280" IsReadOnly="True" />
+                  <DataGridTextColumn Header="Tiers" Binding="{Binding ValueText}" Width="Auto" MinWidth="80" MaxWidth="220" IsReadOnly="True" />
+                  <DataGridTextColumn Header="Tag" Binding="{Binding TagText}" Width="Auto" MinWidth="80" MaxWidth="200" IsReadOnly="True" />
                 </DataGrid.Columns>
               </DataGrid>
 
