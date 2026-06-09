@@ -114,7 +114,20 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
         TypesView.Refresh();
         OnPropertyChanged(nameof(TypesCountLabel));
         OnPropertyChanged(nameof(AllFilteredChecked));   // the filtered set (and thus tri-state) changed
+        OnPropertyChanged(nameof(ActiveFilterCount));
+        OnPropertyChanged(nameof(FiltersButtonLabel));
     }
+
+    /// <summary>How many filters are currently non-empty — shown on the collapsed Filters button so
+    /// active filtering is visible even when the filter panel is hidden.</summary>
+    public int ActiveFilterCount => new[]
+    {
+        TypesFilter, TypesCategoryFilter, TypesSourceFilter, TypesFileFilter,
+        TypesUsageFilter, TypesValueFilter, TypesTagFilter, TypesFlagFilter,
+        TypesNominalMin, TypesNominalMax,
+    }.Count(s => !string.IsNullOrEmpty(s));
+
+    public string FiltersButtonLabel => ActiveFilterCount == 0 ? "Filters" : $"Filters ({ActiveFilterCount})";
 
     /// <summary>Path of the active mission's types.xml (or a hint), shown on the Economy page.</summary>
     public string TypesFile => new TypesService(_configPath).TypesFile() ?? "(no types.xml — pick/scaffold a server mission)";
