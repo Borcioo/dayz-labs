@@ -10,7 +10,7 @@
         xmlns:dd="urn:gong-wpf-dragdrop"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
-        Title="dzl — DayZ Dev Launcher"
+        Title="DayZ Labs (DZL)"
         MinWidth="1100" MinHeight="720"
         Width="1240" Height="800"
         WindowBackdropType="Mica"
@@ -251,7 +251,7 @@
     </Grid.Resources>
 
     <!-- ============ TITLE BAR ============ -->
-    <ui:TitleBar Grid.Row="0" Title="dzl — DayZ Dev Launcher" Margin="0">
+    <ui:TitleBar Grid.Row="0" Title="DayZ Labs (DZL)" Height="30" Margin="0">
       <ui:TitleBar.Icon>
         <ui:SymbolIcon Symbol="Gauge24" />
       </ui:TitleBar.Icon>

@@ -48,7 +48,7 @@ public sealed class TrayIcon : IDisposable
         _currentIcon = MakeDot(DownColor);
         _icon = new TaskbarIcon
         {
-            ToolTipText = "dzl — server down",
+            ToolTipText = "DayZ Labs — server down",
             Icon = _currentIcon,
             ContextMenu = BuildMenu(),
         };
@@ -206,7 +206,7 @@ public sealed class TrayIcon : IDisposable
 
         if (up == _lastUp && _icon.Icon is not null) return;
         _lastUp = up;
-        _icon.ToolTipText = up ? "dzl — server UP" : "dzl — server down";
+        _icon.ToolTipText = up ? "DayZ Labs — server UP" : "DayZ Labs — server down";
 
         // Fresh icon each flip; dispose the one we previously created after the swap.
         var next = MakeDot(up ? UpColor : DownColor);

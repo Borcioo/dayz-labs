@@ -374,7 +374,7 @@ public partial class SetupWizardWindow : FluentWindow
             ok ? "Shared drive mappings enabled (EnableLinkedConnections=1).\n\nReboot for it to take effect — "
                  + "after that, a work drive mounted by either an admin or a normal app is visible to both."
                : "Couldn't write the setting — dzl needs to be running as administrator to change it.",
-            "dzl — drive visibility",
+            "DayZ Labs — drive visibility",
             System.Windows.MessageBoxButton.OK,
             ok ? System.Windows.MessageBoxImage.Information : System.Windows.MessageBoxImage.Warning);
         RefreshWorkDrive();

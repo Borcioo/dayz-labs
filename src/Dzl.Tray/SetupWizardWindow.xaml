@@ -7,7 +7,7 @@
         xmlns:local="clr-namespace:Dzl.Tray"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         mc:Ignorable="d"
-        Title="dzl — Setup environment"
+        Title="DayZ Labs — Setup environment"
         Width="900" Height="640"
         MinWidth="780" MinHeight="560"
         WindowBackdropType="Mica"
@@ -57,7 +57,7 @@
     </Grid.Resources>
 
     <!-- ============ TITLE BAR ============ -->
-    <ui:TitleBar Grid.Row="0" Title="dzl — Setup environment" Margin="0">
+    <ui:TitleBar Grid.Row="0" Title="DayZ Labs — Setup environment" Margin="0">
       <ui:TitleBar.TrailingContent>
         <ctl:ScreenshotButton VerticalAlignment="Stretch" />
       </ui:TitleBar.TrailingContent>
