@@ -54,11 +54,15 @@
                     <RowDefinition Height="Auto" />  <!-- status -->
                   </Grid.RowDefinitions>
 
-            <!-- Toolbar: file/source scope + actions. A WrapPanel so a narrow window flows the
-                 buttons onto a second line instead of clipping them. The resolved file path
+            <!-- Toolbar: file/source scope left, actions right. The actions live in a WrapPanel
+                 inside the star column: wide window = one right-aligned row, narrow window = the
+                 column squeezes and the buttons wrap instead of clipping. The resolved file path
                  lives in the status footer below the grid. -->
-            <WrapPanel Grid.Row="0" Margin="0,0,0,4">
-              <StackPanel Orientation="Horizontal" Margin="0,0,16,4" VerticalAlignment="Center">
+            <Grid Grid.Row="0" Margin="0,0,0,4">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,16,4" VerticalAlignment="Center">
                 <TextBlock Text="File:" VerticalAlignment="Center" Margin="0,0,6,0"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 <ComboBox MinWidth="160" VerticalAlignment="Center" Margin="0,0,12,0"
@@ -77,6 +81,7 @@
                   <ComboBoxItem Content="Custom" Tag="Custom" />
                 </ComboBox>
               </StackPanel>
+              <WrapPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
               <ToggleButton x:Name="FiltersToggle" Margin="0,0,8,4" Padding="10,5"
                             ToolTip="Show / hide the filter panel (the count shows active filters)">
                 <StackPanel Orientation="Horizontal">
@@ -99,7 +104,8 @@
                 </ui:DropDownButton.Flyout>
               </ui:DropDownButton>
               <ui:Button Content="Save" Appearance="Primary" Icon="{ui:SymbolIcon Save24}" Margin="0,0,0,4" Click="OnSaveTypes" />
-            </WrapPanel>
+              </WrapPanel>
+            </Grid>
 
             <!-- Advanced filters (every control labeled). Collapsed by default — toggled by the
                  Filters button in the toolbar, so small screens keep the vertical space. -->
