@@ -65,14 +65,14 @@
               <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,16,4" VerticalAlignment="Center">
                 <TextBlock Text="File:" VerticalAlignment="Center" Margin="0,0,6,0"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                <ComboBox MinWidth="160" VerticalAlignment="Center" Margin="0,0,12,0"
+                <ComboBox MinWidth="160" VerticalAlignment="Center" Margin="0,0,12,0" Padding="10,5"
                           ItemsSource="{Binding TypesFileOptions}"
                           DisplayMemberPath="Label" SelectedValuePath="Path"
                           SelectedValue="{Binding TypesFileFilter}"
                           ToolTip="Scope the grid to one CE file, or All for the union" />
                 <TextBlock Text="Source:" VerticalAlignment="Center" Margin="0,0,6,0"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                <ComboBox MinWidth="110" VerticalAlignment="Center"
+                <ComboBox MinWidth="110" VerticalAlignment="Center" Padding="10,5"
                           SelectedValuePath="Tag" SelectedValue="{Binding TypesSourceFilter}"
                           ToolTip="Vanilla / Mod / Custom origin">
                   <ComboBoxItem Content="All sources" Tag="" />
