@@ -70,6 +70,15 @@ public partial class MainWindow : FluentWindow
                 return;
             }
 
+            // "Economy" opens its own modeless window (more room; works alongside the main
+            // window) — like Setup, it's not an in-app page, so bounce the rail selection back.
+            if (tag == "economy")
+            {
+                OpenEconomyWindow();
+                RestoreNavToCurrentPage();
+                return;
+            }
+
             // Clear every other rail's selection so only one item looks active.
             foreach (var rail in NavRails)
                 if (!ReferenceEquals(rail, lb)) rail.SelectedItem = null;
@@ -111,7 +120,6 @@ public partial class MainWindow : FluentWindow
         PageMyMods.Visibility = tag == "mymods" ? Visibility.Visible : Visibility.Collapsed;
         PageServers.Visibility = tag == "servers" ? Visibility.Visible : Visibility.Collapsed;
         PageBases.Visibility = tag == "bases" ? Visibility.Visible : Visibility.Collapsed;
-        PageEconomy.Visibility = tag == "economy" ? Visibility.Visible : Visibility.Collapsed;
         PageLogs.Visibility = tag == "logs" ? Visibility.Visible : Visibility.Collapsed;
         PageTools.Visibility = tag == "tools" ? Visibility.Visible : Visibility.Collapsed;
         PageMcp.Visibility = tag == "mcp" ? Visibility.Visible : Visibility.Collapsed;
@@ -123,8 +131,27 @@ public partial class MainWindow : FluentWindow
         if (tag == "mymods") { _vm.RefreshModProjects(); if (NewModAuthorBox.Text.Length == 0) NewModAuthorBox.Text = _vm.CachedAuthor; }
         if (tag == "servers") { _vm.RefreshServers(); _vm.RefreshBases(); }   // base dropdown needs bases
         if (tag == "bases") _vm.RefreshBases();
-        if (tag == "economy") { _vm.TypesEditor.LoadTypes(); _vm.RefreshDictionaries(); RefreshTypesBackupsMenu(); }
         if (tag == "settings") { LoadSettingsFields(); _ = _vm.RefreshGitHubAuthAsync(); _vm.RefreshSteamAccount(); }
+    }
+
+    // --- Economy window (modeless, single instance) ------------------------
+
+    private EconomyWindow? _economyWin;
+
+    /// <summary>Open (or focus) the Central Economy editor window. Modeless and ownerless on
+    /// purpose: an owned Mica FluentWindow hides its owner when closed, and the editor must not
+    /// block the main window. The shared MainViewModel keeps all editor state across closes.</summary>
+    private void OpenEconomyWindow()
+    {
+        if (_economyWin is { } w)
+        {
+            if (w.WindowState == WindowState.Minimized) w.WindowState = WindowState.Normal;
+            w.Activate();
+            return;
+        }
+        _economyWin = new EconomyWindow(_vm);
+        _economyWin.Closed += (_, _) => _economyWin = null;
+        _economyWin.Show();
     }
 
     // --- Dashboard shortcut handlers --------------------------------------
@@ -571,172 +598,6 @@ public partial class MainWindow : FluentWindow
 
     private void OnOpenWorkshop(object sender, RoutedEventArgs e)
         => new WorkshopWindow(_vm).Show();   // no Owner — see OnOpenGit (owned FluentWindow can hide its owner)
-
-    // === Economy (types.xml) editor =======================================
-
-    // Batch + remove operate on the CHECKED rows (checkbox column), NOT the grid's focused/edited row.
-    // The detail form edits the single focused row (grid SelectedItem) — selection-for-edit and
-    // selection-for-batch are separate concepts now.
-    private System.Collections.Generic.List<TypeRowVm> CheckedTypes() =>
-        _vm.TypesEditor.CheckedTypes.ToList();
-
-    private void OnReloadTypes(object sender, RoutedEventArgs e) { _vm.TypesEditor.LoadTypes(); RefreshTypesBackupsMenu(); }
-    private void OnSaveTypes(object sender, RoutedEventArgs e) { _vm.TypesEditor.SaveTypes(); RefreshTypesBackupsMenu(); }
-
-    /// <summary>Reload the Dictionaries data when the user switches to the Dictionaries sub-tab of the
-    /// Economy tab shell, so stale limits (e.g. after types/limits edits) are refreshed immediately.
-    /// Guarded against child SelectionChanged bubbling by checking e.OriginalSource is this TabControl.</summary>
-    private void OnEconomyTabSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        // Only react to selection changes on the exact Economy TabControl, not bubbled events from
-        // child controls (DataGrid, ComboBox, etc.) whose SelectionChanged also bubbles up.
-        if (!ReferenceEquals(e.OriginalSource, EconomyTabControl)) return;
-        if (EconomyTabControl.SelectedItem is TabItem { Header: "Dictionaries" })
-            _vm.RefreshDictionaries();
-        else if (EconomyTabControl.SelectedItem is TabItem { Header: "Random Presets" })
-            _vm.RefreshRandomPresets();
-        else if (EconomyTabControl.SelectedItem is TabItem { Header: "Spawnable Types" })
-            _vm.RefreshSpawnableTypes();
-        else if (EconomyTabControl.SelectedItem is TabItem { Header: "Globals" })
-            _vm.RefreshGlobals();
-        else if (EconomyTabControl.SelectedItem is TabItem { Header: "Events" })
-            _vm.RefreshEvents();
-        else if (EconomyTabControl.SelectedItem is TabItem { Header: "Player Spawns" })
-            _vm.RefreshPlayerSpawns();
-    }
-
-    private void OnAddType(object sender, RoutedEventArgs e)
-    {
-        var result = NewTypeDialog.Show(this, _vm.TypesEditor.TypesSourceFiles());
-        if (result is { } r) _vm.TypesEditor.AddType(r.name, r.targetFile);
-    }
-
-    private void OnDuplicateType(object sender, RoutedEventArgs e)
-    {
-        if (_vm.TypesEditor.SelectedType is not { } src)
-        { System.Windows.MessageBox.Show("Select a row to duplicate first.", "Duplicate", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information); return; }
-        var result = NewTypeDialog.Show(this, _vm.TypesEditor.TypesSourceFiles(),
-            title: "Duplicate type", defaultName: src.Name + "_Copy", okLabel: "Duplicate");
-        if (result is { } r) _vm.TypesEditor.DuplicateType(src, r.name, r.targetFile);
-    }
-
-    // Remove acts on the checked rows; falls back to the single focused row when nothing is checked.
-    private void OnRemoveTypes(object sender, RoutedEventArgs e)
-    {
-        var rows = CheckedTypes();
-        if (rows.Count == 0 && TypesGrid.SelectedItem is TypeRowVm sel) rows = new() { sel };
-        _vm.TypesEditor.RemoveTypes(rows);
-    }
-
-    private void OnClearFilters(object sender, RoutedEventArgs e) => _vm.TypesEditor.ClearTypeFilters();
-
-    // Push the grid's focused row into the VM (drives the detail form). Batch selection is the checkbox set.
-    private void OnTypesSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-        => _vm.TypesEditor.SetSelectedTypes(
-            TypesGrid.SelectedItem is TypeRowVm row ? new[] { row } : System.Array.Empty<TypeRowVm>(),
-            TypesGrid.SelectedItem as TypeRowVm);
-
-    // Jump to (and select) the first row with lint findings.
-    private void OnJumpToLint(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        var hit = _vm.TypesEditor.TypesView.Cast<TypeRowVm>().FirstOrDefault(r => r.HasLint);
-        if (hit is null) return;
-        TypesGrid.SelectedItem = hit;
-        TypesGrid.ScrollIntoView(hit);
-    }
-
-    private void OnBatchSet(object sender, RoutedEventArgs e) => Batch(multiply: false);
-    private void OnBatchMultiply(object sender, RoutedEventArgs e) => Batch(multiply: true);
-
-    private void Batch(bool multiply)
-    {
-        var rows = CheckedTypes();
-        if (!RequireSelection(rows)) return;
-        var field = (BatchFieldBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "nominal";
-        if (!double.TryParse(BatchValueBox.Text.Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var val))
-        { System.Windows.MessageBox.Show("Enter a numeric value.", "Batch", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information); return; }
-        _vm.TypesEditor.BatchApply(rows, field, val, multiply);
-        TypesGrid.Items.Refresh();
-    }
-
-    private void OnBatchFlagSet(object sender, RoutedEventArgs e) => BatchFlag("set");
-    private void OnBatchFlagClear(object sender, RoutedEventArgs e) => BatchFlag("clear");
-    private void OnBatchFlagToggle(object sender, RoutedEventArgs e) => BatchFlag("toggle");
-
-    private void BatchFlag(string op)
-    {
-        var rows = CheckedTypes();
-        if (!RequireSelection(rows)) return;
-        var flag = (BatchFlagBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "map";
-        _vm.TypesEditor.BatchFlag(rows, flag, op);
-        TypesGrid.Items.Refresh();
-    }
-
-    private void OnBatchListAdd(object sender, RoutedEventArgs e) => BatchList(add: true);
-    private void OnBatchListRemove(object sender, RoutedEventArgs e) => BatchList(add: false);
-
-    private void BatchList(bool add)
-    {
-        var rows = CheckedTypes();
-        if (!RequireSelection(rows)) return;
-        var list = (BatchListBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "usage";
-        var val = BatchListValueBox.Text.Trim();
-        if (val.Length == 0) { System.Windows.MessageBox.Show("Enter a list value.", "Batch", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information); return; }
-        _vm.TypesEditor.BatchList(rows, list, val, add);
-        TypesGrid.Items.Refresh();
-    }
-
-    private void OnBatchCategorySet(object sender, RoutedEventArgs e)
-    {
-        var rows = CheckedTypes();
-        if (!RequireSelection(rows)) return;
-        var cat = BatchCategoryBox.Text?.Trim() ?? "";
-        _vm.TypesEditor.BatchCategory(rows, cat);
-        TypesGrid.Items.Refresh();
-    }
-
-    private bool RequireSelection(System.Collections.Generic.IReadOnlyList<TypeRowVm> rows)
-    {
-        if (rows.Count > 0) return true;
-        System.Windows.MessageBox.Show("Check one or more rows first (the checkbox column).", "Batch", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-        return false;
-    }
-
-    // Undo granularity for in-grid cell edits: snapshot the pre-edit state, commit it on edit-commit.
-    private void OnTypesBeginEdit(object sender, DataGridBeginningEditEventArgs e) => _vm.TypesEditor.BeginTypeEdit();
-    private void OnTypesCellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
-    {
-        if (e.EditAction == DataGridEditAction.Commit) _vm.TypesEditor.CommitTypeEdit();
-        else _vm.TypesEditor.CancelTypeEdit();
-    }
-
-    private void RefreshTypesBackupsMenu()
-    {
-        TypesBackupsMenu.Items.Clear();
-        var backups = _vm.TypesEditor.TypesBackups();
-        if (backups.Count == 0)
-        {
-            TypesBackupsMenu.Items.Add(new System.Windows.Controls.MenuItem { Header = "(no backups yet)", IsEnabled = false });
-            return;
-        }
-        foreach (var b in backups)
-        {
-            var item = new System.Windows.Controls.MenuItem { Header = b.Stamp, Tag = b.Path };
-            item.Click += OnRestoreTypeBackup;
-            TypesBackupsMenu.Items.Add(item);
-        }
-    }
-
-    private void OnRestoreTypeBackup(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string path }) return;
-        var ok = System.Windows.MessageBox.Show(
-            $"Restore types.xml from backup {System.IO.Path.GetFileName(path)}?\n\nThe current file is snapshotted first (undoable).",
-            "Restore backup", System.Windows.MessageBoxButton.OKCancel, System.Windows.MessageBoxImage.Warning) == System.Windows.MessageBoxResult.OK;
-        if (!ok) return;
-        _vm.TypesEditor.RestoreTypes(path);
-        RefreshTypesBackupsMenu();
-    }
 
     // Open a clickable hyperlink (apikey page, etc.) in the default browser.
     private void OnNavigateLink(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
