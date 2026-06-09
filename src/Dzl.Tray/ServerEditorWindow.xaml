@@ -82,7 +82,7 @@
 
     <ui:TitleBar Grid.Row="0" Title="{Binding ActivePreset, StringFormat='Server: {0}'}">
       <ui:TitleBar.TrailingContent>
-        <ctl:ScreenshotButton VerticalAlignment="Center" Margin="0,0,8,0" />
+        <ctl:ScreenshotButton VerticalAlignment="Stretch" />
       </ui:TitleBar.TrailingContent>
       <ui:TitleBar.Icon>
         <ui:SymbolIcon Symbol="Server24" />

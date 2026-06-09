@@ -14,7 +14,7 @@
 
     <ui:TitleBar Grid.Row="0" x:Name="TitleBarCtl" Title="Create release" ShowMaximize="False" ShowMinimize="False" Margin="0,0,0,8">
       <ui:TitleBar.TrailingContent>
-        <ctl:ScreenshotButton VerticalAlignment="Center" Margin="0,0,8,0" />
+        <ctl:ScreenshotButton VerticalAlignment="Stretch" />
       </ui:TitleBar.TrailingContent>
     </ui:TitleBar>
 
