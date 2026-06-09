@@ -11,16 +11,9 @@
               <KeyBinding Modifiers="Control" Key="Z" Command="{Binding TypesEditor.UndoTypesCommand}" />
               <KeyBinding Modifiers="Control" Key="Y" Command="{Binding TypesEditor.RedoTypesCommand}" />
             </Grid.InputBindings>
-            <Grid.RowDefinitions>
-              <RowDefinition Height="Auto" />  <!-- page header -->
-              <RowDefinition Height="*" />     <!-- CE editor tab shell -->
-            </Grid.RowDefinitions>
-
-            <!-- Page header -->
-            <TextBlock Grid.Row="0" Text="Central Economy" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,8" />
-
-            <!-- CE editor tab shell: one tab per CE file KIND (Types now; more kinds slot in later). -->
-            <TabControl x:Name="EconomyTabControl" Grid.Row="1" BorderThickness="0" Background="Transparent" Padding="0"
+            <!-- CE editor tab shell: one tab per CE file KIND. No page header — the window title
+                 already says Economy. -->
+            <TabControl x:Name="EconomyTabControl" BorderThickness="0" Background="Transparent" Padding="0"
                         SelectionChanged="OnEconomyTabSelectionChanged">
               <TabControl.Resources>
                 <Style TargetType="TabItem">
@@ -61,72 +54,56 @@
                     <RowDefinition Height="Auto" />  <!-- status -->
                   </Grid.RowDefinitions>
 
-            <!-- Main file selector (top of tab) + toolbar -->
+            <!-- One-row toolbar: file/source scope on the left, actions on the right.
+                 The resolved file path lives in the status footer below the grid. -->
             <Grid Grid.Row="0" Margin="0,0,0,8">
               <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
-              <!-- File / source selector: the primary in-tab navigation -->
-              <Border Grid.Column="0" Padding="10,8" CornerRadius="6" VerticalAlignment="Top"
-                      Background="{DynamicResource ControlFillColorDefaultBrush}"
-                      BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
-                <StackPanel>
-                  <WrapPanel Orientation="Horizontal">
-                    <StackPanel Orientation="Horizontal" Margin="0,0,16,4">
-                      <TextBlock Text="File:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="SemiBold"
-                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                      <ComboBox MinWidth="160" VerticalAlignment="Center"
-                                ItemsSource="{Binding TypesFileOptions}"
-                                DisplayMemberPath="Label" SelectedValuePath="Path"
-                                SelectedValue="{Binding TypesFileFilter}"
-                                ToolTip="Scope the grid to one CE file, or All for the union" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                      <TextBlock Text="Source:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="SemiBold"
-                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                      <ComboBox MinWidth="110" VerticalAlignment="Center"
-                                SelectedValuePath="Tag" SelectedValue="{Binding TypesSourceFilter}"
-                                ToolTip="Vanilla / Mod / Custom origin">
-                        <ComboBoxItem Content="All sources" Tag="" />
-                        <ComboBoxItem Content="Vanilla" Tag="Vanilla" />
-                        <ComboBoxItem Content="Mod" Tag="Mod" />
-                        <ComboBoxItem Content="Custom" Tag="Custom" />
-                      </ComboBox>
-                    </StackPanel>
-                  </WrapPanel>
-                  <TextBlock FontSize="11" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"
-                             Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                             Text="{Binding TypesFile}" />
-                </StackPanel>
-              </Border>
-              <StackPanel Grid.Column="1" Margin="12,0,0,0" HorizontalAlignment="Right">
-                <TextBlock Text="{Binding TypesCountLabel}" HorizontalAlignment="Right" Margin="0,2,0,8"
+              <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="File:" VerticalAlignment="Center" Margin="0,0,6,0"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <ComboBox MinWidth="160" VerticalAlignment="Center" Margin="0,0,12,0"
+                          ItemsSource="{Binding TypesFileOptions}"
+                          DisplayMemberPath="Label" SelectedValuePath="Path"
+                          SelectedValue="{Binding TypesFileFilter}"
+                          ToolTip="Scope the grid to one CE file, or All for the union" />
+                <TextBlock Text="Source:" VerticalAlignment="Center" Margin="0,0,6,0"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <ComboBox MinWidth="110" VerticalAlignment="Center"
+                          SelectedValuePath="Tag" SelectedValue="{Binding TypesSourceFilter}"
+                          ToolTip="Vanilla / Mod / Custom origin">
+                  <ComboBoxItem Content="All sources" Tag="" />
+                  <ComboBoxItem Content="Vanilla" Tag="Vanilla" />
+                  <ComboBoxItem Content="Mod" Tag="Mod" />
+                  <ComboBoxItem Content="Custom" Tag="Custom" />
+                </ComboBox>
+              </StackPanel>
+              <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="{Binding TypesCountLabel}" VerticalAlignment="Center" Margin="0,0,12,0"
                            FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                <!-- Toolbar: filters toggle + undo/redo + add/duplicate/remove/reload/backups/save -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-              <ToggleButton x:Name="FiltersToggle" Margin="0,0,8,0" Padding="10,5"
-                            ToolTip="Show / hide the filter panel (the count shows active filters)">
-                <StackPanel Orientation="Horizontal">
-                  <ui:SymbolIcon Symbol="Filter24" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
-                  <TextBlock Text="{Binding FiltersButtonLabel}" VerticalAlignment="Center" />
-                </StackPanel>
-              </ToggleButton>
-              <ui:Button Icon="{ui:SymbolIcon ArrowUndo24}" ToolTip="Undo (Ctrl+Z)" Margin="0,0,4,0"
-                         Command="{Binding UndoTypesCommand}" />
-              <ui:Button Icon="{ui:SymbolIcon ArrowRedo24}" ToolTip="Redo (Ctrl+Y)" Margin="0,0,8,0"
-                         Command="{Binding RedoTypesCommand}" />
-              <ui:Button Content="Add" Icon="{ui:SymbolIcon Add24}" Margin="0,0,4,0" Click="OnAddType" />
-              <ui:Button Content="Duplicate" Icon="{ui:SymbolIcon Copy24}" Margin="0,0,4,0" Click="OnDuplicateType"
-                         ToolTip="Copy the selected row's full field set under a new name" />
-              <ui:Button Content="Remove" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" Margin="0,0,8,0" Click="OnRemoveTypes" />
-              <ui:Button Content="Reload" Icon="{ui:SymbolIcon ArrowSync24}" Margin="0,0,4,0" Click="OnReloadTypes" />
-              <ui:DropDownButton Content="Backups" Icon="{ui:SymbolIcon History24}" Margin="0,0,4,0">
-                <ui:DropDownButton.Flyout>
-                  <ContextMenu x:Name="TypesBackupsMenu" />
-                </ui:DropDownButton.Flyout>
-              </ui:DropDownButton>
-              <ui:Button Content="Save" Appearance="Primary" Icon="{ui:SymbolIcon Save24}" Click="OnSaveTypes" />
-                </StackPanel>
+                <ToggleButton x:Name="FiltersToggle" Margin="0,0,8,0" Padding="10,5"
+                              ToolTip="Show / hide the filter panel (the count shows active filters)">
+                  <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Symbol="Filter24" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding FiltersButtonLabel}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </ToggleButton>
+                <ui:Button Icon="{ui:SymbolIcon ArrowUndo24}" ToolTip="Undo (Ctrl+Z)" Margin="0,0,4,0"
+                           Command="{Binding UndoTypesCommand}" />
+                <ui:Button Icon="{ui:SymbolIcon ArrowRedo24}" ToolTip="Redo (Ctrl+Y)" Margin="0,0,8,0"
+                           Command="{Binding RedoTypesCommand}" />
+                <ui:Button Content="Add" Icon="{ui:SymbolIcon Add24}" Margin="0,0,4,0" Click="OnAddType" />
+                <ui:Button Content="Duplicate" Icon="{ui:SymbolIcon Copy24}" Margin="0,0,4,0" Click="OnDuplicateType"
+                           ToolTip="Copy the selected row's full field set under a new name" />
+                <ui:Button Content="Remove" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" Margin="0,0,8,0" Click="OnRemoveTypes" />
+                <ui:Button Content="Reload" Icon="{ui:SymbolIcon ArrowSync24}" Margin="0,0,4,0" Click="OnReloadTypes" />
+                <ui:DropDownButton Content="Backups" Icon="{ui:SymbolIcon History24}" Margin="0,0,4,0">
+                  <ui:DropDownButton.Flyout>
+                    <ContextMenu x:Name="TypesBackupsMenu" />
+                  </ui:DropDownButton.Flyout>
+                </ui:DropDownButton>
+                <ui:Button Content="Save" Appearance="Primary" Icon="{ui:SymbolIcon Save24}" Click="OnSaveTypes" />
               </StackPanel>
             </Grid>
 
@@ -441,16 +418,19 @@
               </Grid>
             </Grid>
 
-            <!-- Status + lint summary -->
+            <!-- Status footer: lint summary | resolved file path | edit status -->
             <Grid Grid.Row="3" Margin="0,6,0,0">
               <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
               <TextBlock Grid.Column="0" Text="{Binding TypesLintSummary}" VerticalAlignment="Center" FontSize="12"
-                         Foreground="#F0C04A" Cursor="Hand" MouseLeftButtonUp="OnJumpToLint"
+                         Margin="0,0,12,0" Foreground="#F0C04A" Cursor="Hand" MouseLeftButtonUp="OnJumpToLint"
                          ToolTip="Click to jump to the first row with findings"
                          Visibility="{Binding HasLintFindings, Converter={StaticResource BoolToVis}}" />
-              <TextBlock Grid.Column="1" Text="{Binding TypesStatus}" VerticalAlignment="Center" HorizontalAlignment="Right"
+              <TextBlock Grid.Column="1" Text="{Binding TypesFile}" ToolTip="{Binding TypesFile}"
+                         VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis"
+                         Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+              <TextBlock Grid.Column="2" Text="{Binding TypesStatus}" VerticalAlignment="Center" Margin="12,0,0,0"
                          FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             </Grid>
                 </Grid>
