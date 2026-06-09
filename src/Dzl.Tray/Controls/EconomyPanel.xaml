@@ -417,8 +417,12 @@
             </Grid>
 
             <!-- Status footer (one slim line, uniform 11px): path left, metrics right.
-                 Order: file path (ellipsized) | lint | showing X/N | last-action status. -->
-            <Grid Grid.Row="3" Height="22" Margin="0,6,0,0">
+                 Order: file path (ellipsized) | lint | showing X/N | last-action status.
+                 Tinted like a classic status bar so it reads as chrome, not content. -->
+            <Border Grid.Row="3" Margin="0,6,0,0" CornerRadius="4" Padding="10,3"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
+            <Grid Height="20">
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
@@ -434,6 +438,7 @@
               <TextBlock Grid.Column="3" Text="{Binding TypesStatus}" VerticalAlignment="Center"
                          FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             </Grid>
+            </Border>
                 </Grid>
               </TabItem>
 
