@@ -54,13 +54,11 @@
                     <RowDefinition Height="Auto" />  <!-- status -->
                   </Grid.RowDefinitions>
 
-            <!-- One-row toolbar: file/source scope on the left, actions on the right.
-                 The resolved file path lives in the status footer below the grid. -->
-            <Grid Grid.Row="0" Margin="0,0,0,8">
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
-              </Grid.ColumnDefinitions>
-              <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+            <!-- Toolbar: file/source scope + actions. A WrapPanel so a narrow window flows the
+                 buttons onto a second line instead of clipping them. The resolved file path
+                 lives in the status footer below the grid. -->
+            <WrapPanel Grid.Row="0" Margin="0,0,0,4">
+              <StackPanel Orientation="Horizontal" Margin="0,0,16,4" VerticalAlignment="Center">
                 <TextBlock Text="File:" VerticalAlignment="Center" Margin="0,0,6,0"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 <ComboBox MinWidth="160" VerticalAlignment="Center" Margin="0,0,12,0"
@@ -79,31 +77,29 @@
                   <ComboBoxItem Content="Custom" Tag="Custom" />
                 </ComboBox>
               </StackPanel>
-              <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                <ToggleButton x:Name="FiltersToggle" Margin="0,0,8,0" Padding="10,5"
-                              ToolTip="Show / hide the filter panel (the count shows active filters)">
-                  <StackPanel Orientation="Horizontal">
-                    <ui:SymbolIcon Symbol="Filter24" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding FiltersButtonLabel}" VerticalAlignment="Center" />
-                  </StackPanel>
-                </ToggleButton>
-                <ui:Button Icon="{ui:SymbolIcon ArrowUndo24}" ToolTip="Undo (Ctrl+Z)" Margin="0,0,4,0"
-                           Command="{Binding UndoTypesCommand}" />
-                <ui:Button Icon="{ui:SymbolIcon ArrowRedo24}" ToolTip="Redo (Ctrl+Y)" Margin="0,0,8,0"
-                           Command="{Binding RedoTypesCommand}" />
-                <ui:Button Content="Add" Icon="{ui:SymbolIcon Add24}" Margin="0,0,4,0" Click="OnAddType" />
-                <ui:Button Content="Duplicate" Icon="{ui:SymbolIcon Copy24}" Margin="0,0,4,0" Click="OnDuplicateType"
-                           ToolTip="Copy the selected row's full field set under a new name" />
-                <ui:Button Content="Remove" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" Margin="0,0,8,0" Click="OnRemoveTypes" />
-                <ui:Button Content="Reload" Icon="{ui:SymbolIcon ArrowSync24}" Margin="0,0,4,0" Click="OnReloadTypes" />
-                <ui:DropDownButton Content="Backups" Icon="{ui:SymbolIcon History24}" Margin="0,0,4,0">
-                  <ui:DropDownButton.Flyout>
-                    <ContextMenu x:Name="TypesBackupsMenu" />
-                  </ui:DropDownButton.Flyout>
-                </ui:DropDownButton>
-                <ui:Button Content="Save" Appearance="Primary" Icon="{ui:SymbolIcon Save24}" Click="OnSaveTypes" />
-              </StackPanel>
-            </Grid>
+              <ToggleButton x:Name="FiltersToggle" Margin="0,0,8,4" Padding="10,5"
+                            ToolTip="Show / hide the filter panel (the count shows active filters)">
+                <StackPanel Orientation="Horizontal">
+                  <ui:SymbolIcon Symbol="Filter24" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding FiltersButtonLabel}" VerticalAlignment="Center" />
+                </StackPanel>
+              </ToggleButton>
+              <ui:Button Icon="{ui:SymbolIcon ArrowUndo24}" ToolTip="Undo (Ctrl+Z)" Margin="0,0,4,4"
+                         Command="{Binding UndoTypesCommand}" />
+              <ui:Button Icon="{ui:SymbolIcon ArrowRedo24}" ToolTip="Redo (Ctrl+Y)" Margin="0,0,8,4"
+                         Command="{Binding RedoTypesCommand}" />
+              <ui:Button Content="Add" Icon="{ui:SymbolIcon Add24}" Margin="0,0,4,4" Click="OnAddType" />
+              <ui:Button Content="Duplicate" Icon="{ui:SymbolIcon Copy24}" Margin="0,0,4,4" Click="OnDuplicateType"
+                         ToolTip="Copy the selected row's full field set under a new name" />
+              <ui:Button Content="Remove" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" Margin="0,0,8,4" Click="OnRemoveTypes" />
+              <ui:Button Content="Reload" Icon="{ui:SymbolIcon ArrowSync24}" Margin="0,0,4,4" Click="OnReloadTypes" />
+              <ui:DropDownButton Content="Backups" Icon="{ui:SymbolIcon History24}" Margin="0,0,4,4">
+                <ui:DropDownButton.Flyout>
+                  <ContextMenu x:Name="TypesBackupsMenu" />
+                </ui:DropDownButton.Flyout>
+              </ui:DropDownButton>
+              <ui:Button Content="Save" Appearance="Primary" Icon="{ui:SymbolIcon Save24}" Margin="0,0,0,4" Click="OnSaveTypes" />
+            </WrapPanel>
 
             <!-- Advanced filters (every control labeled). Collapsed by default — toggled by the
                  Filters button in the toolbar, so small screens keep the vertical space. -->
