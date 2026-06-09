@@ -238,7 +238,20 @@
                   </DataGridTemplateColumn>
                   <!-- Lint indicator: ⚠ + count, tooltip lists this row's findings. Narrow on purpose —
                        it's empty for clean rows, so any extra width reads as a dead gap before Name. -->
-                  <DataGridTemplateColumn Header="" Width="26" MinWidth="26" MaxWidth="26" IsReadOnly="True" CanUserSort="False">
+                  <DataGridTemplateColumn Width="26" MinWidth="26" MaxWidth="26" IsReadOnly="True" CanUserSort="False">
+                    <DataGridTemplateColumn.HeaderStyle>
+                      <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DarkDataGridColumnHeader}">
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="HorizontalContentAlignment" Value="Center" />
+                      </Style>
+                    </DataGridTemplateColumn.HeaderStyle>
+                    <DataGridTemplateColumn.HeaderTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="⚠" FontSize="12" FontWeight="SemiBold" Foreground="#F0C04A"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   ToolTip="Lint findings — rows with warnings/errors show ⚠ here (hover the row's ⚠ for details)" />
+                      </DataTemplate>
+                    </DataGridTemplateColumn.HeaderTemplate>
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
                         <TextBlock Text="{Binding LintGlyph}" FontSize="11" FontWeight="SemiBold"
