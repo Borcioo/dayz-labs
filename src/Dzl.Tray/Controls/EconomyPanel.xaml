@@ -202,7 +202,7 @@
                   <!-- Checkbox selection (batch target) + header select-all over the filtered set.
                        Fixed width with the cell padding zeroed for this column so the (centered) checkbox is
                        never clipped — the default 8,0 cell padding ate the content width and cut the box. -->
-                  <DataGridTemplateColumn Width="36" MinWidth="36" MaxWidth="36" CanUserResize="False" CanUserSort="False" IsReadOnly="True">
+                  <DataGridTemplateColumn Width="40" MinWidth="40" MaxWidth="40" CanUserResize="False" CanUserSort="False" IsReadOnly="True">
                     <DataGridTemplateColumn.CellStyle>
                       <Style TargetType="DataGridCell" BasedOn="{StaticResource DarkDataGridCell}">
                         <Setter Property="Padding" Value="0" />
