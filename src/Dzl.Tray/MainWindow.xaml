@@ -1447,8 +1447,8 @@
           <!-- ===== ECONOMY (types.xml editor) ===== -->
           <Grid x:Name="PageEconomy" Visibility="Collapsed">
             <Grid.InputBindings>
-              <KeyBinding Modifiers="Control" Key="Z" Command="{Binding UndoTypesCommand}" />
-              <KeyBinding Modifiers="Control" Key="Y" Command="{Binding RedoTypesCommand}" />
+              <KeyBinding Modifiers="Control" Key="Z" Command="{Binding TypesEditor.UndoTypesCommand}" />
+              <KeyBinding Modifiers="Control" Key="Y" Command="{Binding TypesEditor.RedoTypesCommand}" />
             </Grid.InputBindings>
             <Grid.RowDefinitions>
               <RowDefinition Height="Auto" />  <!-- page header -->
@@ -1489,8 +1489,10 @@
                 </Style>
               </TabControl.Resources>
 
+              <!-- DataContext = MainViewModel.TypesEditor (a TypesEditorVm) — same sub-VM pattern as the
+                   other CE tabs below. -->
               <TabItem Header="Types">
-                <Grid Margin="0,12,0,0">
+                <Grid x:Name="TypesTabRoot" Margin="0,12,0,0" DataContext="{Binding TypesEditor}">
                   <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />  <!-- file selector + toolbar -->
                     <RowDefinition Height="Auto" />  <!-- filters -->
@@ -1744,16 +1746,17 @@
               <!-- Right column: contextual panel — single-row edit form OR batch operations -->
               <Grid Grid.Column="1" Margin="10,0,0,0">
                 <!-- Single-row edit form — visible when 0 or 1 rows are checked -->
-                <!-- DataContext is the selected row, but Vm/suggestions/Visibility must come from the page
-                     VM (not the row) — bind them explicitly via the PageEconomy element's DataContext. -->
+                <!-- DataContext is the selected row, but Vm/suggestions/Visibility must come from the
+                     Types-editor VM (not the row) — bind them explicitly via the TypesTabRoot element's
+                     DataContext (a TypesEditorVm). -->
                 <ctl:TypeDetailPanel x:Name="TypeDetail"
                                      DataContext="{Binding SelectedType}"
-                                     Vm="{Binding DataContext, ElementName=PageEconomy}"
-                                     Categories="{Binding DataContext.LimitsCategory, ElementName=PageEconomy}"
-                                     UsageSuggestions="{Binding DataContext.LimitsUsage, ElementName=PageEconomy}"
-                                     ValueSuggestions="{Binding DataContext.LimitsValue, ElementName=PageEconomy}"
-                                     TagSuggestions="{Binding DataContext.LimitsTag, ElementName=PageEconomy}"
-                                     Visibility="{Binding DataContext.BatchMode, ElementName=PageEconomy, Converter={StaticResource InverseBoolToVis}}" />
+                                     Vm="{Binding DataContext, ElementName=TypesTabRoot}"
+                                     Categories="{Binding DataContext.LimitsCategory, ElementName=TypesTabRoot}"
+                                     UsageSuggestions="{Binding DataContext.LimitsUsage, ElementName=TypesTabRoot}"
+                                     ValueSuggestions="{Binding DataContext.LimitsValue, ElementName=TypesTabRoot}"
+                                     TagSuggestions="{Binding DataContext.LimitsTag, ElementName=TypesTabRoot}"
+                                     Visibility="{Binding DataContext.BatchMode, ElementName=TypesTabRoot, Converter={StaticResource InverseBoolToVis}}" />
 
                 <!-- Batch operations panel — visible when 2+ rows are checked -->
                 <Border Visibility="{Binding BatchMode, Converter={StaticResource BoolToVis}}"

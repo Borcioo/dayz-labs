@@ -123,7 +123,7 @@ public partial class MainWindow : FluentWindow
         if (tag == "mymods") { _vm.RefreshModProjects(); if (NewModAuthorBox.Text.Length == 0) NewModAuthorBox.Text = _vm.CachedAuthor; }
         if (tag == "servers") { _vm.RefreshServers(); _vm.RefreshBases(); }   // base dropdown needs bases
         if (tag == "bases") _vm.RefreshBases();
-        if (tag == "economy") { _vm.LoadTypes(); _vm.RefreshDictionaries(); RefreshTypesBackupsMenu(); }
+        if (tag == "economy") { _vm.TypesEditor.LoadTypes(); _vm.RefreshDictionaries(); RefreshTypesBackupsMenu(); }
         if (tag == "settings") { LoadSettingsFields(); _ = _vm.RefreshGitHubAuthAsync(); _vm.RefreshSteamAccount(); }
     }
 
@@ -592,10 +592,10 @@ public partial class MainWindow : FluentWindow
     // The detail form edits the single focused row (grid SelectedItem) — selection-for-edit and
     // selection-for-batch are separate concepts now.
     private System.Collections.Generic.List<TypeRowVm> CheckedTypes() =>
-        _vm.CheckedTypes.ToList();
+        _vm.TypesEditor.CheckedTypes.ToList();
 
-    private void OnReloadTypes(object sender, RoutedEventArgs e) { _vm.LoadTypes(); RefreshTypesBackupsMenu(); }
-    private void OnSaveTypes(object sender, RoutedEventArgs e) { _vm.SaveTypes(); RefreshTypesBackupsMenu(); }
+    private void OnReloadTypes(object sender, RoutedEventArgs e) { _vm.TypesEditor.LoadTypes(); RefreshTypesBackupsMenu(); }
+    private void OnSaveTypes(object sender, RoutedEventArgs e) { _vm.TypesEditor.SaveTypes(); RefreshTypesBackupsMenu(); }
 
     /// <summary>Reload the Dictionaries data when the user switches to the Dictionaries sub-tab of the
     /// Economy tab shell, so stale limits (e.g. after types/limits edits) are refreshed immediately.
@@ -621,17 +621,17 @@ public partial class MainWindow : FluentWindow
 
     private void OnAddType(object sender, RoutedEventArgs e)
     {
-        var result = NewTypeDialog.Show(this, _vm.TypesSourceFiles());
-        if (result is { } r) _vm.AddType(r.name, r.targetFile);
+        var result = NewTypeDialog.Show(this, _vm.TypesEditor.TypesSourceFiles());
+        if (result is { } r) _vm.TypesEditor.AddType(r.name, r.targetFile);
     }
 
     private void OnDuplicateType(object sender, RoutedEventArgs e)
     {
-        if (_vm.SelectedType is not { } src)
+        if (_vm.TypesEditor.SelectedType is not { } src)
         { System.Windows.MessageBox.Show("Select a row to duplicate first.", "Duplicate", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information); return; }
-        var result = NewTypeDialog.Show(this, _vm.TypesSourceFiles(),
+        var result = NewTypeDialog.Show(this, _vm.TypesEditor.TypesSourceFiles(),
             title: "Duplicate type", defaultName: src.Name + "_Copy", okLabel: "Duplicate");
-        if (result is { } r) _vm.DuplicateType(src, r.name, r.targetFile);
+        if (result is { } r) _vm.TypesEditor.DuplicateType(src, r.name, r.targetFile);
     }
 
     // Remove acts on the checked rows; falls back to the single focused row when nothing is checked.
@@ -639,21 +639,21 @@ public partial class MainWindow : FluentWindow
     {
         var rows = CheckedTypes();
         if (rows.Count == 0 && TypesGrid.SelectedItem is TypeRowVm sel) rows = new() { sel };
-        _vm.RemoveTypes(rows);
+        _vm.TypesEditor.RemoveTypes(rows);
     }
 
-    private void OnClearFilters(object sender, RoutedEventArgs e) => _vm.ClearTypeFilters();
+    private void OnClearFilters(object sender, RoutedEventArgs e) => _vm.TypesEditor.ClearTypeFilters();
 
     // Push the grid's focused row into the VM (drives the detail form). Batch selection is the checkbox set.
     private void OnTypesSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-        => _vm.SetSelectedTypes(
+        => _vm.TypesEditor.SetSelectedTypes(
             TypesGrid.SelectedItem is TypeRowVm row ? new[] { row } : System.Array.Empty<TypeRowVm>(),
             TypesGrid.SelectedItem as TypeRowVm);
 
     // Jump to (and select) the first row with lint findings.
     private void OnJumpToLint(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        var hit = _vm.TypesView.Cast<TypeRowVm>().FirstOrDefault(r => r.HasLint);
+        var hit = _vm.TypesEditor.TypesView.Cast<TypeRowVm>().FirstOrDefault(r => r.HasLint);
         if (hit is null) return;
         TypesGrid.SelectedItem = hit;
         TypesGrid.ScrollIntoView(hit);
@@ -669,7 +669,7 @@ public partial class MainWindow : FluentWindow
         var field = (BatchFieldBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "nominal";
         if (!double.TryParse(BatchValueBox.Text.Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var val))
         { System.Windows.MessageBox.Show("Enter a numeric value.", "Batch", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information); return; }
-        _vm.BatchApply(rows, field, val, multiply);
+        _vm.TypesEditor.BatchApply(rows, field, val, multiply);
         TypesGrid.Items.Refresh();
     }
 
@@ -682,7 +682,7 @@ public partial class MainWindow : FluentWindow
         var rows = CheckedTypes();
         if (!RequireSelection(rows)) return;
         var flag = (BatchFlagBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "map";
-        _vm.BatchFlag(rows, flag, op);
+        _vm.TypesEditor.BatchFlag(rows, flag, op);
         TypesGrid.Items.Refresh();
     }
 
@@ -696,7 +696,7 @@ public partial class MainWindow : FluentWindow
         var list = (BatchListBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "usage";
         var val = BatchListValueBox.Text.Trim();
         if (val.Length == 0) { System.Windows.MessageBox.Show("Enter a list value.", "Batch", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information); return; }
-        _vm.BatchList(rows, list, val, add);
+        _vm.TypesEditor.BatchList(rows, list, val, add);
         TypesGrid.Items.Refresh();
     }
 
@@ -705,7 +705,7 @@ public partial class MainWindow : FluentWindow
         var rows = CheckedTypes();
         if (!RequireSelection(rows)) return;
         var cat = BatchCategoryBox.Text?.Trim() ?? "";
-        _vm.BatchCategory(rows, cat);
+        _vm.TypesEditor.BatchCategory(rows, cat);
         TypesGrid.Items.Refresh();
     }
 
@@ -717,17 +717,17 @@ public partial class MainWindow : FluentWindow
     }
 
     // Undo granularity for in-grid cell edits: snapshot the pre-edit state, commit it on edit-commit.
-    private void OnTypesBeginEdit(object sender, DataGridBeginningEditEventArgs e) => _vm.BeginTypeEdit();
+    private void OnTypesBeginEdit(object sender, DataGridBeginningEditEventArgs e) => _vm.TypesEditor.BeginTypeEdit();
     private void OnTypesCellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
     {
-        if (e.EditAction == DataGridEditAction.Commit) _vm.CommitTypeEdit();
-        else _vm.CancelTypeEdit();
+        if (e.EditAction == DataGridEditAction.Commit) _vm.TypesEditor.CommitTypeEdit();
+        else _vm.TypesEditor.CancelTypeEdit();
     }
 
     private void RefreshTypesBackupsMenu()
     {
         TypesBackupsMenu.Items.Clear();
-        var backups = _vm.TypesBackups();
+        var backups = _vm.TypesEditor.TypesBackups();
         if (backups.Count == 0)
         {
             TypesBackupsMenu.Items.Add(new System.Windows.Controls.MenuItem { Header = "(no backups yet)", IsEnabled = false });
@@ -748,7 +748,7 @@ public partial class MainWindow : FluentWindow
             $"Restore types.xml from backup {System.IO.Path.GetFileName(path)}?\n\nThe current file is snapshotted first (undoable).",
             "Restore backup", System.Windows.MessageBoxButton.OKCancel, System.Windows.MessageBoxImage.Warning) == System.Windows.MessageBoxResult.OK;
         if (!ok) return;
-        _vm.RestoreTypes(path);
+        _vm.TypesEditor.RestoreTypes(path);
         RefreshTypesBackupsMenu();
     }
 
