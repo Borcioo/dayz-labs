@@ -270,7 +270,7 @@
                   </DataGridTemplateColumn>
                   <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="2*" MinWidth="130" SortMemberPath="Name" />
                   <!-- Origin pill (matches the mod-source pills on the Mods/Servers pages) -->
-                  <DataGridTemplateColumn Header="Source" Width="84" IsReadOnly="True" SortMemberPath="OriginLabel">
+                  <DataGridTemplateColumn Header="Source" Width="Auto" IsReadOnly="True" SortMemberPath="OriginLabel">
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
                         <Border CornerRadius="9" Padding="7,1" Margin="2,0" VerticalAlignment="Center"
@@ -281,16 +281,16 @@
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                   </DataGridTemplateColumn>
-                  <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="110" IsReadOnly="True" />
-                  <DataGridTextColumn Header="Nominal" Binding="{Binding Nominal}" Width="64" />
-                  <DataGridTextColumn Header="Min" Binding="{Binding Min}" Width="54" />
-                  <DataGridTextColumn Header="QMin" Binding="{Binding QuantMin}" Width="54" />
-                  <DataGridTextColumn Header="QMax" Binding="{Binding QuantMax}" Width="54" />
-                  <DataGridTextColumn Header="Lifetime" Binding="{Binding Lifetime}" Width="80" />
-                  <DataGridTextColumn Header="Restock" Binding="{Binding Restock}" Width="70" />
-                  <DataGridTextColumn Header="Cost" Binding="{Binding Cost}" Width="54" />
+                  <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="Auto" IsReadOnly="True" />
+                  <DataGridTextColumn Header="Nominal" Binding="{Binding Nominal}" Width="Auto" />
+                  <DataGridTextColumn Header="Min" Binding="{Binding Min}" Width="Auto" />
+                  <DataGridTextColumn Header="QMin" Binding="{Binding QuantMin}" Width="Auto" />
+                  <DataGridTextColumn Header="QMax" Binding="{Binding QuantMax}" Width="Auto" />
+                  <DataGridTextColumn Header="Lifetime" Binding="{Binding Lifetime}" Width="Auto" />
+                  <DataGridTextColumn Header="Restock" Binding="{Binding Restock}" Width="Auto" />
+                  <DataGridTextColumn Header="Cost" Binding="{Binding Cost}" Width="Auto" />
                   <!-- Compact flags: active letters highlighted (C H M P · Cr De) -->
-                  <DataGridTemplateColumn Header="Flags" Width="110" IsReadOnly="True" CanUserSort="False">
+                  <DataGridTemplateColumn Header="Flags" Width="Auto" MinWidth="96" IsReadOnly="True" CanUserSort="False">
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
