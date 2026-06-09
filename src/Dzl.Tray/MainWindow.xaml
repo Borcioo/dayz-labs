@@ -263,22 +263,14 @@
             BorderBrush="{DynamicResource ControlElevationBorderBrush}">
       <Grid>
         <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="Auto" />  <!-- app name -->
           <ColumnDefinition Width="Auto" />  <!-- mode toggle -->
           <ColumnDefinition Width="Auto" />  <!-- profile -->
           <ColumnDefinition Width="*" />     <!-- spacer -->
           <ColumnDefinition Width="Auto" />  <!-- status pills -->
         </Grid.ColumnDefinitions>
 
-        <!-- App name -->
+        <!-- Mode toggle: debug | normal (the app icon/name live in the title bar above) -->
         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
-          <ui:SymbolIcon Symbol="Gauge24" FontSize="20" Margin="0,0,8,0"
-                         Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
-          <TextBlock Text="dzl" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
-        </StackPanel>
-
-        <!-- Mode toggle: debug | normal -->
-        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
           <TextBlock Text="Mode" VerticalAlignment="Center" Margin="0,0,8,0"
                      Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
           <ui:ToggleSwitch IsChecked="{Binding IsNormalMode, Mode=OneWay}"
@@ -289,7 +281,7 @@
         </StackPanel>
 
         <!-- Server quick switcher (manage on the Servers page) -->
-        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
           <TextBlock Text="Server" VerticalAlignment="Center" Margin="0,0,8,0"
                      Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
           <ComboBox Width="180" VerticalAlignment="Center"
@@ -301,7 +293,7 @@
 
         <!-- Status pills: SERVER/CLIENT/MCP + P:/GitHub/Steam — the same control renders the
              status footer at the bottom, so both bars always show the same state. -->
-        <ctl:StatusPills Grid.Column="4" VerticalAlignment="Center" />
+        <ctl:StatusPills Grid.Column="3" VerticalAlignment="Center" />
       </Grid>
     </Border>
 
