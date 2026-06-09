@@ -138,16 +138,19 @@ public partial class EconomyPanel : UserControl
         TypesGrid.Items.Refresh();
     }
 
-    private void OnBatchListAdd(object sender, RoutedEventArgs e) => BatchList(add: true);
-    private void OnBatchListRemove(object sender, RoutedEventArgs e) => BatchList(add: false);
+    private void OnBatchListAdd(object sender, RoutedEventArgs e) => BatchList(sender, add: true);
+    private void OnBatchListRemove(object sender, RoutedEventArgs e) => BatchList(sender, add: false);
 
-    private void BatchList(bool add)
+    // One section per CE list (usage / value / tag) — the button's Tag carries the list key and
+    // each section has its own suggestion combo.
+    private void BatchList(object sender, bool add)
     {
         var rows = CheckedTypes();
         if (!RequireSelection(rows)) return;
-        var list = (BatchListBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "usage";
-        var val = BatchListValueBox.Text.Trim();
-        if (val.Length == 0) { System.Windows.MessageBox.Show("Enter a list value.", "Batch", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information); return; }
+        var list = (sender as FrameworkElement)?.Tag?.ToString() ?? "usage";
+        var combo = list switch { "value" => BatchTierBox, "tag" => BatchTagBox, _ => BatchUsageBox };
+        var val = combo.Text?.Trim() ?? "";
+        if (val.Length == 0) { System.Windows.MessageBox.Show("Enter or pick a value first.", "Batch", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information); return; }
         Vm.TypesEditor.BatchList(rows, list, val, add);
         TypesGrid.Items.Refresh();
     }

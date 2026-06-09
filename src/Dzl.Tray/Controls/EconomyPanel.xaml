@@ -386,16 +386,31 @@
                         <ui:Button Content="Toggle" Click="OnBatchFlagToggle" ToolTip="Toggle the chosen flag" />
                       </StackPanel>
 
-                      <TextBlock Text="List" Style="{StaticResource BatchLabel}" />
-                      <ComboBox x:Name="BatchListBox" SelectedValuePath="Tag" SelectedIndex="0" Margin="0,0,0,4">
-                        <ComboBoxItem Content="usage" Tag="usage" />
-                        <ComboBoxItem Content="value" Tag="value" />
-                        <ComboBoxItem Content="tag" Tag="tag" />
-                      </ComboBox>
-                      <ui:TextBox x:Name="BatchListValueBox" PlaceholderText="list value" Margin="0,0,0,6" />
+                      <!-- One section per CE list, each with dictionary suggestions (same sources as
+                           the detail panel) — no generic which-list picker. The Tag on the buttons
+                           carries the internal list key (usage/value/tag). -->
+                      <TextBlock Text="Usage" Style="{StaticResource BatchLabel}" />
+                      <ComboBox x:Name="BatchUsageBox" IsEditable="True" ItemsSource="{Binding LimitsUsage}"
+                                Margin="0,0,0,6" ToolTip="Usage value to add/remove (suggestions from cfglimitsdefinition.xml)" />
                       <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                        <ui:Button Content="+ Add" Margin="0,0,4,0" Click="OnBatchListAdd" ToolTip="Add this value to the list on checked rows" />
-                        <ui:Button Content="− Remove" Click="OnBatchListRemove" ToolTip="Remove this value from the list on checked rows" />
+                        <ui:Button Content="+ Add" Margin="0,0,4,0" Tag="usage" Click="OnBatchListAdd" ToolTip="Add this usage on checked rows" />
+                        <ui:Button Content="− Remove" Tag="usage" Click="OnBatchListRemove" ToolTip="Remove this usage from checked rows" />
+                      </StackPanel>
+
+                      <TextBlock Text="Value (tiers)" Style="{StaticResource BatchLabel}" />
+                      <ComboBox x:Name="BatchTierBox" IsEditable="True" ItemsSource="{Binding LimitsValue}"
+                                Margin="0,0,0,6" ToolTip="Tier to add/remove (suggestions from cfglimitsdefinition.xml)" />
+                      <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                        <ui:Button Content="+ Add" Margin="0,0,4,0" Tag="value" Click="OnBatchListAdd" ToolTip="Add this tier on checked rows" />
+                        <ui:Button Content="− Remove" Tag="value" Click="OnBatchListRemove" ToolTip="Remove this tier from checked rows" />
+                      </StackPanel>
+
+                      <TextBlock Text="Tag" Style="{StaticResource BatchLabel}" />
+                      <ComboBox x:Name="BatchTagBox" IsEditable="True" ItemsSource="{Binding LimitsTag}"
+                                Margin="0,0,0,6" ToolTip="Tag to add/remove (suggestions from cfglimitsdefinition.xml)" />
+                      <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                        <ui:Button Content="+ Add" Margin="0,0,4,0" Tag="tag" Click="OnBatchListAdd" ToolTip="Add this tag on checked rows" />
+                        <ui:Button Content="− Remove" Tag="tag" Click="OnBatchListRemove" ToolTip="Remove this tag from checked rows" />
                       </StackPanel>
 
                       <TextBlock Text="Category" Style="{StaticResource BatchLabel}" />
