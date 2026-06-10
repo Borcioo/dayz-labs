@@ -326,20 +326,26 @@
                 <Grid.RowDefinitions>
                   <RowDefinition Height="*" /><RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <!-- Shown only when a row is selected AND we're not in batch mode (nested
-                     visibilities = AND without a multi-converter). -->
-                <StackPanel Grid.Row="1"
-                            Visibility="{Binding BatchMode, Converter={StaticResource InverseBoolToVis}}">
-                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0"
-                              Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
-                    <ui:Button Content="Duplicate" Icon="{ui:SymbolIcon Copy24}" Margin="0,0,4,0"
-                               Click="OnDuplicateType"
-                               ToolTip="Copy the selected row's full field set under a new name" />
-                    <ui:Button Content="Remove" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger"
-                               Click="OnRemoveTypes"
-                               ToolTip="Remove the selected row (unsaved until Save)" />
+                <!-- Contextual actions UNDER the card — same placement in both modes. Two equal
+                     columns that stretch to fill the panel width. -->
+                <Grid Grid.Row="1" Margin="0,8,0,0">
+                  <!-- single-row mode: Duplicate | Remove (only when a row is selected) -->
+                  <StackPanel Visibility="{Binding BatchMode, Converter={StaticResource InverseBoolToVis}}">
+                    <UniformGrid Columns="2" Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
+                      <ui:Button Content="Duplicate" Icon="{ui:SymbolIcon Copy24}" Margin="0,0,4,0"
+                                 HorizontalAlignment="Stretch" Click="OnDuplicateType"
+                                 ToolTip="Copy the selected row's full field set under a new name" />
+                      <ui:Button Content="Remove" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" Margin="4,0,0,0"
+                                 HorizontalAlignment="Stretch" Click="OnRemoveTypes"
+                                 ToolTip="Remove the selected row (unsaved until Save)" />
+                    </UniformGrid>
                   </StackPanel>
-                </StackPanel>
+                  <!-- batch mode: full-width Remove for the checked set -->
+                  <ui:Button Content="Remove checked rows" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger"
+                             HorizontalAlignment="Stretch" Click="OnRemoveTypes"
+                             Visibility="{Binding BatchMode, Converter={StaticResource BoolToVis}}"
+                             ToolTip="Remove every checked row (unsaved until Save; undoable)" />
+                </Grid>
                 <!-- Single-row edit form — visible when 0 or 1 rows are checked -->
                 <!-- DataContext is the selected row, but Vm/suggestions/Visibility must come from the
                      Types-editor VM (not the row) — bind them explicitly via the TypesTabRoot element's
@@ -434,10 +440,6 @@
                       <ComboBox x:Name="BatchCategoryBox" Margin="0,0,0,6" IsEditable="True"
                                 ItemsSource="{Binding LimitsCategory}" ToolTip="Category to set" />
                       <ui:Button Content="Set category" Click="OnBatchCategorySet" ToolTip="Set category on checked rows" />
-
-                      <ui:Button Content="Remove checked rows" Appearance="Danger" Icon="{ui:SymbolIcon Delete24}"
-                                 Margin="0,16,0,0" Click="OnRemoveTypes"
-                                 ToolTip="Remove every checked row (unsaved until Save; undoable)" />
                     </StackPanel>
                   </ScrollViewer>
                 </Border>
