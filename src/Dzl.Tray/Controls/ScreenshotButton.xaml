@@ -1,0 +1,20 @@
+<UserControl x:Class="Dzl.Tray.Controls.ScreenshotButton"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+  <!-- Flat, chrome-style: the whole row is pinned to the caption-button box (30px, top-aligned)
+       so both the camera AND the "saved …" status line up with minimize/maximize/close. -->
+  <StackPanel Orientation="Horizontal" Height="30" VerticalAlignment="Top">
+    <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12"
+               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+               Cursor="Hand" MouseLeftButtonUp="OnRevealScreenshot" />
+    <!-- Fixed 46×30 top-aligned: the exact box of WPF-UI's caption (min/max/close) buttons —
+         Stretch would make it taller than them and visibly uneven. -->
+    <ui:Button x:Name="ShotButton" Icon="{ui:SymbolIcon Camera20}" FontSize="14"
+               Appearance="Transparent" Background="Transparent" BorderThickness="0"
+               CornerRadius="0" Padding="0" Width="46" Height="30" VerticalAlignment="Top"
+               HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+               ToolTip="Screenshot the app (includes open windows) → saved to the screenshots folder"
+               Click="OnScreenshot" />
+  </StackPanel>
+</UserControl>

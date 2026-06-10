@@ -8,7 +8,7 @@ namespace Dzl.Tray.Controls;
 
 /// <summary>The master–detail editor surface for one <see cref="TypeRowVm"/> (its DataContext = the selected
 /// row, set by the host through a binding). Numeric +/- steppers, field commits, flag toggles and chip edits
-/// route through the owning <see cref="MainViewModel"/> (the <see cref="Vm"/> DP) so each change is one undo
+/// route through the owning <see cref="TypesEditorVm"/> (the <see cref="Vm"/> DP) so each change is one undo
 /// step and re-lints live. The limits suggestion lists are passed in as DPs (from the VM's LimitsXxx).</summary>
 public partial class TypeDetailPanel : UserControl
 {
@@ -28,13 +28,13 @@ public partial class TypeDetailPanel : UserControl
         };
     }
 
-    /// <summary>The owning view-model (for undo snapshots + re-lint after edits).</summary>
+    /// <summary>The owning Types-editor view-model (for undo snapshots + re-lint after edits).</summary>
     public static readonly DependencyProperty VmProperty = DependencyProperty.Register(
-        nameof(Vm), typeof(MainViewModel), typeof(TypeDetailPanel), new PropertyMetadata(null));
+        nameof(Vm), typeof(TypesEditorVm), typeof(TypeDetailPanel), new PropertyMetadata(null));
 
-    public MainViewModel? Vm
+    public TypesEditorVm? Vm
     {
-        get => (MainViewModel?)GetValue(VmProperty);
+        get => (TypesEditorVm?)GetValue(VmProperty);
         set => SetValue(VmProperty, value);
     }
 

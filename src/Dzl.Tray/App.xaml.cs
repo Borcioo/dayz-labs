@@ -48,7 +48,7 @@ public partial class App : Application
         DispatcherUnhandledException += (_, ex) =>
         {
             LogCrash(ex.Exception);
-            MessageBox.Show(ex.Exception.Message, "dzl — something went wrong",
+            MessageBox.Show(ex.Exception.Message, "DayZ Labs — something went wrong",
                             MessageBoxButton.OK, MessageBoxImage.Error);
             ex.Handled = true;
         };
