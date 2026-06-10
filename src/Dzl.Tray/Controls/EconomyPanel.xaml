@@ -93,10 +93,7 @@
                          Command="{Binding UndoTypesCommand}" />
               <ui:Button Icon="{ui:SymbolIcon ArrowRedo24}" ToolTip="Redo (Ctrl+Y)" Margin="0,0,8,4"
                          Command="{Binding RedoTypesCommand}" />
-              <ui:Button Content="Add" Icon="{ui:SymbolIcon Add24}" Margin="0,0,4,4" Click="OnAddType" />
-              <ui:Button Content="Duplicate" Icon="{ui:SymbolIcon Copy24}" Margin="0,0,4,4" Click="OnDuplicateType"
-                         ToolTip="Copy the selected row's full field set under a new name" />
-              <ui:Button Content="Remove" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" Margin="0,0,8,4" Click="OnRemoveTypes" />
+              <ui:Button Content="Add" Icon="{ui:SymbolIcon Add24}" Margin="0,0,8,4" Click="OnAddType" />
               <ui:Button Content="Reload" Icon="{ui:SymbolIcon ArrowSync24}" Margin="0,0,4,4" Click="OnReloadTypes" />
               <ui:DropDownButton Content="Backups" Icon="{ui:SymbolIcon History24}" Margin="0,0,4,4">
                 <ui:DropDownButton.Flyout>
@@ -323,8 +320,21 @@
               <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch"
                             Background="Transparent" ShowsPreview="False" />
 
-              <!-- Right column: contextual panel — single-row edit form OR batch operations -->
+              <!-- Right column: contextual panel — single-row edit form OR batch operations.
+                   Row 1 holds the per-row actions (Duplicate/Remove) under the edit form. -->
               <Grid Grid.Column="2" Margin="4,0,0,0">
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="*" /><RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0"
+                            Visibility="{Binding BatchMode, Converter={StaticResource InverseBoolToVis}}">
+                  <ui:Button Content="Duplicate" Icon="{ui:SymbolIcon Copy24}" Margin="0,0,4,0"
+                             Click="OnDuplicateType" IsEnabled="{Binding HasSelection}"
+                             ToolTip="Copy the selected row's full field set under a new name" />
+                  <ui:Button Content="Remove" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger"
+                             Click="OnRemoveTypes" IsEnabled="{Binding HasSelection}"
+                             ToolTip="Remove the selected row (unsaved until Save)" />
+                </StackPanel>
                 <!-- Single-row edit form — visible when 0 or 1 rows are checked -->
                 <!-- DataContext is the selected row, but Vm/suggestions/Visibility must come from the
                      Types-editor VM (not the row) — bind them explicitly via the TypesTabRoot element's
@@ -419,6 +429,10 @@
                       <ComboBox x:Name="BatchCategoryBox" Margin="0,0,0,6" IsEditable="True"
                                 ItemsSource="{Binding LimitsCategory}" ToolTip="Category to set" />
                       <ui:Button Content="Set category" Click="OnBatchCategorySet" ToolTip="Set category on checked rows" />
+
+                      <ui:Button Content="Remove checked rows" Appearance="Danger" Icon="{ui:SymbolIcon Delete24}"
+                                 Margin="0,16,0,0" Click="OnRemoveTypes"
+                                 ToolTip="Remove every checked row (unsaved until Save; undoable)" />
                     </StackPanel>
                   </ScrollViewer>
                 </Border>
