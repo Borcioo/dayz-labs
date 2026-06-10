@@ -103,7 +103,7 @@
               <!-- Save "lights up" (Primary accent + dot) only when there are unsaved changes. -->
               <ui:Button x:Name="SaveTypesBtn" Icon="{ui:SymbolIcon Save24}" Margin="0,0,0,4" Click="OnSaveTypes">
                 <ui:Button.Style>
-                  <Style TargetType="ui:Button">
+                  <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
                     <Setter Property="Appearance" Value="Secondary" />
                     <Setter Property="Content" Value="Save" />
                     <Setter Property="ToolTip" Value="No unsaved changes" />
