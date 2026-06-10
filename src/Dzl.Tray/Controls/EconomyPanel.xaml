@@ -326,14 +326,19 @@
                 <Grid.RowDefinitions>
                   <RowDefinition Height="*" /><RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0"
+                <!-- Shown only when a row is selected AND we're not in batch mode (nested
+                     visibilities = AND without a multi-converter). -->
+                <StackPanel Grid.Row="1"
                             Visibility="{Binding BatchMode, Converter={StaticResource InverseBoolToVis}}">
-                  <ui:Button Content="Duplicate" Icon="{ui:SymbolIcon Copy24}" Margin="0,0,4,0"
-                             Click="OnDuplicateType" IsEnabled="{Binding HasSelection}"
-                             ToolTip="Copy the selected row's full field set under a new name" />
-                  <ui:Button Content="Remove" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger"
-                             Click="OnRemoveTypes" IsEnabled="{Binding HasSelection}"
-                             ToolTip="Remove the selected row (unsaved until Save)" />
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0"
+                              Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
+                    <ui:Button Content="Duplicate" Icon="{ui:SymbolIcon Copy24}" Margin="0,0,4,0"
+                               Click="OnDuplicateType"
+                               ToolTip="Copy the selected row's full field set under a new name" />
+                    <ui:Button Content="Remove" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger"
+                               Click="OnRemoveTypes"
+                               ToolTip="Remove the selected row (unsaved until Save)" />
+                  </StackPanel>
                 </StackPanel>
                 <!-- Single-row edit form — visible when 0 or 1 rows are checked -->
                 <!-- DataContext is the selected row, but Vm/suggestions/Visibility must come from the
