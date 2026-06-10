@@ -111,6 +111,10 @@
                         <Setter Property="Background" Value="#C2620A" />
                         <Setter Property="BorderBrush" Value="#E07B1A" />
                         <Setter Property="Foreground" Value="#FFFFFF" />
+                        <Setter Property="MouseOverBackground" Value="#D9731A" />
+                        <Setter Property="MouseOverBorderBrush" Value="#F08A2A" />
+                        <Setter Property="PressedBackground" Value="#A85408" />
+                        <Setter Property="PressedForeground" Value="#FFFFFF" />
                         <Setter Property="ToolTip" Value="Unsaved changes — click to write types.xml" />
                       </DataTrigger>
                     </Style.Triggers>
