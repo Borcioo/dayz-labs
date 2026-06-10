@@ -100,7 +100,23 @@
                   <ContextMenu x:Name="TypesBackupsMenu" />
                 </ui:DropDownButton.Flyout>
               </ui:DropDownButton>
-              <ui:Button Content="Save" Appearance="Primary" Icon="{ui:SymbolIcon Save24}" Margin="0,0,0,4" Click="OnSaveTypes" />
+              <!-- Save "lights up" (Primary accent + dot) only when there are unsaved changes. -->
+              <ui:Button x:Name="SaveTypesBtn" Icon="{ui:SymbolIcon Save24}" Margin="0,0,0,4" Click="OnSaveTypes">
+                <ui:Button.Style>
+                  <Style TargetType="ui:Button">
+                    <Setter Property="Appearance" Value="Secondary" />
+                    <Setter Property="Content" Value="Save" />
+                    <Setter Property="ToolTip" Value="No unsaved changes" />
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding HasUnsavedChanges}" Value="True">
+                        <Setter Property="Appearance" Value="Primary" />
+                        <Setter Property="Content" Value="● Save" />
+                        <Setter Property="ToolTip" Value="Unsaved changes — click to write types.xml" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </ui:Button.Style>
+              </ui:Button>
               </WrapPanel>
             </Grid>
 

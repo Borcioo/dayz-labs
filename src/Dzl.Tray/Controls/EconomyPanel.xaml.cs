@@ -33,7 +33,26 @@ public partial class EconomyPanel : UserControl
     private System.Collections.Generic.List<TypeRowVm> CheckedTypes() =>
         Vm.TypesEditor.CheckedTypes.ToList();
 
-    private void OnReloadTypes(object sender, RoutedEventArgs e) { Vm.TypesEditor.LoadTypes(); RefreshTypesBackupsMenu(); }
+    // Reload guards unsaved edits: Yes = save then reload (SaveTypes reloads on success),
+    // No = discard and reload, Cancel = keep working.
+    private void OnReloadTypes(object sender, RoutedEventArgs e)
+    {
+        if (Vm.TypesEditor.HasUnsavedChanges)
+        {
+            var r = System.Windows.MessageBox.Show(
+                "You have unsaved changes.\n\nYes — save, then reload\nNo — discard the changes and reload\nCancel — stay as you are",
+                "Reload types", System.Windows.MessageBoxButton.YesNoCancel, System.Windows.MessageBoxImage.Warning);
+            if (r == System.Windows.MessageBoxResult.Cancel) return;
+            if (r == System.Windows.MessageBoxResult.Yes)
+            {
+                Vm.TypesEditor.SaveTypes();   // reloads from disk on success; keeps edits + status on failure
+                RefreshTypesBackupsMenu();
+                return;
+            }
+        }
+        Vm.TypesEditor.LoadTypes();
+        RefreshTypesBackupsMenu();
+    }
     private void OnSaveTypes(object sender, RoutedEventArgs e) { Vm.TypesEditor.SaveTypes(); RefreshTypesBackupsMenu(); }
 
     /// <summary>Reload the Dictionaries data when the user switches to the Dictionaries sub-tab of the

@@ -330,6 +330,11 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
     public bool CanUndoTypes => _typesUndo.Count > 0;
     public bool CanRedoTypes => _typesRedo.Count > 0;
 
+    /// <summary>True when the in-memory set has been mutated since the last load/save. Set on every
+    /// undo-snapshot push; cleared by <see cref="LoadTypes"/> (which also runs after a successful
+    /// save). Conservative on purpose: undoing back to the original state stays "dirty".</summary>
+    [ObservableProperty] private bool _hasUnsavedChanges;
+
     private List<Dzl.Core.Economy.TypeEntry> CaptureTypes() => Types.Select(t => t.ToEntry()).ToList();
 
     private void PushTypeUndo()
@@ -337,6 +342,7 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
         _typesUndo.Add(CaptureTypes());
         if (_typesUndo.Count > UndoCap) _typesUndo.RemoveAt(0);
         _typesRedo.Clear();
+        HasUnsavedChanges = true;
         AfterTypeHistoryChange();
     }
 
@@ -373,6 +379,7 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
         if (_typesUndo.Count > UndoCap) _typesUndo.RemoveAt(0);
         _typesRedo.Clear();
         _pendingEdit = null;
+        HasUnsavedChanges = true;
         AfterTypeHistoryChange();
         ScheduleLint();   // reflect in-memory edits after a cell commit (debounced for rapid edits)
     }
@@ -427,6 +434,7 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
         RefreshTypesFileOptions();
         RefreshLimits(svc);
         _typesUndo.Clear(); _typesRedo.Clear(); _pendingEdit = null;
+        HasUnsavedChanges = false;
         AfterTypeHistoryChange();
         OnPropertyChanged(nameof(TypesFile));
         OnPropertyChanged(nameof(HasTypes));
