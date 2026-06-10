@@ -340,11 +340,15 @@
                                  ToolTip="Remove the selected row (unsaved until Save)" />
                     </UniformGrid>
                   </StackPanel>
-                  <!-- batch mode: full-width Remove for the checked set -->
-                  <ui:Button Content="Remove checked rows" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger"
-                             HorizontalAlignment="Stretch" Click="OnRemoveTypes"
-                             Visibility="{Binding BatchMode, Converter={StaticResource BoolToVis}}"
-                             ToolTip="Remove every checked row (unsaved until Save; undoable)" />
+                  <!-- batch mode: Duplicate | Remove for the checked set, same two-column pattern -->
+                  <UniformGrid Columns="2" Visibility="{Binding BatchMode, Converter={StaticResource BoolToVis}}">
+                    <ui:Button Content="Duplicate checked" Icon="{ui:SymbolIcon Copy24}" Margin="0,0,4,0"
+                               HorizontalAlignment="Stretch" Click="OnBatchDuplicate"
+                               ToolTip="Copy every checked row under a collision-safe _Copy name (unsaved; undoable)" />
+                    <ui:Button Content="Remove checked" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" Margin="4,0,0,0"
+                               HorizontalAlignment="Stretch" Click="OnRemoveTypes"
+                               ToolTip="Remove every checked row (unsaved until Save; undoable)" />
+                  </UniformGrid>
                 </Grid>
                 <!-- Single-row edit form — visible when 0 or 1 rows are checked -->
                 <!-- DataContext is the selected row, but Vm/suggestions/Visibility must come from the

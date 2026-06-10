@@ -98,6 +98,15 @@ public partial class EconomyPanel : UserControl
         TypesGrid.ScrollIntoView(hit);
     }
 
+    // Batch duplicate: copy every checked row under a collision-safe _Copy name.
+    private void OnBatchDuplicate(object sender, RoutedEventArgs e)
+    {
+        var rows = CheckedTypes();
+        if (!RequireSelection(rows)) return;
+        Vm.TypesEditor.DuplicateTypes(rows);
+        TypesGrid.Items.Refresh();
+    }
+
     private void OnBatchSet(object sender, RoutedEventArgs e) => Batch(multiply: false);
     private void OnBatchMultiply(object sender, RoutedEventArgs e) => Batch(multiply: true);
 

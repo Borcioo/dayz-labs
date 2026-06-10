@@ -765,6 +765,34 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
         TypesStatus = $"duplicated {src.Name} → {newName} (unsaved)";
     }
 
+    /// <summary>Duplicate every row in <paramref name="rows"/> (the batch-checked set). Each copy keeps
+    /// the source row's full field set and file, under a collision-safe name (Name_Copy, Name_Copy2…).
+    /// One undo step for the whole batch; copies start unchecked.</summary>
+    public void DuplicateTypes(IReadOnlyList<TypeRowVm> rows)
+    {
+        if (rows.Count == 0) return;
+        PushTypeUndo();
+        var taken = new HashSet<string>(Types.Select(t => t.Name), StringComparer.OrdinalIgnoreCase);
+        foreach (var src in rows)
+        {
+            var name = UniqueName(src.Name, taken);
+            taken.Add(name);
+            var entry = src.ToEntry() with { Name = name };
+            Types.Add(Track(new TypeRowVm(entry, src.Origin)));
+        }
+        RefreshTypesView();
+        RefreshTypesLint();
+        TypesStatus = $"duplicated {rows.Count} (unsaved)";
+
+        static string UniqueName(string baseName, HashSet<string> taken)
+        {
+            var name = baseName + "_Copy";
+            var i = 2;
+            while (taken.Contains(name)) name = $"{baseName}_Copy{i++}";
+            return name;
+        }
+    }
+
     /// <summary>Snapshot the current state as one undo step before a detail-panel edit (numeric typing,
     /// category, flag toggle). Called by the code-behind when a detail field gains focus / a toggle flips.</summary>
     public void PushDetailEditUndo() => PushTypeUndo();
