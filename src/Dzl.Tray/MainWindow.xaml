@@ -891,12 +891,14 @@
                                    Text="⚠ Needs the GitHub CLI (gh) installed and signed in — see Settings → Accounts." />
                         <Grid Margin="0,0,0,8">
                           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                          <ui:TextBox x:Name="GhRepoBox" Grid.Column="0" PlaceholderText="owner/name or GitHub URL" />
+                          <ui:TextBox x:Name="GhRepoBox" Grid.Column="0" PlaceholderText="owner/name or GitHub URL"
+                                      TextChanged="OnGhRepoChanged" />
                           <ui:Button Grid.Column="1" Content="Import" Appearance="Primary"
                                      Icon="{ui:SymbolIcon ArrowDownload24}" Margin="8,0,0,0" Click="OnImportFromGitHub" />
                         </Grid>
                         <ui:TextBox x:Name="GhNameBox" Margin="0,0,0,8"
-                                    PlaceholderText="folder name (optional — defaults to the repo name)" />
+                                    PlaceholderText="folder name (auto-filled from the repo — edit freely)"
+                                    TextChanged="OnGhNameChanged" />
                         <ComboBox x:Name="GhModeCombo" SelectedIndex="0" Margin="0,0,0,8"
                                   ToolTip="What happens to version control after the download">
                           <ComboBoxItem Content="Keep .git — it's my repo (clone, push/pull works)" />

@@ -512,6 +512,26 @@ public partial class MainWindow : FluentWindow
         new BuildWindow(_vm, name).Show();
     }
 
+    // Folder name follows the repo URL until the user types their own; emptying the box hands
+    // control back to the auto-fill. _ghNameAutoFill guards the programmatic write from being
+    // mistaken for user input.
+    private bool _ghNameIsAuto = true;
+    private bool _ghNameAutoFill;
+
+    private void OnGhRepoChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        if (!_ghNameIsAuto) return;
+        _ghNameAutoFill = true;
+        GhNameBox.Text = MainViewModel.SuggestModName(GhRepoBox.Text);
+        _ghNameAutoFill = false;
+    }
+
+    private void OnGhNameChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        if (_ghNameAutoFill) return;
+        _ghNameIsAuto = GhNameBox.Text.Trim().Length == 0;
+    }
+
     private void OnImportFromGitHub(object sender, RoutedEventArgs e)
     {
         var repo = GhRepoBox.Text.Trim();
