@@ -98,9 +98,12 @@ public sealed class BuildService
 
         var root = ProjectPaths.Root(cfg);
         var keysDir = ProjectPaths.KeysDir(root, cfg.KeysDir);
+        // Never regenerate over an existing private key — a lost .biprivatekey means every mod
+        // signed with it can no longer be updated. The existing pair is returned untouched.
         if (File.Exists(ProjectPaths.PrivateKey(root, cfg.KeysDir, name)))
             return new KeyResult(true, ProjectPaths.PrivateKey(root, cfg.KeysDir, name),
-                ProjectPaths.PublicKey(root, cfg.KeysDir, name), "key already exists");
+                ProjectPaths.PublicKey(root, cfg.KeysDir, name),
+                $"key '{name}' already exists — left untouched (existing keys are never overwritten)");
 
         var exe = ToolCatalog.Find(cfg.DayzToolsPath, "dscreatekey");
         if (exe is null || !exe.Exists)

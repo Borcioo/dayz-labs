@@ -115,6 +115,22 @@ public class ModBuildTests
     }
 
     [Fact]
+    public void GenerateKey_never_overwrites_an_existing_private_key()
+    {
+        var (configPath, root) = TmpConfig();
+        var keysDir = Path.Combine(root, "keys");
+        Directory.CreateDirectory(keysDir);
+        var priv = Path.Combine(keysDir, "Macie.biprivatekey");
+        File.WriteAllText(priv, "PRECIOUS");
+
+        var r = new BuildService(configPath).GenerateKey("Macie");
+
+        r.Ok.Should().BeTrue();                               // existing pair is a usable outcome…
+        r.Output.Should().Contain("never overwritten");      // …but says nothing new was created
+        File.ReadAllText(priv).Should().Be("PRECIOUS");      // the key itself is untouched
+    }
+
+    [Fact]
     public void Build_fails_when_addonbuilder_missing_even_for_a_valid_project()
     {
         var (configPath, root) = TmpConfig();

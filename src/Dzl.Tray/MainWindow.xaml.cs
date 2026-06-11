@@ -596,17 +596,30 @@ public partial class MainWindow : FluentWindow
 
     // Ask for the new key's name in a prompt (the dropdown holds existing keys), persist it +
     // the keys folder, run DSCreateKey, then refresh the dropdown so the new key appears.
+    // A taken name is refused outright — losing a .biprivatekey to an accidental regenerate
+    // would orphan every mod signed with it (Core never overwrites either; this is the UX guard).
     private void OnGenerateKey(object sender, RoutedEventArgs e)
     {
         var name = PromptDialog.Show(this, "Generate signing key",
-            "Name for the new key pair (letters/digits/underscore, e.g. your author handle):",
-            CfgSigningKey.Text.Trim());
+            "Name for the NEW key pair (letters/digits/underscore, e.g. your author handle):",
+            "");
         if (string.IsNullOrWhiteSpace(name)) return;
+        name = name.Trim();
 
-        _vm.ApplyConfig(_vm.Cfg with { SigningKey = name.Trim(), KeysDir = CfgKeysDir.Text.Trim() });
+        if (_vm.ListSigningKeys().Any(k => k.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+        {
+            System.Windows.MessageBox.Show(
+                $"Key '{name}' already exists in the keys folder and was NOT touched.\n\n" +
+                "Existing keys are never overwritten — losing a private key would orphan every mod signed with it.\n" +
+                "Pick the key from the dropdown to use it, or choose a different name to generate a new one.",
+                "Generate signing key", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            return;
+        }
+
+        _vm.ApplyConfig(_vm.Cfg with { SigningKey = name, KeysDir = CfgKeysDir.Text.Trim() });
         SigningStatus.Text = _vm.GenerateSigningKey();
         CfgSigningKey.ItemsSource = _vm.ListSigningKeys().Select(k => k.Name).ToList();
-        CfgSigningKey.Text = name.Trim();
+        CfgSigningKey.Text = name;
     }
 
     /// <summary>Live key state for the Settings page: ✓ ready / not created yet, for the
