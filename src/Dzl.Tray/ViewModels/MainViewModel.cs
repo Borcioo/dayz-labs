@@ -895,19 +895,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             : $"✓ imported {modName}  (⚠ link: {link.Detail}){vcsNote}";
     }
 
-    /// <summary>Delete a clone's .git folder. Git marks object files read-only, so attributes are
-    /// cleared first — a plain recursive delete dies halfway and leaves a broken half-repo.</summary>
+    /// <summary>Delete a clone's .git folder (read-only-safe via <see cref="FileOps.ForceDeleteDirectory"/>).</summary>
     private static (bool ok, string msg) DeleteGitDir(string dir)
     {
-        var gitDir = Path.Combine(dir, ".git");
-        if (!Directory.Exists(gitDir)) return (true, "");
-        try
-        {
-            foreach (var f in Directory.EnumerateFiles(gitDir, "*", SearchOption.AllDirectories))
-                File.SetAttributes(f, FileAttributes.Normal);
-            Directory.Delete(gitDir, recursive: true);
-            return (true, "");
-        }
+        try { FileOps.ForceDeleteDirectory(Path.Combine(dir, ".git")); return (true, ""); }
         catch (Exception ex) { return (false, ex.Message); }
     }
 
@@ -974,13 +965,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             Junction.Remove(ProjectPaths.JunctionPath(WorkDriveSource, name));   // drop the link, never the target
-            var src = ProjectPaths.ModDir(root, name);
-            if (Directory.Exists(src)) Directory.Delete(src, true);
+            // Force-delete: cloned projects contain read-only git files that kill a plain delete.
+            FileOps.ForceDeleteDirectory(ProjectPaths.ModDir(root, name));
             if (alsoBuild)
-            {
-                var build = ProjectPaths.BuildDir(root, name);
-                if (Directory.Exists(build)) Directory.Delete(build, true);
-            }
+                FileOps.ForceDeleteDirectory(ProjectPaths.BuildDir(root, name));
         }
         catch (Exception ex) { RefreshModProjects(); return $"✗ {name}: {ex.Message}"; }
         RefreshModProjects();
