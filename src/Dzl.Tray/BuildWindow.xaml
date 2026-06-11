@@ -91,8 +91,13 @@
       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
       <TextBlock Grid.Column="0" x:Name="StatusText" VerticalAlignment="Center" FontSize="12" TextTrimming="CharacterEllipsis"
                  Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-      <ui:Button Grid.Column="1" Content="Open report" Icon="{ui:SymbolIcon Open24}" x:Name="ReportBtn"
-                 IsEnabled="False" ToolTip="Open the saved preflight report (.txt)" Click="OnOpenReport" />
+      <StackPanel Grid.Column="1" Orientation="Horizontal">
+        <ui:Button Content="Open build folder" Icon="{ui:SymbolIcon FolderOpen24}" x:Name="BuildFolderBtn"
+                   IsEnabled="False" Margin="0,0,8,0"
+                   ToolTip="Open the @Mod output folder (Addons + keys)" Click="OnOpenBuildFolder" />
+        <ui:Button Content="Open report" Icon="{ui:SymbolIcon Open24}" x:Name="ReportBtn"
+                   IsEnabled="False" ToolTip="Open the saved preflight report (.txt)" Click="OnOpenReport" />
+      </StackPanel>
     </Grid>
   </Grid>
 </ui:FluentWindow>

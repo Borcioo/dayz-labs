@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -18,6 +19,7 @@ public partial class BuildWindow : FluentWindow
     private readonly MainViewModel _vm;
     private readonly string _mod;
     private string _reportPath = "";
+    private string _buildDir = "";
 
     public BuildWindow(MainViewModel vm, string mod)
     {
@@ -53,6 +55,10 @@ public partial class BuildWindow : FluentWindow
                 : "No signing keys yet — create or import one in Settings → Signing, then reopen this window.";
             if (keys.Count == 0) SignChk.IsChecked = false;
             StatusText.Text = plan.Ready ? $"ready — output: {plan.AddonsDir}" : plan.Message;
+
+            // A previous build's output may already be there — openable from the start.
+            _buildDir = plan.OutputDir;
+            BuildFolderBtn.IsEnabled = Directory.Exists(_buildDir);
         }
         catch { /* plan is advisory; the build itself re-validates */ }
     }
@@ -106,6 +112,8 @@ public partial class BuildWindow : FluentWindow
         if (result is null) { StatusText.Text = "a build is already running"; return; }
         // The gate ran the same preflight — surface its findings + report here too.
         if (result.Preflight is { } pf) ShowFindings(pf);
+        if (result.ModDir.Length > 0) { _buildDir = result.ModDir; }
+        BuildFolderBtn.IsEnabled = Directory.Exists(_buildDir);
         StatusText.Text = result.Ok ? $"✓ {result.Message}" : $"✗ {result.Message}";
     }
 
@@ -113,6 +121,11 @@ public partial class BuildWindow : FluentWindow
     {
         // ShellOpen.Folder shell-executes any path; a .txt opens in the default editor.
         if (_reportPath.Length > 0) ShellOpen.Folder(_reportPath);
+    }
+
+    private void OnOpenBuildFolder(object sender, RoutedEventArgs e)
+    {
+        if (Directory.Exists(_buildDir)) ShellOpen.Folder(_buildDir);
     }
 
     /// <summary>Row adapter: severity → badge colors, file:line → one location string.</summary>
