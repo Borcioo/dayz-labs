@@ -717,8 +717,9 @@ var buildModArg = new Argument<string>("Mod", "Mod project name (under ProjectsR
 var buildClean = new Option<bool>("--clean", "Wipe the output first (AddonBuilder -clear).");
 var buildNoBin = new Option<bool>("--no-binarize", "Pack only, don't binarize (AddonBuilder -packonly).");
 var buildSign = new Option<bool>("--sign", "Sign the PBO with your signing key (generate one with 'dzl key new').");
+var buildForce = new Option<bool>("--force", "Rebuild even when nothing changed (ignore the skip-unchanged cache).");
 var buildCmd = new Command("build", "Build a mod into a PBO and add it to the active server's run-list.")
-    { buildModArg, buildClean, buildNoBin, buildSign };
+    { buildModArg, buildClean, buildNoBin, buildSign, buildForce };
 buildCmd.SetHandler(ctx =>
 {
     var (_, _, _, configPath) = Resolve(ctx);
@@ -726,8 +727,9 @@ buildCmd.SetHandler(ctx =>
     var clean = ctx.ParseResult.GetValueForOption(buildClean);
     var noBin = ctx.ParseResult.GetValueForOption(buildNoBin);
     var sign = ctx.ParseResult.GetValueForOption(buildSign);
+    var force = ctx.ParseResult.GetValueForOption(buildForce);
     var r = new BuildService(configPath).Build(mod, clean: clean, binarize: !noBin, sign: sign,
-        onLine: line => Console.Error.WriteLine(line));   // log to stderr; result line to stdout
+        onLine: line => Console.Error.WriteLine(line), force: force);   // log to stderr; result line to stdout
     if (!r.Ok)
     {
         Console.Error.WriteLine(r.Message);

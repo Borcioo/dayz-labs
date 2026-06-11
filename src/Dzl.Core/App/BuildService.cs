@@ -139,7 +139,8 @@ public sealed class BuildService
     /// <param name="onLine">Optional live-log sink for each AddonBuilder output line.</param>
     /// <param name="sign">Sign the PBO with the creator's key (AddonBuilder <c>-sign</c>); copies the public
     /// <c>.bikey</c> into the mod's <c>keys\</c> so it ships. Fails if no key exists (generate one first).</param>
-    public BuildResult Build(string modName, bool clean = false, bool binarize = true, bool sign = false, Action<string>? onLine = null)
+    /// <param name="force">Ignore the skip-unchanged cache and rebuild regardless.</param>
+    public BuildResult Build(string modName, bool clean = false, bool binarize = true, bool sign = false, Action<string>? onLine = null, bool force = false)
     {
         BuildResult Fail(string msg, string output = "") =>
             new(false, modName, "", "", false, msg, output);
@@ -179,6 +180,24 @@ public sealed class BuildService
         var addonsDir = ProjectPaths.BuildAddonsDir(root, modName);
         Directory.CreateDirectory(addonsDir);
 
+        // Skip-unchanged: same payload + same settings + output still present → nothing to do.
+        var sha1Memo = new Dictionary<string, string>();
+        var settingsFingerprint =
+            $"binarize={binarize};sign={sign};" +
+            $"exe={BuildCache.Fingerprint(exe.ExePath, sha1Memo)};" +
+            $"key={(sign ? BuildCache.Fingerprint(signKey, sha1Memo) : "off")}";
+        var stateHash = BuildCache.ComputeStateHash(projectDir,
+            PreflightOptions.DefaultExcludes, settingsFingerprint, sha1Memo);
+        var cache = BuildCache.Load(ConfigDir);
+        if (!force && cache.TryGetValue(modName, out var cached) && cached.Hash == stateHash &&
+            File.Exists(cached.Pbo) &&
+            (!sign || Directory.EnumerateFiles(addonsDir, Path.GetFileName(cached.Pbo) + ".*.bisign").Any()))
+        {
+            onLine?.Invoke($"skip: no changes since last build ({cached.UpdatedUtc:u})");
+            return new BuildResult(true, modName, buildDir, cached.Pbo, false,
+                "skipped — no changes since last build (use force to rebuild)", "");
+        }
+
         // Junctions anchored on the always-live work-drive source folder (survive P: unmounts): the source
         // so AddonBuilder reads it via P:\<Mod>, and the build so it surfaces at P:\Mods\@<Mod>. Both targets
         // live physically under ProjectsRoot (mods\ and build\).
@@ -205,6 +224,9 @@ public sealed class BuildService
 
         var pbo = ModBuild.NewestPbo(addonsDir)!.FullName;
         ModBuild.WriteMarker(ProjectPaths.BuildMarkerPath(root, modName), $"dzl-built {startUtc:O} from {projectDir}");
+
+        cache[modName] = new BuildCache.Entry(stateHash, pbo, DateTime.UtcNow);
+        BuildCache.Save(ConfigDir, cache);
 
         // Place the public key in the built mod's keys\ (sibling of Addons\, outside the PBO) so the
         // distributed/loaded @<Mod> carries it and servers can whitelist it. The private key stays put.
