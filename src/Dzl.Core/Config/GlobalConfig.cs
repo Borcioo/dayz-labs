@@ -39,6 +39,11 @@ public sealed record GlobalConfig
     /// junctions are anchored on). Empty = auto-derive from DayZ Tools settings.ini. snake_case: work_drive_source.</summary>
     public string WorkDriveSource { get; init; } = "";
 
+    /// <summary>Run preflight before every build and block on error-severity findings. On by default —
+    /// AddonBuilder reports "Build Successful" even for configs it silently mangles. snake_case:
+    /// preflight_before_build.</summary>
+    public bool PreflightBeforeBuild { get; init; } = true;
+
     /// <summary>Folder holding signing keys (.biprivatekey/.bikey). Empty = <c>&lt;ProjectsRoot&gt;\keys</c>.
     /// snake_case: keys_dir.</summary>
     public string KeysDir { get; init; } = "";

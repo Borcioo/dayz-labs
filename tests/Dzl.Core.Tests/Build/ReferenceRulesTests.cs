@@ -172,4 +172,25 @@ public class ReferenceRulesTests
         var f = Of(r, "ref-missing").Single();
         f.Severity.Should().Be(FindingSeverity.Warning);
     }
+
+    // --- hiddenSelections arity scoping ---
+
+    [Fact]
+    public void Hiddensel_arity_fires_once_for_a_nested_class_not_per_ancestor()
+    {
+        var (dir, opts) = TmpMod();
+        Write(dir, "config.cpp", """
+            class CfgPatches { class Foo { requiredAddons[] = {}; }; };
+            class CfgVehicles {
+                class Crate {
+                    hiddenSelections[] = {"camo"};
+                    hiddenSelectionsTextures[] = {"a_co.paa","b_co.paa"};
+                };
+            };
+            """);
+        var r = PreflightEngine.Run(dir, "Foo", opts);
+        var hits = Of(r, "hiddensel-arity").ToList();
+        hits.Should().HaveCount(1);
+        hits[0].Message.Should().Contain("Crate");
+    }
 }

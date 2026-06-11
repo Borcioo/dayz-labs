@@ -164,6 +164,23 @@ public sealed class BuildService
         if (!WorkDrive.IsMounted())
             return Fail("P: work drive not mounted — mount it first (binarize resolves vanilla data + includes against P:)");
 
+        // Preflight gate: AddonBuilder reports "Build Successful" even for configs it silently
+        // mangles, so error-severity findings block the build (config flag to opt out).
+        if (cfg.PreflightBeforeBuild)
+        {
+            onLine?.Invoke("preflight: checking project before build ...");
+            var pf = Preflight(modName, saveReport: true);
+            foreach (var f in pf.Findings.Where(f => f.Severity == FindingSeverity.Error))
+                onLine?.Invoke($"preflight ✗ {f.Rule}: {f.Message}");
+            if (!pf.Ok)
+                return Fail(
+                    $"preflight failed with {pf.Errors} error(s) — fix them or set preflight_before_build=false to bypass",
+                    string.Join("\n", pf.Findings
+                        .Where(f => f.Severity == FindingSeverity.Error)
+                        .Select(f => $"{f.Rule}: {f.Message}" + (f.File.Length > 0 ? $"  [{f.File}:{f.Line}]" : ""))));
+            onLine?.Invoke($"preflight: ok ({pf.Warnings} warning(s))");
+        }
+
         // Resolve the signing key up front so we fail before building if signing was asked for but no key exists.
         string? signKey = null;
         if (sign)

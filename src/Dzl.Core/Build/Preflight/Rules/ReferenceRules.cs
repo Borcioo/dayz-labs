@@ -172,11 +172,12 @@ public static class ReferenceRules
 
             foreach (var block in CppText.ClassBlocks(content))
             {
-                var sel = CppText.ParseArrayValues(block.Body, "hiddenSelections");
-                var tex = CppText.ParseArrayValues(block.Body, "hiddenSelectionsTextures");
+                // Only this class's own properties — nested class bodies would double-report
+                // every finding once per ancestor.
+                var own = StripNestedClassBodies(block.Body);
+                var sel = CppText.ParseArrayValues(own, "hiddenSelections");
+                var tex = CppText.ParseArrayValues(own, "hiddenSelectionsTextures");
                 if (sel is null || tex is null) continue;
-                // Nested classes repeat the parent body — only flag when the arrays are in THIS body
-                // (ParseArrayValues already scopes to the body, nested duplicates dedupe by message).
                 if (tex.Count > sel.Count)
                     report.Warn("hiddensel-arity",
                         $"{block.Name}: hiddenSelectionsTextures[] has {tex.Count} entries but hiddenSelections[] only {sel.Count} — extras never apply.",
@@ -200,6 +201,28 @@ public static class ReferenceRules
                     $"Texture has no role suffix (_co/_nohq/_smdi): {rel} — fine for UI images, wrong for model textures.",
                     rel);
         }
+    }
+
+    /// <summary>Body text with every nested <c>class X { ... }</c> span removed, leaving only the
+    /// class's own property lines.</summary>
+    internal static string StripNestedClassBodies(string body)
+    {
+        var spans = new List<(int start, int end)>();
+        foreach (var b in CppText.ClassBlocks(body))
+        {
+            if (spans.Any(s => b.StartIndex >= s.start && b.StartIndex < s.end)) continue;   // already inside a removed span
+            spans.Add((b.StartIndex, b.EndIndex));
+        }
+        if (spans.Count == 0) return body;
+        var sb = new System.Text.StringBuilder(body.Length);
+        int pos = 0;
+        foreach (var (start, end) in spans.OrderBy(s => s.start))
+        {
+            if (start > pos) sb.Append(body, pos, start - pos);
+            pos = Math.Max(pos, end);
+        }
+        if (pos < body.Length) sb.Append(body, pos, body.Length - pos);
+        return sb.ToString();
     }
 
     private static bool IsConcatenated(string content, Match m)

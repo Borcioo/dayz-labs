@@ -49,6 +49,11 @@ public sealed record DzlConfig
     /// auto-derive from DayZ Tools settings.ini. snake_case: work_drive_source.</summary>
     public string WorkDriveSource { get; init; } = "";
 
+    /// <summary>Run preflight before every build and block on error-severity findings. On by
+    /// default — AddonBuilder reports "Build Successful" even for configs it silently mangles.
+    /// snake_case: preflight_before_build.</summary>
+    public bool PreflightBeforeBuild { get; init; } = true;
+
     /// <summary>Folder for signing keys (empty = ProjectsRoot\keys). snake_case: keys_dir.</summary>
     public string KeysDir { get; init; } = "";
 
@@ -93,6 +98,7 @@ public sealed record DzlConfig
         AutoLaunchTray = AutoLaunchTray,
         AutomountWorkDrive = AutomountWorkDrive,
         WorkDriveSource = WorkDriveSource,
+        PreflightBeforeBuild = PreflightBeforeBuild,
         KeysDir = KeysDir,
         SigningKey = SigningKey,
         EditorPath = EditorPath,
@@ -138,6 +144,7 @@ public sealed record DzlConfig
         AutoLaunchTray = g.AutoLaunchTray,
         AutomountWorkDrive = g.AutomountWorkDrive,
         WorkDriveSource = g.WorkDriveSource,
+        PreflightBeforeBuild = g.PreflightBeforeBuild,
         KeysDir = g.KeysDir,
         SigningKey = g.SigningKey,
         EditorPath = g.EditorPath,
