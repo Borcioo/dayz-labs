@@ -37,6 +37,9 @@ public static class PreflightEngine
         if (opts.CheckFileSystem)
             FileSystemRules.Check(modDir, prefix, opts, report);
 
+        if (opts.CheckScripts)
+            ScriptRules.Check(modDir, opts, report);
+
         return report;
     }
 }
