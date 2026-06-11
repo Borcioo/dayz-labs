@@ -65,9 +65,35 @@
                 <TextBlock Grid.Column="1" TextWrapping="Wrap" VerticalAlignment="Center">
                   <Run Text="{Binding Rule, Mode=OneWay}" FontWeight="SemiBold" /><Run Text="  " /><Run Text="{Binding Message, Mode=OneWay}" />
                 </TextBlock>
+                <TextBlock Grid.Column="2" FontFamily="Consolas" FontSize="11"
+                           VerticalAlignment="Center" Margin="8,0,0,0">
+                  <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding Openable}" Value="False">
+                          <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </TextBlock.Style>
+                  <Hyperlink Click="OnOpenFinding" ToolTip="Open in the editor at this line (Settings → editor)"
+                             Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                    <Run Text="{Binding Location, Mode=OneWay}" />
+                  </Hyperlink>
+                </TextBlock>
                 <TextBlock Grid.Column="2" Text="{Binding Location}" FontFamily="Consolas" FontSize="11"
                            VerticalAlignment="Center" Margin="8,0,0,0"
-                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                  <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding Openable}" Value="True">
+                          <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </TextBlock.Style>
+                </TextBlock>
               </Grid>
             </DataTemplate>
           </ListBox.ItemTemplate>

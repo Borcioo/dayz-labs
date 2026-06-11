@@ -149,16 +149,17 @@ public static class ConfigRules
 
             foreach (var patch in patchClasses)
             {
+                var patchLine = LineInFile(cfg, "class " + patch.Name);
                 var required = CppText.ParseArrayValues(patch.Body, "requiredAddons");
                 if (required is null)
                 {
                     report.Warn("requiredaddons-missing",
-                        $"CfgPatches class {patch.Name} has no requiredAddons[] — load order vs vanilla/other mods is undefined.", rel);
+                        $"CfgPatches class {patch.Name} has no requiredAddons[] — load order vs vanilla/other mods is undefined.", rel, patchLine);
                 }
                 else if (required.Count == 0 && externalBases.Count > 0)
                 {
                     report.Warn("requiredaddons-empty",
-                        $"requiredAddons[] is empty but the config inherits from external classes ({string.Join(", ", externalBases.Take(5))}).", rel);
+                        $"requiredAddons[] is empty but the config inherits from external classes ({string.Join(", ", externalBases.Take(5))}).", rel, patchLine);
                 }
 
                 if (required is not null)
@@ -176,6 +177,21 @@ public static class ConfigRules
                 }
             }
         }
+    }
+
+    /// <summary>1-based line of the first occurrence of <paramref name="needle"/> in the RAW file
+    /// (0 when absent/unreadable). Inlined includes shift positions in the merged content, so
+    /// line numbers for findings are always located in the original file text.</summary>
+    private static int LineInFile(string path, string needle)
+    {
+        if (string.IsNullOrEmpty(needle)) return 0;
+        try
+        {
+            var raw = File.ReadAllText(path);
+            var idx = raw.IndexOf(needle, StringComparison.OrdinalIgnoreCase);
+            return idx < 0 ? 0 : CppText.LineOf(raw, idx);
+        }
+        catch { return 0; }
     }
 
     private static void CheckCfgMods(string modDir, List<string> configs,
@@ -207,7 +223,8 @@ public static class ConfigRules
         if (topLevelMod is not null && scriptFolders.Count > 0 &&
             !Regex.IsMatch(topLevelMod.Body, "\\btype\\s*=\\s*\"mod\"", RegexOptions.IgnoreCase))
             report.Warn("cfgmods-type",
-                $"CfgMods class {topLevelMod.Name} has no type=\"mod\" — required for script/input mods per official docs.", rel);
+                $"CfgMods class {topLevelMod.Name} has no type=\"mod\" — required for script/input mods per official docs.",
+                rel, LineInFile(best.Config, "class " + topLevelMod.Name));
 
         var referenced = new List<string>();
         foreach (var (module, folder) in ScriptModules)
@@ -220,14 +237,16 @@ public static class ConfigRules
             {
                 if (folderExists)
                     report.Warn("cfgmods-module-unregistered",
-                        $"{folder} exists on disk but CfgMods has no {module} entry — its scripts silently never compile.", rel);
+                        $"{folder} exists on disk but CfgMods has no {module} entry — its scripts silently never compile.",
+                        rel, LineInFile(best.Config, "class CfgMods"));
                 continue;
             }
 
             var files = CppText.ParseArrayValues(moduleBody, "files");
             if (files is null || files.Count == 0)
             {
-                report.Warn("cfgmods-files-empty", $"{module} is declared but its files[] is missing/empty.", rel);
+                report.Warn("cfgmods-files-empty", $"{module} is declared but its files[] is missing/empty.",
+                    rel, LineInFile(best.Config, module));
                 continue;
             }
 
@@ -235,7 +254,8 @@ public static class ConfigRules
             {
                 var (resolved, found) = PathResolver.Resolve(entry, modDir, prefix, opts.WorkDriveRoot);
                 if (found) referenced.Add(Path.GetFullPath(resolved));
-                else report.Warn("cfgmods-path-missing", $"{module} files[] path does not exist: {entry}", rel);
+                else report.Warn("cfgmods-path-missing", $"{module} files[] path does not exist: {entry}",
+                    rel, LineInFile(best.Config, entry));
             }
         }
 
@@ -248,7 +268,8 @@ public static class ConfigRules
                 r.StartsWith(full + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase));
             if (!hit && CppText.FindClassBody(best.Body, module).Length > 0)
                 report.Warn("cfgmods-folder-unreferenced",
-                    $"{folder} exists but no {module} files[] entry points at it.", rel);
+                    $"{folder} exists but no {module} files[] entry points at it.",
+                    rel, LineInFile(best.Config, module));
         }
     }
 

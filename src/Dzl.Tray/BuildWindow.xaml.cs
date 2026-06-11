@@ -77,9 +77,10 @@ public partial class BuildWindow : FluentWindow
     {
         FindingsHint.Visibility = r.Findings.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         FindingsHint.Text = "No findings — clean.";
+        var modDir = _vm.ModDirOf(_mod);
         FindingsList.ItemsSource = r.Findings
             .OrderByDescending(f => f.Severity)
-            .Select(f => new FindingRow(f))
+            .Select(f => new FindingRow(f, modDir))
             .ToList();
         SummaryText.Text = $"{(r.Ok ? "✓" : "✗")} {r.Errors} error(s), {r.Warnings} warning(s), {r.Infos} info";
         _reportPath = r.ReportTxt;
@@ -128,10 +129,22 @@ public partial class BuildWindow : FluentWindow
         if (Directory.Exists(_buildDir)) ShellOpen.Folder(_buildDir);
     }
 
-    /// <summary>Row adapter: severity → badge colors, file:line → one location string.</summary>
+    /// <summary>Open a finding's file in the configured editor (Settings → editor), jumping to the
+    /// line when the editor supports it. Falls back to the OS default app when none is set.</summary>
+    private void OnOpenFinding(object sender, RoutedEventArgs e)
+    {
+        // Hyperlink is a FrameworkContentElement, not a FrameworkElement.
+        var ctx = (sender as FrameworkElement)?.DataContext ?? (sender as FrameworkContentElement)?.DataContext;
+        if (ctx is not FindingRow row || row.FullPath.Length == 0) return;
+        if (!Dzl.Core.Tools.EditorLauncher.OpenFile(_vm.Cfg.EditorPath, row.FullPath, row.Line))
+            StatusText.Text = $"✗ could not open {row.Location} — set an editor in Settings";
+    }
+
+    /// <summary>Row adapter: severity → badge colors, file:line → one location string (clickable
+    /// when the file resolves inside the mod dir).</summary>
     public sealed class FindingRow
     {
-        public FindingRow(Finding f)
+        public FindingRow(Finding f, string modDir)
         {
             Severity = f.Severity switch
             {
@@ -141,7 +154,13 @@ public partial class BuildWindow : FluentWindow
             };
             Rule = f.Rule;
             Message = f.Message;
+            Line = f.Line;
             Location = f.File.Length == 0 ? "" : f.Line > 0 ? $"{f.File}:{f.Line}" : f.File;
+            if (f.File.Length > 0)
+            {
+                var full = System.IO.Path.Combine(modDir, f.File.Replace('\\', System.IO.Path.DirectorySeparatorChar));
+                FullPath = System.IO.File.Exists(full) ? full : "";
+            }
             (BadgeBg, BadgeFg) = f.Severity switch
             {
                 FindingSeverity.Error => (Brush("#4D1F1F"), Brush("#FF6B6B")),
@@ -154,6 +173,9 @@ public partial class BuildWindow : FluentWindow
         public string Rule { get; }
         public string Message { get; }
         public string Location { get; }
+        public string FullPath { get; } = "";
+        public int Line { get; }
+        public bool Openable => FullPath.Length > 0;
         public SolidColorBrush BadgeBg { get; }
         public SolidColorBrush BadgeFg { get; }
 
