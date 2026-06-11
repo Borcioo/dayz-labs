@@ -9,10 +9,29 @@ public static class EditorLauncher
     public static bool Open(string editorPath, string folder)
     {
         if (string.IsNullOrWhiteSpace(editorPath) || string.IsNullOrWhiteSpace(folder)) return false;
+        return Start(editorPath, new List<string> { folder });
+    }
+
+    /// <summary>Launch the editor with args. CLI shims (.cmd/.bat — what PATH detection finds for
+    /// Cursor/VS Code) go through <c>cmd /c</c> with a hidden window; ShellExecute on a shim pops
+    /// a console window that stays open. Real exes keep plain ShellExecute.</summary>
+    private static bool Start(string editorPath, List<string> args)
+    {
         try
         {
-            var psi = new ProcessStartInfo(editorPath) { UseShellExecute = true };
-            psi.ArgumentList.Add(folder);
+            var ext = Path.GetExtension(editorPath).ToLowerInvariant();
+            ProcessStartInfo psi;
+            if (ext is ".cmd" or ".bat")
+            {
+                psi = new ProcessStartInfo("cmd.exe") { UseShellExecute = false, CreateNoWindow = true };
+                psi.ArgumentList.Add("/c");
+                psi.ArgumentList.Add(editorPath);
+            }
+            else
+            {
+                psi = new ProcessStartInfo(editorPath) { UseShellExecute = true };
+            }
+            foreach (var a in args) psi.ArgumentList.Add(a);
             Process.Start(psi);
             return true;
         }
@@ -50,10 +69,7 @@ public static class EditorLauncher
                 Process.Start(new ProcessStartInfo(file) { UseShellExecute = true });
                 return true;
             }
-            var psi = new ProcessStartInfo(editorPath) { UseShellExecute = true };
-            foreach (var a in FileArgs(editorPath, file, line, folder)) psi.ArgumentList.Add(a);
-            Process.Start(psi);
-            return true;
+            return Start(editorPath, FileArgs(editorPath, file, line, folder));
         }
         catch { return false; }
     }
