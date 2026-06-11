@@ -352,6 +352,7 @@ public partial class MainWindow : FluentWindow
         CfgSigningKey.Text = !string.IsNullOrWhiteSpace(c.SigningKey) ? c.SigningKey : _vm.CachedAuthor;
         CfgKeysDir.Text = c.KeysDir;
         RefreshSigningStatus();
+        CfgEditorPath.ItemsSource = _vm.DetectEditors();   // dropdown of detected editors; text stays the saved value
         CfgEditorPath.Text = c.EditorPath;
         CfgSteamCmdPath.Text = c.SteamCmdPath;
         CfgSteamLogin.Text = c.SteamLogin;
@@ -688,9 +689,19 @@ public partial class MainWindow : FluentWindow
     private void OnDetectEditor(object sender, RoutedEventArgs e)
     {
         var editors = _vm.DetectEditors();
+        CfgEditorPath.ItemsSource = editors;
         if (editors.Count == 0) { EditorStatus.Text = "No editor found on PATH (cursor/code/…). Browse to one manually."; return; }
-        CfgEditorPath.Text = editors[0].Path;   // best match (Cursor first)
-        EditorStatus.Text = $"Found: {string.Join(", ", editors.Select(x => x.Name))}. Using {editors[0].Name}. Save to apply.";
+        CfgEditorPath.Text = editors[0].Path;   // best match (Cursor first); the dropdown holds the rest
+        EditorStatus.Text = $"Found {editors.Count}: {string.Join(", ", editors.Select(x => x.Name))} — pick from the dropdown. Save to apply.";
+    }
+
+    // Selecting a detected editor from the dropdown puts its PATH into the editable text — the
+    // combo would otherwise render the record's ToString(). Deferred: the combo overwrites Text
+    // right after SelectionChanged.
+    private void OnEditorPicked(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (CfgEditorPath.SelectedItem is not Dzl.Core.Env.EditorInfo info) return;
+        Dispatcher.BeginInvoke(() => CfgEditorPath.Text = info.Path);
     }
 
     private void OnOpenInEditor(object sender, RoutedEventArgs e)
@@ -814,6 +825,7 @@ public partial class MainWindow : FluentWindow
         var picked = parts[0] == "file" ? PickFile() : PickFolder();
         if (picked is null) return;
         if (FindName(parts[1]) is TextBox tb) tb.Text = picked;
+        else if (FindName(parts[1]) is System.Windows.Controls.ComboBox cb) cb.Text = picked;
     }
 
     private static string? PickFile()

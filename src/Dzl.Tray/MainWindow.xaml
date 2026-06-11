@@ -2027,8 +2027,19 @@
                       <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
                       </Grid.ColumnDefinitions>
-                      <ui:TextBox x:Name="CfgEditorPath" Grid.Column="0"
-                                  PlaceholderText="e.g. cursor / code, or a full path to the editor exe" />
+                      <ComboBox x:Name="CfgEditorPath" Grid.Column="0" IsEditable="True"
+                                ToolTip="Pick a detected editor, type a command (cursor/code), or browse to an exe"
+                                SelectionChanged="OnEditorPicked">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate>
+                            <TextBlock>
+                              <Run Text="{Binding Name, Mode=OneWay}" FontWeight="SemiBold" />
+                              <Run Text="{Binding Path, Mode=OneWay}" FontSize="11"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                            </TextBlock>
+                          </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
                       <ui:Button Grid.Column="1" Content="Detect" Icon="{ui:SymbolIcon ArrowSync24}" Margin="8,0,0,0" Click="OnDetectEditor" />
                       <ui:Button Grid.Column="2" Content="📁" Margin="8,0,0,0" Tag="file:CfgEditorPath" Click="OnBrowseInto" />
                     </Grid>
