@@ -57,7 +57,31 @@
           <TextBlock FontSize="11" Margin="0,0,0,4" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                      Text="Folders scanned to discover existing mods (one per line)." />
           <ui:TextBox x:Name="CfgScanRoots" MinHeight="92" AcceptsReturn="True" TextWrapping="Wrap"
-                      VerticalScrollBarVisibility="Auto" Margin="0,0,0,4" />
+                      VerticalScrollBarVisibility="Auto" Margin="0,0,0,14" />
+
+          <TextBlock Text="Signing key" FontWeight="SemiBold" Margin="0,0,0,4" />
+          <TextBlock FontSize="11" Margin="0,0,0,4" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                     Text="Signs built PBOs (Build → sign). One key signs all your mods; existing keys are never overwritten." />
+          <Grid Margin="0,0,0,6">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ComboBox x:Name="CfgSigningKey" Grid.Column="0" IsEditable="True"
+                      ToolTip="Pick a key from the keys folder (or type a name)" />
+            <ui:Button Grid.Column="1" Content="Generate…" Margin="8,0,0,0" Click="OnGenerateKey"
+                       ToolTip="Create a new key pair (DSCreateKey) in the keys folder" />
+            <ui:Button Grid.Column="2" Content="Import…" Margin="8,0,0,0" Click="OnImportKeys"
+                       ToolTip="Copy an existing .biprivatekey (+ its .bikey) into the keys folder" />
+          </Grid>
+          <TextBlock Text="Keys folder" FontWeight="SemiBold" Margin="0,4,0,4" />
+          <Grid Margin="0,0,0,4">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <ui:TextBox x:Name="CfgKeysDir" Grid.Column="0" PlaceholderText="blank = &lt;ProjectsRoot&gt;\keys" />
+            <ui:Button Grid.Column="1" Content="Browse" Icon="{ui:SymbolIcon FolderOpen24}" Margin="8,0,0,0"
+                       Tag="CfgKeysDir" Click="OnBrowse" />
+          </Grid>
+          <TextBlock x:Name="SigningStatus" FontSize="11" Margin="0,2,0,4" TextWrapping="Wrap"
+                     Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
         </StackPanel>
 
         <!-- ===== WORKSHOP ===== -->

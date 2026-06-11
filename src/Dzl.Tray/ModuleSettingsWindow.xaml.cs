@@ -37,6 +37,10 @@ public partial class ModuleSettingsWindow : FluentWindow
             CfgWorkDriveSource.Text = c.WorkDriveSource;
             CfgAutomountWorkDrive.IsChecked = c.AutomountWorkDrive;
             CfgScanRoots.Text = string.Join("\n", c.ScanRoots);
+            CfgSigningKey.ItemsSource = _vm.ListSigningKeys().Select(k => k.Name).ToList();
+            CfgSigningKey.Text = !string.IsNullOrWhiteSpace(c.SigningKey) ? c.SigningKey : _vm.CachedAuthor;
+            CfgKeysDir.Text = c.KeysDir;
+            SigningStatus.Text = SigningKeysUi.Status(_vm, CfgSigningKey.Text);
         }
         else if (_module == "workshop")
         {
@@ -63,6 +67,26 @@ public partial class ModuleSettingsWindow : FluentWindow
         if (target == "CfgProjectsRoot") CfgProjectsRoot.Text = dlg.FolderName;
         else if (target == "CfgWorkDriveSource") CfgWorkDriveSource.Text = dlg.FolderName;
         else if (target == "CfgWorkshopDir") CfgWorkshopDir.Text = dlg.FolderName;
+        else if (target == "CfgKeysDir") CfgKeysDir.Text = dlg.FolderName;
+    }
+
+    // Signing-key flows shared with the global Settings page (SigningKeysUi keeps the guards in sync).
+    private void OnGenerateKey(object sender, RoutedEventArgs e)
+    {
+        var (name, status) = SigningKeysUi.GenerateInteractive(this, _vm, CfgKeysDir.Text);
+        if (name is null) return;
+        CfgSigningKey.ItemsSource = _vm.ListSigningKeys().Select(k => k.Name).ToList();
+        CfgSigningKey.Text = name;
+        SigningStatus.Text = status;
+    }
+
+    private void OnImportKeys(object sender, RoutedEventArgs e)
+    {
+        var (name, status) = SigningKeysUi.ImportInteractive(this, _vm, CfgKeysDir.Text);
+        if (name is null) { if (status.Length > 0) SigningStatus.Text = status; return; }
+        CfgSigningKey.ItemsSource = _vm.ListSigningKeys().Select(k => k.Name).ToList();
+        CfgSigningKey.Text = name;
+        SigningStatus.Text = status;
     }
 
     private void OnBrowseFile(object sender, RoutedEventArgs e)
@@ -111,6 +135,8 @@ public partial class ModuleSettingsWindow : FluentWindow
                 WorkDriveSource = CfgWorkDriveSource.Text.Trim(),
                 AutomountWorkDrive = CfgAutomountWorkDrive.IsChecked == true,
                 ScanRoots = roots,
+                SigningKey = CfgSigningKey.Text.Trim(),
+                KeysDir = CfgKeysDir.Text.Trim(),
             });
         }
         else if (_module == "workshop")

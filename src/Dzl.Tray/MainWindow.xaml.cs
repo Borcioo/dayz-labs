@@ -594,89 +594,30 @@ public partial class MainWindow : FluentWindow
 
     private async void OnGitHubLogout(object sender, RoutedEventArgs e) => await _vm.GitHubLogoutAsync();
 
-    // Ask for the new key's name in a prompt (the dropdown holds existing keys), persist it +
-    // the keys folder, run DSCreateKey, then refresh the dropdown so the new key appears.
-    // A taken name is refused outright — losing a .biprivatekey to an accidental regenerate
-    // would orphan every mod signed with it (Core never overwrites either; this is the UX guard).
+    // Shared flow (SigningKeysUi): prompt for a NEW name, refuse taken ones, run DSCreateKey,
+    // then refresh the dropdown so the new key appears.
     private void OnGenerateKey(object sender, RoutedEventArgs e)
     {
-        var name = PromptDialog.Show(this, "Generate signing key",
-            "Name for the NEW key pair (letters/digits/underscore, e.g. your author handle):",
-            "");
-        if (string.IsNullOrWhiteSpace(name)) return;
-        name = name.Trim();
-
-        if (_vm.ListSigningKeys().Any(k => k.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
-        {
-            System.Windows.MessageBox.Show(
-                $"Key '{name}' already exists in the keys folder and was NOT touched.\n\n" +
-                "Existing keys are never overwritten — losing a private key would orphan every mod signed with it.\n" +
-                "Pick the key from the dropdown to use it, or choose a different name to generate a new one.",
-                "Generate signing key", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-            return;
-        }
-
-        _vm.ApplyConfig(_vm.Cfg with { SigningKey = name, KeysDir = CfgKeysDir.Text.Trim() });
-        SigningStatus.Text = _vm.GenerateSigningKey();
+        var (name, status) = SigningKeysUi.GenerateInteractive(this, _vm, CfgKeysDir.Text);
+        if (name is null) return;
+        SigningStatus.Text = status;
         CfgSigningKey.ItemsSource = _vm.ListSigningKeys().Select(k => k.Name).ToList();
         CfgSigningKey.Text = name;
     }
 
     /// <summary>Live key state for the Settings page: ✓ ready / not created yet, for the
     /// effective name + folder currently in the boxes (not yet necessarily saved).</summary>
-    private void RefreshSigningStatus()
-    {
-        var name = CfgSigningKey.Text.Trim();
-        if (name.Length == 0) { SigningStatus.Text = "No key name — type one or set your author handle."; return; }
-        var priv = System.IO.Path.Combine(_vm.ResolvedKeysDir, name + ".biprivatekey");
-        var pub = System.IO.Path.Combine(_vm.ResolvedKeysDir, name + ".bikey");
-        SigningStatus.Text = File.Exists(priv)
-            ? $"✓ key ready: {priv}" + (File.Exists(pub) ? "" : "  (⚠ matching .bikey missing — servers can't whitelist)")
-            : $"Key '{name}' not created yet — generate it, or import existing key files.";
-    }
+    private void RefreshSigningStatus() =>
+        SigningStatus.Text = SigningKeysUi.Status(_vm, CfgSigningKey.Text);
 
-    // Bring your own keys: copy an existing .biprivatekey (+ its sibling .bikey when present)
-    // into the keys folder and take the file name as the signing-key name.
+    // Shared flow (SigningKeysUi): copy an existing .biprivatekey (+ .bikey) into the keys folder.
     private void OnImportKeys(object sender, RoutedEventArgs e)
     {
-        var dlg = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = "Import signing key",
-            Filter = "DayZ private key (*.biprivatekey)|*.biprivatekey",
-        };
-        if (dlg.ShowDialog(this) != true) return;
-
-        try
-        {
-            var name = System.IO.Path.GetFileNameWithoutExtension(dlg.FileName);
-            var keysDir = _vm.ResolvedKeysDir;
-            Directory.CreateDirectory(keysDir);
-
-            var destPriv = System.IO.Path.Combine(keysDir, name + ".biprivatekey");
-            if (File.Exists(destPriv) &&
-                System.Windows.MessageBox.Show(
-                    $"Key '{name}' already exists in {keysDir} — overwrite?", "Import signing key",
-                    System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
-                != System.Windows.MessageBoxResult.Yes)
-                return;
-            File.Copy(dlg.FileName, destPriv, overwrite: true);
-
-            // The public half usually sits next to the private one; copy it too when present.
-            var srcPub = System.IO.Path.ChangeExtension(dlg.FileName, ".bikey");
-            if (File.Exists(srcPub))
-                File.Copy(srcPub, System.IO.Path.Combine(keysDir, name + ".bikey"), overwrite: true);
-
-            CfgSigningKey.ItemsSource = _vm.ListSigningKeys().Select(k => k.Name).ToList();
-            CfgSigningKey.Text = name;
-            _vm.ApplyConfig(_vm.Cfg with { SigningKey = name, KeysDir = CfgKeysDir.Text.Trim() });
-            RefreshSigningStatus();
-            if (!File.Exists(srcPub))
-                SigningStatus.Text += "\nImported the private key only — no .bikey found next to it.";
-        }
-        catch (Exception ex)
-        {
-            SigningStatus.Text = "✗ import failed: " + ex.Message;
-        }
+        var (name, status) = SigningKeysUi.ImportInteractive(this, _vm, CfgKeysDir.Text);
+        if (name is null) { if (status.Length > 0) SigningStatus.Text = status; return; }
+        CfgSigningKey.ItemsSource = _vm.ListSigningKeys().Select(k => k.Name).ToList();
+        CfgSigningKey.Text = name;
+        SigningStatus.Text = status;
     }
 
     // === Steam Workshop ===================================================
