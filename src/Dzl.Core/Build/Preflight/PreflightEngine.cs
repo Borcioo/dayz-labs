@@ -28,6 +28,15 @@ public static class PreflightEngine
             ConfigRules.CheckConfigs(modDir, modName, prefix, opts, report);
         }
 
+        if (opts.CheckReferences)
+        {
+            ReferenceRules.Check(modDir, prefix, opts, report);
+            ReferenceRules.CheckTextureSuffixes(modDir, opts, report);
+        }
+
+        if (opts.CheckFileSystem)
+            FileSystemRules.Check(modDir, prefix, opts, report);
+
         return report;
     }
 }
