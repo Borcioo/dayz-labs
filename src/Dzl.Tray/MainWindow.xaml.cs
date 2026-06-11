@@ -346,8 +346,11 @@ public partial class MainWindow : FluentWindow
         CfgEnableAutomationServer.IsChecked = c.EnableAutomationServer;
         CfgAutomountWorkDrive.IsChecked = c.AutomountWorkDrive;
         CfgWorkDriveSource.Text = c.WorkDriveSource;
-        CfgSigningKey.Text = c.SigningKey;
+        // Show the effective key name, not an empty box — blank config falls back to the cached
+        // author handle, and saving the prefilled value just makes that explicit.
+        CfgSigningKey.Text = !string.IsNullOrWhiteSpace(c.SigningKey) ? c.SigningKey : _vm.CachedAuthor;
         CfgKeysDir.Text = c.KeysDir;
+        RefreshSigningStatus();
         CfgEditorPath.Text = c.EditorPath;
         CfgSteamCmdPath.Text = c.SteamCmdPath;
         CfgSteamLogin.Text = c.SteamLogin;
@@ -595,6 +598,62 @@ public partial class MainWindow : FluentWindow
     {
         _vm.ApplyConfig(_vm.Cfg with { SigningKey = CfgSigningKey.Text.Trim(), KeysDir = CfgKeysDir.Text.Trim() });
         SigningStatus.Text = _vm.GenerateSigningKey();
+    }
+
+    /// <summary>Live key state for the Settings page: ✓ ready / not created yet, for the
+    /// effective name + folder currently in the boxes (not yet necessarily saved).</summary>
+    private void RefreshSigningStatus()
+    {
+        var name = CfgSigningKey.Text.Trim();
+        if (name.Length == 0) { SigningStatus.Text = "No key name — type one or set your author handle."; return; }
+        var priv = System.IO.Path.Combine(_vm.ResolvedKeysDir, name + ".biprivatekey");
+        var pub = System.IO.Path.Combine(_vm.ResolvedKeysDir, name + ".bikey");
+        SigningStatus.Text = File.Exists(priv)
+            ? $"✓ key ready: {priv}" + (File.Exists(pub) ? "" : "  (⚠ matching .bikey missing — servers can't whitelist)")
+            : $"Key '{name}' not created yet — generate it, or import existing key files.";
+    }
+
+    // Bring your own keys: copy an existing .biprivatekey (+ its sibling .bikey when present)
+    // into the keys folder and take the file name as the signing-key name.
+    private void OnImportKeys(object sender, RoutedEventArgs e)
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Import signing key",
+            Filter = "DayZ private key (*.biprivatekey)|*.biprivatekey",
+        };
+        if (dlg.ShowDialog(this) != true) return;
+
+        try
+        {
+            var name = System.IO.Path.GetFileNameWithoutExtension(dlg.FileName);
+            var keysDir = _vm.ResolvedKeysDir;
+            Directory.CreateDirectory(keysDir);
+
+            var destPriv = System.IO.Path.Combine(keysDir, name + ".biprivatekey");
+            if (File.Exists(destPriv) &&
+                System.Windows.MessageBox.Show(
+                    $"Key '{name}' already exists in {keysDir} — overwrite?", "Import signing key",
+                    System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
+                != System.Windows.MessageBoxResult.Yes)
+                return;
+            File.Copy(dlg.FileName, destPriv, overwrite: true);
+
+            // The public half usually sits next to the private one; copy it too when present.
+            var srcPub = System.IO.Path.ChangeExtension(dlg.FileName, ".bikey");
+            if (File.Exists(srcPub))
+                File.Copy(srcPub, System.IO.Path.Combine(keysDir, name + ".bikey"), overwrite: true);
+
+            CfgSigningKey.Text = name;
+            _vm.ApplyConfig(_vm.Cfg with { SigningKey = name, KeysDir = CfgKeysDir.Text.Trim() });
+            RefreshSigningStatus();
+            if (!File.Exists(srcPub))
+                SigningStatus.Text += "\nImported the private key only — no .bikey found next to it.";
+        }
+        catch (Exception ex)
+        {
+            SigningStatus.Text = "✗ import failed: " + ex.Message;
+        }
     }
 
     // === Steam Workshop ===================================================

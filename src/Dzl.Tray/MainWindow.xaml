@@ -1980,10 +1980,15 @@
                     <TextBlock Text="Signing" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
                     <TextBlock Text="Signing key name (one key signs all your mods)" Style="{StaticResource FieldLabel}" />
                     <Grid Margin="0,0,0,10">
-                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
                       <ui:TextBox x:Name="CfgSigningKey" Grid.Column="0"
                                   PlaceholderText="blank = your author handle" />
-                      <ui:Button Grid.Column="1" Content="Generate key" Margin="8,0,0,0" Click="OnGenerateKey" />
+                      <ui:Button Grid.Column="1" Content="Generate key" Margin="8,0,0,0" Click="OnGenerateKey"
+                                 ToolTip="Create a new key pair (DSCreateKey) in the keys folder" />
+                      <ui:Button Grid.Column="2" Content="Import keys…" Margin="8,0,0,0" Click="OnImportKeys"
+                                 ToolTip="Copy an existing .biprivatekey (+ its .bikey) into the keys folder and use its name" />
                     </Grid>
                     <TextBlock FontSize="11" Opacity="0.7" Margin="0,0,0,10">
                       <Run Text="Resolved key: " /><Run Text="{Binding ResolvedSigningKey, Mode=OneWay}" FontWeight="SemiBold" />
