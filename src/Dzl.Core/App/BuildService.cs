@@ -212,9 +212,19 @@ public sealed class BuildService
         if (!buildEns.Ok)
             return Fail($"build junction {buildArea} → {ProjectPaths.BuildRoot(root)} failed: {buildEns.Detail}");
 
+        // AddonBuilder writes into a work dir; the loadable Addons\ is only touched after the
+        // output verifies, and then atomically (backup → swap → rollback on failure).
+        var workDir = Path.Combine(buildDir, ".work");
+        var workAddons = Path.Combine(workDir, "Addons");
+        if (Directory.Exists(workAddons)) try { Directory.Delete(workAddons, recursive: true); } catch { }
+        Directory.CreateDirectory(workAddons);
+        var abTemp = Path.Combine(workDir, "temp");
+        var includeFile = AddonBuilder.WriteIncludeFile(workDir);
+
         var startUtc = DateTime.UtcNow;
-        var pack = AddonBuilder.Pack(exe.ExePath, ProjectPaths.WorkDriveLink(modName), addonsDir,
-            clear: clean, packOnly: !binarize, prefix: null, signKey: signKey, onLine: onLine);
+        var pack = AddonBuilder.Pack(exe.ExePath, ProjectPaths.WorkDriveLink(modName), workAddons,
+            clear: clean, packOnly: !binarize, prefix: null, signKey: signKey, onLine: onLine,
+            tempDir: abTemp, includeFile: includeFile);
 
         // On failure, append pattern-matched cause→fix triage to the raw tool log.
         static string WithDiagnostics(string output)
@@ -226,11 +236,32 @@ public sealed class BuildService
         if (!pack.Ok)
             return Fail($"AddonBuilder exited {pack.ExitCode}", WithDiagnostics(pack.Output));
 
-        if (!ModBuild.HasFreshPbo(addonsDir, startUtc))
+        if (!ModBuild.HasFreshPbo(workAddons, startUtc))
             return Fail("AddonBuilder reported success but no fresh .pbo appeared (stale junction? source path wrong?)",
                 WithDiagnostics(pack.Output));
 
-        var pbo = ModBuild.NewestPbo(addonsDir)!.FullName;
+        var workPbo = ModBuild.NewestPbo(workAddons)!.FullName;
+
+        // Post-pack verification: the packed prefix must match the project's $PBOPREFIX$ (a
+        // mismatch means the mod loads with every asset path broken), and a signed build must
+        // actually carry a signature (AddonBuilder -sign can silently not sign).
+        var expectedPrefix = PathResolver.ReadPrefix(projectDir);
+        var info = PboHeader.Read(workPbo);
+        if (info is null)
+            onLine?.Invoke("verify: could not parse the produced PBO header (skipping prefix check)");
+        else if (expectedPrefix.Length > 0 && info.Prefix.Length > 0 &&
+                 !string.Equals(info.Prefix, expectedPrefix, StringComparison.OrdinalIgnoreCase))
+            return Fail($"packed PBO prefix '{info.Prefix}' does not match $PBOPREFIX$ '{expectedPrefix}' — assets would resolve to the wrong paths", pack.Output);
+
+        if (sign && PboHeader.FindSignature(workPbo) is null)
+            return Fail("signing was requested but no .bisign was produced next to the PBO", WithDiagnostics(pack.Output));
+
+        var (pubOk, pubDetail) = ModBuild.PublishAtomically(workAddons, addonsDir);
+        if (!pubOk)
+            return Fail($"publish failed: {pubDetail}", pack.Output);
+        try { Directory.Delete(workDir, recursive: true); } catch { /* leftover work dir is harmless */ }
+
+        var pbo = Path.Combine(addonsDir, Path.GetFileName(workPbo));
         ModBuild.WriteMarker(ProjectPaths.BuildMarkerPath(root, modName), $"dzl-built {startUtc:O} from {projectDir}");
 
         cache[modName] = new BuildCache.Entry(stateHash, pbo, DateTime.UtcNow);

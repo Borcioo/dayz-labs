@@ -39,6 +39,63 @@ public static class ModBuild
         File.WriteAllText(markerPath, detail);
     }
 
+    /// <summary>
+    /// Atomically publish a finished build: move every <c>*.pbo</c>/<c>*.bisign</c> from
+    /// <paramref name="workAddonsDir"/> into <paramref name="finalAddonsDir"/>, backing up what's
+    /// there first and restoring it when anything fails. A failed rebuild therefore never leaves
+    /// the loadable <c>@Mod\Addons</c> half-written (the server may be configured to load it).
+    /// </summary>
+    public static (bool Ok, string Detail) PublishAtomically(string workAddonsDir, string finalAddonsDir)
+    {
+        string[] Artifacts(string dir) =>
+            Directory.Exists(dir)
+                ? Directory.EnumerateFiles(dir).Where(f =>
+                      f.EndsWith(".pbo", StringComparison.OrdinalIgnoreCase) ||
+                      f.EndsWith(".bisign", StringComparison.OrdinalIgnoreCase)).ToArray()
+                : Array.Empty<string>();
+
+        var fresh = Artifacts(workAddonsDir);
+        if (fresh.Length == 0) return (false, $"nothing to publish in {workAddonsDir}");
+
+        Directory.CreateDirectory(finalAddonsDir);
+        var backupDir = Path.Combine(finalAddonsDir, $".backup_{DateTime.UtcNow.Ticks}");
+        var backedUp = new List<(string Original, string Backup)>();
+        var published = new List<string>();
+
+        try
+        {
+            var existing = Artifacts(finalAddonsDir);
+            if (existing.Length > 0)
+            {
+                Directory.CreateDirectory(backupDir);
+                foreach (var f in existing)
+                {
+                    var b = Path.Combine(backupDir, Path.GetFileName(f));
+                    File.Move(f, b);
+                    backedUp.Add((f, b));
+                }
+            }
+            foreach (var f in fresh)
+            {
+                var dst = Path.Combine(finalAddonsDir, Path.GetFileName(f));
+                File.Move(f, dst);
+                published.Add(dst);
+            }
+            if (Directory.Exists(backupDir)) Directory.Delete(backupDir, recursive: true);
+            return (true, $"published {published.Count} file(s)");
+        }
+        catch (Exception ex)
+        {
+            // Roll back: remove whatever landed, put the originals back.
+            foreach (var p in published)
+                try { File.Delete(p); } catch { }
+            foreach (var (original, backup) in backedUp)
+                try { if (File.Exists(backup)) File.Move(backup, original, overwrite: true); } catch { }
+            try { if (Directory.Exists(backupDir) && !Directory.EnumerateFileSystemEntries(backupDir).Any()) Directory.Delete(backupDir); } catch { }
+            return (false, $"publish failed and previous output was restored: {ex.Message}");
+        }
+    }
+
     /// <summary>Append the built mod's load path to the run-list (enabled, both sides), deduping on path
     /// case-insensitively so re-builds don't pile up duplicates. Pure: returns an updated config.</summary>
     public static DzlConfig Register(DzlConfig cfg, string loadPath, string side = "both")
