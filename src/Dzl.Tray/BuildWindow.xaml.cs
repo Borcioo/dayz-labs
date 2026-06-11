@@ -56,6 +56,21 @@ public partial class BuildWindow : FluentWindow
             Dispatcher.BeginInvoke(() => BuildBtn.IsEnabled = PreflightBtn.IsEnabled = !_vm.Building);
     }
 
+    /// <summary>Render a preflight result into the findings pane (shared by the Preflight button
+    /// and the build gate, which runs the same checks).</summary>
+    private void ShowFindings(Dzl.Core.Build.Preflight.PreflightView r)
+    {
+        FindingsHint.Visibility = r.Findings.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        FindingsHint.Text = "No findings — clean.";
+        FindingsList.ItemsSource = r.Findings
+            .OrderByDescending(f => f.Severity)
+            .Select(f => new FindingRow(f))
+            .ToList();
+        SummaryText.Text = $"{(r.Ok ? "✓" : "✗")} {r.Errors} error(s), {r.Warnings} warning(s), {r.Infos} info";
+        _reportPath = r.ReportTxt;
+        ReportBtn.IsEnabled = _reportPath.Length > 0;
+    }
+
     private async void OnPreflight(object sender, RoutedEventArgs e)
     {
         PreflightBtn.IsEnabled = false;
@@ -63,15 +78,7 @@ public partial class BuildWindow : FluentWindow
         try
         {
             var r = await _vm.PreflightAsync(_mod);
-            FindingsHint.Visibility = r.Findings.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-            FindingsHint.Text = "No findings — clean.";
-            FindingsList.ItemsSource = r.Findings
-                .OrderByDescending(f => f.Severity)
-                .Select(f => new FindingRow(f))
-                .ToList();
-            SummaryText.Text = $"{(r.Ok ? "✓" : "✗")} {r.Errors} error(s), {r.Warnings} warning(s), {r.Infos} info";
-            _reportPath = r.ReportTxt;
-            ReportBtn.IsEnabled = _reportPath.Length > 0;
+            ShowFindings(r);
             StatusText.Text = r.Ok ? "preflight passed" : "preflight found errors — fix them before building";
         }
         catch (Exception ex) { StatusText.Text = "✗ " + ex.Message; }
@@ -81,12 +88,15 @@ public partial class BuildWindow : FluentWindow
     private async void OnBuild(object sender, RoutedEventArgs e)
     {
         StatusText.Text = "building…";
-        await _vm.BuildModAsync(_mod,
+        var result = await _vm.BuildModAsync(_mod,
             clean: CleanChk.IsChecked == true,
             binarize: BinarizeChk.IsChecked != false,
             sign: SignChk.IsChecked == true,
             force: ForceChk.IsChecked == true);
-        StatusText.Text = "done — see the log";
+        if (result is null) { StatusText.Text = "a build is already running"; return; }
+        // The gate ran the same preflight — surface its findings + report here too.
+        if (result.Preflight is { } pf) ShowFindings(pf);
+        StatusText.Text = result.Ok ? $"✓ {result.Message}" : $"✗ {result.Message}";
     }
 
     private void OnOpenReport(object sender, RoutedEventArgs e)

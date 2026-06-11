@@ -7,7 +7,7 @@ namespace Dzl.Core.Build;
 /// holds the captured AddonBuilder log.</summary>
 public sealed record BuildResult(
     bool Ok, string ModName, string ModDir, string PboPath, bool Registered, string Message, string Output,
-    string Diagnostics = "");
+    string Diagnostics = "", Preflight.PreflightView? Preflight = null);
 
 /// <summary>
 /// Side-effect-light helpers for the build→deploy pipeline: verifying a fresh PBO was produced, the

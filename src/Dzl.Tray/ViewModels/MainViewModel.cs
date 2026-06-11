@@ -9,6 +9,8 @@ using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Dzl.Core.App;
+using Dzl.Core.Build;
+using Dzl.Core.Build.Preflight;
 using Dzl.Core.Config;
 using Dzl.Core.Launch;
 using Dzl.Core.Logs;
@@ -966,10 +968,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _building;
 
     /// <summary>Build a mod project into a PBO off the UI thread, streaming the AddonBuilder log; on
-    /// success register the <c>@&lt;Mod&gt;</c> into the active server's run-list and refresh.</summary>
-    public async Task BuildModAsync(string name, bool clean = false, bool binarize = true, bool sign = false, bool force = false)
+    /// success register the <c>@&lt;Mod&gt;</c> into the active server's run-list and refresh.
+    /// Returns the result (incl. the gate's preflight view) so callers can render findings;
+    /// null when a build is already running.</summary>
+    public async Task<BuildResult?> BuildModAsync(string name, bool clean = false, bool binarize = true, bool sign = false, bool force = false)
     {
-        if (Building) return;
+        if (Building) return null;
         Building = true;
         BuildLog = $"▸ Building {name} (clean={clean}, binarize={binarize}, sign={sign}, force={force}) …\n";
         var configPath = _configPath;
@@ -981,10 +985,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             BuildLog += "\n" + result.Diagnostics + "\n";
         Building = false;
         if (result.Ok) { Reload(); RefreshModProjects(); }
+        return result;
     }
 
     /// <summary>Preflight a mod project off the UI thread (configs, references, paths, scripts).</summary>
-    public Task<BuildService.PreflightView> PreflightAsync(string name)
+    public Task<PreflightView> PreflightAsync(string name)
     {
         var configPath = _configPath;
         return Task.Run(() => new BuildService(configPath).Preflight(name));

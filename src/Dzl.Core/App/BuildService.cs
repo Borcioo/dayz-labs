@@ -90,13 +90,6 @@ public sealed class BuildService
         return DsTools.CreateKey(exe.ExePath, keysDir, name);
     }
 
-    /// <summary>Outcome of a preflight run. <see cref="Ok"/> = no error-severity findings.
-    /// <see cref="ReportTxt"/>/<see cref="ReportJson"/> are saved next to the mod's build dir
-    /// (empty when saving failed or was skipped).</summary>
-    public sealed record PreflightView(
-        bool Ok, string Mod, int Errors, int Warnings, int Infos,
-        IReadOnlyList<Finding> Findings, string ReportTxt, string ReportJson);
-
     /// <summary>Run the preflight rule set over a mod project. Read-only on the project; writes
     /// only the report files. CfgConvert syntax gate engages automatically when DayZ Tools is
     /// configured; the work drive is used for vanilla-reference resolution only when mounted.</summary>
@@ -142,9 +135,10 @@ public sealed class BuildService
     /// <param name="force">Ignore the skip-unchanged cache and rebuild regardless.</param>
     public BuildResult Build(string modName, bool clean = false, bool binarize = true, bool sign = false, Action<string>? onLine = null, bool force = false)
     {
+        PreflightView? preflight = null;   // set by the gate below; rides along on every result
         BuildResult Fail(string msg, string output = "") =>
             new(false, modName, "", "", false, msg, output,
-                BuildDiagnostics.Format(BuildDiagnostics.Diagnose(output + "\n" + msg)));
+                BuildDiagnostics.Format(BuildDiagnostics.Diagnose(output + "\n" + msg)), preflight);
 
         if (!ProjectPaths.IsValidName(modName))
             return Fail($"invalid mod name: {modName}");
@@ -165,20 +159,21 @@ public sealed class BuildService
             return Fail("P: work drive not mounted — mount it first (binarize resolves vanilla data + includes against P:)");
 
         // Preflight gate: AddonBuilder reports "Build Successful" even for configs it silently
-        // mangles, so error-severity findings block the build (config flag to opt out).
+        // mangles, so error-severity findings block the build (config flag to opt out). The view
+        // rides along on the result so frontends can show the findings without a second run.
         if (cfg.PreflightBeforeBuild)
         {
             onLine?.Invoke("preflight: checking project before build ...");
-            var pf = Preflight(modName, saveReport: true);
-            foreach (var f in pf.Findings.Where(f => f.Severity == FindingSeverity.Error))
+            preflight = Preflight(modName, saveReport: true);
+            foreach (var f in preflight.Findings.Where(f => f.Severity == FindingSeverity.Error))
                 onLine?.Invoke($"preflight ✗ {f.Rule}: {f.Message}");
-            if (!pf.Ok)
+            if (!preflight.Ok)
                 return Fail(
-                    $"preflight failed with {pf.Errors} error(s) — fix them or set preflight_before_build=false to bypass",
-                    string.Join("\n", pf.Findings
+                    $"preflight failed with {preflight.Errors} error(s) — fix them or set preflight_before_build=false to bypass",
+                    string.Join("\n", preflight.Findings
                         .Where(f => f.Severity == FindingSeverity.Error)
                         .Select(f => $"{f.Rule}: {f.Message}" + (f.File.Length > 0 ? $"  [{f.File}:{f.Line}]" : ""))));
-            onLine?.Invoke($"preflight: ok ({pf.Warnings} warning(s))");
+            onLine?.Invoke($"preflight: ok ({preflight.Warnings} warning(s))");
         }
 
         // Resolve the signing key up front so we fail before building if signing was asked for but no key exists.
@@ -213,7 +208,7 @@ public sealed class BuildService
         {
             onLine?.Invoke($"skip: no changes since last build ({cached.UpdatedUtc:u})");
             return new BuildResult(true, modName, buildDir, cached.Pbo, false,
-                "skipped — no changes since last build (use force to rebuild)", "");
+                "skipped — no changes since last build (use force to rebuild)", "", "", preflight);
         }
 
         // Junctions anchored on the always-live work-drive source folder (survive P: unmounts): the source
@@ -305,6 +300,6 @@ public sealed class BuildService
             Profiles.Save(updated, string.IsNullOrEmpty(active) ? "default" : active, _configPath);
 
         var note = registered ? $"built + added to run-list ({active})" : "built (already in run-list)";
-        return new BuildResult(true, modName, buildDir, pbo, registered, note, pack.Output);
+        return new BuildResult(true, modName, buildDir, pbo, registered, note, pack.Output, "", preflight);
     }
 }
