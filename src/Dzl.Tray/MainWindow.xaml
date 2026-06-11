@@ -970,11 +970,8 @@
                               <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                                 <!-- Primary: Build. Everything else under the ⋯ menu. -->
                                 <ui:Button Content="Build" Appearance="Primary" Icon="{ui:SymbolIcon Box24}"
-                                           ToolTip="Build → PBO and add to the active server's run-list (needs P: mounted)"
-                                           Tag="{Binding Name}" Click="OnBuildMod" Margin="0,0,8,0"
-                                           IsEnabled="{Binding DataContext.WorkDriveMounted, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
-                                <ui:Button Icon="{ui:SymbolIcon DocumentSearch24}" Margin="0,0,8,0" Tag="{Binding Name}" Click="OnOpenBuildWindow"
-                                           ToolTip="Build console — preflight findings, options, live log, diagnostics" />
+                                           ToolTip="Build console — preflight findings, options, live log, diagnostics"
+                                           Tag="{Binding Name}" Click="OnBuildMod" Margin="0,0,8,0" />
                                 <ui:Button Icon="{ui:SymbolIcon BranchFork24}" Margin="0,0,8,0" Tag="{Binding Name}" Click="OnOpenGit"
                                            ToolTip="Git — branches, stage &amp; commit, push, release, terminal" />
                                 <ui:Button Icon="{ui:SymbolIcon Open24}" Margin="0,0,8,0" Tag="{Binding RepoUrl}" Click="OnOpenRepoUrl"
@@ -1043,26 +1040,6 @@
                         </Style>
                       </TextBlock.Style>
                     </TextBlock>
-                  </StackPanel>
-                </ui:Card>
-
-                <!-- Build log -->
-                <ui:Card Margin="0,0,0,4" Padding="16">
-                  <ui:Card.Style>
-                    <Style TargetType="ui:Card">
-                      <Setter Property="Visibility" Value="Visible" />
-                      <Style.Triggers>
-                        <DataTrigger Binding="{Binding BuildLog}" Value="">
-                          <Setter Property="Visibility" Value="Collapsed" />
-                        </DataTrigger>
-                      </Style.Triggers>
-                    </Style>
-                  </ui:Card.Style>
-                  <StackPanel>
-                    <TextBlock Text="Output log" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
-                    <TextBox Text="{Binding BuildLog, Mode=OneWay}" Style="{StaticResource LogTextBox}"
-                             Height="200" IsReadOnly="True"
-                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
                   </StackPanel>
                 </ui:Card>
 

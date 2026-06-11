@@ -567,13 +567,9 @@ public partial class MainWindow : FluentWindow
         NewModStatus.Text = _vm.DeleteModProject(name, alsoBuild: r == System.Windows.MessageBoxResult.Yes);
     }
 
-    private async void OnBuildMod(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string name }) return;
-        var opt = BuildDialog.Show(this, _vm, name);     // resolves the plan + pre-fills paths; null = cancelled
-        if (opt is null) return;
-        await _vm.BuildModAsync(name, opt.Value.clean, opt.Value.binarize, opt.Value.sign);
-    }
+    // Build opens the Build console window — one build flow (preflight findings, options, live
+    // log, diagnostics). Signing keys are managed in Settings → Signing.
+    private void OnBuildMod(object sender, RoutedEventArgs e) => OnOpenBuildWindow(sender, e);
 
 
     // GitHub OAuth login is interactive (device code + browser), so run it in a real terminal the

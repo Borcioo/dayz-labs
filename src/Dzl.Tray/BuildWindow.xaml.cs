@@ -28,6 +28,24 @@ public partial class BuildWindow : FluentWindow
         _vm.PropertyChanged += OnVmChanged;
         Unloaded += (_, _) => _vm.PropertyChanged -= OnVmChanged;
         LogBox.Text = _vm.BuildLog;
+        RefreshPlan();
+    }
+
+    /// <summary>Pre-resolve the build plan: signing-key availability gates the sign checkbox
+    /// (keys are managed in Settings → Signing), and a not-ready environment shows up front.</summary>
+    private void RefreshPlan()
+    {
+        try
+        {
+            var plan = new BuildService(_vm.ConfigFilePath).Plan(_mod);
+            SignChk.IsEnabled = plan.HasKey;
+            SignChk.ToolTip = plan.HasKey
+                ? $"Sign with key '{plan.KeyName}' + ship the .bikey"
+                : "No signing key yet — create one in Settings → Signing, then reopen this window.";
+            if (!plan.HasKey) SignChk.IsChecked = false;
+            StatusText.Text = plan.Ready ? $"ready — output: {plan.AddonsDir}" : plan.Message;
+        }
+        catch { /* plan is advisory; the build itself re-validates */ }
     }
 
     private void OnVmChanged(object? s, System.ComponentModel.PropertyChangedEventArgs e)
