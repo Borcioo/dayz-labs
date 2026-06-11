@@ -967,18 +967,27 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>Build a mod project into a PBO off the UI thread, streaming the AddonBuilder log; on
     /// success register the <c>@&lt;Mod&gt;</c> into the active server's run-list and refresh.</summary>
-    public async Task BuildModAsync(string name, bool clean = false, bool binarize = true, bool sign = false)
+    public async Task BuildModAsync(string name, bool clean = false, bool binarize = true, bool sign = false, bool force = false)
     {
         if (Building) return;
         Building = true;
-        BuildLog = $"▸ Building {name} (clean={clean}, binarize={binarize}, sign={sign}) …\n";
+        BuildLog = $"▸ Building {name} (clean={clean}, binarize={binarize}, sign={sign}, force={force}) …\n";
         var configPath = _configPath;
         var result = await Task.Run(() =>
             new BuildService(configPath).Build(name, clean: clean, binarize: binarize, sign: sign,
-                onLine: line => _dispatcher.BeginInvoke(() => BuildLog += line + "\n")));
+                onLine: line => _dispatcher.BeginInvoke(() => BuildLog += line + "\n"), force: force));
         BuildLog += (result.Ok ? "\n✓ " : "\n✗ ") + result.Message + "\n";
+        if (!result.Ok && result.Diagnostics.Length > 0)
+            BuildLog += "\n" + result.Diagnostics + "\n";
         Building = false;
         if (result.Ok) { Reload(); RefreshModProjects(); }
+    }
+
+    /// <summary>Preflight a mod project off the UI thread (configs, references, paths, scripts).</summary>
+    public Task<BuildService.PreflightView> PreflightAsync(string name)
+    {
+        var configPath = _configPath;
+        return Task.Run(() => new BuildService(configPath).Preflight(name));
     }
 
     /// <summary>Resolved path/tool preview for the Build options dialog (no side effects).</summary>

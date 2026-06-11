@@ -973,6 +973,8 @@
                                            ToolTip="Build → PBO and add to the active server's run-list (needs P: mounted)"
                                            Tag="{Binding Name}" Click="OnBuildMod" Margin="0,0,8,0"
                                            IsEnabled="{Binding DataContext.WorkDriveMounted, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
+                                <ui:Button Icon="{ui:SymbolIcon DocumentSearch24}" Margin="0,0,8,0" Tag="{Binding Name}" Click="OnOpenBuildWindow"
+                                           ToolTip="Build console — preflight findings, options, live log, diagnostics" />
                                 <ui:Button Icon="{ui:SymbolIcon BranchFork24}" Margin="0,0,8,0" Tag="{Binding Name}" Click="OnOpenGit"
                                            ToolTip="Git — branches, stage &amp; commit, push, release, terminal" />
                                 <ui:Button Icon="{ui:SymbolIcon Open24}" Margin="0,0,8,0" Tag="{Binding RepoUrl}" Click="OnOpenRepoUrl"
