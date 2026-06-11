@@ -136,7 +136,7 @@ public partial class BuildWindow : FluentWindow
         // Hyperlink is a FrameworkContentElement, not a FrameworkElement.
         var ctx = (sender as FrameworkElement)?.DataContext ?? (sender as FrameworkContentElement)?.DataContext;
         if (ctx is not FindingRow row || row.FullPath.Length == 0) return;
-        if (!Dzl.Core.Tools.EditorLauncher.OpenFile(_vm.Cfg.EditorPath, row.FullPath, row.Line))
+        if (!Dzl.Core.Tools.EditorLauncher.OpenFile(_vm.Cfg.EditorPath, row.FullPath, row.Line, _vm.ModDirOf(_mod)))
             StatusText.Text = $"✗ could not open {row.Location} — set an editor in Settings";
     }
 

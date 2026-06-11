@@ -19,20 +19,28 @@ public static class EditorLauncher
         catch { return false; }
     }
 
-    /// <summary>Arguments to open one file (optionally at a line) in the configured editor.
-    /// VS Code-family editors (code/cursor/codium/insiders) take <c>--goto file:line</c>;
-    /// everything else gets the plain file path (line ignored). Pure — unit-testable.</summary>
-    public static List<string> FileArgs(string editorPath, string file, int line = 0)
+    /// <summary>Arguments to open a file (optionally at a line, optionally with its project
+    /// folder as the workspace). VS Code-family editors (code/cursor/codium/insiders/windsurf)
+    /// take <c>[folder] --goto file:line</c> — the folder opens as the workspace and the file
+    /// lands focused at the line. Everything else gets the plain file path (folder + line
+    /// ignored; most plain editors would try to open the folder as a file). Pure — unit-testable.</summary>
+    public static List<string> FileArgs(string editorPath, string file, int line = 0, string? folder = null)
     {
         var exe = Path.GetFileNameWithoutExtension(editorPath).ToLowerInvariant();
         var isVsCodeFamily = exe is "code" or "code-insiders" or "cursor" or "codium" or "windsurf";
-        if (line > 0 && isVsCodeFamily) return new List<string> { "--goto", $"{file}:{line}" };
-        return new List<string> { file };
+        if (!isVsCodeFamily) return new List<string> { file };
+
+        var args = new List<string>();
+        if (!string.IsNullOrWhiteSpace(folder)) args.Add(folder);
+        if (line > 0) { args.Add("--goto"); args.Add($"{file}:{line}"); }
+        else args.Add(file);
+        return args;
     }
 
-    /// <summary>Open a single file in the configured editor, jumping to <paramref name="line"/>
-    /// when the editor supports it. Falls back to the OS default app when no editor is set.</summary>
-    public static bool OpenFile(string editorPath, string file, int line = 0)
+    /// <summary>Open a file in the configured editor — with its project folder as the workspace
+    /// and the cursor at <paramref name="line"/> when the editor supports it. Falls back to the
+    /// OS default app when no editor is set.</summary>
+    public static bool OpenFile(string editorPath, string file, int line = 0, string? folder = null)
     {
         if (string.IsNullOrWhiteSpace(file) || !File.Exists(file)) return false;
         try
@@ -43,7 +51,7 @@ public static class EditorLauncher
                 return true;
             }
             var psi = new ProcessStartInfo(editorPath) { UseShellExecute = true };
-            foreach (var a in FileArgs(editorPath, file, line)) psi.ArgumentList.Add(a);
+            foreach (var a in FileArgs(editorPath, file, line, folder)) psi.ArgumentList.Add(a);
             Process.Start(psi);
             return true;
         }
