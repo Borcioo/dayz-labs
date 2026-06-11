@@ -36,6 +36,17 @@ public static class DzlMcpTools
                               [Description("How many trailing lines")] int lines = 50)
         => J(Svc().Logs(which, lines));
 
+    [McpServerTool, Description("Diagnose a DayZ log tail for known failure signatures: verification kicks (VE_MISSING_BISIGN, VE_PATCHED_PBO, mod version skew, filePatching mismatch) and build-tool symptoms. Returns cause→fix entries; empty list = nothing recognized.")]
+    public static string DiagnoseLogs([Description("script|rpt|adm|client")] string which = "client",
+                                      [Description("how many trailing lines to scan")] int lines = 500)
+    {
+        var log = Svc().Logs(which, lines);
+        var text = string.Join('\n', log.Lines);
+        var kicks = Dzl.Core.Build.BuildDiagnostics.DiagnoseKick(text);
+        var build = Dzl.Core.Build.BuildDiagnostics.Diagnose(text);
+        return J(new { ok = true, kicks, build });
+    }
+
     [McpServerTool, Description("Start the server (and optionally the client). mode = debug|normal.")]
     public static string Start([Description("debug|normal")] string mode = "debug",
                                [Description("also start the client")] bool client = false)
@@ -75,8 +86,13 @@ public static class DzlMcpTools
     public static string BuildMod([Description("Mod project name (under ProjectsRoot)")] string mod,
                                   [Description("Wipe output first (AddonBuilder -clear)")] bool clean = false,
                                   [Description("Binarize configs/models (false = -packonly)")] bool binarize = true,
-                                  [Description("Sign the PBO with your signing key (must exist — see generate_key)")] bool sign = false)
-        => J(new BuildService(ConfigPath()).Build(mod, clean, binarize, sign));
+                                  [Description("Sign the PBO with your signing key (must exist — see generate_key)")] bool sign = false,
+                                  [Description("Rebuild even when nothing changed (skip-unchanged cache)")] bool force = false)
+        => J(new BuildService(ConfigPath()).Build(mod, clean, binarize, sign, force: force));
+
+    [McpServerTool, Description("Preflight a mod project before building: config sanity (CfgPatches/CfgMods/CfgConvert syntax gate), missing/excluded asset references, baked absolute paths, path hygiene (lowercase rule, case conflicts), texture freshness, ODOL p3ds, Enforce-script traps. Returns findings with rule ids, file and line. ok=false means error-severity findings exist.")]
+    public static string Preflight([Description("Mod project name (under ProjectsRoot)")] string mod)
+        => J(new BuildService(ConfigPath()).Preflight(mod));
 
     [McpServerTool, Description("Create the creator's signing key pair (DSCreateKey) in the keys folder. One key signs all your mods. Name defaults to the configured signing key / author.")]
     public static string GenerateKey([Description("Key name (optional; defaults to configured signing key / author)")] string? name = null)

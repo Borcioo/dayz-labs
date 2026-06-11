@@ -7,14 +7,34 @@ public static class CfgConvert
     public static List<string> UnbinarizeArgs(string binPath, string outCpp) =>
         new() { "-txt", "-dst", outCpp, binPath };
 
-    public static (bool ok, string output) Unbinarize(string exePath, string binPath, string outCpp)
+    public static (bool ok, string output) Unbinarize(string exePath, string binPath, string outCpp) =>
+        Run(exePath, UnbinarizeArgs(binPath, outCpp), Path.GetDirectoryName(binPath));
+
+    public static List<string> ToBinArgs(string cppPath, string outBin) =>
+        new() { "-bin", "-dst", outBin, cppPath };
+
+    /// <summary>Convert a <c>config.cpp</c> to binary form — used both for real conversion and as a
+    /// syntax gate (CfgConvert is the engine's own parser, so a non-zero exit is an authoritative
+    /// config error). Runs with cwd at the config's folder so relative includes resolve.</summary>
+    public static (bool ok, string output) ToBin(string exePath, string cppPath, string outBin) =>
+        Run(exePath, ToBinArgs(cppPath, outBin), Path.GetDirectoryName(cppPath));
+
+    private static (bool ok, string output) Run(string exePath, List<string> args, string? cwd)
     {
-        var psi = new ProcessStartInfo(exePath) { RedirectStandardOutput = true, RedirectStandardError = true,
-            UseShellExecute = false, CreateNoWindow = true };
-        foreach (var a in UnbinarizeArgs(binPath, outCpp)) psi.ArgumentList.Add(a);
-        using var p = Process.Start(psi)!;
-        var outp = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
-        p.WaitForExit();
-        return (p.ExitCode == 0, outp.Trim());
+        try
+        {
+            var psi = new ProcessStartInfo(exePath) { RedirectStandardOutput = true, RedirectStandardError = true,
+                UseShellExecute = false, CreateNoWindow = true };
+            if (!string.IsNullOrEmpty(cwd) && Directory.Exists(cwd)) psi.WorkingDirectory = cwd;
+            foreach (var a in args) psi.ArgumentList.Add(a);
+            using var p = Process.Start(psi)!;
+            var outp = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
+            p.WaitForExit();
+            return (p.ExitCode == 0, outp.Trim());
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
     }
 }

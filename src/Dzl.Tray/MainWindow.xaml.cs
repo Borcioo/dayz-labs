@@ -501,6 +501,13 @@ public partial class MainWindow : FluentWindow
         new GitWindow(_vm, name, _vm.ModDirOf(name)).Show();
     }
 
+    // Open the per-mod build console (preflight + build log). Ownerless like GitWindow.
+    private void OnOpenBuildWindow(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string name }) return;
+        new BuildWindow(_vm, name).Show();
+    }
+
     private void OnImportFromGitHub(object sender, RoutedEventArgs e)
     {
         var repo = GhRepoBox.Text.Trim();

@@ -114,6 +114,23 @@ public partial class App : Application
             a.Equals("--minimized", StringComparison.OrdinalIgnoreCase));
         if (!startHidden)
             _tray.ShowMainWindow();
+
+        // Headless UI smoke (DZL_SMOKE_WINDOW=build:<Mod>): realize the named tool window — the
+        // point where bad icon names / resource keys actually crash — screenshot, exit 0.
+        // Crashes surface via crash.log + non-zero exit. No-op without the env var.
+        var smoke = Environment.GetEnvironmentVariable("DZL_SMOKE_WINDOW");
+        if (smoke?.StartsWith("build:", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            var mod = smoke["build:".Length..];
+            Dispatcher.BeginInvoke(async () =>
+            {
+                var win = new BuildWindow(new ViewModels.MainViewModel(configPath), mod);
+                win.Show();
+                await System.Threading.Tasks.Task.Delay(1500);
+                try { AppScreenshot.Capture(configPath); } catch { /* capture is best-effort */ }
+                Shutdown(0);
+            }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        }
     }
 
     private static void LogCrash(Exception ex)

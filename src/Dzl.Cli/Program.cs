@@ -127,17 +127,29 @@ root.AddCommand(restartCmd);
 var logsWhich = new Argument<string>("which", "script|rpt|adm|client")
     .FromAmong("script", "rpt", "adm", "client");
 var logsLines = new Option<int?>("--lines", "Print the last N lines and exit.");
+var logsDiagnose = new Option<bool>("--diagnose",
+    "Scan the tail for known DayZ verification-kick codes (VE_MISSING_BISIGN etc.) and explain them.");
 var logsCmd = new Command("logs", "Resolve a log path (or print last N lines with --lines).")
-{ logsWhich, logsLines };
+{ logsWhich, logsLines, logsDiagnose };
 logsCmd.SetHandler(ctx =>
 {
     var (cfg, _, _, _) = Resolve(ctx);
     var which = ctx.ParseResult.GetValueForArgument(logsWhich);
     var lines = ctx.ParseResult.GetValueForOption(logsLines);
+    var diagnose = ctx.ParseResult.GetValueForOption(logsDiagnose);
     var path = LogResolver.Resolve(cfg.ProfilesPath, cfg.ClientProfilesPath).GetValueOrDefault(which);
     if (string.IsNullOrEmpty(path))
     {
         Console.WriteLine($"no {which} log found");
+        return;
+    }
+    if (diagnose)
+    {
+        var tail = string.Join('\n', LogTail.LastLines(path, lines ?? 500));
+        var diags = Dzl.Core.Build.BuildDiagnostics.DiagnoseKick(tail);
+        Console.WriteLine(diags.Count > 0
+            ? Dzl.Core.Build.BuildDiagnostics.Format(diags)
+            : "no known kick/verification signatures in the tail");
         return;
     }
     if (lines is int n)
@@ -717,8 +729,9 @@ var buildModArg = new Argument<string>("Mod", "Mod project name (under ProjectsR
 var buildClean = new Option<bool>("--clean", "Wipe the output first (AddonBuilder -clear).");
 var buildNoBin = new Option<bool>("--no-binarize", "Pack only, don't binarize (AddonBuilder -packonly).");
 var buildSign = new Option<bool>("--sign", "Sign the PBO with your signing key (generate one with 'dzl key new').");
+var buildForce = new Option<bool>("--force", "Rebuild even when nothing changed (ignore the skip-unchanged cache).");
 var buildCmd = new Command("build", "Build a mod into a PBO and add it to the active server's run-list.")
-    { buildModArg, buildClean, buildNoBin, buildSign };
+    { buildModArg, buildClean, buildNoBin, buildSign, buildForce };
 buildCmd.SetHandler(ctx =>
 {
     var (_, _, _, configPath) = Resolve(ctx);
@@ -726,17 +739,57 @@ buildCmd.SetHandler(ctx =>
     var clean = ctx.ParseResult.GetValueForOption(buildClean);
     var noBin = ctx.ParseResult.GetValueForOption(buildNoBin);
     var sign = ctx.ParseResult.GetValueForOption(buildSign);
+    var force = ctx.ParseResult.GetValueForOption(buildForce);
     var r = new BuildService(configPath).Build(mod, clean: clean, binarize: !noBin, sign: sign,
-        onLine: line => Console.Error.WriteLine(line));   // log to stderr; result line to stdout
+        onLine: line => Console.Error.WriteLine(line), force: force);   // log to stderr; result line to stdout
     if (!r.Ok)
     {
         Console.Error.WriteLine(r.Message);
+        if (r.Diagnostics.Length > 0) Console.Error.WriteLine(r.Diagnostics);
         ctx.ExitCode = 1;
         return;
     }
     Console.WriteLine($"{r.Message}  →  {r.PboPath}");
 });
 root.AddCommand(buildCmd);
+
+// ---- preflight (build-quality checks before packing) ----
+var preflightModArg = new Argument<string>("Mod", "Mod project name (under ProjectsRoot).");
+var preflightJson = new Option<bool>("--json", "Print the full report as JSON instead of text.");
+var preflightCmd = new Command("preflight",
+    "Validate a mod before building: configs (CfgPatches/CfgMods/syntax), references, paths, scripts.")
+    { preflightModArg, preflightJson };
+preflightCmd.SetHandler(ctx =>
+{
+    var (_, _, _, configPath) = Resolve(ctx);
+    var mod = ctx.ParseResult.GetValueForArgument(preflightModArg);
+    var asJson = ctx.ParseResult.GetValueForOption(preflightJson);
+    var r = new BuildService(configPath).Preflight(mod);
+
+    if (asJson)
+    {
+        Console.WriteLine(JsonSerializer.Serialize(r, ConfigStore.Json));
+    }
+    else
+    {
+        foreach (var f in r.Findings.OrderByDescending(f => f.Severity))
+        {
+            var mark = f.Severity switch
+            {
+                Dzl.Core.Build.Preflight.FindingSeverity.Error => "✗",
+                Dzl.Core.Build.Preflight.FindingSeverity.Warning => "!",
+                _ => "·",
+            };
+            var loc = f.File.Length > 0 ? (f.Line > 0 ? $"  [{f.File}:{f.Line}]" : $"  [{f.File}]") : "";
+            Console.WriteLine($"{mark} {f.Rule}: {f.Message}{loc}");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"{(r.Ok ? "✓" : "✗")} {mod}: {r.Errors} error(s), {r.Warnings} warning(s), {r.Infos} info");
+        if (r.ReportTxt.Length > 0) Console.WriteLine($"report: {r.ReportTxt}");
+    }
+    if (!r.Ok) ctx.ExitCode = 1;
+});
+root.AddCommand(preflightCmd);
 
 // ---- key (signing key generation) ----
 var keyCmd = new Command("key", "Manage your DayZ signing key (one key signs all your mods).");
