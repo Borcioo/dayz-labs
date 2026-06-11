@@ -31,18 +31,27 @@ public partial class BuildWindow : FluentWindow
         RefreshPlan();
     }
 
-    /// <summary>Pre-resolve the build plan: signing-key availability gates the sign checkbox
-    /// (keys are managed in Settings → Signing), and a not-ready environment shows up front.</summary>
+    /// <summary>Pre-resolve the build plan: the key dropdown lists what the keys folder holds
+    /// (managed in Settings → Signing) with the configured/default key pre-selected; no keys at
+    /// all disables signing. A not-ready environment shows up front.</summary>
     private void RefreshPlan()
     {
         try
         {
-            var plan = new BuildService(_vm.ConfigFilePath).Plan(_mod);
-            SignChk.IsEnabled = plan.HasKey;
-            SignChk.ToolTip = plan.HasKey
-                ? $"Sign with key '{plan.KeyName}' + ship the .bikey"
-                : "No signing key yet — create one in Settings → Signing, then reopen this window.";
-            if (!plan.HasKey) SignChk.IsChecked = false;
+            var svc = new BuildService(_vm.ConfigFilePath);
+            var plan = svc.Plan(_mod);
+            var keys = svc.ListKeys();
+
+            KeyCombo.ItemsSource = keys.Select(k => k.Name).ToList();
+            KeyCombo.SelectedItem = keys.Any(k => k.Name.Equals(plan.KeyName, StringComparison.OrdinalIgnoreCase))
+                ? keys.First(k => k.Name.Equals(plan.KeyName, StringComparison.OrdinalIgnoreCase)).Name
+                : keys.FirstOrDefault()?.Name;
+
+            SignChk.IsEnabled = keys.Count > 0;
+            SignChk.ToolTip = keys.Count > 0
+                ? "Sign with the selected key + ship the .bikey"
+                : "No signing keys yet — create or import one in Settings → Signing, then reopen this window.";
+            if (keys.Count == 0) SignChk.IsChecked = false;
             StatusText.Text = plan.Ready ? $"ready — output: {plan.AddonsDir}" : plan.Message;
         }
         catch { /* plan is advisory; the build itself re-validates */ }
@@ -92,7 +101,8 @@ public partial class BuildWindow : FluentWindow
             clean: CleanChk.IsChecked == true,
             binarize: BinarizeChk.IsChecked != false,
             sign: SignChk.IsChecked == true,
-            force: ForceChk.IsChecked == true);
+            force: ForceChk.IsChecked == true,
+            keyName: SignChk.IsChecked == true ? KeyCombo.SelectedItem as string : null);
         if (result is null) { StatusText.Text = "a build is already running"; return; }
         // The gate ran the same preflight — surface its findings + report here too.
         if (result.Preflight is { } pf) ShowFindings(pf);

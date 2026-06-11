@@ -36,7 +36,10 @@
       <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
         <CheckBox x:Name="CleanChk" Content="clean" ToolTip="Wipe AddonBuilder output first (-clear)" Margin="0,0,10,0" />
         <CheckBox x:Name="BinarizeChk" Content="binarize" IsChecked="True" ToolTip="Off = pack only (-packonly)" Margin="0,0,10,0" />
-        <CheckBox x:Name="SignChk" Content="sign" ToolTip="Sign with your key + ship the .bikey" Margin="0,0,10,0" />
+        <CheckBox x:Name="SignChk" Content="sign" ToolTip="Sign with the selected key + ship the .bikey" Margin="0,0,6,0" />
+        <ComboBox x:Name="KeyCombo" MinWidth="110" Margin="0,0,10,0" FontSize="12"
+                  ToolTip="Signing key (from the keys folder — manage in Settings → Signing)"
+                  IsEnabled="{Binding IsChecked, ElementName=SignChk}" />
         <CheckBox x:Name="ForceChk" Content="force" ToolTip="Ignore the skip-unchanged cache" />
       </StackPanel>
     </Grid>

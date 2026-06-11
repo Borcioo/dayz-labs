@@ -346,8 +346,9 @@ public partial class MainWindow : FluentWindow
         CfgEnableAutomationServer.IsChecked = c.EnableAutomationServer;
         CfgAutomountWorkDrive.IsChecked = c.AutomountWorkDrive;
         CfgWorkDriveSource.Text = c.WorkDriveSource;
-        // Show the effective key name, not an empty box — blank config falls back to the cached
-        // author handle, and saving the prefilled value just makes that explicit.
+        // Keys dropdown: whatever exists in the keys folder, with the effective name selected —
+        // blank config falls back to the cached author handle; saving makes the choice explicit.
+        CfgSigningKey.ItemsSource = _vm.ListSigningKeys().Select(k => k.Name).ToList();
         CfgSigningKey.Text = !string.IsNullOrWhiteSpace(c.SigningKey) ? c.SigningKey : _vm.CachedAuthor;
         CfgKeysDir.Text = c.KeysDir;
         RefreshSigningStatus();
@@ -593,11 +594,19 @@ public partial class MainWindow : FluentWindow
 
     private async void OnGitHubLogout(object sender, RoutedEventArgs e) => await _vm.GitHubLogoutAsync();
 
-    // Persist the typed signing-key name + keys folder first (so generation uses them), then run DSCreateKey.
+    // Ask for the new key's name in a prompt (the dropdown holds existing keys), persist it +
+    // the keys folder, run DSCreateKey, then refresh the dropdown so the new key appears.
     private void OnGenerateKey(object sender, RoutedEventArgs e)
     {
-        _vm.ApplyConfig(_vm.Cfg with { SigningKey = CfgSigningKey.Text.Trim(), KeysDir = CfgKeysDir.Text.Trim() });
+        var name = PromptDialog.Show(this, "Generate signing key",
+            "Name for the new key pair (letters/digits/underscore, e.g. your author handle):",
+            CfgSigningKey.Text.Trim());
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        _vm.ApplyConfig(_vm.Cfg with { SigningKey = name.Trim(), KeysDir = CfgKeysDir.Text.Trim() });
         SigningStatus.Text = _vm.GenerateSigningKey();
+        CfgSigningKey.ItemsSource = _vm.ListSigningKeys().Select(k => k.Name).ToList();
+        CfgSigningKey.Text = name.Trim();
     }
 
     /// <summary>Live key state for the Settings page: ✓ ready / not created yet, for the
@@ -644,6 +653,7 @@ public partial class MainWindow : FluentWindow
             if (File.Exists(srcPub))
                 File.Copy(srcPub, System.IO.Path.Combine(keysDir, name + ".bikey"), overwrite: true);
 
+            CfgSigningKey.ItemsSource = _vm.ListSigningKeys().Select(k => k.Name).ToList();
             CfgSigningKey.Text = name;
             _vm.ApplyConfig(_vm.Cfg with { SigningKey = name, KeysDir = CfgKeysDir.Text.Trim() });
             RefreshSigningStatus();

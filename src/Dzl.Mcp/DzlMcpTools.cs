@@ -87,8 +87,9 @@ public static class DzlMcpTools
                                   [Description("Wipe output first (AddonBuilder -clear)")] bool clean = false,
                                   [Description("Binarize configs/models (false = -packonly)")] bool binarize = true,
                                   [Description("Sign the PBO with your signing key (must exist — see generate_key)")] bool sign = false,
-                                  [Description("Rebuild even when nothing changed (skip-unchanged cache)")] bool force = false)
-        => J(new BuildService(ConfigPath()).Build(mod, clean, binarize, sign, force: force));
+                                  [Description("Rebuild even when nothing changed (skip-unchanged cache)")] bool force = false,
+                                  [Description("Sign with this key from the keys folder (optional; defaults to the configured key)")] string? key = null)
+        => J(new BuildService(ConfigPath()).Build(mod, clean, binarize, sign, force: force, keyName: key));
 
     [McpServerTool, Description("Preflight a mod project before building: config sanity (CfgPatches/CfgMods/CfgConvert syntax gate), missing/excluded asset references, baked absolute paths, path hygiene (lowercase rule, case conflicts), texture freshness, ODOL p3ds, Enforce-script traps. Returns findings with rule ids, file and line. ok=false means error-severity findings exist.")]
     public static string Preflight([Description("Mod project name (under ProjectsRoot)")] string mod)

@@ -27,6 +27,25 @@ public sealed class BuildService
         !string.IsNullOrWhiteSpace(cfg.SigningKey) ? cfg.SigningKey.Trim()
         : (ModScaffold.CachedAuthor(ConfigDir) ?? "").Trim();
 
+    /// <summary>One signing key found in the keys folder. <see cref="HasPublic"/> false = the
+    /// .bikey half is missing (signing works, but servers have nothing to whitelist).</summary>
+    public sealed record SigningKeyInfo(string Name, string PrivateKeyPath, bool HasPublic);
+
+    /// <summary>Enumerate signing keys (<c>*.biprivatekey</c>) in the resolved keys folder.</summary>
+    public IReadOnlyList<SigningKeyInfo> ListKeys()
+    {
+        Profiles.EnsureDefault(_configPath);
+        var (cfg, _, _) = Profiles.ResolveActive(_configPath);
+        var keysDir = ProjectPaths.KeysDir(ProjectPaths.Root(cfg), cfg.KeysDir);
+        if (!Directory.Exists(keysDir)) return Array.Empty<SigningKeyInfo>();
+        return Directory.EnumerateFiles(keysDir, "*.biprivatekey")
+            .Select(p => new SigningKeyInfo(
+                Path.GetFileNameWithoutExtension(p), p,
+                File.Exists(Path.ChangeExtension(p, ".bikey"))))
+            .OrderBy(k => k.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     /// <summary>Resolved, read-only preview of where a build will read from / write to and which tool it
     /// will use — so a UI can pre-fill the paths and warn before running. No side effects.</summary>
     public sealed record BuildPlanView(
@@ -133,7 +152,8 @@ public sealed class BuildService
     /// <param name="sign">Sign the PBO with the creator's key (AddonBuilder <c>-sign</c>); copies the public
     /// <c>.bikey</c> into the mod's <c>keys\</c> so it ships. Fails if no key exists (generate one first).</param>
     /// <param name="force">Ignore the skip-unchanged cache and rebuild regardless.</param>
-    public BuildResult Build(string modName, bool clean = false, bool binarize = true, bool sign = false, Action<string>? onLine = null, bool force = false)
+    /// <param name="keyName">Sign with this key from the keys folder instead of the configured/default one.</param>
+    public BuildResult Build(string modName, bool clean = false, bool binarize = true, bool sign = false, Action<string>? onLine = null, bool force = false, string? keyName = null)
     {
         PreflightView? preflight = null;   // set by the gate below; rides along on every result
         BuildResult Fail(string msg, string output = "") =>
@@ -176,16 +196,18 @@ public sealed class BuildService
             onLine?.Invoke($"preflight: ok ({preflight.Warnings} warning(s))");
         }
 
-        // Resolve the signing key up front so we fail before building if signing was asked for but no key exists.
+        // Resolve the signing key up front so we fail before building if signing was asked for but
+        // no key exists. An explicit keyName overrides the configured/default key for this build.
         string? signKey = null;
+        var effectiveKey = !string.IsNullOrWhiteSpace(keyName) ? keyName.Trim() : KeyName(cfg);
         if (sign)
         {
-            var keyName = KeyName(cfg);
-            if (keyName.Length == 0)
+            if (effectiveKey.Length == 0)
                 return Fail("sign requested but no signing-key name — set one in Settings");
-            signKey = ProjectPaths.PrivateKey(root, cfg.KeysDir, keyName);
+            signKey = ProjectPaths.PrivateKey(root, cfg.KeysDir, effectiveKey);
             if (!File.Exists(signKey))
-                return Fail($"signing key '{keyName}' not found at {signKey} — generate it first");
+                return Fail($"signing key '{effectiveKey}' not found at {signKey} — generate it first");
+            onLine?.Invoke($"signing with key: {effectiveKey}");
         }
 
         var workDriveSource = EnvDetect.WorkDriveSource(cfg.WorkDriveSource, cfg.DayzToolsPath);
@@ -280,13 +302,12 @@ public sealed class BuildService
         {
             try
             {
-                var keyName = KeyName(cfg);
-                var pub = ProjectPaths.PublicKey(root, cfg.KeysDir, keyName);
+                var pub = ProjectPaths.PublicKey(root, cfg.KeysDir, effectiveKey);
                 if (File.Exists(pub))
                 {
                     var buildKeys = ProjectPaths.BuildKeysDir(root, modName);
                     Directory.CreateDirectory(buildKeys);
-                    File.Copy(pub, Path.Combine(buildKeys, keyName + ".bikey"), overwrite: true);
+                    File.Copy(pub, Path.Combine(buildKeys, effectiveKey + ".bikey"), overwrite: true);
                 }
             }
             catch { /* best-effort; the .bisign is already produced */ }

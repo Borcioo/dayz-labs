@@ -730,8 +730,9 @@ var buildClean = new Option<bool>("--clean", "Wipe the output first (AddonBuilde
 var buildNoBin = new Option<bool>("--no-binarize", "Pack only, don't binarize (AddonBuilder -packonly).");
 var buildSign = new Option<bool>("--sign", "Sign the PBO with your signing key (generate one with 'dzl key new').");
 var buildForce = new Option<bool>("--force", "Rebuild even when nothing changed (ignore the skip-unchanged cache).");
+var buildKey = new Option<string?>("--key", "Sign with this key from the keys folder (default: the configured key).");
 var buildCmd = new Command("build", "Build a mod into a PBO and add it to the active server's run-list.")
-    { buildModArg, buildClean, buildNoBin, buildSign, buildForce };
+    { buildModArg, buildClean, buildNoBin, buildSign, buildForce, buildKey };
 buildCmd.SetHandler(ctx =>
 {
     var (_, _, _, configPath) = Resolve(ctx);
@@ -740,8 +741,9 @@ buildCmd.SetHandler(ctx =>
     var noBin = ctx.ParseResult.GetValueForOption(buildNoBin);
     var sign = ctx.ParseResult.GetValueForOption(buildSign);
     var force = ctx.ParseResult.GetValueForOption(buildForce);
+    var key = ctx.ParseResult.GetValueForOption(buildKey);
     var r = new BuildService(configPath).Build(mod, clean: clean, binarize: !noBin, sign: sign,
-        onLine: line => Console.Error.WriteLine(line), force: force);   // log to stderr; result line to stdout
+        onLine: line => Console.Error.WriteLine(line), force: force, keyName: key);   // log to stderr; result line to stdout
     if (!r.Ok)
     {
         Console.Error.WriteLine(r.Message);

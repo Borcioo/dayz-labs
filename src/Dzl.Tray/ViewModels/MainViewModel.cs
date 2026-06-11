@@ -971,7 +971,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// success register the <c>@&lt;Mod&gt;</c> into the active server's run-list and refresh.
     /// Returns the result (incl. the gate's preflight view) so callers can render findings;
     /// null when a build is already running.</summary>
-    public async Task<BuildResult?> BuildModAsync(string name, bool clean = false, bool binarize = true, bool sign = false, bool force = false)
+    public async Task<BuildResult?> BuildModAsync(string name, bool clean = false, bool binarize = true, bool sign = false, bool force = false, string? keyName = null)
     {
         if (Building) return null;
         Building = true;
@@ -979,7 +979,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var configPath = _configPath;
         var result = await Task.Run(() =>
             new BuildService(configPath).Build(name, clean: clean, binarize: binarize, sign: sign,
-                onLine: line => _dispatcher.BeginInvoke(() => BuildLog += line + "\n"), force: force));
+                onLine: line => _dispatcher.BeginInvoke(() => BuildLog += line + "\n"), force: force,
+                keyName: keyName));
         BuildLog += (result.Ok ? "\n✓ " : "\n✗ ") + result.Message + "\n";
         if (!result.Ok && result.Diagnostics.Length > 0)
             BuildLog += "\n" + result.Diagnostics + "\n";
@@ -997,6 +998,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>Resolved path/tool preview for the Build options dialog (no side effects).</summary>
     public BuildService.BuildPlanView BuildPlan(string name) => new BuildService(_configPath).Plan(name);
+
+    /// <summary>Signing keys present in the keys folder (for the Settings/Build pickers).</summary>
+    public IReadOnlyList<BuildService.SigningKeyInfo> ListSigningKeys() =>
+        new BuildService(_configPath).ListKeys();
 
     /// <summary>Create the creator's signing key (DSCreateKey). Returns a status line.</summary>
     public string GenerateSigningKey()

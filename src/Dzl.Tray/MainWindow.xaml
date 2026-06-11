@@ -1978,14 +1978,14 @@
                 <ui:Card Margin="0,0,0,12" Padding="16">
                   <StackPanel>
                     <TextBlock Text="Signing" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" />
-                    <TextBlock Text="Signing key name (one key signs all your mods)" Style="{StaticResource FieldLabel}" />
+                    <TextBlock Text="Signing key (found in the keys folder; one key signs all your mods)" Style="{StaticResource FieldLabel}" />
                     <Grid Margin="0,0,0,10">
                       <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
                       </Grid.ColumnDefinitions>
-                      <ui:TextBox x:Name="CfgSigningKey" Grid.Column="0"
-                                  PlaceholderText="blank = your author handle" />
-                      <ui:Button Grid.Column="1" Content="Generate key" Margin="8,0,0,0" Click="OnGenerateKey"
+                      <ComboBox x:Name="CfgSigningKey" Grid.Column="0" IsEditable="True"
+                                ToolTip="Pick a key from the keys folder (or type a name)" />
+                      <ui:Button Grid.Column="1" Content="Generate key…" Margin="8,0,0,0" Click="OnGenerateKey"
                                  ToolTip="Create a new key pair (DSCreateKey) in the keys folder" />
                       <ui:Button Grid.Column="2" Content="Import keys…" Margin="8,0,0,0" Click="OnImportKeys"
                                  ToolTip="Copy an existing .biprivatekey (+ its .bikey) into the keys folder and use its name" />
