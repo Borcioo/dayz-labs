@@ -1,4 +1,5 @@
 using Dzl.Core.Build;
+using Dzl.Core.Build.Preflight;
 using Dzl.Core.Config;
 using Dzl.Core.Env;
 using Dzl.Core.Projects;
@@ -87,6 +88,49 @@ public sealed class BuildService
             return new KeyResult(false, "", "", "DSCreateKey not found — check the DayZ Tools path");
 
         return DsTools.CreateKey(exe.ExePath, keysDir, name);
+    }
+
+    /// <summary>Outcome of a preflight run. <see cref="Ok"/> = no error-severity findings.
+    /// <see cref="ReportTxt"/>/<see cref="ReportJson"/> are saved next to the mod's build dir
+    /// (empty when saving failed or was skipped).</summary>
+    public sealed record PreflightView(
+        bool Ok, string Mod, int Errors, int Warnings, int Infos,
+        IReadOnlyList<Finding> Findings, string ReportTxt, string ReportJson);
+
+    /// <summary>Run the preflight rule set over a mod project. Read-only on the project; writes
+    /// only the report files. CfgConvert syntax gate engages automatically when DayZ Tools is
+    /// configured; the work drive is used for vanilla-reference resolution only when mounted.</summary>
+    public PreflightView Preflight(string modName, bool saveReport = true)
+    {
+        if (!ProjectPaths.IsValidName(modName))
+        {
+            var bad = new PreflightReport();
+            bad.Error("mod-name", $"invalid mod name: {modName}");
+            return new PreflightView(false, modName, 1, 0, 0, bad.Findings, "", "");
+        }
+
+        Profiles.EnsureDefault(_configPath);
+        var (cfg, _, _) = Profiles.ResolveActive(_configPath);
+        var root = ProjectPaths.Root(cfg);
+        var modDir = ProjectPaths.ModDir(root, modName);
+        var cfgConvert = ToolCatalog.Find(cfg.DayzToolsPath, "cfgconvert");
+
+        var opts = new PreflightOptions
+        {
+            WorkDriveRoot = WorkDrive.IsMounted() ? @"P:\" : null,
+            CfgConvertExe = cfgConvert?.Exists == true ? cfgConvert.ExePath : null,
+            TempDir = Path.Combine(ConfigDir, "temp"),
+        };
+
+        var report = PreflightEngine.Run(modDir, modName, opts);
+
+        string txt = "", json = "";
+        if (saveReport && Directory.Exists(modDir))
+            (txt, json) = ReportExport.Save(report, modName,
+                Path.Combine(ProjectPaths.BuildDir(root, modName), "preflight-report"));
+
+        return new PreflightView(report.Ok, modName, report.Errors, report.Warnings, report.Infos,
+            report.Findings, txt, json);
     }
 
     /// <summary>Build <paramref name="modName"/> and (on success) add it to the active run-list.</summary>

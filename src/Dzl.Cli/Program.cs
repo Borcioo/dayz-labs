@@ -738,6 +738,44 @@ buildCmd.SetHandler(ctx =>
 });
 root.AddCommand(buildCmd);
 
+// ---- preflight (build-quality checks before packing) ----
+var preflightModArg = new Argument<string>("Mod", "Mod project name (under ProjectsRoot).");
+var preflightJson = new Option<bool>("--json", "Print the full report as JSON instead of text.");
+var preflightCmd = new Command("preflight",
+    "Validate a mod before building: configs (CfgPatches/CfgMods/syntax), references, paths, scripts.")
+    { preflightModArg, preflightJson };
+preflightCmd.SetHandler(ctx =>
+{
+    var (_, _, _, configPath) = Resolve(ctx);
+    var mod = ctx.ParseResult.GetValueForArgument(preflightModArg);
+    var asJson = ctx.ParseResult.GetValueForOption(preflightJson);
+    var r = new BuildService(configPath).Preflight(mod);
+
+    if (asJson)
+    {
+        Console.WriteLine(JsonSerializer.Serialize(r, ConfigStore.Json));
+    }
+    else
+    {
+        foreach (var f in r.Findings.OrderByDescending(f => f.Severity))
+        {
+            var mark = f.Severity switch
+            {
+                Dzl.Core.Build.Preflight.FindingSeverity.Error => "✗",
+                Dzl.Core.Build.Preflight.FindingSeverity.Warning => "!",
+                _ => "·",
+            };
+            var loc = f.File.Length > 0 ? (f.Line > 0 ? $"  [{f.File}:{f.Line}]" : $"  [{f.File}]") : "";
+            Console.WriteLine($"{mark} {f.Rule}: {f.Message}{loc}");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"{(r.Ok ? "✓" : "✗")} {mod}: {r.Errors} error(s), {r.Warnings} warning(s), {r.Infos} info");
+        if (r.ReportTxt.Length > 0) Console.WriteLine($"report: {r.ReportTxt}");
+    }
+    if (!r.Ok) ctx.ExitCode = 1;
+});
+root.AddCommand(preflightCmd);
+
 // ---- key (signing key generation) ----
 var keyCmd = new Command("key", "Manage your DayZ signing key (one key signs all your mods).");
 var keyNewName = new Argument<string?>("name", () => null, "Key name (defaults to your configured signing key / author).");

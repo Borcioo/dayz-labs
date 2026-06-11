@@ -78,6 +78,10 @@ public static class DzlMcpTools
                                   [Description("Sign the PBO with your signing key (must exist — see generate_key)")] bool sign = false)
         => J(new BuildService(ConfigPath()).Build(mod, clean, binarize, sign));
 
+    [McpServerTool, Description("Preflight a mod project before building: config sanity (CfgPatches/CfgMods/CfgConvert syntax gate), missing/excluded asset references, baked absolute paths, path hygiene (lowercase rule, case conflicts), texture freshness, ODOL p3ds, Enforce-script traps. Returns findings with rule ids, file and line. ok=false means error-severity findings exist.")]
+    public static string Preflight([Description("Mod project name (under ProjectsRoot)")] string mod)
+        => J(new BuildService(ConfigPath()).Preflight(mod));
+
     [McpServerTool, Description("Create the creator's signing key pair (DSCreateKey) in the keys folder. One key signs all your mods. Name defaults to the configured signing key / author.")]
     public static string GenerateKey([Description("Key name (optional; defaults to configured signing key / author)")] string? name = null)
         => J(new BuildService(ConfigPath()).GenerateKey(name));

@@ -43,12 +43,12 @@ public static class ReportExport
             findings = report.Findings,
         }, Json);
 
-    /// <summary>Write both formats next to <paramref name="basePath"/> (no extension). Returns the
-    /// two paths; failures are swallowed (reporting must never break the pipeline).</summary>
+    /// <summary>Write both formats as <c>&lt;basePath&gt;.txt</c> / <c>.json</c>. Returns the two
+    /// paths; failures are swallowed (reporting must never break the pipeline).</summary>
     public static (string txt, string json) Save(PreflightReport report, string modName, string basePath)
     {
-        var txt = basePath + "_preflight.txt";
-        var json = basePath + "_preflight.json";
+        var txt = basePath + ".txt";
+        var json = basePath + ".json";
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(basePath)!);
