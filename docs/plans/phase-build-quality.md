@@ -254,11 +254,16 @@ src/Dzl.Core/Build/
 
 ## Suggested task order
 
-- [ ] 1. `CppText` (comment strip, class walker, `parse array`, include resolve) + tests
-- [ ] 2. `PreflightReport` + `PreflightEngine` skeleton + ConfigRules (CfgPatches/CfgMods) + CfgConvert syntax gate
-- [ ] 3. ReferenceRules (text scan + rvmat + exclusion-aware resolve) + FileSystemRules
-- [ ] 4. ScriptRules + report export (txt/json)
-- [ ] 5. Surface: `LauncherService.Preflight` → CLI/MCP/tray
-- [ ] 6. `BuildCache` (state hash + skip) into `BuildService.Build` + `--force`
-- [ ] 7. `BuildDiagnostics` + tool-output summary into build failure path
-- [ ] 8. `PboHeader` reader + post-pack prefix/signature verification + atomic publish
+- [x] 1. `CppText` (comment strip, class walker, `parse array`, include resolve) + tests
+- [x] 2. `PreflightReport` + `PreflightEngine` skeleton + ConfigRules (CfgPatches/CfgMods) + CfgConvert syntax gate
+- [x] 3. ReferenceRules (text scan + rvmat + exclusion-aware resolve) + FileSystemRules
+- [x] 4. ScriptRules + report export (txt/json)
+- [x] 5. Surface: `BuildService.Preflight` → CLI (`dzl preflight`) / MCP (`preflight`, `diagnose_logs`) / tray (BuildWindow)
+- [x] 6. `BuildCache` (state hash + skip) into `BuildService.Build` + `--force`
+- [x] 7. `BuildDiagnostics` + tool-output summary into build failure path
+- [x] 8. `PboHeader` reader + post-pack prefix/signature verification + atomic publish
+
+All implemented + E2E-verified against the real AddonBuilder (2026-06-11). Field notes from the
+live runs: `-temp=` must point at an EXISTING dir (binarize dies at "Syncing folders" otherwise);
+`-include=` takes ONE semicolon-separated line (newline-separated lists fail the binarize path);
+AddonBuilder can exit 0 with "Build failed" in the log — the fresh-pbo check is the real gate.
