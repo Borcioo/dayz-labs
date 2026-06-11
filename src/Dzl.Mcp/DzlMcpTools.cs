@@ -36,6 +36,17 @@ public static class DzlMcpTools
                               [Description("How many trailing lines")] int lines = 50)
         => J(Svc().Logs(which, lines));
 
+    [McpServerTool, Description("Diagnose a DayZ log tail for known failure signatures: verification kicks (VE_MISSING_BISIGN, VE_PATCHED_PBO, mod version skew, filePatching mismatch) and build-tool symptoms. Returns cause→fix entries; empty list = nothing recognized.")]
+    public static string DiagnoseLogs([Description("script|rpt|adm|client")] string which = "client",
+                                      [Description("how many trailing lines to scan")] int lines = 500)
+    {
+        var log = Svc().Logs(which, lines);
+        var text = string.Join('\n', log.Lines);
+        var kicks = Dzl.Core.Build.BuildDiagnostics.DiagnoseKick(text);
+        var build = Dzl.Core.Build.BuildDiagnostics.Diagnose(text);
+        return J(new { ok = true, kicks, build });
+    }
+
     [McpServerTool, Description("Start the server (and optionally the client). mode = debug|normal.")]
     public static string Start([Description("debug|normal")] string mode = "debug",
                                [Description("also start the client")] bool client = false)

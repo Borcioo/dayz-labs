@@ -216,11 +216,19 @@ public sealed class BuildService
         var pack = AddonBuilder.Pack(exe.ExePath, ProjectPaths.WorkDriveLink(modName), addonsDir,
             clear: clean, packOnly: !binarize, prefix: null, signKey: signKey, onLine: onLine);
 
+        // On failure, append pattern-matched cause→fix triage to the raw tool log.
+        static string WithDiagnostics(string output)
+        {
+            var diag = BuildDiagnostics.Format(BuildDiagnostics.Diagnose(output));
+            return diag.Length > 0 ? output + Environment.NewLine + Environment.NewLine + diag : output;
+        }
+
         if (!pack.Ok)
-            return Fail($"AddonBuilder exited {pack.ExitCode}", pack.Output);
+            return Fail($"AddonBuilder exited {pack.ExitCode}", WithDiagnostics(pack.Output));
 
         if (!ModBuild.HasFreshPbo(addonsDir, startUtc))
-            return Fail("AddonBuilder reported success but no fresh .pbo appeared", pack.Output);
+            return Fail("AddonBuilder reported success but no fresh .pbo appeared (stale junction? source path wrong?)",
+                WithDiagnostics(pack.Output));
 
         var pbo = ModBuild.NewestPbo(addonsDir)!.FullName;
         ModBuild.WriteMarker(ProjectPaths.BuildMarkerPath(root, modName), $"dzl-built {startUtc:O} from {projectDir}");

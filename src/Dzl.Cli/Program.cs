@@ -127,17 +127,29 @@ root.AddCommand(restartCmd);
 var logsWhich = new Argument<string>("which", "script|rpt|adm|client")
     .FromAmong("script", "rpt", "adm", "client");
 var logsLines = new Option<int?>("--lines", "Print the last N lines and exit.");
+var logsDiagnose = new Option<bool>("--diagnose",
+    "Scan the tail for known DayZ verification-kick codes (VE_MISSING_BISIGN etc.) and explain them.");
 var logsCmd = new Command("logs", "Resolve a log path (or print last N lines with --lines).")
-{ logsWhich, logsLines };
+{ logsWhich, logsLines, logsDiagnose };
 logsCmd.SetHandler(ctx =>
 {
     var (cfg, _, _, _) = Resolve(ctx);
     var which = ctx.ParseResult.GetValueForArgument(logsWhich);
     var lines = ctx.ParseResult.GetValueForOption(logsLines);
+    var diagnose = ctx.ParseResult.GetValueForOption(logsDiagnose);
     var path = LogResolver.Resolve(cfg.ProfilesPath, cfg.ClientProfilesPath).GetValueOrDefault(which);
     if (string.IsNullOrEmpty(path))
     {
         Console.WriteLine($"no {which} log found");
+        return;
+    }
+    if (diagnose)
+    {
+        var tail = string.Join('\n', LogTail.LastLines(path, lines ?? 500));
+        var diags = Dzl.Core.Build.BuildDiagnostics.DiagnoseKick(tail);
+        Console.WriteLine(diags.Count > 0
+            ? Dzl.Core.Build.BuildDiagnostics.Format(diags)
+            : "no known kick/verification signatures in the tail");
         return;
     }
     if (lines is int n)
