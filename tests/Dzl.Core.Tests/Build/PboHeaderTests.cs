@@ -141,11 +141,12 @@ public class AddonBuilderArgsTests
     }
 
     [Fact]
-    public void WriteIncludeFile_writes_one_pattern_per_line()
+    public void WriteIncludeFile_writes_semicolon_separated_single_line()
     {
         var dir = Directory.CreateTempSubdirectory().FullName;
         var path = AddonBuilder.WriteIncludeFile(dir);
         var lines = File.ReadAllLines(path);
-        lines.Should().Contain("*.xml").And.Contain("*.layout");
+        lines.Should().HaveCount(1, "AddonBuilder's binarize path rejects newline-separated include lists");
+        lines[0].Should().Contain("*.xml;").And.Contain("*.layout");
     }
 }

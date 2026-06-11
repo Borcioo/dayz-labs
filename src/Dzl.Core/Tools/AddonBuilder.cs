@@ -32,12 +32,14 @@ public static class AddonBuilder
         "*.ogg", "*.wav", "*.nm", "*.bisurf", "*.html", "*.txt",
     };
 
-    /// <summary>Write the default include-patterns file (one pattern per line) and return its path.</summary>
+    /// <summary>Write the default include-patterns file and return its path. Format verified
+    /// against DayZ AddonBuilder: ONE line, semicolon-separated — newline-separated lists make
+    /// the binarize path fail at "Syncing folders" with a bare "Build failed".</summary>
     public static string WriteIncludeFile(string dir)
     {
         Directory.CreateDirectory(dir);
         var path = Path.Combine(dir, "include.lst");
-        File.WriteAllLines(path, DefaultIncludePatterns);
+        File.WriteAllText(path, string.Join(';', DefaultIncludePatterns));
         return path;
     }
 

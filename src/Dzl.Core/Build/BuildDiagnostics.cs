@@ -24,7 +24,8 @@ public static class BuildDiagnostics
             "The classic trigger is an already-binarized ODOL .p3d fed back into Binarize (or corrupt source data).",
             "Run 'dzl preflight' — it flags ODOL models. Keep them out of binarization or rebuild from MLOD source.")),
 
-        new(new[] { "error 3 while parsing", "config : some input after end of file", "cfgconvert failed" }, new Diagnosis(
+        new(new[] { "error 3 while parsing", "config : some input after end of file", "cfgconvert failed",
+                "cfgconvert returned error", "error reading config file", "encountered instead of" }, new Diagnosis(
             "Config syntax error",
             "CfgConvert/Binarize could not parse a config — the error can come from an included .hpp, not just config.cpp.",
             "Fix the reported line; 'dzl preflight' runs the same parser up front when DayZ Tools is configured.")),

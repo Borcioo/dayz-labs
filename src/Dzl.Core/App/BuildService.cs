@@ -143,7 +143,8 @@ public sealed class BuildService
     public BuildResult Build(string modName, bool clean = false, bool binarize = true, bool sign = false, Action<string>? onLine = null, bool force = false)
     {
         BuildResult Fail(string msg, string output = "") =>
-            new(false, modName, "", "", false, msg, output);
+            new(false, modName, "", "", false, msg, output,
+                BuildDiagnostics.Format(BuildDiagnostics.Diagnose(output + "\n" + msg)));
 
         if (!ProjectPaths.IsValidName(modName))
             return Fail($"invalid mod name: {modName}");
@@ -219,6 +220,7 @@ public sealed class BuildService
         if (Directory.Exists(workAddons)) try { Directory.Delete(workAddons, recursive: true); } catch { }
         Directory.CreateDirectory(workAddons);
         var abTemp = Path.Combine(workDir, "temp");
+        Directory.CreateDirectory(abTemp);   // AddonBuilder fails at "Syncing folders" when -temp= doesn't exist
         var includeFile = AddonBuilder.WriteIncludeFile(workDir);
 
         var startUtc = DateTime.UtcNow;
@@ -226,19 +228,12 @@ public sealed class BuildService
             clear: clean, packOnly: !binarize, prefix: null, signKey: signKey, onLine: onLine,
             tempDir: abTemp, includeFile: includeFile);
 
-        // On failure, append pattern-matched cause→fix triage to the raw tool log.
-        static string WithDiagnostics(string output)
-        {
-            var diag = BuildDiagnostics.Format(BuildDiagnostics.Diagnose(output));
-            return diag.Length > 0 ? output + Environment.NewLine + Environment.NewLine + diag : output;
-        }
-
         if (!pack.Ok)
-            return Fail($"AddonBuilder exited {pack.ExitCode}", WithDiagnostics(pack.Output));
+            return Fail($"AddonBuilder exited {pack.ExitCode}", pack.Output);
 
         if (!ModBuild.HasFreshPbo(workAddons, startUtc))
-            return Fail("AddonBuilder reported success but no fresh .pbo appeared (stale junction? source path wrong?)",
-                WithDiagnostics(pack.Output));
+            return Fail("AddonBuilder reported success but no fresh .pbo appeared — check the log above for the real error",
+                pack.Output);
 
         var workPbo = ModBuild.NewestPbo(workAddons)!.FullName;
 
@@ -254,7 +249,7 @@ public sealed class BuildService
             return Fail($"packed PBO prefix '{info.Prefix}' does not match $PBOPREFIX$ '{expectedPrefix}' — assets would resolve to the wrong paths", pack.Output);
 
         if (sign && PboHeader.FindSignature(workPbo) is null)
-            return Fail("signing was requested but no .bisign was produced next to the PBO", WithDiagnostics(pack.Output));
+            return Fail("signing was requested but no .bisign was produced next to the PBO", pack.Output);
 
         var (pubOk, pubDetail) = ModBuild.PublishAtomically(workAddons, addonsDir);
         if (!pubOk)

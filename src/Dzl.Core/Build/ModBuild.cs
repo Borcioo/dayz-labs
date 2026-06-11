@@ -6,7 +6,8 @@ namespace Dzl.Core.Build;
 /// pre-flight check failed); <see cref="Message"/> is a one-line summary and <see cref="Output"/>
 /// holds the captured AddonBuilder log.</summary>
 public sealed record BuildResult(
-    bool Ok, string ModName, string ModDir, string PboPath, bool Registered, string Message, string Output);
+    bool Ok, string ModName, string ModDir, string PboPath, bool Registered, string Message, string Output,
+    string Diagnostics = "");
 
 /// <summary>
 /// Side-effect-light helpers for the build→deploy pipeline: verifying a fresh PBO was produced, the

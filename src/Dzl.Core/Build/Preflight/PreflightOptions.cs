@@ -35,5 +35,7 @@ public sealed record PreflightOptions
         ".git", ".svn", ".vscode", ".idea", ".gui-sources", "workbench",
         ".gitignore", ".gitattributes", "readme.md", "*.gproj", "*.bak", "*.psd",
         "thumbs.db", "desktop.ini", ".dzl-build.json",
+        // Prefix marker files never ship in the PBO (AddonBuilder consumes them).
+        "$pboprefix$", "$prefix$", "$pboprefix$.txt", "$prefix$.txt",
     };
 }

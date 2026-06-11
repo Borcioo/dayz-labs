@@ -745,6 +745,7 @@ buildCmd.SetHandler(ctx =>
     if (!r.Ok)
     {
         Console.Error.WriteLine(r.Message);
+        if (r.Diagnostics.Length > 0) Console.Error.WriteLine(r.Diagnostics);
         ctx.ExitCode = 1;
         return;
     }
