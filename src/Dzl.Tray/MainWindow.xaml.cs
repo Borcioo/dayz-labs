@@ -516,8 +516,14 @@ public partial class MainWindow : FluentWindow
     {
         var repo = GhRepoBox.Text.Trim();
         if (repo.Length == 0) { GhImportStatus.Text = "Enter a GitHub repo (owner/name or URL)."; return; }
+        var mode = GhModeCombo.SelectedIndex switch
+        {
+            1 => MainViewModel.GitHubImportMode.Snapshot,
+            2 => MainViewModel.GitHubImportMode.Fresh,
+            _ => MainViewModel.GitHubImportMode.Clone,
+        };
         GhImportStatus.Text = "cloning…";
-        GhImportStatus.Text = _vm.ImportFromGitHub(repo, GhNameBox.Text);
+        GhImportStatus.Text = _vm.ImportFromGitHub(repo, GhNameBox.Text, mode);
         if (GhImportStatus.Text.StartsWith('✓')) { GhRepoBox.Text = ""; GhNameBox.Text = ""; }
     }
 

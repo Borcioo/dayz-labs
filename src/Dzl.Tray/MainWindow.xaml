@@ -897,6 +897,12 @@
                         </Grid>
                         <ui:TextBox x:Name="GhNameBox" Margin="0,0,0,8"
                                     PlaceholderText="folder name (optional — defaults to the repo name)" />
+                        <ComboBox x:Name="GhModeCombo" SelectedIndex="0" Margin="0,0,0,8"
+                                  ToolTip="What happens to version control after the download">
+                          <ComboBoxItem Content="Keep .git — it's my repo (clone, push/pull works)" />
+                          <ComboBoxItem Content="Files only — strip .git (samples/templates you just want the content of)" />
+                          <ComboBoxItem Content="Fresh repo — strip .git, git init + initial commit (sample as the start of YOUR mod)" />
+                        </ComboBox>
                         <TextBlock x:Name="GhImportStatus" FontSize="12" TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                       </StackPanel>

@@ -854,9 +854,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return msg;
     }
 
+    /// <summary>How a GitHub import treats version control. <see cref="Clone"/> keeps the repo's
+    /// .git (your own mod); <see cref="Snapshot"/> strips it (samples/templates you just want the
+    /// files of); <see cref="Fresh"/> strips it and starts a new local repo with an initial commit
+    /// (sample as the starting point of YOUR mod — publish later from the Git window).</summary>
+    public enum GitHubImportMode { Clone, Snapshot, Fresh }
+
     /// <summary>Clone a GitHub repo into the projects tree as a mod (folder named <paramref name="name"/> or
     /// derived from the repo), then link P:\&lt;Mod&gt;. Needs gh installed + logged in. Returns a status line.</summary>
-    public string ImportFromGitHub(string repo, string? name)
+    public string ImportFromGitHub(string repo, string? name, GitHubImportMode mode = GitHubImportMode.Clone)
     {
         repo = repo?.Trim() ?? "";
         if (repo.Length == 0) return "✗ enter a GitHub repo (owner/name or URL)";
@@ -867,9 +873,42 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (Directory.Exists(dest)) return $"✗ {modName} already exists";
         var clone = Dzl.Core.Vcs.GitHub.Clone(repo, dest);
         if (!clone.ok) { RefreshModProjects(); return $"✗ clone failed: {clone.msg}"; }
+
+        var vcsNote = "";
+        if (mode != GitHubImportMode.Clone)
+        {
+            var (ok, msg) = DeleteGitDir(dest);
+            if (!ok) vcsNote = $"  (⚠ couldn't remove .git: {msg})";
+            else if (mode == GitHubImportMode.Fresh)
+            {
+                var init = Dzl.Core.Vcs.Git.Init(dest);
+                var commit = init.ok ? Dzl.Core.Vcs.Git.CommitAll(dest, $"Initial commit — imported from {repo} (dzl)") : init;
+                vcsNote = commit.ok ? "  (fresh repo, initial commit)" : $"  (⚠ re-init: {commit.msg})";
+            }
+            else vcsNote = "  (no .git — plain files)";
+        }
+
         var link = Junction.Ensure(ProjectPaths.JunctionPath(WorkDriveSource, modName), dest);
         RefreshModProjects();
-        return link.Ok ? $"✓ imported {modName} from GitHub + linked P:\\{modName}" : $"✓ imported {modName}  (⚠ link: {link.Detail})";
+        return link.Ok
+            ? $"✓ imported {modName} from GitHub + linked P:\\{modName}{vcsNote}"
+            : $"✓ imported {modName}  (⚠ link: {link.Detail}){vcsNote}";
+    }
+
+    /// <summary>Delete a clone's .git folder. Git marks object files read-only, so attributes are
+    /// cleared first — a plain recursive delete dies halfway and leaves a broken half-repo.</summary>
+    private static (bool ok, string msg) DeleteGitDir(string dir)
+    {
+        var gitDir = Path.Combine(dir, ".git");
+        if (!Directory.Exists(gitDir)) return (true, "");
+        try
+        {
+            foreach (var f in Directory.EnumerateFiles(gitDir, "*", SearchOption.AllDirectories))
+                File.SetAttributes(f, FileAttributes.Normal);
+            Directory.Delete(gitDir, recursive: true);
+            return (true, "");
+        }
+        catch (Exception ex) { return (false, ex.Message); }
     }
 
     /// <summary>True when gh is installed + logged in (drives the "From GitHub" tab availability).</summary>
