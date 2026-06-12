@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using Dzl.Core.Procs;
 
 namespace Dzl.Core.Tools;
 
@@ -18,20 +18,9 @@ public static class DsTools
         try
         {
             Directory.CreateDirectory(keysDir);
-            var psi = new ProcessStartInfo(exePath)
-            {
-                WorkingDirectory = keysDir,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-            psi.ArgumentList.Add(name);
-            using var p = Process.Start(psi)!;
-            var outp = (p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd()).Trim();
-            p.WaitForExit();
+            var r = ProcRunner.Run(exePath, new[] { name }, new RunOpts(WorkingDir: keysDir));
             // DSCreateKey can return non-zero even on success on some setups; trust the produced file.
-            return new KeyResult(File.Exists(priv), priv, pub, outp);
+            return new KeyResult(File.Exists(priv), priv, pub, r.AllOutput);
         }
         catch (Exception ex)
         {

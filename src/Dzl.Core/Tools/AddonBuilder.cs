@@ -1,5 +1,4 @@
-using System.Diagnostics;
-using System.Text;
+using Dzl.Core.Procs;
 
 namespace Dzl.Core.Tools;
 
@@ -50,31 +49,11 @@ public static class AddonBuilder
         bool clear = true, bool packOnly = true, string? prefix = null, string? signKey = null,
         Action<string>? onLine = null, string? tempDir = null, string? includeFile = null)
     {
-        try
-        {
-            var psi = new ProcessStartInfo(exePath) { RedirectStandardOutput = true, RedirectStandardError = true,
-                UseShellExecute = false, CreateNoWindow = true };
-            foreach (var arg in PackArgs(sourceDir, outputDir, clear, packOnly, prefix, signKey, tempDir, includeFile)) psi.ArgumentList.Add(arg);
-
-            var sb = new StringBuilder();
-            using var p = new Process { StartInfo = psi };
-            void Sink(string? s)
-            {
-                if (s is null) return;
-                lock (sb) sb.AppendLine(s);
-                onLine?.Invoke(s);
-            }
-            p.OutputDataReceived += (_, e) => Sink(e.Data);
-            p.ErrorDataReceived += (_, e) => Sink(e.Data);
-            p.Start();
-            p.BeginOutputReadLine();
-            p.BeginErrorReadLine();
-            p.WaitForExit();
-            return new PackResult(p.ExitCode == 0, p.ExitCode, sb.ToString().Trim());
-        }
-        catch (Exception ex)
-        {
-            return new PackResult(false, -1, ex.Message);
-        }
+        // No timeout: binarizing a big mod legitimately runs for minutes. OnLine preserves the
+        // live interleaved order; the persisted log groups stdout before stderr.
+        var r = ProcRunner.Run(exePath,
+            PackArgs(sourceDir, outputDir, clear, packOnly, prefix, signKey, tempDir, includeFile),
+            new RunOpts(TimeoutMs: 0, OnLine: onLine));
+        return new PackResult(r.Ok, r.Code, r.AllOutput);
     }
 }

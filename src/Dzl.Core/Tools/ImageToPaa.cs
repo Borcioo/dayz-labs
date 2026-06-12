@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using Dzl.Core.Procs;
 
 namespace Dzl.Core.Tools;
 
@@ -30,22 +30,18 @@ public static class ImageToPaa
             .ToList();
     }
 
-    // Manual-verify: runs the real exe per job, reports per-file result + progress.
+    // Manual-verify: runs the real exe per job, reports per-file result + progress. Never throws —
+    // a launch failure surfaces as a failed PaaResult for that job.
     public static List<PaaResult> ConvertFolder(string exePath, string dir, bool recursive,
                                                 IProgress<PaaResult>? progress = null)
     {
         var results = new List<PaaResult>();
         foreach (var job in PlanFolder(dir, recursive))
         {
-            var psi = new ProcessStartInfo(exePath) { RedirectStandardError = true, RedirectStandardOutput = true,
-                UseShellExecute = false, CreateNoWindow = true };
-            psi.ArgumentList.Add(job.Input);
-            psi.ArgumentList.Add(job.Output);
-            using var p = Process.Start(psi)!;
-            var err = p.StandardError.ReadToEnd();
-            p.WaitForExit();
-            var r = new PaaResult(job.Input, job.Output, p.ExitCode == 0 && File.Exists(job.Output),
-                p.ExitCode == 0 ? "ok" : $"exit {p.ExitCode}: {err.Trim()}");
+            var run = ProcRunner.Run(exePath, new[] { job.Input, job.Output },
+                new RunOpts(TimeoutMs: 120_000));
+            var r = new PaaResult(job.Input, job.Output, run.Ok && File.Exists(job.Output),
+                run.Ok ? "ok" : $"exit {run.Code}: {run.StdErr}");
             results.Add(r); progress?.Report(r);
         }
         return results;

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Dzl.Core.Config;
+using Dzl.Core.Procs;
 
 namespace Dzl.Core.Launch;
 
@@ -16,15 +17,13 @@ public static class ProcessManager
         return first.Length == 0 ? null : first;
     }
 
+    /// <summary>Image name of a live PID via <c>tasklist</c>, or null when the PID is gone or the
+    /// lookup fails. Never throws — this runs on every status call from every frontend.</summary>
     public static string? ImageOf(int pid)
     {
-        var psi = new ProcessStartInfo("tasklist", $"/FI \"PID eq {pid}\" /NH /FO CSV")
-        { RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true };
-        using var p = Process.Start(psi);
-        if (p is null) return null;
-        var outp = p.StandardOutput.ReadToEnd();
-        p.WaitForExit();
-        return ParseImage(outp);
+        var r = ProcRunner.Run("tasklist", new[] { "/FI", $"PID eq {pid}", "/NH", "/FO", "CSV" },
+            new RunOpts(TimeoutMs: 10_000));
+        return r.Ok ? ParseImage(r.StdOut) : null;
     }
 
     public static string ServerExe(DzlConfig c, string mode) => mode == "debug" ? c.ExeDebug : c.ExeNormal;

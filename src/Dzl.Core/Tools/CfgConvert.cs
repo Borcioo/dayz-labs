@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using Dzl.Core.Procs;
 
 namespace Dzl.Core.Tools;
 
@@ -21,20 +21,7 @@ public static class CfgConvert
 
     private static (bool ok, string output) Run(string exePath, List<string> args, string? cwd)
     {
-        try
-        {
-            var psi = new ProcessStartInfo(exePath) { RedirectStandardOutput = true, RedirectStandardError = true,
-                UseShellExecute = false, CreateNoWindow = true };
-            if (!string.IsNullOrEmpty(cwd) && Directory.Exists(cwd)) psi.WorkingDirectory = cwd;
-            foreach (var a in args) psi.ArgumentList.Add(a);
-            using var p = Process.Start(psi)!;
-            var outp = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
-            p.WaitForExit();
-            return (p.ExitCode == 0, outp.Trim());
-        }
-        catch (Exception ex)
-        {
-            return (false, ex.Message);
-        }
+        var r = ProcRunner.Run(exePath, args, new RunOpts(WorkingDir: cwd));
+        return (r.Ok, r.AllOutput);
     }
 }
