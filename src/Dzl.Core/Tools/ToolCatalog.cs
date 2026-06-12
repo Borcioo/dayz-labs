@@ -51,6 +51,17 @@ public static class ToolCatalog
         return list;
     }
 
-    public static ToolEntry? Find(string toolsPath, string key) =>
-        Discover(toolsPath).FirstOrDefault(t => string.Equals(t.Key, key, StringComparison.OrdinalIgnoreCase));
+    /// <summary>Resolve one tool by key. Known keys are answered with a single File.Exists probe;
+    /// only unknown keys pay the recursive Bin scan (Find is called several times per build and
+    /// from every MCP tool call, so the full Discover glob here was a measurable cost).</summary>
+    public static ToolEntry? Find(string toolsPath, string key)
+    {
+        foreach (var (k, name, rel, kind) in Known)
+        {
+            if (!string.Equals(k, key, StringComparison.OrdinalIgnoreCase)) continue;
+            var full = Path.Combine(toolsPath, "Bin", rel);
+            return new ToolEntry(k, name, full, File.Exists(full), kind);
+        }
+        return Discover(toolsPath).FirstOrDefault(t => string.Equals(t.Key, key, StringComparison.OrdinalIgnoreCase));
+    }
 }

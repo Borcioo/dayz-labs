@@ -88,57 +88,89 @@ public sealed class LauncherService
         return new LogsResult(which, path, tail);
     }
 
+    /// <summary>CLI/MCP starts pull the tray up as a monitor when configured; the tray's own
+    /// starts ("tui") never re-launch it.</summary>
+    private static void AutoLaunchTrayIfWanted(DzlConfig cfg, string source)
+    {
+        if (source is "cli" or "mcp" && cfg.AutoLaunchTray && !TrayLauncher.IsTrayRunning())
+            TrayLauncher.LaunchMonitor(AppContext.BaseDirectory);
+    }
+
+    /// <summary>The facade never throws: a spawn failure (bad DayzPath, missing exe) must come
+    /// back to the CLI/MCP/tray as an OpResult, not an unhandled Win32Exception.</summary>
+    private static OpResult Op(Func<string> action)
+    {
+        try { return new OpResult(true, action()); }
+        catch (Exception ex) { return new OpResult(false, ex.Message); }
+    }
+
     public OpResult Start(string mode, bool client, string source = "cli")
     {
         var (cfg, _, _) = Resolve();
-        if (source is "cli" or "mcp" && cfg.AutoLaunchTray && !Dzl.Core.Launch.TrayLauncher.IsTrayRunning())
-            Dzl.Core.Launch.TrayLauncher.LaunchMonitor(AppContext.BaseDirectory);
-        ProcessManager.Spawn(mode, "server", cfg, source, _configPath);
-        if (client) ProcessManager.Spawn(mode, "client", cfg, source, _configPath);
-        return new OpResult(true, $"started server{(client ? " + client" : "")} ({mode})");
+        AutoLaunchTrayIfWanted(cfg, source);
+        return Op(() =>
+        {
+            ProcessManager.Spawn(mode, "server", cfg, source, _configPath);
+            if (client) ProcessManager.Spawn(mode, "client", cfg, source, _configPath);
+            return $"started server{(client ? " + client" : "")} ({mode})";
+        });
     }
 
     public OpResult Stop(bool client, string source = "cli")  // source unused by Stop; keep for symmetry
     {
         var (cfg, _, _) = Resolve();
-        ProcessManager.Stop("server", cfg, _configPath);
-        if (client) ProcessManager.Stop("client", cfg, _configPath);
-        return new OpResult(true, $"stopped server{(client ? " + client" : "")}");
+        return Op(() =>
+        {
+            ProcessManager.Stop("server", cfg, _configPath);
+            if (client) ProcessManager.Stop("client", cfg, _configPath);
+            return $"stopped server{(client ? " + client" : "")}";
+        });
     }
 
     public OpResult Restart(string mode, string source = "cli")
     {
         var (cfg, _, _) = Resolve();
-        ProcessManager.Restart(mode, cfg, _configPath, source);
-        return new OpResult(true, $"restarted server ({mode})");
+        return Op(() =>
+        {
+            ProcessManager.Restart(mode, cfg, _configPath, source);
+            return $"restarted server ({mode})";
+        });
     }
 
     public OpResult StartTarget(string target, string mode, string source = "tui")
     {
         var (cfg, _, _) = Resolve();
-        if (source is "cli" or "mcp" && cfg.AutoLaunchTray && !Dzl.Core.Launch.TrayLauncher.IsTrayRunning())
-            Dzl.Core.Launch.TrayLauncher.LaunchMonitor(AppContext.BaseDirectory);
-        ProcessManager.Spawn(mode, target, cfg, source, _configPath);
-        return new OpResult(true, $"started {target} ({mode})");
+        AutoLaunchTrayIfWanted(cfg, source);
+        return Op(() =>
+        {
+            ProcessManager.Spawn(mode, target, cfg, source, _configPath);
+            return $"started {target} ({mode})";
+        });
     }
 
     public OpResult StopTarget(string target, string source = "tui")
     {
         var (cfg, _, _) = Resolve();
-        ProcessManager.Stop(target, cfg, _configPath);
-        return new OpResult(true, $"stopped {target}");
+        return Op(() =>
+        {
+            ProcessManager.Stop(target, cfg, _configPath);
+            return $"stopped {target}";
+        });
     }
 
     public OpResult RestartTarget(string target, string mode, string source = "tui")
     {
         var (cfg, _, _) = Resolve();
-        if (target == "server")
-            ProcessManager.Restart(mode, cfg, _configPath, source);
-        else
+        return Op(() =>
         {
-            ProcessManager.Stop(target, cfg, _configPath);
-            ProcessManager.Spawn(mode, target, cfg, source, _configPath);
-        }
-        return new OpResult(true, $"restarted {target} ({mode})");
+            if (target == "server")
+                ProcessManager.Restart(mode, cfg, _configPath, source);
+            else
+            {
+                ProcessManager.Stop(target, cfg, _configPath);
+                ProcessManager.Spawn(mode, target, cfg, source, _configPath);
+            }
+            return $"restarted {target} ({mode})";
+        });
     }
 }

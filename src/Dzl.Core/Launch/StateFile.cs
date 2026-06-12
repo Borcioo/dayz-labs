@@ -16,8 +16,10 @@ public static class StateFile
     {
         var p = Path(configPath);
         if (!File.Exists(p)) return new();
+        // IOException too: the tray polls this file every 1.5 s while the CLI/MCP write it —
+        // a sharing violation mid-write must read as "no entries", not escape through Status().
         try { return JsonSerializer.Deserialize<Dictionary<string, ProcInfo>>(File.ReadAllText(p), Json) ?? new(); }
-        catch (JsonException) { return new(); }
+        catch (Exception ex) when (ex is JsonException or IOException) { return new(); }
     }
 
     // imageOf(pid) -> image name or null if not running (injectable for tests).
@@ -48,7 +50,11 @@ public static class StateFile
 
     private static void WriteAll(string configPath, Dictionary<string, ProcInfo> data)
     {
-        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path(configPath))!);
-        File.WriteAllText(Path(configPath), JsonSerializer.Serialize(data, Json));
+        var path = Path(configPath);
+        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+        // Atomic swap so a concurrent reader (tray poll vs CLI/MCP) never sees a half-written file.
+        var tmp = path + ".tmp";
+        File.WriteAllText(tmp, JsonSerializer.Serialize(data, Json));
+        File.Move(tmp, path, overwrite: true);
     }
 }

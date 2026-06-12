@@ -95,17 +95,53 @@ public static class ProcessElevation
     }
 
     // CreateProcessWithTokenW wants a single command-line string; quote the exe + args.
-    private static string BuildCommandLine(string exePath, IReadOnlyList<string> args)
+    // Public + pure so the quoting rules are unit-testable (the rest of this class needs a real
+    // elevated token).
+    public static string BuildCommandLine(string exePath, IReadOnlyList<string> args)
     {
         var sb = new System.Text.StringBuilder();
         sb.Append('"').Append(exePath).Append('"');
         foreach (var a in args)
         {
             sb.Append(' ');
-            if (a.Contains(' ') || a.Contains('"')) sb.Append('"').Append(a.Replace("\"", "\\\"")).Append('"');
-            else sb.Append(a);
+            AppendArgument(sb, a);
         }
         return sb.ToString();
+    }
+
+    /// <summary>MSVCRT argv quoting: backslashes are literal except when they precede a quote (or
+    /// the closing quote), where each must be doubled. The naive Replace("\"","\\\"") variant broke
+    /// args ending in a backslash — <c>"C:\DayZ Projects\"</c> parses as an escaped quote and
+    /// swallows the next argument.</summary>
+    private static void AppendArgument(System.Text.StringBuilder sb, string arg)
+    {
+        if (arg.Length != 0 && !arg.Any(c => c is ' ' or '\t' or '"'))
+        {
+            sb.Append(arg);
+            return;
+        }
+        sb.Append('"');
+        var i = 0;
+        while (i < arg.Length)
+        {
+            var backslashes = 0;
+            while (i < arg.Length && arg[i] == '\\') { backslashes++; i++; }
+            if (i == arg.Length)
+            {
+                sb.Append('\\', backslashes * 2);   // before the closing quote: double them
+            }
+            else if (arg[i] == '"')
+            {
+                sb.Append('\\', backslashes * 2 + 1).Append('"');
+                i++;
+            }
+            else
+            {
+                sb.Append('\\', backslashes).Append(arg[i]);
+                i++;
+            }
+        }
+        sb.Append('"');
     }
 
     // ---- P/Invoke declarations ----

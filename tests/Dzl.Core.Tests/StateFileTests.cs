@@ -41,4 +41,14 @@ public class StateFileTests
         File.WriteAllText(StateFile.Path(cfg), "{ broken");
         StateFile.ReadRaw(cfg).Should().BeEmpty();
     }
+
+    [Fact]
+    public void Locked_file_reads_empty_instead_of_throwing()
+    {
+        // The tray polls while the CLI/MCP write — a sharing violation must not escape Status().
+        var cfg = Cfg();
+        StateFile.Write(cfg, "server", 4242, "debug", "cli", "DayZDiag_x64.exe");
+        using var lockStream = new FileStream(StateFile.Path(cfg), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        StateFile.ReadRaw(cfg).Should().BeEmpty();
+    }
 }
