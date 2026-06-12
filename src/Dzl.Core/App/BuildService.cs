@@ -158,71 +158,135 @@ public sealed class BuildService
     /// <param name="keyName">Sign with this key from the keys folder instead of the configured/default one.</param>
     public BuildResult Build(string modName, bool clean = false, bool binarize = true, bool sign = false, Action<string>? onLine = null, bool force = false, string? keyName = null)
     {
-        PreflightView? preflight = null;   // set by the gate below; rides along on every result
-        BuildResult Fail(string msg, string output = "") =>
-            new(false, modName, "", "", false, msg, output,
-                BuildDiagnostics.Format(BuildDiagnostics.Diagnose(output + "\n" + msg)), preflight);
-
         if (!ProjectPaths.IsValidName(modName))
-            return Fail($"invalid mod name: {modName}");
+            return FailResult(modName, null, $"invalid mod name: {modName}");
 
         Profiles.EnsureDefault(_configPath);
         var (cfg, _, active) = Profiles.ResolveActive(_configPath);
 
         var root = ProjectPaths.Root(cfg);
         var projectDir = ProjectPaths.ModDir(root, modName);
-        if (!Directory.Exists(projectDir) || !ModProjects.IsProject(projectDir))
-            return Fail($"not a mod project: {projectDir} (need $PBOPREFIX$ or config.cpp)");
+        var (exe, envFail) = ValidateEnvironment(modName, cfg, projectDir);
+        if (exe is null)
+            return envFail!;
 
-        var exe = ToolCatalog.Find(cfg.DayzToolsPath, "addonbuilder");
-        if (exe is null || !exe.Exists)
-            return Fail("AddonBuilder not found — set DayZ Tools path / install Addon Builder");
+        // The preflight view rides along on every result from here on.
+        var (preflight, gateFail) = GateOnPreflight(modName, cfg, onLine);
+        if (gateFail is not null)
+            return gateFail;
 
-        if (!WorkDrive.IsMounted())
-            return Fail("P: work drive not mounted — mount it first (binarize resolves vanilla data + includes against P:)");
-
-        // Preflight gate: AddonBuilder reports "Build Successful" even for configs it silently
-        // mangles, so error-severity findings block the build (config flag to opt out). The view
-        // rides along on the result so frontends can show the findings without a second run.
-        if (cfg.PreflightBeforeBuild)
-        {
-            onLine?.Invoke("preflight: checking project before build ...");
-            preflight = Preflight(modName, saveReport: true);
-            foreach (var f in preflight.Findings.Where(f => f.Severity == FindingSeverity.Error))
-                onLine?.Invoke($"preflight ✗ {f.Rule}: {f.Message}");
-            if (!preflight.Ok)
-                return Fail(
-                    $"preflight failed with {preflight.Errors} error(s) — fix them or set preflight_before_build=false to bypass",
-                    string.Join("\n", preflight.Findings
-                        .Where(f => f.Severity == FindingSeverity.Error)
-                        .Select(f => $"{f.Rule}: {f.Message}" + (f.File.Length > 0 ? $"  [{f.File}:{f.Line}]" : ""))));
-            onLine?.Invoke($"preflight: ok ({preflight.Warnings} warning(s))");
-        }
-
-        // Resolve the signing key up front so we fail before building if signing was asked for but
-        // no key exists. An explicit keyName overrides the configured/default key for this build.
-        string? signKey = null;
-        var effectiveKey = !string.IsNullOrWhiteSpace(keyName) ? keyName.Trim() : KeyName(cfg);
-        if (sign)
-        {
-            if (effectiveKey.Length == 0)
-                return Fail("sign requested but no signing-key name — set one in Settings");
-            signKey = ProjectPaths.PrivateKey(root, cfg.KeysDir, effectiveKey);
-            if (!File.Exists(signKey))
-                return Fail($"signing key '{effectiveKey}' not found at {signKey} — generate it first");
-            onLine?.Invoke($"signing with key: {effectiveKey}");
-        }
+        var (signKey, effectiveKey, keyFail) = ResolveSignKey(modName, cfg, root, sign, keyName, preflight, onLine);
+        if (keyFail is not null)
+            return keyFail;
 
         var workDriveSource = EnvDetect.WorkDriveSource(cfg.WorkDriveSource, cfg.DayzToolsPath);
         var buildDir = ProjectPaths.BuildDir(root, modName);
         var addonsDir = ProjectPaths.BuildAddonsDir(root, modName);
         Directory.CreateDirectory(addonsDir);
 
-        // Skip-unchanged: same payload + same settings + output still present → nothing to do.
+        var (stateHash, cache, skip) = TryCacheSkip(modName, projectDir, exe.ExePath, buildDir, addonsDir,
+            binarize, sign, force, signKey, preflight, onLine);
+        if (skip is not null)
+            return skip;
+
+        var junctionFail = EnsureJunctions(modName, workDriveSource, projectDir, root, preflight);
+        if (junctionFail is not null)
+            return junctionFail;
+
+        var (pack, workDir, workAddons, startUtc) = PackToWorkDir(exe.ExePath, modName, buildDir, clean, binarize, signKey, onLine);
+        if (!pack.Ok)
+            return FailResult(modName, preflight, $"AddonBuilder exited {pack.ExitCode}", pack.Output);
+
+        var (workPbo, verifyFail) = VerifyPackedOutput(modName, projectDir, workAddons, startUtc, sign, pack.Output, preflight, onLine);
+        if (verifyFail is not null)
+            return verifyFail;
+
+        var (pbo, publishFail) = PublishAndRecord(modName, root, projectDir, workDir, workAddons, addonsDir,
+            workPbo!, startUtc, stateHash, cache, pack.Output, preflight);
+        if (publishFail is not null)
+            return publishFail;
+
+        if (sign)
+            ShipPublicKey(cfg, root, modName, effectiveKey);
+
+        var (registered, note) = RegisterInRunList(cfg, active, modName);
+        return new BuildResult(true, modName, buildDir, pbo, registered, note, pack.Output, "", preflight);
+    }
+
+    /// <summary>Failed <see cref="BuildResult"/> with diagnostics derived from the output + message.</summary>
+    private static BuildResult FailResult(string modName, PreflightView? preflight, string msg, string output = "") =>
+        new(false, modName, "", "", false, msg, output,
+            BuildDiagnostics.Format(BuildDiagnostics.Diagnose(output + "\n" + msg)), preflight);
+
+    /// <summary>Validate the build environment: the project exists, AddonBuilder is installed, P: is mounted.
+    /// Returns the resolved AddonBuilder entry, or null + the failure to surface.</summary>
+    private static (ToolEntry? exe, BuildResult? fail) ValidateEnvironment(string modName, DzlConfig cfg, string projectDir)
+    {
+        if (!Directory.Exists(projectDir) || !ModProjects.IsProject(projectDir))
+            return (null, FailResult(modName, null, $"not a mod project: {projectDir} (need $PBOPREFIX$ or config.cpp)"));
+
+        var exe = ToolCatalog.Find(cfg.DayzToolsPath, "addonbuilder");
+        if (exe is null || !exe.Exists)
+            return (null, FailResult(modName, null, "AddonBuilder not found — set DayZ Tools path / install Addon Builder"));
+
+        if (!WorkDrive.IsMounted())
+            return (null, FailResult(modName, null, "P: work drive not mounted — mount it first (binarize resolves vanilla data + includes against P:)"));
+
+        return (exe, null);
+    }
+
+    /// <summary>Preflight gate: AddonBuilder reports "Build Successful" even for configs it silently
+    /// mangles, so error-severity findings block the build (config flag to opt out). The view
+    /// rides along on the result so frontends can show the findings without a second run.</summary>
+    private (PreflightView? preflight, BuildResult? fail) GateOnPreflight(string modName, DzlConfig cfg, Action<string>? onLine)
+    {
+        if (!cfg.PreflightBeforeBuild)
+            return (null, null);
+
+        onLine?.Invoke("preflight: checking project before build ...");
+        var preflight = Preflight(modName, saveReport: true);
+        foreach (var f in preflight.Findings.Where(f => f.Severity == FindingSeverity.Error))
+            onLine?.Invoke($"preflight ✗ {f.Rule}: {f.Message}");
+        if (!preflight.Ok)
+            return (preflight, FailResult(modName, preflight,
+                $"preflight failed with {preflight.Errors} error(s) — fix them or set preflight_before_build=false to bypass",
+                string.Join("\n", preflight.Findings
+                    .Where(f => f.Severity == FindingSeverity.Error)
+                    .Select(f => $"{f.Rule}: {f.Message}" + (f.File.Length > 0 ? $"  [{f.File}:{f.Line}]" : "")))));
+        onLine?.Invoke($"preflight: ok ({preflight.Warnings} warning(s))");
+        return (preflight, null);
+    }
+
+    /// <summary>Resolve the signing key up front so we fail before building if signing was asked for but
+    /// no key exists. An explicit keyName overrides the configured/default key for this build.</summary>
+    private (string? signKey, string effectiveKey, BuildResult? fail) ResolveSignKey(
+        string modName, DzlConfig cfg, string root, bool sign, string? keyName,
+        PreflightView? preflight, Action<string>? onLine)
+    {
+        var effectiveKey = !string.IsNullOrWhiteSpace(keyName) ? keyName.Trim() : KeyName(cfg);
+        if (!sign)
+            return (null, effectiveKey, null);
+
+        if (effectiveKey.Length == 0)
+            return (null, effectiveKey, FailResult(modName, preflight, "sign requested but no signing-key name — set one in Settings"));
+        var signKey = ProjectPaths.PrivateKey(root, cfg.KeysDir, effectiveKey);
+        if (!File.Exists(signKey))
+            return (null, effectiveKey, FailResult(modName, preflight, $"signing key '{effectiveKey}' not found at {signKey} — generate it first"));
+        onLine?.Invoke($"signing with key: {effectiveKey}");
+        return (signKey, effectiveKey, null);
+    }
+
+    /// <summary>Skip-unchanged: same payload + same settings + output still present → nothing to do.
+    /// Always returns the computed state hash + loaded cache so the publish phase can record the build.</summary>
+    private (string stateHash, Dictionary<string, BuildCache.Entry> cache, BuildResult? skip) TryCacheSkip(
+        string modName, string projectDir, string exePath, string buildDir, string addonsDir,
+        bool binarize, bool sign, bool force, string? signKey,
+        PreflightView? preflight, Action<string>? onLine)
+    {
         var sha1Memo = new Dictionary<string, string>();
         var settingsFingerprint =
             $"binarize={binarize};sign={sign};" +
-            $"exe={BuildCache.Fingerprint(exe.ExePath, sha1Memo)};" +
+            $"exe={BuildCache.Fingerprint(exePath, sha1Memo)};" +
             $"key={(sign ? BuildCache.Fingerprint(signKey, sha1Memo) : "off")}";
         var stateHash = BuildCache.ComputeStateHash(projectDir,
             PreflightOptions.DefaultExcludes, settingsFingerprint, sha1Memo);
@@ -232,26 +296,36 @@ public sealed class BuildService
             (!sign || Directory.EnumerateFiles(addonsDir, Path.GetFileName(cached.Pbo) + ".*.bisign").Any()))
         {
             onLine?.Invoke($"skip: no changes since last build ({cached.UpdatedUtc:u})");
-            return new BuildResult(true, modName, buildDir, cached.Pbo, false,
-                "skipped — no changes since last build (use force to rebuild)", "", "", preflight);
+            return (stateHash, cache, new BuildResult(true, modName, buildDir, cached.Pbo, false,
+                "skipped — no changes since last build (use force to rebuild)", "", "", preflight));
         }
+        return (stateHash, cache, null);
+    }
 
-        // Junctions anchored on the always-live work-drive source folder (survive P: unmounts): the source
-        // so AddonBuilder reads it via P:\<Mod>, and the build so it surfaces at P:\Mods\@<Mod>. Both targets
-        // live physically under ProjectsRoot (mods\ and build\).
+    /// <summary>Junctions anchored on the always-live work-drive source folder (survive P: unmounts): the source
+    /// so AddonBuilder reads it via P:\&lt;Mod&gt;, and the build so it surfaces at P:\Mods\@&lt;Mod&gt;. Both targets
+    /// live physically under ProjectsRoot (mods\ and build\).</summary>
+    private static BuildResult? EnsureJunctions(string modName, string? workDriveSource, string projectDir, string root, PreflightView? preflight)
+    {
         var srcJunction = ProjectPaths.JunctionPath(workDriveSource, modName);
         var srcEns = Junction.Ensure(srcJunction, projectDir);
         if (!srcEns.Ok)
-            return Fail($"source junction {srcJunction} → {projectDir} failed: {srcEns.Detail}");
+            return FailResult(modName, preflight, $"source junction {srcJunction} → {projectDir} failed: {srcEns.Detail}");
 
         // One junction for the whole build area surfaces every build at P:\Mods\@<Mod>.
         var buildArea = ProjectPaths.BuildAreaJunction(workDriveSource);
         var buildEns = Junction.Ensure(buildArea, ProjectPaths.BuildRoot(root));
         if (!buildEns.Ok)
-            return Fail($"build junction {buildArea} → {ProjectPaths.BuildRoot(root)} failed: {buildEns.Detail}");
+            return FailResult(modName, preflight, $"build junction {buildArea} → {ProjectPaths.BuildRoot(root)} failed: {buildEns.Detail}");
 
-        // AddonBuilder writes into a work dir; the loadable Addons\ is only touched after the
-        // output verifies, and then atomically (backup → swap → rollback on failure).
+        return null;
+    }
+
+    /// <summary>AddonBuilder writes into a work dir; the loadable Addons\ is only touched after the
+    /// output verifies, and then atomically (backup → swap → rollback on failure).</summary>
+    private static (PackResult pack, string workDir, string workAddons, DateTime startUtc) PackToWorkDir(
+        string exePath, string modName, string buildDir, bool clean, bool binarize, string? signKey, Action<string>? onLine)
+    {
         var workDir = Path.Combine(buildDir, ".work");
         var workAddons = Path.Combine(workDir, "Addons");
         if (Directory.Exists(workAddons)) try { Directory.Delete(workAddons, recursive: true); } catch { }
@@ -261,36 +335,51 @@ public sealed class BuildService
         var includeFile = AddonBuilder.WriteIncludeFile(workDir);
 
         var startUtc = DateTime.UtcNow;
-        var pack = AddonBuilder.Pack(exe.ExePath, ProjectPaths.WorkDriveLink(modName), workAddons,
+        var pack = AddonBuilder.Pack(exePath, ProjectPaths.WorkDriveLink(modName), workAddons,
             clear: clean, packOnly: !binarize, prefix: null, signKey: signKey, onLine: onLine,
             tempDir: abTemp, includeFile: includeFile);
+        return (pack, workDir, workAddons, startUtc);
+    }
 
-        if (!pack.Ok)
-            return Fail($"AddonBuilder exited {pack.ExitCode}", pack.Output);
-
+    /// <summary>Post-pack verification: a fresh .pbo must exist (AddonBuilder can no-op and still report
+    /// success), the packed prefix must match the project's $PBOPREFIX$ (a mismatch means the mod loads
+    /// with every asset path broken), and a signed build must actually carry a signature
+    /// (AddonBuilder -sign can silently not sign).</summary>
+    private static (string? workPbo, BuildResult? fail) VerifyPackedOutput(
+        string modName, string projectDir, string workAddons, DateTime startUtc, bool sign,
+        string packOutput, PreflightView? preflight, Action<string>? onLine)
+    {
         if (!ModBuild.HasFreshPbo(workAddons, startUtc))
-            return Fail("AddonBuilder reported success but no fresh .pbo appeared — check the log above for the real error",
-                pack.Output);
+            return (null, FailResult(modName, preflight,
+                "AddonBuilder reported success but no fresh .pbo appeared — check the log above for the real error",
+                packOutput));
 
         var workPbo = ModBuild.NewestPbo(workAddons)!.FullName;
 
-        // Post-pack verification: the packed prefix must match the project's $PBOPREFIX$ (a
-        // mismatch means the mod loads with every asset path broken), and a signed build must
-        // actually carry a signature (AddonBuilder -sign can silently not sign).
         var expectedPrefix = PathResolver.ReadPrefix(projectDir);
         var info = PboHeader.Read(workPbo);
         if (info is null)
             onLine?.Invoke("verify: could not parse the produced PBO header (skipping prefix check)");
         else if (expectedPrefix.Length > 0 && info.Prefix.Length > 0 &&
                  !string.Equals(info.Prefix, expectedPrefix, StringComparison.OrdinalIgnoreCase))
-            return Fail($"packed PBO prefix '{info.Prefix}' does not match $PBOPREFIX$ '{expectedPrefix}' — assets would resolve to the wrong paths", pack.Output);
+            return (workPbo, FailResult(modName, preflight, $"packed PBO prefix '{info.Prefix}' does not match $PBOPREFIX$ '{expectedPrefix}' — assets would resolve to the wrong paths", packOutput));
 
         if (sign && PboHeader.FindSignature(workPbo) is null)
-            return Fail("signing was requested but no .bisign was produced next to the PBO", pack.Output);
+            return (workPbo, FailResult(modName, preflight, "signing was requested but no .bisign was produced next to the PBO", packOutput));
 
+        return (workPbo, null);
+    }
+
+    /// <summary>Atomically publish the work-dir output into the loadable Addons\, drop the ownership
+    /// marker, and record the build in the skip-unchanged cache. Returns the published PBO path.</summary>
+    private (string pbo, BuildResult? fail) PublishAndRecord(
+        string modName, string root, string projectDir, string workDir, string workAddons, string addonsDir,
+        string workPbo, DateTime startUtc, string stateHash, Dictionary<string, BuildCache.Entry> cache,
+        string packOutput, PreflightView? preflight)
+    {
         var (pubOk, pubDetail) = ModBuild.PublishAtomically(workAddons, addonsDir);
         if (!pubOk)
-            return Fail($"publish failed: {pubDetail}", pack.Output);
+            return ("", FailResult(modName, preflight, $"publish failed: {pubDetail}", packOutput));
         try { Directory.Delete(workDir, recursive: true); } catch { /* leftover work dir is harmless */ }
 
         var pbo = Path.Combine(addonsDir, Path.GetFileName(workPbo));
@@ -298,32 +387,36 @@ public sealed class BuildService
 
         cache[modName] = new BuildCache.Entry(stateHash, pbo, DateTime.UtcNow);
         BuildCache.Save(ConfigDir, cache);
+        return (pbo, null);
+    }
 
-        // Place the public key in the built mod's keys\ (sibling of Addons\, outside the PBO) so the
-        // distributed/loaded @<Mod> carries it and servers can whitelist it. The private key stays put.
-        if (sign)
+    /// <summary>Place the public key in the built mod's keys\ (sibling of Addons\, outside the PBO) so the
+    /// distributed/loaded @&lt;Mod&gt; carries it and servers can whitelist it. The private key stays put.</summary>
+    private static void ShipPublicKey(DzlConfig cfg, string root, string modName, string effectiveKey)
+    {
+        try
         {
-            try
+            var pub = ProjectPaths.PublicKey(root, cfg.KeysDir, effectiveKey);
+            if (File.Exists(pub))
             {
-                var pub = ProjectPaths.PublicKey(root, cfg.KeysDir, effectiveKey);
-                if (File.Exists(pub))
-                {
-                    var buildKeys = ProjectPaths.BuildKeysDir(root, modName);
-                    Directory.CreateDirectory(buildKeys);
-                    File.Copy(pub, Path.Combine(buildKeys, effectiveKey + ".bikey"), overwrite: true);
-                }
+                var buildKeys = ProjectPaths.BuildKeysDir(root, modName);
+                Directory.CreateDirectory(buildKeys);
+                File.Copy(pub, Path.Combine(buildKeys, effectiveKey + ".bikey"), overwrite: true);
             }
-            catch { /* best-effort; the .bisign is already produced */ }
         }
+        catch { /* best-effort; the .bisign is already produced */ }
+    }
 
-        // Register by the engine/toolchain path P:\Mods\@<Mod> (the build is surfaced there via the build-area
-        // junction). Clean + conventional ("Mods is on P:"), and it matches a P:\Mods scan so Merge dedupes.
+    /// <summary>Register by the engine/toolchain path P:\Mods\@&lt;Mod&gt; (the build is surfaced there via the
+    /// build-area junction). Clean + conventional ("Mods is on P:"), and it matches a P:\Mods scan so Merge dedupes.</summary>
+    private (bool registered, string note) RegisterInRunList(DzlConfig cfg, string active, string modName)
+    {
         var updated = ModBuild.Register(cfg, ProjectPaths.BuildLink(modName));
         var registered = !ReferenceEquals(updated, cfg);
         if (registered)
             Profiles.Save(updated, string.IsNullOrEmpty(active) ? "default" : active, _configPath);
 
         var note = registered ? $"built + added to run-list ({active})" : "built (already in run-list)";
-        return new BuildResult(true, modName, buildDir, pbo, registered, note, pack.Output, "", preflight);
+        return (registered, note);
     }
 }
