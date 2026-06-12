@@ -139,53 +139,24 @@ public sealed class DictionaryService
     // cfglimitsdefinitionuser.xml — write helpers
     // ------------------------------------------------------------------
 
-    private (bool ok, string msg) EditLimitsUser(Action<XDocument> edit, string successMsg)
+    /// <summary>Edits that cannot no-op (upserts) route through the Func overload with an
+    /// always-true edit.</summary>
+    private (bool ok, string msg) EditLimitsUser(Action<XDocument> edit, string successMsg) =>
+        EditLimitsUser(doc => { edit(doc); return true; }, successMsg, noOpMsg: "");
+
+    private (bool ok, string msg) EditLimitsUser(Func<XDocument, bool> edit, string successMsg, string noOpMsg)
     {
         var path = LimitsUserPath();
         if (path is null) return (false, "no mission resolved for the active server");
         try
         {
-            XDocument doc;
-            if (File.Exists(path))
-            {
-                doc = LimitsUserXml.ParseDoc(File.ReadAllText(path));
-            }
-            else
-            {
-                doc = new XDocument(
+            var doc = File.Exists(path)
+                ? LimitsUserXml.ParseDoc(File.ReadAllText(path))
+                : new XDocument(
                     new XDeclaration("1.0", "UTF-8", null),
                     new XElement("user_lists",
                         new XElement("usageflags"),
                         new XElement("valueflags")));
-            }
-
-            edit(doc);
-            CeBackup.Snapshot(path);
-            File.WriteAllText(path, LimitsUserXml.ToXml(doc));
-            return (true, successMsg);
-        }
-        catch (Exception ex) { return (false, ex.Message); }
-    }
-
-    private (bool ok, string msg) EditLimitsUserWithResult(Func<XDocument, bool> edit, string successMsg, string noOpMsg)
-    {
-        var path = LimitsUserPath();
-        if (path is null) return (false, "no mission resolved for the active server");
-        try
-        {
-            XDocument doc;
-            if (File.Exists(path))
-            {
-                doc = LimitsUserXml.ParseDoc(File.ReadAllText(path));
-            }
-            else
-            {
-                doc = new XDocument(
-                    new XDeclaration("1.0", "UTF-8", null),
-                    new XElement("user_lists",
-                        new XElement("usageflags"),
-                        new XElement("valueflags")));
-            }
 
             if (!edit(doc)) return (false, noOpMsg);
             CeBackup.Snapshot(path);
@@ -208,7 +179,7 @@ public sealed class DictionaryService
     public (bool ok, string msg) RemoveGroup(LimitsKind kind, string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return (false, "group name must not be empty");
-        return EditLimitsUserWithResult(
+        return EditLimitsUser(
             doc => LimitsUserXml.RemoveGroup(doc, kind, name),
             $"removed {kind} group '{name}'",
             $"{kind} group '{name}' not found");

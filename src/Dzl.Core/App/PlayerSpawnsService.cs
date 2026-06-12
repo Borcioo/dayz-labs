@@ -11,87 +11,19 @@ namespace Dzl.Core.App;
 /// ok+message), snapshots a backup (<see cref="CeBackup"/>) before every write, edits in place so
 /// comments/order survive a round-trip (<see cref="PlayerSpawnsXml"/>).
 /// </summary>
-public sealed class PlayerSpawnsService
+public sealed class PlayerSpawnsService : CeFileService
 {
-    private readonly string _configPath;
+    public PlayerSpawnsService(string configPath) : base(configPath) { }
 
-    public PlayerSpawnsService(string configPath) { _configPath = configPath; }
-
-    // ------------------------------------------------------------------
-    // Path resolution
-    // ------------------------------------------------------------------
-
-    private MissionPaths? Mission()
-    {
-        var (cfg, _, _) = Profiles.ResolveActive(_configPath);
-        return MissionLocator.Resolve(cfg);
-    }
+    protected override string RelativePath => "cfgplayerspawnpoints.xml";
+    protected override string? SeedRootName => null;   // edits require an existing file
 
     /// <summary>The mission's <c>cfgplayerspawnpoints.xml</c> path (whether or not it exists yet),
     /// or null when no mission is resolvable.</summary>
-    public string? SpawnsPath()
-    {
-        var mp = Mission();
-        return mp is null ? null : Path.Combine(mp.MissionDir, "cfgplayerspawnpoints.xml");
-    }
-
-    // ------------------------------------------------------------------
-    // Read
-    // ------------------------------------------------------------------
+    public string? SpawnsPath() => FilePath();
 
     /// <summary>Read all spawn categories. Returns an empty list when the file is absent or unresolvable.</summary>
-    public List<SpawnCategory> Load()
-    {
-        var path = SpawnsPath();
-        if (path is null || !File.Exists(path)) return new List<SpawnCategory>();
-        try { return PlayerSpawnsXml.Parse(File.ReadAllText(path)); }
-        catch { return new List<SpawnCategory>(); }
-    }
-
-    /// <summary>Raw current file text (or null when absent/unresolvable). Used by the tray's per-tab
-    /// undo/redo, which snapshots the whole file before each edit and restores it verbatim.</summary>
-    public string? ReadRaw()
-    {
-        var path = SpawnsPath();
-        if (path is null || !File.Exists(path)) return null;
-        try { return File.ReadAllText(path); }
-        catch { return null; }
-    }
-
-    /// <summary>Overwrite the file with <paramref name="xml"/> verbatim (snapshots a backup first).
-    /// Used by undo/redo. Never throws.</summary>
-    public (bool ok, string msg) WriteRaw(string xml)
-    {
-        var path = SpawnsPath();
-        if (path is null) return (false, "no mission resolved for the active server");
-        try
-        {
-            CeBackup.Snapshot(path);
-            File.WriteAllText(path, xml);
-            return (true, "restored");
-        }
-        catch (Exception ex) { return (false, ex.Message); }
-    }
-
-    // ------------------------------------------------------------------
-    // Write helper
-    // ------------------------------------------------------------------
-
-    private (bool ok, string msg) Edit(Func<XDocument, bool> edit, string successMsg, string noOpMsg)
-    {
-        var path = SpawnsPath();
-        if (path is null) return (false, "no mission resolved for the active server");
-        if (!File.Exists(path)) return (false, "cfgplayerspawnpoints.xml not found in the mission");
-        try
-        {
-            var doc = PlayerSpawnsXml.ParseDoc(File.ReadAllText(path));
-            if (!edit(doc)) return (false, noOpMsg);
-            CeBackup.Snapshot(path);
-            File.WriteAllText(path, PlayerSpawnsXml.ToXml(doc));
-            return (true, successMsg);
-        }
-        catch (Exception ex) { return (false, ex.Message); }
-    }
+    public List<SpawnCategory> Load() => LoadList(PlayerSpawnsXml.Parse);
 
     // ------------------------------------------------------------------
     // Param edits
