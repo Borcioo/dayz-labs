@@ -4,8 +4,6 @@ using Dzl.Core.Projects;
 
 namespace Dzl.Core.App;
 
-public sealed record RepoOp(bool Ok, string Message);
-
 /// <summary>
 /// SP4 GitHub integration: treat each mod project as a git repo manageable from dzl — report status,
 /// publish to GitHub (init + first commit + <c>gh repo create --push</c>), and cut releases. One facade
@@ -43,17 +41,17 @@ public sealed class RepoService
 
     /// <summary>Init the repo if needed (with a DayZ <c>.gitignore</c> + first commit) then create and push
     /// a GitHub repo named after the mod.</summary>
-    public RepoOp Publish(string mod, bool @private = true, string? description = null)
+    public OpResult Publish(string mod, bool @private = true, string? description = null)
     {
         var dir = ResolveProject(mod, out var err);
-        if (dir is null) return new RepoOp(false, err);
-        if (!Git.IsAvailable()) return new RepoOp(false, "git not found on PATH");
-        if (!GitHub.IsAvailable()) return new RepoOp(false, "gh (GitHub CLI) not found — install + 'gh auth login'");
+        if (dir is null) return new OpResult(false, err);
+        if (!Git.IsAvailable()) return new OpResult(false, "git not found on PATH");
+        if (!GitHub.IsAvailable()) return new OpResult(false, "gh (GitHub CLI) not found — install + 'gh auth login'");
 
         if (!Git.IsRepo(dir))
         {
             var init = Git.Init(dir);
-            if (!init.ok) return new RepoOp(false, $"git init failed: {init.msg}");
+            if (!init.ok) return new OpResult(false, $"git init failed: {init.msg}");
         }
 
         // Seed a .gitignore (idempotent) so build artifacts don't get committed.
@@ -64,24 +62,24 @@ public sealed class RepoService
         if (!Git.HasCommits(dir))
         {
             var commit = Git.CommitAll(dir, "Initial commit (dzl)");
-            if (!commit.ok) return new RepoOp(false, $"first commit failed: {commit.msg}");
+            if (!commit.ok) return new OpResult(false, $"first commit failed: {commit.msg}");
         }
 
         var (ok, msg) = GitHub.CreateRepo(dir, mod, @private, description);
-        return new RepoOp(ok, ok ? $"published {mod} → {msg}" : $"gh repo create failed: {msg}");
+        return new OpResult(ok, ok ? $"published {mod} → {msg}" : $"gh repo create failed: {msg}");
     }
 
     /// <summary>Cut a GitHub release at HEAD for the mod (creates + pushes the tag).</summary>
-    public RepoOp Release(string mod, string tag, string? notes = null)
+    public OpResult Release(string mod, string tag, string? notes = null)
     {
-        if (string.IsNullOrWhiteSpace(tag)) return new RepoOp(false, "tag required (e.g. v1.0.0)");
+        if (string.IsNullOrWhiteSpace(tag)) return new OpResult(false, "tag required (e.g. v1.0.0)");
         var dir = ResolveProject(mod, out var err);
-        if (dir is null) return new RepoOp(false, err);
-        if (!GitHub.IsAvailable()) return new RepoOp(false, "gh (GitHub CLI) not found");
-        if (!Git.IsRepo(dir) || !Git.HasCommits(dir)) return new RepoOp(false, "not a published repo yet — run publish first");
+        if (dir is null) return new OpResult(false, err);
+        if (!GitHub.IsAvailable()) return new OpResult(false, "gh (GitHub CLI) not found");
+        if (!Git.IsRepo(dir) || !Git.HasCommits(dir)) return new OpResult(false, "not a published repo yet — run publish first");
 
         var (ok, msg) = GitHub.Release(dir, tag, $"{mod} {tag}", notes);
-        return new RepoOp(ok, ok ? $"released {tag} → {msg}" : $"gh release failed: {msg}");
+        return new OpResult(ok, ok ? $"released {tag} → {msg}" : $"gh release failed: {msg}");
     }
 
     /// <summary>Changed files in a mod's repo (staged + unstaged + untracked).</summary>
@@ -113,15 +111,15 @@ public sealed class RepoService
 
     /// <summary>Stage + commit a mod's changes. <paramref name="all"/> stages everything first; otherwise only
     /// the already-staged index is committed.</summary>
-    public RepoOp Commit(string mod, string message, bool all = true)
+    public OpResult Commit(string mod, string message, bool all = true)
     {
-        if (string.IsNullOrWhiteSpace(message)) return new RepoOp(false, "commit message required");
+        if (string.IsNullOrWhiteSpace(message)) return new OpResult(false, "commit message required");
         var dir = ResolveProject(mod, out var err);
-        if (dir is null) return new RepoOp(false, err);
-        if (!Git.IsRepo(dir)) return new RepoOp(false, "not a git repo");
-        if (all) { var s = Git.StageAll(dir); if (!s.ok) return new RepoOp(false, s.msg); }
+        if (dir is null) return new OpResult(false, err);
+        if (!Git.IsRepo(dir)) return new OpResult(false, "not a git repo");
+        if (all) { var s = Git.StageAll(dir); if (!s.ok) return new OpResult(false, s.msg); }
         var r = Git.CommitStaged(dir, message);
-        return new RepoOp(r.ok, r.msg);
+        return new OpResult(r.ok, r.msg);
     }
 
     /// <summary>Current branch + all local branches of a mod's repo.</summary>
@@ -134,29 +132,29 @@ public sealed class RepoService
         return (true, "", cur, all);
     }
 
-    private RepoOp OnRepo(string mod, Func<string, (bool ok, string msg)> op)
+    private OpResult OnRepo(string mod, Func<string, (bool ok, string msg)> op)
     {
         var dir = ResolveProject(mod, out var err);
-        if (dir is null) return new RepoOp(false, err);
-        if (!Git.IsRepo(dir)) return new RepoOp(false, "not a git repo");
+        if (dir is null) return new OpResult(false, err);
+        if (!Git.IsRepo(dir)) return new OpResult(false, "not a git repo");
         var (ok, msg) = op(dir);
-        return new RepoOp(ok, msg);
+        return new OpResult(ok, msg);
     }
 
-    public RepoOp Checkout(string mod, string branch) => OnRepo(mod, d => Git.Checkout(d, branch));
-    public RepoOp CreateBranch(string mod, string name) => OnRepo(mod, d => Git.CreateBranch(d, name));
-    public RepoOp Push(string mod) => OnRepo(mod, Git.Push);
-    public RepoOp Pull(string mod) => OnRepo(mod, Git.Pull);
+    public OpResult Checkout(string mod, string branch) => OnRepo(mod, d => Git.Checkout(d, branch));
+    public OpResult CreateBranch(string mod, string name) => OnRepo(mod, d => Git.CreateBranch(d, name));
+    public OpResult Push(string mod) => OnRepo(mod, Git.Push);
+    public OpResult Pull(string mod) => OnRepo(mod, Git.Pull);
 
     /// <summary>Cut a GitHub release with full options, optionally uploading the built <c>@&lt;mod&gt;</c> PBOs
     /// as release assets.</summary>
-    public RepoOp Release(string mod, ReleaseOptions opts, bool attachBuiltAddons)
+    public OpResult Release(string mod, ReleaseOptions opts, bool attachBuiltAddons)
     {
-        if (string.IsNullOrWhiteSpace(opts.Tag)) return new RepoOp(false, "tag required (e.g. v1.0.0)");
+        if (string.IsNullOrWhiteSpace(opts.Tag)) return new OpResult(false, "tag required (e.g. v1.0.0)");
         var dir = ResolveProject(mod, out var err);
-        if (dir is null) return new RepoOp(false, err);
-        if (!GitHub.IsAvailable()) return new RepoOp(false, "gh (GitHub CLI) not found");
-        if (!Git.IsRepo(dir) || !Git.HasCommits(dir)) return new RepoOp(false, "not a published repo yet — publish first");
+        if (dir is null) return new OpResult(false, err);
+        if (!GitHub.IsAvailable()) return new OpResult(false, "gh (GitHub CLI) not found");
+        if (!Git.IsRepo(dir) || !Git.HasCommits(dir)) return new OpResult(false, "not a published repo yet — publish first");
 
         List<string>? assets = null;
         if (attachBuiltAddons)
@@ -173,6 +171,6 @@ public sealed class RepoService
         var title = string.IsNullOrWhiteSpace(opts.Title) ? $"{mod} {opts.Tag}" : opts.Title;
         var (ok, msg) = GitHub.Release(dir, opts with { Title = title }, assets);
         var assetNote = assets is { Count: > 0 } ? $" (+{assets.Count} asset{(assets.Count > 1 ? "s" : "")})" : "";
-        return new RepoOp(ok, ok ? $"released {opts.Tag} → {msg}{assetNote}" : $"gh release failed: {msg}");
+        return new OpResult(ok, ok ? $"released {opts.Tag} → {msg}{assetNote}" : $"gh release failed: {msg}");
     }
 }

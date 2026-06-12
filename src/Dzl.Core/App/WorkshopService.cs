@@ -5,8 +5,6 @@ using SteamKit2.Authentication;
 
 namespace Dzl.Core.App;
 
-public sealed record WorkshopOp(bool Ok, string Message);
-
 /// <summary>A Workshop item subscribed/downloaded in the Steam client's content folder.</summary>
 public sealed record SubscribedItem(string Id, string Name, string Dir);
 
@@ -68,11 +66,12 @@ public sealed class WorkshopService
     }
 
     /// <summary>In-app subscribe (true) / unsubscribe (false) — renews the access token from the stored session.</summary>
-    public async Task<(bool ok, string message)> SubscribeAsync(string id, bool subscribe = true)
+    public async Task<OpResult> SubscribeAsync(string id, bool subscribe = true)
     {
         var (token, error) = await AccessTokenAsync();
-        if (string.IsNullOrEmpty(token)) return (false, error.Length > 0 ? error : "not signed in to Steam");
-        return await WorkshopWeb.SubscribeAsync(token, id, subscribe);
+        if (string.IsNullOrEmpty(token)) return new(false, error.Length > 0 ? error : "not signed in to Steam");
+        var (ok, message) = await WorkshopWeb.SubscribeAsync(token, id, subscribe);
+        return new(ok, message);
     }
 
     /// <summary>QR sign-in; on success stores the refresh token (encrypted) for future Subscribe calls.</summary>
@@ -124,7 +123,7 @@ public sealed class WorkshopService
     public string ResolvedWorkshopDir() => WorkshopInstallDir();
 
     /// <summary>Delete a downloaded item — removes the clean junction and the cached steamcmd content. Never throws.</summary>
-    public (bool ok, string message) DeleteDownloaded(string id)
+    public OpResult DeleteDownloaded(string id)
     {
         try
         {
@@ -134,13 +133,13 @@ public sealed class WorkshopService
             // On net6+ deleting a junction removes the link only (does not recurse into the target).
             if (Directory.Exists(dest)) Directory.Delete(dest, true);
             if (Directory.Exists(raw)) Directory.Delete(raw, true);
-            return (true, $"deleted {id}");
+            return new(true, $"deleted {id}");
         }
-        catch (Exception ex) { return (false, ex.Message); }
+        catch (Exception ex) { return new(false, ex.Message); }
     }
 
     /// <summary>Download (or re-download to update) a Workshop item via steamcmd, spawning a console for login.</summary>
-    public WorkshopOp Download(string id)
+    public OpResult Download(string id)
     {
         var cfg = Cfg;
         if (string.IsNullOrWhiteSpace(cfg.SteamCmdPath) || !File.Exists(cfg.SteamCmdPath))

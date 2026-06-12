@@ -5,8 +5,6 @@ using Dzl.Core.Economy.Lint;
 
 namespace Dzl.Core.App;
 
-public sealed record TypesOp(bool Ok, string Message);
-
 /// <summary>One Types entry plus the origin/source of the CE file it came from (for source-aware
 /// listing/filtering in the CLI/MCP/tray).</summary>
 public sealed record TypeRow(TypeEntry Entry, CeOrigin Origin, string ModSource);
@@ -121,7 +119,7 @@ public sealed class TypesService
     /// Each target file is loaded (or created as <c>&lt;types/&gt;</c>), pruned of types no longer
     /// kept for it, upserted, snapshotted, and written back. Per-file try/catch; ok only when no
     /// file failed.</summary>
-    public TypesOp SaveAll(IReadOnlyList<TypeEntry> entries)
+    public OpResult SaveAll(IReadOnlyList<TypeEntry> entries)
     {
         var (resolved, primary) = ResolveAll();   // I1: resolve once
         if (primary is null) return new(false, "no types.xml files resolved");
@@ -168,7 +166,7 @@ public sealed class TypesService
     /// file. Unspecified fields keep their current value (or the default for a new entry).
     /// <para><b>Not concurrency-safe:</b> concurrent calls may interleave reads and writes; callers
     /// must serialize if needed.</para></summary>
-    public TypesOp Set(string name, int? nominal = null, int? min = null, int? lifetime = null,
+    public OpResult Set(string name, int? nominal = null, int? min = null, int? lifetime = null,
                        int? restock = null, int? cost = null, string? category = null, string? file = null)
     {
         if (string.IsNullOrWhiteSpace(name)) return new(false, "type name required");
@@ -247,7 +245,7 @@ public sealed class TypesService
 
     /// <summary>Remove the named type from whichever resolved file(s) contain it (each affected file is
     /// snapshotted first).</summary>
-    public TypesOp Remove(string name)
+    public OpResult Remove(string name)
     {
         var files = ResolveTypesFiles();
         if (files.Count == 0) return new(false, "no types.xml for the active server's mission");
@@ -289,7 +287,7 @@ public sealed class TypesService
     /// on the primary file only (vanilla <c>db\types.xml</c> or the first resolved file). Mod/custom
     /// CE files maintain their own backup snapshots in <c>.dzl-&lt;stem&gt;-backups/</c> directories
     /// next to each file; full multi-file restore browsing is a future sub-project.</summary>
-    public TypesOp Restore(string backupFile)
+    public OpResult Restore(string backupFile)
     {
         var f = ResolveAll().Primary;
         if (f is null) return new(false, "no types.xml for the active server's mission");
