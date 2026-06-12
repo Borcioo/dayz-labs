@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Dzl.Core.Build.Preflight;
+using Dzl.Core.Json;
 
 namespace Dzl.Core.Build;
 
@@ -17,11 +18,7 @@ public static class BuildCache
 
     private sealed record CacheFile(Dictionary<string, Entry> Mods);
 
-    private static readonly JsonSerializerOptions Json = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-    };
+    private static readonly JsonSerializerOptions Json = DzlJson.SnakeIndented;
 
     public static string CachePath(string configDir) => Path.Combine(configDir, ".dzl-build-cache.json");
 

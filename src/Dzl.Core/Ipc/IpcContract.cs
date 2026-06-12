@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Dzl.Core.Json;
 
 namespace Dzl.Core.Ipc;
 
@@ -8,6 +9,7 @@ public sealed record IpcResponse(bool Ok, string? Error, string? Json);
 public static class IpcContract
 {
     public const string PipeName = "dzl-ipc-v1";
-    public static readonly JsonSerializerOptions Json = new()
-    { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+    // MUST stay WriteIndented=false (DzlJson.Snake): the pipe protocol is line-framed —
+    // one JSON document per line — so an indented payload would split across reads.
+    public static readonly JsonSerializerOptions Json = DzlJson.Snake;
 }

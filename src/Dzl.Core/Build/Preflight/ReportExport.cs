@@ -1,17 +1,13 @@
 using System.Text;
 using System.Text.Json;
+using Dzl.Core.Json;
 
 namespace Dzl.Core.Build.Preflight;
 
 /// <summary>Serializes a <see cref="PreflightReport"/> for humans (.txt) and tools (.json).</summary>
 public static class ReportExport
 {
-    private static readonly JsonSerializerOptions Json = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower) },
-    };
+    private static readonly JsonSerializerOptions Json = DzlJson.SnakeIndented;
 
     public static string ToText(PreflightReport report, string modName)
     {

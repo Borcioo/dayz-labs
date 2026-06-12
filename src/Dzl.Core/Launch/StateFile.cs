@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Dzl.Core.Json;
 
 namespace Dzl.Core.Launch;
 
@@ -6,8 +7,7 @@ public sealed record ProcInfo(int Pid, string Mode, string Source, string Exe);
 
 public static class StateFile
 {
-    private static readonly JsonSerializerOptions Json = new()
-    { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower, WriteIndented = true };
+    private static readonly JsonSerializerOptions Json = DzlJson.SnakeIndented;
 
     public static string Path(string configPath) =>
         System.IO.Path.Combine(System.IO.Path.GetDirectoryName(configPath) ?? ".", ".dzl-procs.json");

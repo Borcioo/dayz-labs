@@ -1,14 +1,12 @@
 using System.Text.Json;
+using Dzl.Core.Json;
 
 namespace Dzl.Core.Config;
 
 public static class ConfigStore
 {
-    public static readonly JsonSerializerOptions Json = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        WriteIndented = true,
-    };
+    /// <summary>Alias for <see cref="DzlJson.SnakeIndented"/> — kept so call sites don't churn.</summary>
+    public static readonly JsonSerializerOptions Json = DzlJson.SnakeIndented;
 
     public static DzlConfig Load(string path)
     {
