@@ -3,19 +3,17 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using Dzl.Core.App;
-using Dzl.Core.Economy;
 
 namespace Dzl.Tray.Controls;
 
 /// <summary>
 /// Backs the <see cref="GlobalsEditor"/> control (the Economy "Globals" tab): a filterable, editable
 /// DataGrid of <c>&lt;var&gt;</c> rows from <c>db/globals.xml</c>. All edits route through
-/// <see cref="GlobalsService"/> (never throws; snapshots a backup before each write). Per-tab undo/redo
-/// snapshots the whole file's raw text before each mutation and restores it verbatim.
+/// <see cref="GlobalsService"/> (never throws; snapshots a backup before each write). Per-tab
+/// undo/redo + the status line come from <see cref="RawXmlEditorVm"/>.
 /// </summary>
-public sealed partial class GlobalsVm : ObservableObject
+public sealed partial class GlobalsVm : RawXmlEditorVm
 {
     private readonly GlobalsService _svc;
     private readonly Func<string, bool> _confirm;
@@ -23,8 +21,13 @@ public sealed partial class GlobalsVm : ObservableObject
     /// <param name="configPath">The resolved dzl config path.</param>
     /// <param name="confirm">Modal yes/no confirmation (returns true on Yes).</param>
     public GlobalsVm(string configPath, Func<string, bool> confirm)
+        : this(new GlobalsService(configPath), confirm) { }
+
+    private GlobalsVm(GlobalsService svc, Func<string, bool> confirm)
+        : base(svc.ReadRaw, svc.WriteRaw, svc.GlobalsPath,
+               "(no globals.xml — pick/scaffold a server mission)")
     {
-        _svc = new GlobalsService(configPath);
+        _svc = svc;
         _confirm = confirm;
     }
 
@@ -40,8 +43,6 @@ public sealed partial class GlobalsVm : ObservableObject
 
     [ObservableProperty] private GlobalVarRowVm? _selectedRow;
 
-    [ObservableProperty] private string _status = "";
-
     [ObservableProperty] private string _filter = "";
 
     partial void OnFilterChanged(string value) => ApplyFilter();
@@ -51,26 +52,12 @@ public sealed partial class GlobalsVm : ObservableObject
     [ObservableProperty] private string _newVarValue = "";
     [ObservableProperty] private int _newVarType = 0;
 
-    /// <summary>True when the file is resolvable (a mission is active) — gates the editor UI.</summary>
-    public bool HasFile => _svc.GlobalsPath() is not null;
-
-    /// <summary>The resolved file path for the status/header (or a hint when unresolved).</summary>
-    public string FileLabel => _svc.GlobalsPath() ?? "(no globals.xml — pick/scaffold a server mission)";
-
     // ------------------------------------------------------------------
     // Load
     // ------------------------------------------------------------------
 
-    /// <summary>(Re)load all vars from disk. Clears undo/redo history.</summary>
-    public void Reload()
-    {
-        _undo.Clear();
-        _redo.Clear();
-        NotifyHistory();
-        LoadKeepingSelection();
-        OnPropertyChanged(nameof(HasFile));
-        OnPropertyChanged(nameof(FileLabel));
-    }
+    /// <inheritdoc/>
+    protected override void ReloadView() => LoadKeepingSelection();
 
     private void LoadKeepingSelection()
     {
@@ -97,61 +84,6 @@ public sealed partial class GlobalsVm : ObservableObject
     }
 
     // ------------------------------------------------------------------
-    // Undo/redo (raw-file snapshots)
-    // ------------------------------------------------------------------
-
-    private const int UndoCap = 50;
-    private readonly List<string> _undo = new();
-    private readonly List<string> _redo = new();
-
-    public bool CanUndo => _undo.Count > 0;
-    public bool CanRedo => _redo.Count > 0;
-
-    private void NotifyHistory()
-    {
-        OnPropertyChanged(nameof(CanUndo));
-        OnPropertyChanged(nameof(CanRedo));
-        UndoCommand.NotifyCanExecuteChanged();
-        RedoCommand.NotifyCanExecuteChanged();
-    }
-
-    private void PushUndo()
-    {
-        var raw = _svc.ReadRaw();
-        if (raw is null) return;
-        _undo.Add(raw);
-        if (_undo.Count > UndoCap) _undo.RemoveAt(0);
-        _redo.Clear();
-        NotifyHistory();
-    }
-
-    [RelayCommand(CanExecute = nameof(CanUndo))]
-    private void Undo()
-    {
-        if (_undo.Count == 0) return;
-        var cur = _svc.ReadRaw();
-        var prev = _undo[^1]; _undo.RemoveAt(_undo.Count - 1);
-        if (cur is not null) _redo.Add(cur);
-        var (ok, msg) = _svc.WriteRaw(prev);
-        Status = ok ? "↶ undo" : "✗ " + msg;
-        LoadKeepingSelection();
-        NotifyHistory();
-    }
-
-    [RelayCommand(CanExecute = nameof(CanRedo))]
-    private void Redo()
-    {
-        if (_redo.Count == 0) return;
-        var cur = _svc.ReadRaw();
-        var next = _redo[^1]; _redo.RemoveAt(_redo.Count - 1);
-        if (cur is not null) _undo.Add(cur);
-        var (ok, msg) = _svc.WriteRaw(next);
-        Status = ok ? "↷ redo" : "✗ " + msg;
-        LoadKeepingSelection();
-        NotifyHistory();
-    }
-
-    // ------------------------------------------------------------------
     // Commands
     // ------------------------------------------------------------------
 
@@ -162,9 +94,7 @@ public sealed partial class GlobalsVm : ObservableObject
         if (name.Length == 0) { Status = "✗ var name must not be empty"; return; }
 
         PushUndo();
-        var (ok, msg) = _svc.SetVar(name, NewVarType, NewVarValue ?? "");
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok)
+        if (Report(_svc.SetVar(name, NewVarType, NewVarValue ?? "")))
         {
             NewVarName = "";
             NewVarValue = "";
@@ -181,9 +111,7 @@ public sealed partial class GlobalsVm : ObservableObject
         if (!_confirm($"Remove the global var \"{row.Name}\"?")) return;
 
         PushUndo();
-        var (ok, msg) = _svc.RemoveVar(row.Name);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok) LoadKeepingSelection();
+        if (Report(_svc.RemoveVar(row.Name))) LoadKeepingSelection();
     }
 
     /// <summary>Persist an inline-edited row after the DataGrid commits the edit.</summary>
@@ -205,9 +133,7 @@ public sealed partial class GlobalsVm : ObservableObject
             if (!rok) { Status = "✗ " + rmsg; LoadKeepingSelection(); return; }
         }
         // Upsert to commit type + value (and handle the case where name didn't change).
-        var (ok, msg) = _svc.SetVar(row.Name, row.Type, row.Value ?? "");
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok)
+        if (Report(_svc.SetVar(row.Name, row.Type, row.Value ?? "")))
         {
             row.CommitName();
             LoadKeepingSelection();

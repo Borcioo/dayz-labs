@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using Dzl.Core.App;
 using Dzl.Core.Economy;
 
@@ -15,10 +14,10 @@ namespace Dzl.Tray.Controls;
 /// types from <c>cfgspawnabletypes.xml</c> plus a detail pane for the selected type (hoarder, damage, cargo and
 /// attachments blocks). Each block is either preset-based (a name referencing <c>cfgrandompresets.xml</c>) or
 /// chance-based (a chance + inline items). All edits route through <see cref="SpawnableTypesService"/> (never
-/// throws; snapshots a backup before each write). Per-tab undo/redo snapshots the whole file's raw text before
-/// each mutation and restores it verbatim. The preset dropdowns are sourced from <see cref="RandomPresetsService"/>.
+/// throws; snapshots a backup before each write). Per-tab undo/redo + the status line come from
+/// <see cref="RawXmlEditorVm"/>. The preset dropdowns are sourced from <see cref="RandomPresetsService"/>.
 /// </summary>
-public sealed partial class SpawnableTypesVm : ObservableObject
+public sealed partial class SpawnableTypesVm : RawXmlEditorVm
 {
     private readonly SpawnableTypesService _svc;
     private readonly RandomPresetsService _presets;
@@ -26,11 +25,28 @@ public sealed partial class SpawnableTypesVm : ObservableObject
     private bool _suspendPersist;
 
     public SpawnableTypesVm(string configPath, Func<string, bool> confirm)
+        : this(new SpawnableTypesService(configPath), configPath, confirm) { }
+
+    private SpawnableTypesVm(SpawnableTypesService svc, string configPath, Func<string, bool> confirm)
+        : base(svc.ReadRaw, svc.WriteRaw, svc.SpawnableTypesPath,
+               "(no cfgspawnabletypes.xml — pick/scaffold a server mission)")
     {
-        _svc = new SpawnableTypesService(configPath);
+        _svc = svc;
         _presets = new RandomPresetsService(configPath);
         _confirm = confirm;
     }
+
+    // ------------------------------------------------------------------
+    // Parsed model (cached between writes — selection clicks reuse it)
+    // ------------------------------------------------------------------
+
+    private List<SpawnableType>? _model;
+
+    /// <summary>The parsed file, re-read lazily after every write/undo/redo/reload.</summary>
+    private List<SpawnableType> Model => _model ??= _svc.Load();
+
+    /// <inheritdoc/>
+    protected override void InvalidateModelCache() => _model = null;
 
     // ------------------------------------------------------------------
     // State
@@ -50,8 +66,6 @@ public sealed partial class SpawnableTypesVm : ObservableObject
     /// <summary>Attachments blocks of the selected type.</summary>
     public ObservableCollection<SpawnBlockVm> AttachmentsBlocks { get; } = new();
 
-    [ObservableProperty] private string _status = "";
-
     [ObservableProperty] private string _filter = "";
 
     // new-type form
@@ -68,29 +82,25 @@ public sealed partial class SpawnableTypesVm : ObservableObject
     /// <summary>Attachments preset names from cfgrandompresets.xml (for the add-block dropdown).</summary>
     public ObservableCollection<string> AttachmentsPresetNames { get; } = new();
 
-    /// <summary>True when the file is resolvable (a mission is active).</summary>
-    public bool HasFile => _svc.SpawnableTypesPath() is not null;
-
-    /// <summary>The resolved file path for the status/header (or a hint when unresolved).</summary>
-    public string FileLabel => _svc.SpawnableTypesPath()
-        ?? "(no cfgspawnabletypes.xml — pick/scaffold a server mission)";
-
     partial void OnFilterChanged(string value) => ApplyFilter();
 
     // ------------------------------------------------------------------
     // Load
     // ------------------------------------------------------------------
 
-    /// <summary>(Re)load all types from disk. Clears undo/redo history and refreshes preset name lists.</summary>
-    public void Reload()
+    /// <summary>(Re)load all types from disk. Also refreshes the preset-name dropdowns (which undo/redo
+    /// deliberately leave alone — they belong to cfgrandompresets.xml, not this file).</summary>
+    public override void Reload()
     {
-        _undo.Clear();
-        _redo.Clear();
-        NotifyHistory();
         LoadPresetNames();
+        base.Reload();
+    }
+
+    /// <inheritdoc/>
+    protected override void ReloadView()
+    {
         LoadTypesKeepingSelection();
-        OnPropertyChanged(nameof(HasFile));
-        OnPropertyChanged(nameof(FileLabel));
+        LoadDetailForSelected();
     }
 
     private void LoadPresetNames()
@@ -109,7 +119,7 @@ public sealed partial class SpawnableTypesVm : ObservableObject
         var prevName = SelectedType?.Name;
 
         _all.Clear();
-        foreach (var t in _svc.Load().OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase))
+        foreach (var t in Model.OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase))
             _all.Add(new SpawnTypeRowVm(t));
 
         ApplyFilter();
@@ -135,7 +145,7 @@ public sealed partial class SpawnableTypesVm : ObservableObject
     partial void OnSelectedTypeChanged(SpawnTypeRowVm? value) => LoadDetailForSelected();
 
     private SpawnableType? FindModel(string name) =>
-        _svc.Load().FirstOrDefault(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase));
+        Model.FirstOrDefault(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase));
 
     private void LoadDetailForSelected()
     {
@@ -188,12 +198,8 @@ public sealed partial class SpawnableTypesVm : ObservableObject
     }
 
     // ------------------------------------------------------------------
-    // Chance parsing/validation (0..1, invariant culture)
+    // Damage parsing/validation (optional 0..1, invariant culture)
     // ------------------------------------------------------------------
-
-    private static bool TryChance(string raw, out double value) =>
-        double.TryParse((raw ?? "").Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out value)
-        && value is >= 0.0 and <= 1.0;
 
     /// <summary>Parse an optional damage field: empty → null; otherwise must be 0..1.</summary>
     private static bool TryDamage(string raw, out double? value)
@@ -210,63 +216,6 @@ public sealed partial class SpawnableTypesVm : ObservableObject
     }
 
     // ------------------------------------------------------------------
-    // Undo/redo (raw-file snapshots)
-    // ------------------------------------------------------------------
-
-    private const int UndoCap = 50;
-    private readonly List<string> _undo = new();
-    private readonly List<string> _redo = new();
-
-    public bool CanUndo => _undo.Count > 0;
-    public bool CanRedo => _redo.Count > 0;
-
-    private void NotifyHistory()
-    {
-        OnPropertyChanged(nameof(CanUndo));
-        OnPropertyChanged(nameof(CanRedo));
-        UndoCommand.NotifyCanExecuteChanged();
-        RedoCommand.NotifyCanExecuteChanged();
-    }
-
-    private void PushUndo()
-    {
-        var raw = _svc.ReadRaw();
-        if (raw is null) return;
-        _undo.Add(raw);
-        if (_undo.Count > UndoCap) _undo.RemoveAt(0);
-        _redo.Clear();
-        NotifyHistory();
-    }
-
-    [RelayCommand(CanExecute = nameof(CanUndo))]
-    private void Undo()
-    {
-        if (_undo.Count == 0) return;
-        var cur = _svc.ReadRaw();
-        var prev = _undo[^1]; _undo.RemoveAt(_undo.Count - 1);
-        if (cur is not null) _redo.Add(cur);
-        var (ok, msg) = _svc.WriteRaw(prev);
-        Status = ok ? "↶ undo" : "✗ " + msg;
-        LoadTypesKeepingSelection();
-        LoadDetailForSelected();
-        NotifyHistory();
-    }
-
-    [RelayCommand(CanExecute = nameof(CanRedo))]
-    private void Redo()
-    {
-        if (_redo.Count == 0) return;
-        var cur = _svc.ReadRaw();
-        var next = _redo[^1]; _redo.RemoveAt(_redo.Count - 1);
-        if (cur is not null) _undo.Add(cur);
-        var (ok, msg) = _svc.WriteRaw(next);
-        Status = ok ? "↷ redo" : "✗ " + msg;
-        LoadTypesKeepingSelection();
-        LoadDetailForSelected();
-        NotifyHistory();
-    }
-
-    // ------------------------------------------------------------------
     // Type-level commands
     // ------------------------------------------------------------------
 
@@ -276,9 +225,7 @@ public sealed partial class SpawnableTypesVm : ObservableObject
         if (name.Length == 0) { Status = "✗ type name must not be empty"; return; }
 
         PushUndo();
-        var (ok, msg) = _svc.AddType(name);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok)
+        if (Report(_svc.AddType(name)))
         {
             NewTypeName = "";
             LoadTypesKeepingSelection();
@@ -291,9 +238,7 @@ public sealed partial class SpawnableTypesVm : ObservableObject
         if (SelectedType is not { } row) { Status = "✗ select a type to remove"; return; }
         if (!_confirm($"Remove the spawnable type \"{row.Name}\" and all its blocks?")) return;
         PushUndo();
-        var (ok, msg) = _svc.RemoveType(row.Name);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok) LoadTypesKeepingSelection();
+        if (Report(_svc.RemoveType(row.Name))) LoadTypesKeepingSelection();
     }
 
     public void RenameSelectedType(string newName)
@@ -302,9 +247,7 @@ public sealed partial class SpawnableTypesVm : ObservableObject
         newName = (newName ?? "").Trim();
         if (newName.Length == 0) { Status = "✗ new name must not be empty"; return; }
         PushUndo();
-        var (ok, msg) = _svc.RenameType(row.Name, newName);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok)
+        if (Report(_svc.RenameType(row.Name, newName)))
         {
             LoadTypesKeepingSelection();
             SelectedType = Types.FirstOrDefault(r => string.Equals(r.Name, newName, StringComparison.OrdinalIgnoreCase));
@@ -320,9 +263,7 @@ public sealed partial class SpawnableTypesVm : ObservableObject
     {
         if (_suspendPersist || SelectedType is not { } row) return;
         PushUndo();
-        var (ok, msg) = _svc.SetHoarder(row.Name, SelectedHoarder);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok) { row.Hoarder = SelectedHoarder; }
+        if (Report(_svc.SetHoarder(row.Name, SelectedHoarder))) { row.Hoarder = SelectedHoarder; }
     }
 
     /// <summary>Persist the damage min/max for the selected type (both empty clears it).</summary>
@@ -332,9 +273,7 @@ public sealed partial class SpawnableTypesVm : ObservableObject
         if (!TryDamage(DamageMin, out var min)) { Status = "✗ damage min must be empty or a number 0..1"; return; }
         if (!TryDamage(DamageMax, out var max)) { Status = "✗ damage max must be empty or a number 0..1"; return; }
         PushUndo();
-        var (ok, msg) = _svc.SetDamage(row.Name, min, max);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok) row.DamageLabel = SpawnTypeRowVm.FormatDamage(min, max);
+        if (Report(_svc.SetDamage(row.Name, min, max))) row.DamageLabel = SpawnTypeRowVm.FormatDamage(min, max);
     }
 
     // ------------------------------------------------------------------
@@ -346,9 +285,8 @@ public sealed partial class SpawnableTypesVm : ObservableObject
     {
         if (SelectedType is not { } row) { Status = "✗ select a type first"; return; }
         PushUndo();
-        var (ok, msg) = _svc.AddBlock(row.Name, isAttachments, preset: null, chance: 1.0);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok) AfterBlockChange(row, isAttachments);
+        if (Report(_svc.AddBlock(row.Name, isAttachments, preset: null, chance: 1.0)))
+            AfterBlockChange(row, isAttachments);
     }
 
     /// <summary>Add a preset-based block referencing <paramref name="preset"/>.</summary>
@@ -358,18 +296,16 @@ public sealed partial class SpawnableTypesVm : ObservableObject
         preset = (preset ?? "").Trim();
         if (preset.Length == 0) { Status = "✗ pick a preset"; return; }
         PushUndo();
-        var (ok, msg) = _svc.AddBlock(row.Name, isAttachments, preset: preset, chance: null);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok) AfterBlockChange(row, isAttachments);
+        if (Report(_svc.AddBlock(row.Name, isAttachments, preset: preset, chance: null)))
+            AfterBlockChange(row, isAttachments);
     }
 
     public void RemoveBlock(SpawnBlockVm? block)
     {
         if (SelectedType is not { } row || block is null) { Status = "✗ select a block to remove"; return; }
         PushUndo();
-        var (ok, msg) = _svc.RemoveBlock(row.Name, block.IsAttachments, block.Index);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok) AfterBlockChange(row, block.IsAttachments);
+        if (Report(_svc.RemoveBlock(row.Name, block.IsAttachments, block.Index)))
+            AfterBlockChange(row, block.IsAttachments);
     }
 
     /// <summary>Switch a block to preset-based with the given preset.</summary>
@@ -379,9 +315,8 @@ public sealed partial class SpawnableTypesVm : ObservableObject
         preset = (preset ?? "").Trim();
         if (preset.Length == 0) { Status = "✗ pick a preset"; return; }
         PushUndo();
-        var (ok, msg) = _svc.SetBlockPreset(row.Name, block.IsAttachments, block.Index, preset);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok) AfterBlockChange(row, block.IsAttachments);
+        if (Report(_svc.SetBlockPreset(row.Name, block.IsAttachments, block.Index, preset)))
+            AfterBlockChange(row, block.IsAttachments);
     }
 
     /// <summary>Switch a block to chance-based with the given chance.</summary>
@@ -390,9 +325,8 @@ public sealed partial class SpawnableTypesVm : ObservableObject
         if (SelectedType is not { } row) return;
         if (!TryChance(chanceText, out var chance)) { Status = "✗ chance must be a number 0..1"; return; }
         PushUndo();
-        var (ok, msg) = _svc.SetBlockChance(row.Name, block.IsAttachments, block.Index, chance);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok) AfterBlockChange(row, block.IsAttachments);
+        if (Report(_svc.SetBlockChance(row.Name, block.IsAttachments, block.Index, chance)))
+            AfterBlockChange(row, block.IsAttachments);
     }
 
     private void OnBlockPresetEdited(SpawnBlockVm block)
@@ -418,18 +352,16 @@ public sealed partial class SpawnableTypesVm : ObservableObject
         if (itemName.Length == 0) { Status = "✗ item name must not be empty"; return; }
         if (!TryChance(chanceText, out var chance)) { Status = "✗ chance must be a number 0..1"; return; }
         PushUndo();
-        var (ok, msg) = _svc.AddItem(row.Name, block.IsAttachments, block.Index, itemName, chance);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok) AfterBlockChange(row, block.IsAttachments);
+        if (Report(_svc.AddItem(row.Name, block.IsAttachments, block.Index, itemName, chance)))
+            AfterBlockChange(row, block.IsAttachments);
     }
 
     public void RemoveItem(SpawnBlockVm? block, SpawnItemVm? item)
     {
         if (SelectedType is not { } row || block is null || item is null) { Status = "✗ select an item to remove"; return; }
         PushUndo();
-        var (ok, msg) = _svc.RemoveItem(row.Name, block.IsAttachments, block.Index, item.Name);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok) AfterBlockChange(row, block.IsAttachments);
+        if (Report(_svc.RemoveItem(row.Name, block.IsAttachments, block.Index, item.Name)))
+            AfterBlockChange(row, block.IsAttachments);
     }
 
     private void OnItemEdited(SpawnBlockVm block, SpawnItemVm item)
@@ -438,8 +370,7 @@ public sealed partial class SpawnableTypesVm : ObservableObject
         if (string.IsNullOrWhiteSpace(item.Name)) { Status = "✗ item name must not be empty"; return; }
         if (!TryChance(item.ChanceText, out var chance)) { Status = "✗ chance must be a number 0..1"; return; }
         PushUndo();
-        var (ok, msg) = _svc.SetItem(row.Name, block.IsAttachments, block.Index, item.OriginalName, chance, item.Name);
-        Status = (ok ? "✓ " : "✗ ") + msg;
+        Report(_svc.SetItem(row.Name, block.IsAttachments, block.Index, item.OriginalName, chance, item.Name));
         AfterBlockChange(row, block.IsAttachments);
     }
 

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using Dzl.Core.App;
 using Dzl.Core.Economy;
 
@@ -13,10 +12,11 @@ namespace Dzl.Tray.Controls;
 /// Backs the <see cref="EventsEditor"/> control (the Economy "Events" tab): a master list of CE events
 /// from <c>db/events.xml</c> plus a detail pane for the selected event (scalar fields, flags, position,
 /// limit, active, and a children grid). All edits route through <see cref="EventsService"/> (never throws;
-/// snapshots a backup before each write). Per-tab undo/redo snapshots the whole file's raw text before
-/// each mutation and restores it verbatim.
+/// snapshots a backup before each write). Per-tab undo/redo + the status line come from
+/// <see cref="RawXmlEditorVm"/>; detail fields persist per-commit (guarded by <c>_suspendDetailPersist</c>),
+/// which stays here by design.
 /// </summary>
-public sealed partial class EventsVm : ObservableObject
+public sealed partial class EventsVm : RawXmlEditorVm
 {
     private readonly EventsService _svc;
     private readonly Func<string, bool> _confirm;
@@ -25,10 +25,27 @@ public sealed partial class EventsVm : ObservableObject
     /// <param name="configPath">The resolved dzl config path.</param>
     /// <param name="confirm">Modal yes/no confirmation (returns true on Yes).</param>
     public EventsVm(string configPath, Func<string, bool> confirm)
+        : this(new EventsService(configPath), confirm) { }
+
+    private EventsVm(EventsService svc, Func<string, bool> confirm)
+        : base(svc.ReadRaw, svc.WriteRaw, svc.EventsPath,
+               "(no events.xml — pick/scaffold a server mission)")
     {
-        _svc = new EventsService(configPath);
+        _svc = svc;
         _confirm = confirm;
     }
+
+    // ------------------------------------------------------------------
+    // Parsed model (cached between writes — selection clicks reuse it)
+    // ------------------------------------------------------------------
+
+    private List<CeEvent>? _model;
+
+    /// <summary>The parsed file, re-read lazily after every write/undo/redo/reload.</summary>
+    private List<CeEvent> Model => _model ??= _svc.Load();
+
+    /// <inheritdoc/>
+    protected override void InvalidateModelCache() => _model = null;
 
     // ------------------------------------------------------------------
     // State — master list
@@ -42,8 +59,6 @@ public sealed partial class EventsVm : ObservableObject
 
     [ObservableProperty] private EventRowVm? _selectedEvent;
 
-    [ObservableProperty] private string _status = "";
-
     [ObservableProperty] private string _filter = "";
 
     // new-event form
@@ -55,13 +70,6 @@ public sealed partial class EventsVm : ObservableObject
     [ObservableProperty] private string _newChildMax = "1";
     [ObservableProperty] private string _newChildLootMin = "0";
     [ObservableProperty] private string _newChildLootMax = "0";
-
-    /// <summary>True when the file is resolvable (a mission is active) — gates the editor UI.</summary>
-    public bool HasFile => _svc.EventsPath() is not null;
-
-    /// <summary>The resolved file path for the status/header (or a hint when unresolved).</summary>
-    public string FileLabel => _svc.EventsPath()
-        ?? "(no events.xml — pick/scaffold a server mission)";
 
     partial void OnFilterChanged(string value) => ApplyFilter();
 
@@ -96,23 +104,15 @@ public sealed partial class EventsVm : ObservableObject
     // Load
     // ------------------------------------------------------------------
 
-    /// <summary>(Re)load all events from disk. Clears undo/redo history.</summary>
-    public void Reload()
-    {
-        _undo.Clear();
-        _redo.Clear();
-        NotifyHistory();
-        LoadKeepingSelection();
-        OnPropertyChanged(nameof(HasFile));
-        OnPropertyChanged(nameof(FileLabel));
-    }
+    /// <inheritdoc/>
+    protected override void ReloadView() => LoadKeepingSelection();
 
     private void LoadKeepingSelection()
     {
         var prevName = SelectedEvent?.Name;
 
         _all.Clear();
-        foreach (var ev in _svc.Load())
+        foreach (var ev in Model)
             _all.Add(new EventRowVm(ev.Name, ev.Nominal, ev.Min, ev.Max, ev.Lifetime, ev.Active, ev.Children.Count));
 
         ApplyFilter();
@@ -146,7 +146,7 @@ public sealed partial class EventsVm : ObservableObject
                 return;
             }
 
-            var ev = _svc.Load()
+            var ev = Model
                 .FirstOrDefault(e => string.Equals(e.Name, row.Name, StringComparison.OrdinalIgnoreCase));
             if (ev is null) { ClearDetail(); return; }
 
@@ -181,61 +181,6 @@ public sealed partial class EventsVm : ObservableObject
     }
 
     // ------------------------------------------------------------------
-    // Undo/redo (raw-file snapshots)
-    // ------------------------------------------------------------------
-
-    private const int UndoCap = 50;
-    private readonly List<string> _undo = new();
-    private readonly List<string> _redo = new();
-
-    public bool CanUndo => _undo.Count > 0;
-    public bool CanRedo => _redo.Count > 0;
-
-    private void NotifyHistory()
-    {
-        OnPropertyChanged(nameof(CanUndo));
-        OnPropertyChanged(nameof(CanRedo));
-        UndoCommand.NotifyCanExecuteChanged();
-        RedoCommand.NotifyCanExecuteChanged();
-    }
-
-    private void PushUndo()
-    {
-        var raw = _svc.ReadRaw();
-        if (raw is null) return;
-        _undo.Add(raw);
-        if (_undo.Count > UndoCap) _undo.RemoveAt(0);
-        _redo.Clear();
-        NotifyHistory();
-    }
-
-    [RelayCommand(CanExecute = nameof(CanUndo))]
-    private void Undo()
-    {
-        if (_undo.Count == 0) return;
-        var cur = _svc.ReadRaw();
-        var prev = _undo[^1]; _undo.RemoveAt(_undo.Count - 1);
-        if (cur is not null) _redo.Add(cur);
-        var (ok, msg) = _svc.WriteRaw(prev);
-        Status = ok ? "↶ undo" : "✗ " + msg;
-        LoadKeepingSelection();
-        NotifyHistory();
-    }
-
-    [RelayCommand(CanExecute = nameof(CanRedo))]
-    private void Redo()
-    {
-        if (_redo.Count == 0) return;
-        var cur = _svc.ReadRaw();
-        var next = _redo[^1]; _redo.RemoveAt(_redo.Count - 1);
-        if (cur is not null) _undo.Add(cur);
-        var (ok, msg) = _svc.WriteRaw(next);
-        Status = ok ? "↷ redo" : "✗ " + msg;
-        LoadKeepingSelection();
-        NotifyHistory();
-    }
-
-    // ------------------------------------------------------------------
     // Event-level commands
     // ------------------------------------------------------------------
 
@@ -244,9 +189,7 @@ public sealed partial class EventsVm : ObservableObject
         var name = (NewEventName ?? "").Trim();
         if (name.Length == 0) { Status = "✗ event name must not be empty"; return; }
         PushUndo();
-        var (ok, msg) = _svc.AddEvent(name);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok)
+        if (Report(_svc.AddEvent(name)))
         {
             NewEventName = "";
             LoadKeepingSelection();
@@ -259,9 +202,7 @@ public sealed partial class EventsVm : ObservableObject
         if (SelectedEvent is not { } row) { Status = "✗ select an event to remove"; return; }
         if (!_confirm($"Remove the event \"{row.Name}\" and all its children?")) return;
         PushUndo();
-        var (ok, msg) = _svc.RemoveEvent(row.Name);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok) LoadKeepingSelection();
+        if (Report(_svc.RemoveEvent(row.Name))) LoadKeepingSelection();
     }
 
     public void RenameSelectedEvent(string newName)
@@ -270,9 +211,7 @@ public sealed partial class EventsVm : ObservableObject
         newName = (newName ?? "").Trim();
         if (newName.Length == 0) { Status = "✗ new name must not be empty"; return; }
         PushUndo();
-        var (ok, msg) = _svc.RenameEvent(row.Name, newName);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok)
+        if (Report(_svc.RenameEvent(row.Name, newName)))
         {
             LoadKeepingSelection();
             SelectedEvent = Events.FirstOrDefault(r => string.Equals(r.Name, newName, StringComparison.OrdinalIgnoreCase));
@@ -293,9 +232,7 @@ public sealed partial class EventsVm : ObservableObject
         if (_suspendDetailPersist || SelectedEvent is not { } row) return;
         if (!TryInt(rawValue, out var value)) { Status = $"✗ {field} must be a non-negative integer"; return; }
         PushUndo();
-        var (ok, msg) = _svc.SetScalar(row.Name, field, value);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok)
+        if (Report(_svc.SetScalar(row.Name, field, value)))
         {
             // Update the master-row summary column too (for nominal, active).
             RefreshMasterRow(row.Name);
@@ -306,38 +243,33 @@ public sealed partial class EventsVm : ObservableObject
     {
         if (_suspendDetailPersist || SelectedEvent is not { } row) return;
         PushUndo();
-        var (ok, msg) = _svc.SetFlag(row.Name, flag, value);
-        Status = (ok ? "✓ " : "✗ ") + msg;
+        Report(_svc.SetFlag(row.Name, flag, value));
     }
 
     public void SavePosition(string position)
     {
         if (_suspendDetailPersist || SelectedEvent is not { } row) return;
         PushUndo();
-        var (ok, msg) = _svc.SetPosition(row.Name, position ?? "");
-        Status = (ok ? "✓ " : "✗ ") + msg;
+        Report(_svc.SetPosition(row.Name, position ?? ""));
     }
 
     public void SaveLimit(string limit)
     {
         if (_suspendDetailPersist || SelectedEvent is not { } row) return;
         PushUndo();
-        var (ok, msg) = _svc.SetLimit(row.Name, limit ?? "");
-        Status = (ok ? "✓ " : "✗ ") + msg;
+        Report(_svc.SetLimit(row.Name, limit ?? ""));
     }
 
     public void SaveActive(bool active)
     {
         if (_suspendDetailPersist || SelectedEvent is not { } row) return;
         PushUndo();
-        var (ok, msg) = _svc.SetActive(row.Name, active);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok) RefreshMasterRow(row.Name);
+        if (Report(_svc.SetActive(row.Name, active))) RefreshMasterRow(row.Name);
     }
 
     private void RefreshMasterRow(string name)
     {
-        var ev = _svc.Load()
+        var ev = Model
             .FirstOrDefault(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase));
         if (ev is null) return;
         var row = _all.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
@@ -365,9 +297,7 @@ public sealed partial class EventsVm : ObservableObject
         if (!TryInt(NewChildLootMax, out var lootMax)) { Status = "✗ lootmax must be a non-negative integer"; return; }
 
         PushUndo();
-        var (ok, msg) = _svc.AddChild(row.Name, new EventChild(type, min, max, lootMin, lootMax));
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok)
+        if (Report(_svc.AddChild(row.Name, new EventChild(type, min, max, lootMin, lootMax))))
         {
             NewChildType = "";
             LoadDetailForSelected();
@@ -379,9 +309,7 @@ public sealed partial class EventsVm : ObservableObject
     {
         if (SelectedEvent is not { } row || child is null) { Status = "✗ select a child to remove"; return; }
         PushUndo();
-        var (ok, msg) = _svc.RemoveChild(row.Name, child.Type);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok)
+        if (Report(_svc.RemoveChild(row.Name, child.Type)))
         {
             LoadDetailForSelected();
             RefreshMasterRow(row.Name);
@@ -400,9 +328,7 @@ public sealed partial class EventsVm : ObservableObject
 
         PushUndo();
         var updated = new EventChild(child.Type, min, max, lootMin, lootMax);
-        var (ok, msg) = _svc.SetChild(row.Name, child.OriginalType, updated);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok)
+        if (Report(_svc.SetChild(row.Name, child.OriginalType, updated)))
         {
             child.CommitType();
             RefreshMasterRow(row.Name);

@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using Dzl.Core.App;
 using Dzl.Core.Economy;
 
@@ -16,19 +15,36 @@ namespace Dzl.Tray.Controls;
 /// drives three editable param sections (spawn_params / generator_params / group_params, each a flat Name/Value
 /// bag) and a groups list (across all bubbles containers); selecting a group shows its positions grid (X, Z).
 /// All edits route through <see cref="PlayerSpawnsService"/> (never throws; snapshots a backup before each
-/// write). Per-tab undo/redo snapshots the whole file's raw text and restores it verbatim.
+/// write). Per-tab undo/redo + the status line come from <see cref="RawXmlEditorVm"/>.
 /// </summary>
-public sealed partial class PlayerSpawnsVm : ObservableObject
+public sealed partial class PlayerSpawnsVm : RawXmlEditorVm
 {
     private readonly PlayerSpawnsService _svc;
     private readonly Func<string, bool> _confirm;
     private bool _suspendPersist;
 
     public PlayerSpawnsVm(string configPath, Func<string, bool> confirm)
+        : this(new PlayerSpawnsService(configPath), confirm) { }
+
+    private PlayerSpawnsVm(PlayerSpawnsService svc, Func<string, bool> confirm)
+        : base(svc.ReadRaw, svc.WriteRaw, svc.SpawnsPath,
+               "(no cfgplayerspawnpoints.xml — pick/scaffold a server mission)")
     {
-        _svc = new PlayerSpawnsService(configPath);
+        _svc = svc;
         _confirm = confirm;
     }
+
+    // ------------------------------------------------------------------
+    // Parsed model (cached between writes — selection clicks reuse it)
+    // ------------------------------------------------------------------
+
+    private List<SpawnCategory>? _model;
+
+    /// <summary>The parsed file, re-read lazily after every write/undo/redo/reload.</summary>
+    private List<SpawnCategory> Model => _model ??= _svc.Load();
+
+    /// <inheritdoc/>
+    protected override void InvalidateModelCache() => _model = null;
 
     // ------------------------------------------------------------------
     // State
@@ -56,41 +72,24 @@ public sealed partial class PlayerSpawnsVm : ObservableObject
     /// <summary>Positions of the selected group (editable X/Z rows).</summary>
     public ObservableCollection<SpawnPosVm> Positions { get; } = new();
 
-    [ObservableProperty] private string _status = "";
-
     // add-group form
     [ObservableProperty] private string _newGroupName = "";
 
     /// <summary>The container new groups are added to (defaults to generator_posbubbles).</summary>
     [ObservableProperty] private string _newGroupContainer = "generator_posbubbles";
 
-    /// <summary>True when the file is resolvable (a mission is active).</summary>
-    public bool HasFile => _svc.SpawnsPath() is not null;
-
-    /// <summary>The resolved file path for the status/header (or a hint when unresolved).</summary>
-    public string FileLabel => _svc.SpawnsPath()
-        ?? "(no cfgplayerspawnpoints.xml — pick/scaffold a server mission)";
-
     // ------------------------------------------------------------------
     // Load
     // ------------------------------------------------------------------
 
-    /// <summary>(Re)load all categories from disk. Clears undo/redo history.</summary>
-    public void Reload()
-    {
-        _undo.Clear();
-        _redo.Clear();
-        NotifyHistory();
-        LoadCategoriesKeepingSelection();
-        OnPropertyChanged(nameof(HasFile));
-        OnPropertyChanged(nameof(FileLabel));
-    }
+    /// <inheritdoc/>
+    protected override void ReloadView() => LoadCategoriesKeepingSelection();
 
     private void LoadCategoriesKeepingSelection()
     {
         var prev = SelectedCategory;
         Categories.Clear();
-        foreach (var c in _svc.Load())
+        foreach (var c in Model)
             if (!string.IsNullOrEmpty(c.Name)) Categories.Add(c.Name);
 
         SelectedCategory = Categories.FirstOrDefault(c => string.Equals(c, prev, StringComparison.OrdinalIgnoreCase))
@@ -103,7 +102,7 @@ public sealed partial class PlayerSpawnsVm : ObservableObject
 
     private SpawnCategory? FindCategory(string? name) =>
         name is null ? null
-        : _svc.Load().FirstOrDefault(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase));
+        : Model.FirstOrDefault(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase));
 
     private void LoadCategoryDetail()
     {
@@ -186,61 +185,6 @@ public sealed partial class PlayerSpawnsVm : ObservableObject
         double.TryParse((raw ?? "").Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out value);
 
     // ------------------------------------------------------------------
-    // Undo/redo (raw-file snapshots)
-    // ------------------------------------------------------------------
-
-    private const int UndoCap = 50;
-    private readonly List<string> _undo = new();
-    private readonly List<string> _redo = new();
-
-    public bool CanUndo => _undo.Count > 0;
-    public bool CanRedo => _redo.Count > 0;
-
-    private void NotifyHistory()
-    {
-        OnPropertyChanged(nameof(CanUndo));
-        OnPropertyChanged(nameof(CanRedo));
-        UndoCommand.NotifyCanExecuteChanged();
-        RedoCommand.NotifyCanExecuteChanged();
-    }
-
-    private void PushUndo()
-    {
-        var raw = _svc.ReadRaw();
-        if (raw is null) return;
-        _undo.Add(raw);
-        if (_undo.Count > UndoCap) _undo.RemoveAt(0);
-        _redo.Clear();
-        NotifyHistory();
-    }
-
-    [RelayCommand(CanExecute = nameof(CanUndo))]
-    private void Undo()
-    {
-        if (_undo.Count == 0) return;
-        var cur = _svc.ReadRaw();
-        var prev = _undo[^1]; _undo.RemoveAt(_undo.Count - 1);
-        if (cur is not null) _redo.Add(cur);
-        var (ok, msg) = _svc.WriteRaw(prev);
-        Status = ok ? "↶ undo" : "✗ " + msg;
-        LoadCategoryDetail();
-        NotifyHistory();
-    }
-
-    [RelayCommand(CanExecute = nameof(CanRedo))]
-    private void Redo()
-    {
-        if (_redo.Count == 0) return;
-        var cur = _svc.ReadRaw();
-        var next = _redo[^1]; _redo.RemoveAt(_redo.Count - 1);
-        if (cur is not null) _undo.Add(cur);
-        var (ok, msg) = _svc.WriteRaw(next);
-        Status = ok ? "↷ redo" : "✗ " + msg;
-        LoadCategoryDetail();
-        NotifyHistory();
-    }
-
-    // ------------------------------------------------------------------
     // Param edits
     // ------------------------------------------------------------------
 
@@ -249,8 +193,7 @@ public sealed partial class PlayerSpawnsVm : ObservableObject
         if (_suspendPersist || SelectedCategory is not { } cat) return;
         if (string.IsNullOrWhiteSpace(param.Name)) { Status = "✗ param name must not be empty"; return; }
         PushUndo();
-        var (ok, msg) = _svc.SetParam(cat, param.Section, param.Name, param.Value ?? "");
-        Status = (ok ? "✓ " : "✗ ") + msg;
+        Report(_svc.SetParam(cat, param.Section, param.Name, param.Value ?? ""));
     }
 
     /// <summary>Add a new param row (key + value) to a section of the selected category and persist it.</summary>
@@ -260,9 +203,7 @@ public sealed partial class PlayerSpawnsVm : ObservableObject
         name = (name ?? "").Trim();
         if (name.Length == 0) { Status = "✗ param name must not be empty"; return; }
         PushUndo();
-        var (ok, msg) = _svc.SetParam(cat, section, name, value ?? "");
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok) LoadCategoryDetail();
+        if (Report(_svc.SetParam(cat, section, name, value ?? ""))) LoadCategoryDetail();
     }
 
     // ------------------------------------------------------------------
@@ -276,9 +217,7 @@ public sealed partial class PlayerSpawnsVm : ObservableObject
         if (name.Length == 0) { Status = "✗ group name must not be empty"; return; }
         var container = string.IsNullOrWhiteSpace(NewGroupContainer) ? "generator_posbubbles" : NewGroupContainer.Trim();
         PushUndo();
-        var (ok, msg) = _svc.AddGroup(cat, container, name);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok)
+        if (Report(_svc.AddGroup(cat, container, name)))
         {
             NewGroupName = "";
             LoadCategoryDetail();
@@ -294,9 +233,7 @@ public sealed partial class PlayerSpawnsVm : ObservableObject
         { Status = "✗ select a group to remove"; return; }
         if (!_confirm($"Remove the group \"{grp.Name}\" and all its positions?")) return;
         PushUndo();
-        var (ok, msg) = _svc.RemoveGroup(cat, grp.Container, grp.Name);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok) LoadCategoryDetail();
+        if (Report(_svc.RemoveGroup(cat, grp.Container, grp.Name))) LoadCategoryDetail();
     }
 
     public void RenameSelectedGroup(string newName)
@@ -306,9 +243,7 @@ public sealed partial class PlayerSpawnsVm : ObservableObject
         newName = (newName ?? "").Trim();
         if (newName.Length == 0) { Status = "✗ new name must not be empty"; return; }
         PushUndo();
-        var (ok, msg) = _svc.RenameGroup(cat, grp.Container, grp.Name, newName);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok)
+        if (Report(_svc.RenameGroup(cat, grp.Container, grp.Name, newName)))
         {
             var container = grp.Container;
             LoadCategoryDetail();
@@ -329,9 +264,7 @@ public sealed partial class PlayerSpawnsVm : ObservableObject
         if (!TryDouble(xText, out var x)) { Status = "✗ X must be a number"; return; }
         if (!TryDouble(zText, out var z)) { Status = "✗ Z must be a number"; return; }
         PushUndo();
-        var (ok, msg) = _svc.AddPos(cat, grp.Container, grp.Name, x, z);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok)
+        if (Report(_svc.AddPos(cat, grp.Container, grp.Name, x, z)))
         {
             LoadPositionsForSelected();
             grp.PosCount = Positions.Count;
@@ -343,9 +276,7 @@ public sealed partial class PlayerSpawnsVm : ObservableObject
         if (SelectedCategory is not { } cat || SelectedGroup is not { } grp || pos is null)
         { Status = "✗ select a position to remove"; return; }
         PushUndo();
-        var (ok, msg) = _svc.RemovePos(cat, grp.Container, grp.Name, pos.Index);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok)
+        if (Report(_svc.RemovePos(cat, grp.Container, grp.Name, pos.Index)))
         {
             LoadPositionsForSelected();
             grp.PosCount = Positions.Count;
@@ -358,9 +289,7 @@ public sealed partial class PlayerSpawnsVm : ObservableObject
         if (!TryDouble(pos.XText, out var x)) { Status = "✗ X must be a number"; return; }
         if (!TryDouble(pos.ZText, out var z)) { Status = "✗ Z must be a number"; return; }
         PushUndo();
-        var (ok, msg) = _svc.SetPos(cat, grp.Container, grp.Name, pos.Index, x, z);
-        Status = (ok ? "✓ " : "✗ ") + msg;
-        if (!ok) LoadPositionsForSelected();
+        if (!Report(_svc.SetPos(cat, grp.Container, grp.Name, pos.Index, x, z))) LoadPositionsForSelected();
     }
 }
 
