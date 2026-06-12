@@ -817,19 +817,26 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _ = LoadGitStatusesAsync();   // fire-and-forget; fills each card's git badge off the UI thread
     }
 
+    // Bumped per refresh so an older in-flight badge pass can't overwrite a newer one's results.
+    private int _gitGen;
+
     /// <summary>Fill each project card's git summary off the UI thread (git status shells out).</summary>
     private async Task LoadGitStatusesAsync()
     {
+        var gen = ++_gitGen;
         var root = ProjectsRoot;
         foreach (var vm in ModProjects.ToList())
         {
             var dir = ProjectPaths.ModDir(root, vm.Name);
             var s = await Task.Run(() => Git.Status(dir));
+            if (gen != _gitGen) return;   // a newer refresh owns the badges now
             if (!s.IsRepo) { vm.Git = "no repo"; vm.RepoUrl = null; continue; }
             var ab = (s.Ahead > 0 || s.Behind > 0) ? $" ↑{s.Ahead}↓{s.Behind}" : "";
             var local = s.HasRemote ? "" : " (local)";
             vm.Git = $"{s.Branch} • {s.Detail}{ab}{local}";
-            vm.RepoUrl = s.HasRemote ? await Task.Run(() => Git.RemoteUrl(dir)) : null;
+            var url = s.HasRemote ? await Task.Run(() => Git.RemoteUrl(dir)) : null;
+            if (gen != _gitGen) return;
+            vm.RepoUrl = url;
         }
     }
 
@@ -954,7 +961,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Import an external mod source folder as a project (non-invasive link). Returns a status line.</summary>
     public string ImportModProject(string source, string? name)
     {
-        var res = ModImport.Import(ProjectsRoot, source, string.IsNullOrWhiteSpace(name) ? null : name.Trim());
+        var res = ModImport.Import(ProjectsRoot, source, string.IsNullOrWhiteSpace(name) ? null : name.Trim(), WorkDriveSource);
         RefreshModProjects();
         return res.Ok ? $"✓ imported → {res.ModDir}" : $"✗ {res.Message}";
     }
@@ -1074,6 +1081,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _detailSubscribed;   // is the item shown in the details pane already subscribed?
     private int _workshopPage = 1;
     private bool _wsReady;
+    // Browse generation: every new browse bumps it; stale in-flight results are dropped, so two
+    // quickly-toggled filter chips can't interleave their result pages.
+    private int _browseGen;
 
     /// <summary>Build the filter tag list + sort/time-frame defaults (once). Call before showing the window.</summary>
     public void InitWorkshop()
@@ -1122,12 +1132,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Browse with the current sort + time frame + selected category tags + search (page 1).</summary>
     public async Task WorkshopBrowseAsync()
     {
+        var gen = ++_browseGen;
         _workshopPage = 1;
         var sort = SelectedSort?.BrowseSort ?? "trend";
         var days = ShowTimeFrame ? (SelectedTimeFrame?.Days ?? 7) : 0;
         var tags = SelectedTags().ToList();
         WorkshopStatus = "loading…";
         var (ok, error, items) = await new WorkshopService(_configPath).BrowseAsync(sort, days, WorkshopQuery, 30, 1, tags);
+        if (gen != _browseGen) return;   // a newer browse owns the list now
         WorkshopResults.Clear();
         foreach (var it in items) WorkshopResults.Add(it);
         SelectedWorkshopItem = WorkshopResults.FirstOrDefault();
@@ -1138,11 +1150,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Append the next page of the current browse.</summary>
     public async Task WorkshopLoadMoreAsync()
     {
+        var gen = _browseGen;
         _workshopPage++;
         var sort = SelectedSort?.BrowseSort ?? "trend";
         var days = ShowTimeFrame ? (SelectedTimeFrame?.Days ?? 7) : 0;
         WorkshopStatus = "loading more…";
         var (ok, error, items) = await new WorkshopService(_configPath).BrowseAsync(sort, days, WorkshopQuery, 30, _workshopPage, SelectedTags().ToList());
+        if (gen != _browseGen) return;   // the query changed mid-flight — don't append page N of an old browse
         foreach (var it in items) WorkshopResults.Add(it);
         WorkshopStatus = ok ? $"{WorkshopResults.Count} total (page {_workshopPage})" : $"✗ {error}";
     }
@@ -1553,7 +1567,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         TypesEditor.Dispose();
         _cts.Cancel();
         _cts.Dispose();
+        // Cancel only — same rule as RetailLogs: Follow tasks may still hold the token, and
+        // disposing under them races into ObjectDisposedException. GC collects the CTS.
         _logCts.Cancel();
-        _logCts.Dispose();
     }
 }
