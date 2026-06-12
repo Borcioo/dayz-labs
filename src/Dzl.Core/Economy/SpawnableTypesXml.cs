@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Xml.Linq;
 
 namespace Dzl.Core.Economy;
@@ -44,13 +43,11 @@ public static class SpawnableTypesXml
 {
     private static string BlockElementName(bool isAttachments) => isAttachments ? "attachments" : "cargo";
 
-    private static double ParseDouble(string? raw) =>
-        double.TryParse(raw?.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0.0;
+    private static double ParseDouble(string? raw) => CeNum.Dbl(raw);
 
-    private static double? ParseDoubleOpt(string? raw) =>
-        double.TryParse(raw?.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : (double?)null;
+    private static double? ParseDoubleOpt(string? raw) => CeNum.DblOpt(raw);
 
-    private static string FormatDouble(double v) => v.ToString(CultureInfo.InvariantCulture);
+    private static string FormatDouble(double v) => CeNum.Str(v);
 
     // ------------------------------------------------------------------
     // Read-only parse (never-throw)
@@ -111,16 +108,11 @@ public static class SpawnableTypesXml
     // ------------------------------------------------------------------
 
     /// <summary>Parse XML to an editable document for use with the edit methods.</summary>
-    public static XDocument ParseDoc(string xml) => XDocument.Parse(xml);
+    public static XDocument ParseDoc(string xml) => CeXml.ParseDoc(xml);
 
     /// <summary>Find a <c>&lt;type&gt;</c> element by name (case-insensitive), or null.</summary>
-    private static XElement? FindType(XDocument doc, string name)
-    {
-        var root = doc.Root;
-        if (root is null) return null;
-        return root.Elements("type")
-            .FirstOrDefault(e => string.Equals(e.Attribute("name")?.Value, name, StringComparison.OrdinalIgnoreCase));
-    }
+    private static XElement? FindType(XDocument doc, string name) =>
+        doc.Root?.Elements("type").ByName(name);
 
     /// <summary>Add a new empty <c>&lt;type name="…"/&gt;</c>. Returns true if added, false if a type of the
     /// same name already exists (case-insensitive) or the name is blank.</summary>
@@ -144,16 +136,8 @@ public static class SpawnableTypesXml
 
     /// <summary>Rename a type in place (preserves position/children). Returns true if performed; false if
     /// <paramref name="oldName"/> does not exist or <paramref name="newName"/> already exists.</summary>
-    public static bool RenameType(XDocument doc, string oldName, string newName)
-    {
-        if (string.IsNullOrWhiteSpace(newName)) return false;
-        var el = FindType(doc, oldName);
-        if (el is null) return false;
-        if (!string.Equals(oldName, newName, StringComparison.OrdinalIgnoreCase) &&
-            FindType(doc, newName) is not null) return false;
-        el.SetAttributeValue("name", newName);
-        return true;
-    }
+    public static bool RenameType(XDocument doc, string oldName, string newName) =>
+        CeXml.RenameByName(doc.Root?.Elements("type") ?? Enumerable.Empty<XElement>(), oldName, newName);
 
     /// <summary>Set/clear the <c>&lt;hoarder/&gt;</c> flag on a type. Returns true if the type exists.</summary>
     public static bool SetHoarder(XDocument doc, string name, bool on)
@@ -274,9 +258,7 @@ public static class SpawnableTypesXml
         if (string.IsNullOrWhiteSpace(itemName)) return false;
         var block = BlockAt(doc, typeName, isAttachments, index);
         if (block is null) return false;
-        var exists = block.Elements("item")
-            .Any(e => string.Equals(e.Attribute("name")?.Value, itemName, StringComparison.OrdinalIgnoreCase));
-        if (exists) return false;
+        if (block.Elements("item").ByName(itemName) is not null) return false;
         block.SetAttributeValue("preset", null);
         block.Add(new XElement("item",
             new XAttribute("name", itemName.Trim()),
@@ -289,8 +271,7 @@ public static class SpawnableTypesXml
     {
         var block = BlockAt(doc, typeName, isAttachments, index);
         if (block is null) return false;
-        var el = block.Elements("item")
-            .FirstOrDefault(e => string.Equals(e.Attribute("name")?.Value, itemName, StringComparison.OrdinalIgnoreCase));
+        var el = block.Elements("item").ByName(itemName);
         if (el is null) return false;
         el.Remove();
         return true;
@@ -304,16 +285,13 @@ public static class SpawnableTypesXml
     {
         var block = BlockAt(doc, typeName, isAttachments, index);
         if (block is null) return false;
-        var el = block.Elements("item")
-            .FirstOrDefault(e => string.Equals(e.Attribute("name")?.Value, itemName, StringComparison.OrdinalIgnoreCase));
+        var el = block.Elements("item").ByName(itemName);
         if (el is null) return false;
 
         if (!string.IsNullOrWhiteSpace(newName) &&
             !string.Equals(newName, itemName, StringComparison.OrdinalIgnoreCase))
         {
-            var clash = block.Elements("item")
-                .Any(e => e != el && string.Equals(e.Attribute("name")?.Value, newName, StringComparison.OrdinalIgnoreCase));
-            if (clash) return false;
+            if (block.Elements("item").ByName(newName!, excluding: el) is not null) return false;
             el.SetAttributeValue("name", newName.Trim());
         }
         el.SetAttributeValue("chance", FormatDouble(chance));
@@ -322,8 +300,5 @@ public static class SpawnableTypesXml
 
     /// <summary>Serialize back to text. Preserves the XML declaration if one is present; returns only the
     /// root element text when no declaration exists (avoids a leading bare newline).</summary>
-    public static string ToXml(XDocument doc) =>
-        doc.Declaration is null
-            ? doc.Root!.ToString()
-            : doc.Declaration + Environment.NewLine + doc.Root;
+    public static string ToXml(XDocument doc) => CeXml.Serialize(doc);
 }

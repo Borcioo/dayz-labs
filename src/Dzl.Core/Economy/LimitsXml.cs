@@ -49,7 +49,7 @@ public static class LimitsXml
     // ------------------------------------------------------------------
 
     /// <summary>Parse XML to an editable document for use with the edit methods.</summary>
-    public static XDocument ParseDoc(string xml) => XDocument.Parse(xml);
+    public static XDocument ParseDoc(string xml) => CeXml.ParseDoc(xml);
 
     /// <summary>Map a <see cref="LimitsKind"/> to the XML container element name and child element name.</summary>
     private static (string Container, string Child) KindNames(LimitsKind kind) => kind switch
@@ -87,9 +87,7 @@ public static class LimitsXml
     {
         var (_, child) = KindNames(kind);
         var container = GetOrCreateContainer(doc, kind);
-        var exists = container.Elements(child)
-            .Any(e => string.Equals(e.Attribute("name")?.Value, name, StringComparison.OrdinalIgnoreCase));
-        if (exists) return false;
+        if (container.Elements(child).ByName(name) is not null) return false;
         container.Add(new XElement(child, new XAttribute("name", name)));
         return true;
     }
@@ -103,8 +101,7 @@ public static class LimitsXml
         if (root is null) return false;
         var container = FindContainer(root, containerName);
         if (container is null) return false;
-        var el = container.Elements(child)
-            .FirstOrDefault(e => string.Equals(e.Attribute("name")?.Value, name, StringComparison.OrdinalIgnoreCase));
+        var el = container.Elements(child).ByName(name);
         if (el is null) return false;
         el.Remove();
         return true;
@@ -120,21 +117,10 @@ public static class LimitsXml
         if (root is null) return false;
         var container = FindContainer(root, containerName);
         if (container is null) return false;
-        var el = container.Elements(child)
-            .FirstOrDefault(e => string.Equals(e.Attribute("name")?.Value, oldName, StringComparison.OrdinalIgnoreCase));
-        if (el is null) return false;
-        // Check that the new name doesn't already exist (other than the element we're renaming).
-        var clash = container.Elements(child)
-            .Any(e => e != el && string.Equals(e.Attribute("name")?.Value, newName, StringComparison.OrdinalIgnoreCase));
-        if (clash) return false;
-        el.SetAttributeValue("name", newName);
-        return true;
+        return CeXml.RenameByName(container.Elements(child), oldName, newName);
     }
 
     /// <summary>Serialize back to text. Preserves the XML declaration if one is present;
     /// returns only the root element text when no declaration exists (avoids a leading bare newline).</summary>
-    public static string ToXml(XDocument doc) =>
-        doc.Declaration is null
-            ? doc.Root!.ToString()
-            : doc.Declaration + Environment.NewLine + doc.Root;
+    public static string ToXml(XDocument doc) => CeXml.Serialize(doc);
 }

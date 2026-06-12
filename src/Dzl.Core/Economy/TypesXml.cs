@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Xml.Linq;
 
 namespace Dzl.Core.Economy;
@@ -43,11 +42,11 @@ public static class TypesXml
     private static int IntVal(XElement type, string child, int fallback)
     {
         var e = type.Element(child);
-        return e != null && int.TryParse(e.Value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : fallback;
+        return e is null ? fallback : CeNum.Int(e.Value, fallback);
     }
 
     private static bool FlagVal(XElement? flags, string attr) =>
-        flags?.Attribute(attr)?.Value.Trim() == "1";
+        CeNum.Bool01(flags?.Attribute(attr)?.Value);
 
     private static List<string> NamedChildren(XElement type, string child) =>
         type.Elements(child).Select(e => e.Attribute("name")?.Value.Trim() ?? "").Where(s => s.Length > 0).ToList();
@@ -90,14 +89,10 @@ public static class TypesXml
     }
 
     /// <summary>Parse to an editable document (for in-place edits then <see cref="ToXml"/>).</summary>
-    public static XDocument ParseDoc(string xml) => XDocument.Parse(xml);
+    public static XDocument ParseDoc(string xml) => CeXml.ParseDoc(xml);
 
-    private static void SetInt(XElement type, string child, int value)
-    {
-        var e = type.Element(child);
-        if (e == null) type.Add(new XElement(child, value.ToString(CultureInfo.InvariantCulture)));
-        else e.Value = value.ToString(CultureInfo.InvariantCulture);
-    }
+    private static void SetInt(XElement type, string child, int value) =>
+        type.SetChildValue(child, CeNum.Str(value));
 
     private static void SetNamed(XElement type, string child, IReadOnlyList<string> names)
     {
@@ -110,8 +105,7 @@ public static class TypesXml
     public static bool Upsert(XDocument doc, TypeEntry entry)
     {
         var root = doc.Root ?? throw new InvalidOperationException("types.xml has no root <types>");
-        var type = root.Elements("type")
-            .FirstOrDefault(t => string.Equals(t.Attribute("name")?.Value, entry.Name, StringComparison.OrdinalIgnoreCase));
+        var type = root.Elements("type").ByName(entry.Name);
         var existed = type != null;
         if (type == null)
         {
@@ -129,7 +123,7 @@ public static class TypesXml
 
         var flags = type.Element("flags") ?? new XElement("flags");
         if (flags.Parent == null) type.Add(flags);
-        void F(string a, bool v) => flags.SetAttributeValue(a, v ? "1" : "0");
+        void F(string a, bool v) => flags.SetAttributeValue(a, CeNum.Str(v));
         F("count_in_cargo", entry.Flags.CountInCargo);
         F("count_in_hoarder", entry.Flags.CountInHoarder);
         F("count_in_map", entry.Flags.CountInMap);
@@ -149,13 +143,13 @@ public static class TypesXml
     /// <summary>Remove a <c>&lt;type&gt;</c> by name. Returns true if one was removed.</summary>
     public static bool Remove(XDocument doc, string name)
     {
-        var type = doc.Root?.Elements("type")
-            .FirstOrDefault(t => string.Equals(t.Attribute("name")?.Value, name, StringComparison.OrdinalIgnoreCase));
+        var type = doc.Root?.Elements("type").ByName(name);
         if (type == null) return false;
         type.Remove();
         return true;
     }
 
-    /// <summary>Serialize back to text (declaration preserved).</summary>
-    public static string ToXml(XDocument doc) => doc.Declaration + Environment.NewLine + doc.Root;
+    /// <summary>Serialize back to text. Preserves the XML declaration if one is present; returns only the
+    /// root element text when no declaration exists (avoids a leading bare newline).</summary>
+    public static string ToXml(XDocument doc) => CeXml.Serialize(doc);
 }

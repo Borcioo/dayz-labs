@@ -41,12 +41,11 @@ public static class EventsXml
     // Small helpers
     // ------------------------------------------------------------------
 
-    private static int ParseInt(string? raw) =>
-        int.TryParse(raw?.Trim(), out var v) ? v : 0;
+    private static int ParseInt(string? raw) => CeNum.Int(raw);
 
-    private static bool ParseBool(string? raw) => raw?.Trim() == "1";
+    private static bool ParseBool(string? raw) => CeNum.Bool01(raw);
 
-    private static string FormatBool(bool value) => value ? "1" : "0";
+    private static string FormatBool(bool value) => CeNum.Str(value);
 
     private static string Txt(XElement parent, string child) =>
         parent.Element(child)?.Value?.Trim() ?? "";
@@ -114,16 +113,11 @@ public static class EventsXml
     // ------------------------------------------------------------------
 
     /// <summary>Parse XML to an editable document for use with the edit methods.</summary>
-    public static XDocument ParseDoc(string xml) => XDocument.Parse(xml);
+    public static XDocument ParseDoc(string xml) => CeXml.ParseDoc(xml);
 
     /// <summary>Find an <c>&lt;event&gt;</c> element by name (case-insensitive), or null.</summary>
-    private static XElement? FindEvent(XDocument doc, string name)
-    {
-        var root = doc.Root;
-        if (root is null) return null;
-        return root.Elements("event")
-            .FirstOrDefault(e => string.Equals(e.Attribute("name")?.Value, name, StringComparison.OrdinalIgnoreCase));
-    }
+    private static XElement? FindEvent(XDocument doc, string name) =>
+        doc.Root?.Elements("event").ByName(name);
 
     /// <summary>Add a new empty <c>&lt;event name="…"&gt;</c> with default structure. Returns true if added,
     /// false if the name already exists (case-insensitive) or is blank.</summary>
@@ -164,16 +158,8 @@ public static class EventsXml
 
     /// <summary>Rename an event in place (preserves position/children). Returns true if performed; false if
     /// <paramref name="oldName"/> does not exist or <paramref name="newName"/> already exists.</summary>
-    public static bool RenameEvent(XDocument doc, string oldName, string newName)
-    {
-        if (string.IsNullOrWhiteSpace(newName)) return false;
-        var el = FindEvent(doc, oldName);
-        if (el is null) return false;
-        if (!string.Equals(oldName, newName, StringComparison.OrdinalIgnoreCase) &&
-            FindEvent(doc, newName) is not null) return false;
-        el.SetAttributeValue("name", newName);
-        return true;
-    }
+    public static bool RenameEvent(XDocument doc, string oldName, string newName) =>
+        CeXml.RenameByName(doc.Root?.Elements("event") ?? Enumerable.Empty<XElement>(), oldName, newName);
 
     /// <summary>Set an integer scalar child element on an event (creates it if missing). Field names:
     /// nominal|min|max|lifetime|restock|saferadius|distanceradius|cleanupradius. Returns true if the event exists.</summary>
@@ -181,9 +167,7 @@ public static class EventsXml
     {
         var ev = FindEvent(doc, eventName);
         if (ev is null) return false;
-        var el = ev.Element(field);
-        if (el is null) { ev.Add(new XElement(field, value.ToString())); }
-        else { el.Value = value.ToString(); }
+        ev.SetChildValue(field, CeNum.Str(value));
         return true;
     }
 
@@ -204,9 +188,7 @@ public static class EventsXml
     {
         var ev = FindEvent(doc, eventName);
         if (ev is null) return false;
-        var el = ev.Element("position");
-        if (el is null) { ev.Add(new XElement("position", position)); }
-        else { el.Value = position; }
+        ev.SetChildValue("position", position);
         return true;
     }
 
@@ -215,9 +197,7 @@ public static class EventsXml
     {
         var ev = FindEvent(doc, eventName);
         if (ev is null) return false;
-        var el = ev.Element("limit");
-        if (el is null) { ev.Add(new XElement("limit", limit)); }
-        else { el.Value = limit; }
+        ev.SetChildValue("limit", limit);
         return true;
     }
 
@@ -226,9 +206,7 @@ public static class EventsXml
     {
         var ev = FindEvent(doc, eventName);
         if (ev is null) return false;
-        var el = ev.Element("active");
-        if (el is null) { ev.Add(new XElement("active", FormatBool(active))); }
-        else { el.Value = FormatBool(active); }
+        ev.SetChildValue("active", FormatBool(active));
         return true;
     }
 
@@ -247,8 +225,7 @@ public static class EventsXml
         ev.Element("children")?.Elements("child").ToList() ?? new List<XElement>();
 
     private static XElement? FindChild(XElement ev, string type)
-        => ChildElements(ev)
-            .FirstOrDefault(c => string.Equals(c.Attribute("type")?.Value, type, StringComparison.OrdinalIgnoreCase));
+        => ChildElements(ev).ByName(type, "type");
 
     /// <summary>Add a <c>&lt;child&gt;</c> to an event. Returns true if added; false if the event is missing or
     /// a child of the same type already exists (case-insensitive).</summary>
@@ -292,9 +269,7 @@ public static class EventsXml
         if (!string.IsNullOrWhiteSpace(updated.Type) &&
             !string.Equals(updated.Type, type, StringComparison.OrdinalIgnoreCase))
         {
-            var clash = ChildElements(ev)
-                .Any(c => c != el && string.Equals(c.Attribute("type")?.Value, updated.Type, StringComparison.OrdinalIgnoreCase));
-            if (clash) return false;
+            if (ChildElements(ev).ByName(updated.Type, "type", excluding: el) is not null) return false;
             el.SetAttributeValue("type", updated.Type);
         }
         el.SetAttributeValue("lootmax", updated.LootMax);
@@ -306,8 +281,5 @@ public static class EventsXml
 
     /// <summary>Serialize back to text. Preserves the XML declaration if one is present; returns only the
     /// root element text when no declaration exists (avoids a leading bare newline).</summary>
-    public static string ToXml(XDocument doc) =>
-        doc.Declaration is null
-            ? doc.Root!.ToString()
-            : doc.Declaration + Environment.NewLine + doc.Root;
+    public static string ToXml(XDocument doc) => CeXml.Serialize(doc);
 }

@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Xml.Linq;
 
 namespace Dzl.Core.Economy;
@@ -44,11 +43,9 @@ public static class RandomPresetsXml
         _             => null,
     };
 
-    private static double ParseChance(string? raw) =>
-        double.TryParse(raw?.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0.0;
+    private static double ParseChance(string? raw) => CeNum.Dbl(raw);
 
-    private static string FormatChance(double chance) =>
-        chance.ToString(CultureInfo.InvariantCulture);
+    private static string FormatChance(double chance) => CeNum.Str(chance);
 
     // ------------------------------------------------------------------
     // Read-only parse (never-throw)
@@ -89,17 +86,11 @@ public static class RandomPresetsXml
     // ------------------------------------------------------------------
 
     /// <summary>Parse XML to an editable document for use with the edit methods.</summary>
-    public static XDocument ParseDoc(string xml) => XDocument.Parse(xml);
+    public static XDocument ParseDoc(string xml) => CeXml.ParseDoc(xml);
 
     /// <summary>Find a preset element by kind + name (case-insensitive), or null.</summary>
-    private static XElement? FindPreset(XDocument doc, PresetKind kind, string name)
-    {
-        var root = doc.Root;
-        if (root is null) return null;
-        var elementName = ElementName(kind);
-        return root.Elements(elementName)
-            .FirstOrDefault(e => string.Equals(e.Attribute("name")?.Value, name, StringComparison.OrdinalIgnoreCase));
-    }
+    private static XElement? FindPreset(XDocument doc, PresetKind kind, string name) =>
+        doc.Root?.Elements(ElementName(kind)).ByName(name);
 
     /// <summary>Add a new <c>&lt;cargo|attachments name="…" chance="…"&gt;</c> preset (empty item list).
     /// Returns true if added, false if a preset of the same kind + name already exists (case-insensitive).</summary>
@@ -125,16 +116,8 @@ public static class RandomPresetsXml
 
     /// <summary>Rename a preset in place (preserves position/items). Returns true if performed; false if
     /// <paramref name="oldName"/> does not exist or <paramref name="newName"/> already exists for the kind.</summary>
-    public static bool RenamePreset(XDocument doc, PresetKind kind, string oldName, string newName)
-    {
-        if (string.IsNullOrWhiteSpace(newName)) return false;
-        var el = FindPreset(doc, kind, oldName);
-        if (el is null) return false;
-        if (!string.Equals(oldName, newName, StringComparison.OrdinalIgnoreCase) &&
-            FindPreset(doc, kind, newName) is not null) return false;
-        el.SetAttributeValue("name", newName);
-        return true;
-    }
+    public static bool RenamePreset(XDocument doc, PresetKind kind, string oldName, string newName) =>
+        CeXml.RenameByName(doc.Root?.Elements(ElementName(kind)) ?? Enumerable.Empty<XElement>(), oldName, newName);
 
     /// <summary>Set a preset's <c>chance</c> attribute. Returns true if the preset exists.</summary>
     public static bool SetPresetChance(XDocument doc, PresetKind kind, string name, double chance)
@@ -152,9 +135,7 @@ public static class RandomPresetsXml
         if (string.IsNullOrWhiteSpace(itemName)) return false;
         var preset = FindPreset(doc, kind, presetName);
         if (preset is null) return false;
-        var exists = preset.Elements("item")
-            .Any(e => string.Equals(e.Attribute("name")?.Value, itemName, StringComparison.OrdinalIgnoreCase));
-        if (exists) return false;
+        if (preset.Elements("item").ByName(itemName) is not null) return false;
         preset.Add(new XElement("item",
             new XAttribute("name", itemName),
             new XAttribute("chance", FormatChance(chance))));
@@ -166,8 +147,7 @@ public static class RandomPresetsXml
     {
         var preset = FindPreset(doc, kind, presetName);
         if (preset is null) return false;
-        var el = preset.Elements("item")
-            .FirstOrDefault(e => string.Equals(e.Attribute("name")?.Value, itemName, StringComparison.OrdinalIgnoreCase));
+        var el = preset.Elements("item").ByName(itemName);
         if (el is null) return false;
         el.Remove();
         return true;
@@ -181,16 +161,13 @@ public static class RandomPresetsXml
     {
         var preset = FindPreset(doc, kind, presetName);
         if (preset is null) return false;
-        var el = preset.Elements("item")
-            .FirstOrDefault(e => string.Equals(e.Attribute("name")?.Value, itemName, StringComparison.OrdinalIgnoreCase));
+        var el = preset.Elements("item").ByName(itemName);
         if (el is null) return false;
 
         if (!string.IsNullOrWhiteSpace(newName) &&
             !string.Equals(newName, itemName, StringComparison.OrdinalIgnoreCase))
         {
-            var clash = preset.Elements("item")
-                .Any(e => e != el && string.Equals(e.Attribute("name")?.Value, newName, StringComparison.OrdinalIgnoreCase));
-            if (clash) return false;
+            if (preset.Elements("item").ByName(newName!, excluding: el) is not null) return false;
             el.SetAttributeValue("name", newName);
         }
         el.SetAttributeValue("chance", FormatChance(chance));
@@ -199,8 +176,5 @@ public static class RandomPresetsXml
 
     /// <summary>Serialize back to text. Preserves the XML declaration if one is present; returns only the
     /// root element text when no declaration exists (avoids a leading bare newline).</summary>
-    public static string ToXml(XDocument doc) =>
-        doc.Declaration is null
-            ? doc.Root!.ToString()
-            : doc.Declaration + Environment.NewLine + doc.Root;
+    public static string ToXml(XDocument doc) => CeXml.Serialize(doc);
 }

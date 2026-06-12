@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Xml.Linq;
 
 namespace Dzl.Core.Economy;
@@ -44,11 +43,9 @@ public static class PlayerSpawnsXml
     /// <summary>The three param-bag section names, in canonical order.</summary>
     public static readonly string[] Sections = { "spawn_params", "generator_params", "group_params" };
 
-    private static double ParseDouble(string? raw) =>
-        double.TryParse(raw?.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0.0;
+    private static double ParseDouble(string? raw) => CeNum.Dbl(raw);
 
-    private static string FormatDouble(double value) =>
-        value.ToString(CultureInfo.InvariantCulture);
+    private static string FormatDouble(double value) => CeNum.Str(value);
 
     // ------------------------------------------------------------------
     // Read-only parse (never-throw)
@@ -113,7 +110,7 @@ public static class PlayerSpawnsXml
     // ------------------------------------------------------------------
 
     /// <summary>Parse XML to an editable document for use with the edit methods.</summary>
-    public static XDocument ParseDoc(string xml) => XDocument.Parse(xml);
+    public static XDocument ParseDoc(string xml) => CeXml.ParseDoc(xml);
 
     private static XElement? FindCategory(XDocument doc, string category)
     {
@@ -128,8 +125,7 @@ public static class PlayerSpawnsXml
            .FirstOrDefault(e => string.Equals(e.Name.LocalName, container, StringComparison.OrdinalIgnoreCase));
 
     private static XElement? FindGroup(XElement container, string groupName) =>
-        container.Elements("group")
-                 .FirstOrDefault(g => string.Equals(g.Attribute("name")?.Value, groupName, StringComparison.OrdinalIgnoreCase));
+        container.Elements("group").ByName(groupName);
 
     /// <summary>Upsert a scalar param element (<paramref name="name"/> = <paramref name="value"/>) inside the
     /// given section of a category. Creates the section if it is missing (under an existing category). Returns
@@ -184,17 +180,11 @@ public static class PlayerSpawnsXml
     /// group does not exist or the new name clashes with another group in the same container.</summary>
     public static bool RenameGroup(XDocument doc, string category, string container, string oldName, string newName)
     {
-        if (string.IsNullOrWhiteSpace(newName)) return false;
         var cat = FindCategory(doc, category);
         if (cat is null) return false;
         var cont = FindContainer(cat, container);
         if (cont is null) return false;
-        var g = FindGroup(cont, oldName);
-        if (g is null) return false;
-        if (!string.Equals(oldName, newName, StringComparison.OrdinalIgnoreCase) &&
-            FindGroup(cont, newName) is not null) return false;
-        g.SetAttributeValue("name", newName);
-        return true;
+        return CeXml.RenameByName(cont.Elements("group"), oldName, newName);
     }
 
     /// <summary>Append a <c>&lt;pos x z/&gt;</c> to a group. Returns true if the group exists.</summary>
@@ -244,8 +234,5 @@ public static class PlayerSpawnsXml
 
     /// <summary>Serialize back to text. Preserves the XML declaration if one is present; returns only the
     /// root element text when no declaration exists (avoids a leading bare newline).</summary>
-    public static string ToXml(XDocument doc) =>
-        doc.Declaration is null
-            ? doc.Root!.ToString()
-            : doc.Declaration + Environment.NewLine + doc.Root;
+    public static string ToXml(XDocument doc) => CeXml.Serialize(doc);
 }

@@ -87,7 +87,7 @@ public static class LimitsUserXml
     // ------------------------------------------------------------------
 
     /// <summary>Parse XML to an editable document for use with the edit methods.</summary>
-    public static XDocument ParseDoc(string xml) => XDocument.Parse(xml);
+    public static XDocument ParseDoc(string xml) => CeXml.ParseDoc(xml);
 
     /// <summary>Ensure the document has a root <c>&lt;user_lists&gt;</c> element (creates one if absent)
     /// and return it.</summary>
@@ -131,9 +131,7 @@ public static class LimitsUserXml
         var section = GetOrCreateSection(doc, kind);
 
         // Remove existing group with same name (case-insensitive).
-        var existing = section.Elements("user")
-            .FirstOrDefault(e => string.Equals(e.Attribute("name")?.Value, name, StringComparison.OrdinalIgnoreCase));
-        existing?.Remove();
+        section.Elements("user").ByName(name)?.Remove();
 
         var user = new XElement("user", new XAttribute("name", name));
         foreach (var m in members)
@@ -149,8 +147,7 @@ public static class LimitsUserXml
         var userLists = GetOrCreateUserLists(doc);
         var section = userLists.Element(containerName);
         if (section is null) return false;
-        var el = section.Elements("user")
-            .FirstOrDefault(e => string.Equals(e.Attribute("name")?.Value, name, StringComparison.OrdinalIgnoreCase));
+        var el = section.Elements("user").ByName(name);
         if (el is null) return false;
         el.Remove();
         return true;
@@ -164,8 +161,7 @@ public static class LimitsUserXml
         var (containerName, memberElem, _) = SectionFor(kind);
         var userLists = GetOrCreateUserLists(doc);
         var section = userLists.Element(containerName);
-        XElement? user = section?.Elements("user")
-            .FirstOrDefault(e => string.Equals(e.Attribute("name")?.Value, name, StringComparison.OrdinalIgnoreCase));
+        var user = section?.Elements("user").ByName(name);
 
         if (user is null)
         {
@@ -183,8 +179,5 @@ public static class LimitsUserXml
 
     /// <summary>Serialize back to text. Preserves the XML declaration if one is present;
     /// returns only the root element text when no declaration exists (avoids a leading bare newline).</summary>
-    public static string ToXml(XDocument doc) =>
-        doc.Declaration is null
-            ? doc.Root!.ToString()
-            : doc.Declaration + Environment.NewLine + doc.Root;
+    public static string ToXml(XDocument doc) => CeXml.Serialize(doc);
 }
