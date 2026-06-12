@@ -46,6 +46,14 @@ public class TypesXmlTests
     }
 
     [Fact]
+    public void Parse_with_sourceFile_stamps_every_entry()
+    {
+        TypesXml.Parse(Sample, @"C:\mission\db\types.xml")
+            .Should().OnlyContain(t => t.SourceFile == @"C:\mission\db\types.xml");
+        TypesXml.Parse(Sample).Should().OnlyContain(t => t.SourceFile == "");
+    }
+
+    [Fact]
     public void Upsert_updates_in_place_and_preserves_the_comment()
     {
         var doc = TypesXml.ParseDoc(Sample);

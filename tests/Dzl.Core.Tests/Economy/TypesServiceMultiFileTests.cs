@@ -228,6 +228,68 @@ public class TypesServiceMultiFileTests
         File.Exists(cwdStray).Should().BeFalse(because: "Set must never create files in CWD");
     }
 
+    /// <summary>Set on an EXISTING type must write back to the file it lives in (the mod file),
+    /// leaving the vanilla file byte-for-byte untouched.</summary>
+    [Fact]
+    public void Set_existing_type_updates_its_own_file_and_not_vanilla()
+    {
+        var (configPath, missionDir) = Scaffold();
+        var svc = new TypesService(configPath);
+
+        var result = svc.Set("AKM", nominal: 99);
+        result.Ok.Should().BeTrue(because: result.Message);
+        result.Message.Should().Contain("updated");
+
+        var reloaded = new TypesService(configPath).List();
+        var akm = reloaded.Should().ContainSingle(t => t.Name == "AKM").Subject;
+        akm.Nominal.Should().Be(99);
+        akm.SourceFile.Should().EndWith("mymod_types.xml");
+
+        var vanilla = File.ReadAllText(Path.Combine(missionDir, "db", "types.xml"));
+        vanilla.Should().Contain("vanilla keep-me comment");
+        vanilla.Should().NotContain("AKM");
+    }
+
+    /// <summary>An existing type wins over the file parameter (and matches case-insensitively):
+    /// Set("akm", file: "types.xml") must update the mod file's AKM, not add "akm" to vanilla.</summary>
+    [Fact]
+    public void Set_existing_type_is_case_insensitive_and_overrides_file_param()
+    {
+        var (configPath, missionDir) = Scaffold();
+        var svc = new TypesService(configPath);
+
+        svc.Set("akm", nominal: 11, file: "types.xml").Ok.Should().BeTrue();
+
+        var reloaded = new TypesService(configPath).List();
+        var akm = reloaded.Should().ContainSingle(t => t.Name.Equals("AKM", StringComparison.OrdinalIgnoreCase)).Subject;
+        akm.Nominal.Should().Be(11);
+        akm.SourceFile.Should().EndWith("mymod_types.xml");
+
+        File.ReadAllText(Path.Combine(missionDir, "db", "types.xml"))
+            .Should().NotContainEquivalentOf("akm");
+    }
+
+    /// <summary>A NEW type without a file parameter lands in the primary (vanilla) file, never in a
+    /// mod file.</summary>
+    [Fact]
+    public void Set_new_type_without_file_lands_in_primary()
+    {
+        var (configPath, missionDir) = Scaffold();
+        var svc = new TypesService(configPath);
+
+        var result = svc.Set("BrandNewThing", nominal: 4);
+        result.Ok.Should().BeTrue(because: result.Message);
+        result.Message.Should().Contain("added");
+
+        var found = new TypesService(configPath).List()
+            .Should().ContainSingle(t => t.Name == "BrandNewThing").Subject;
+        found.SourceFile.Replace('/', '\\')
+            .Should().Be(Path.Combine(missionDir, "db", "types.xml").Replace('/', '\\'));
+
+        File.ReadAllText(Path.Combine(missionDir, "ce", "MyMod", "mymod_types.xml"))
+            .Should().NotContain("BrandNewThing");
+    }
+
     /// <summary>M4 — Remove("AKM") touches only the mod file; the vanilla file is left completely
     /// unchanged (Apple survives, keep-me comment survives).</summary>
     [Fact]

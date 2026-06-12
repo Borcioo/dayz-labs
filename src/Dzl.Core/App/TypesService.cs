@@ -88,10 +88,10 @@ public sealed class TypesService
         foreach (var fileRef in ResolveTypesFiles())
         {
             List<TypeEntry> entries;
-            try { entries = TypesXml.Parse(File.ReadAllText(fileRef.Path)); }
+            try { entries = TypesXml.Parse(File.ReadAllText(fileRef.Path), fileRef.Path); }
             catch { continue; }   // skip the bad file
             foreach (var e in entries)
-                rows.Add(new TypeRow(e with { SourceFile = fileRef.Path }, fileRef.Origin, fileRef.ModSource));
+                rows.Add(new TypeRow(e, fileRef.Origin, fileRef.ModSource));
         }
         return rows;
     }
@@ -174,40 +174,58 @@ public sealed class TypesService
         if (string.IsNullOrWhiteSpace(name)) return new(false, "type name required");
 
         var (resolved, primary) = ResolveAll();   // I1: resolve once
-        var existing = Rows().FirstOrDefault(r => string.Equals(r.Entry.Name, name, StringComparison.OrdinalIgnoreCase));
+
+        // Locate an existing entry with a cheap XElement probe over the resolved files, in resolved
+        // order (first file containing the name wins, same as the old Rows()-based lookup) — no
+        // TypeEntry materialization. Each parsed doc is kept so the edit below reuses it instead of
+        // re-reading the target file. Malformed files are skipped here exactly like Rows() skips them;
+        // if one of them ends up as the write target, ParseDoc in the edit reports the error.
+        var probed = new Dictionary<string, XDocument>(StringComparer.OrdinalIgnoreCase);
+        string? target = null;
+        XElement? el = null;
+        foreach (var fileRef in resolved)
+        {
+            XDocument candidate;
+            try { candidate = TypesXml.ParseDoc(File.ReadAllText(fileRef.Path)); }
+            catch { continue; }   // skip the bad file
+            probed[fileRef.Path] = candidate;
+            var match = candidate.Root?.Elements("type").ByName(name);
+            if (match is null) continue;
+            target = fileRef.Path;
+            el = match;
+            break;
+        }
 
         // Resolve the target write path:
-        //   1. Existing type → write back to the file it came from.
+        //   1. Existing type (found above) → write back to the file it came from.
         //   2. file param given → match it against the resolved CE file list (by basename or full path)
         //      so a basename like "mymod_types.xml" lands in the real CE-registered file, not CWD.
         //   3. Fall back to the primary types file.
-        string? target;
-        if (existing is not null)
+        if (target is null)
         {
-            target = existing.Entry.SourceFile;
-        }
-        else if (!string.IsNullOrEmpty(file))
-        {
-            // Try to match against a resolved CE file path.
-            var matched = resolved.FirstOrDefault(r =>
-                Path.GetFileName(r.Path).Equals(file, StringComparison.OrdinalIgnoreCase) ||
-                r.Path.Equals(file, StringComparison.OrdinalIgnoreCase));
-            target = matched?.Path ?? primary;
-        }
-        else
-        {
-            target = primary;
+            if (!string.IsNullOrEmpty(file))
+            {
+                // Try to match against a resolved CE file path.
+                var matched = resolved.FirstOrDefault(r =>
+                    Path.GetFileName(r.Path).Equals(file, StringComparison.OrdinalIgnoreCase) ||
+                    r.Path.Equals(file, StringComparison.OrdinalIgnoreCase));
+                target = matched?.Path ?? primary;
+            }
+            else
+            {
+                target = primary;
+            }
         }
 
         if (string.IsNullOrEmpty(target)) return new(false, "no types.xml for the active server's mission");
 
         try
         {
-            var doc = File.Exists(target)
-                ? TypesXml.ParseDoc(File.ReadAllText(target))
-                : new XDocument(new XDeclaration("1.0", "UTF-8", null), new XElement("types"));
-            var el = doc.Root!.Elements("type")
-                .FirstOrDefault(t => string.Equals(t.Attribute("name")?.Value, name, StringComparison.OrdinalIgnoreCase));
+            var doc = probed.TryGetValue(target, out var reused)
+                ? reused
+                : File.Exists(target)
+                    ? TypesXml.ParseDoc(File.ReadAllText(target))
+                    : new XDocument(new XDeclaration("1.0", "UTF-8", null), new XElement("types"));
             var cur = el != null ? TypesXml.ReadType(el) : new TypeEntry { Name = name };
             var merged = cur with
             {

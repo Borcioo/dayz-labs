@@ -51,13 +51,16 @@ public static class TypesXml
     private static List<string> NamedChildren(XElement type, string child) =>
         type.Elements(child).Select(e => e.Attribute("name")?.Value.Trim() ?? "").Where(s => s.Length > 0).ToList();
 
-    /// <summary>Read one <c>&lt;type&gt;</c> element into a <see cref="TypeEntry"/>.</summary>
-    public static TypeEntry ReadType(XElement type)
+    /// <summary>Read one <c>&lt;type&gt;</c> element into a <see cref="TypeEntry"/>, optionally
+    /// stamping <see cref="TypeEntry.SourceFile"/> at construction (cheaper than a post-hoc
+    /// <c>with</c> clone per entry when reading 20k+ types).</summary>
+    public static TypeEntry ReadType(XElement type, string sourceFile = "")
     {
         var flags = type.Element("flags");
         return new TypeEntry
         {
             Name = type.Attribute("name")?.Value.Trim() ?? "",
+            SourceFile = sourceFile,
             Nominal = IntVal(type, "nominal", 0),
             Min = IntVal(type, "min", 0),
             Lifetime = IntVal(type, "lifetime", 0),
@@ -82,10 +85,15 @@ public static class TypesXml
     }
 
     /// <summary>Parse types.xml text into entries (pure). Throws on malformed XML — callers catch.</summary>
-    public static List<TypeEntry> Parse(string xml)
+    public static List<TypeEntry> Parse(string xml) => Parse(xml, "");
+
+    /// <summary>Like <see cref="Parse(string)"/> but stamps every entry's
+    /// <see cref="TypeEntry.SourceFile"/> during the read, avoiding a per-entry clone.</summary>
+    public static List<TypeEntry> Parse(string xml, string sourceFile)
     {
         var doc = XDocument.Parse(xml);
-        return (doc.Root?.Elements("type") ?? Enumerable.Empty<XElement>()).Select(ReadType).ToList();
+        return (doc.Root?.Elements("type") ?? Enumerable.Empty<XElement>())
+            .Select(t => ReadType(t, sourceFile)).ToList();
     }
 
     /// <summary>Parse to an editable document (for in-place edits then <see cref="ToXml"/>).</summary>
