@@ -25,5 +25,5 @@ public static class PipeClient
         catch (IOException) { return null; }
     }
 
-    public static bool IsServerUp(string? pipeName = null) => Send(new IpcRequest("status", null), pipeName: pipeName) is not null;
+    public static bool IsServerUp(string? pipeName = null) => Send(new IpcRequest(IpcMethods.Status, null), pipeName: pipeName) is not null;
 }

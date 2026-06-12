@@ -88,6 +88,13 @@ public static partial class ProjectPaths
     public static string JunctionPath(string? workDriveSource, string mod) =>
         Path.Combine(string.IsNullOrWhiteSpace(workDriveSource) ? @"P:\" : workDriveSource!, mod);
 
+    /// <summary>The junction anchor for a mod resolved straight from config — the one helper every
+    /// frontend should use. Anchors on the work-drive source when detectable (survives P: unmounts);
+    /// falls back to <c>P:\</c>. Composing this per-frontend caused drift: MCP hardcoded the P:\
+    /// anchor while the CLI anchored on the source.</summary>
+    public static string ResolveJunctionAnchor(Config.DzlConfig cfg, string mod) =>
+        JunctionPath(Env.EnvDetect.WorkDriveSource(cfg.WorkDriveSource, cfg.DayzToolsPath), mod);
+
     /// <summary>The <b>P:</b> path the engine/toolchain addresses a built mod by (<c>P:\Mods\@&lt;Mod&gt;</c>).</summary>
     public static string BuildLink(string mod) => Path.Combine(@"P:\Mods", "@" + mod);
 

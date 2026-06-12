@@ -3,6 +3,7 @@ using System.Text.Json;
 using Dzl.Core.App;
 using Dzl.Core.Config;
 using Dzl.Core.Env;
+using Dzl.Core.Ipc;
 using Dzl.Core.Projects;
 using Dzl.Core.Tools;
 using ModelContextProtocol.Server;
@@ -16,25 +17,29 @@ public static class DzlMcpTools
         Environment.GetEnvironmentVariable("DZL_CONFIG")
         ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "dzl", "config.json");
 
+    // Routed launcher ops go through ControlPlane so a running tray (with the automation pipe up)
+    // stays the live authority — direct LauncherService calls here would race its process state.
+    private static ControlPlane Cp() => new(ConfigPath());
     private static LauncherService Svc() => new(ConfigPath());
+    private static DzlConfig Cfg() => Profiles.ResolveActive(ConfigPath()).cfg;
     private static string J(object o) => JsonSerializer.Serialize(o, ConfigStore.Json);
 
     [McpServerTool, Description("Get running state, mode, port, active profile, paths, enabled mods and newest log files.")]
-    public static string Status() => J(Svc().Status());
+    public static string Status() => Cp().StatusJson();
 
     [McpServerTool, Description("List the enabled mods (path + side) of the active profile.")]
-    public static string ListMods() => J(Svc().Mods());
+    public static string ListMods() => Cp().ModsJson();
 
     [McpServerTool, Description("List profiles/presets; the active one is flagged.")]
-    public static string ListPresets() => J(Svc().Presets());
+    public static string ListPresets() => Cp().PresetsJson();
 
     [McpServerTool, Description("Switch the active profile by name.")]
-    public static string SetPreset([Description("Preset name")] string name) => J(Svc().SetPreset(name));
+    public static string SetPreset([Description("Preset name")] string name) => Cp().SetPresetJson(name);
 
     [McpServerTool, Description("Read the last N lines of a log: script|rpt|adm|client.")]
     public static string Logs([Description("script|rpt|adm|client")] string which,
                               [Description("How many trailing lines")] int lines = 50)
-        => J(Svc().Logs(which, lines));
+        => Cp().LogsJson(which, lines);
 
     [McpServerTool, Description("Diagnose a DayZ log tail for known failure signatures: verification kicks (VE_MISSING_BISIGN, VE_PATCHED_PBO, mod version skew, filePatching mismatch) and build-tool symptoms. Returns cause→fix entries; empty list = nothing recognized.")]
     public static string DiagnoseLogs([Description("script|rpt|adm|client")] string which = "client",
@@ -50,13 +55,13 @@ public static class DzlMcpTools
     [McpServerTool, Description("Start the server (and optionally the client). mode = debug|normal.")]
     public static string Start([Description("debug|normal")] string mode = "debug",
                                [Description("also start the client")] bool client = false)
-        => J(Svc().Start(mode, client, "mcp"));
+        => Cp().StartJson(mode, client, "mcp");
 
     [McpServerTool, Description("Stop the server (and optionally the client).")]
-    public static string Stop([Description("also stop the client")] bool client = false) => J(Svc().Stop(client, "mcp"));
+    public static string Stop([Description("also stop the client")] bool client = false) => Cp().StopJson(client);
 
     [McpServerTool, Description("Restart the server. mode = debug|normal.")]
-    public static string Restart([Description("debug|normal")] string mode = "debug") => J(Svc().Restart(mode, "mcp"));
+    public static string Restart([Description("debug|normal")] string mode = "debug") => Cp().RestartJson(mode, "mcp");
 
     // --- DayZ Tools ---
 
@@ -294,7 +299,7 @@ public static class DzlMcpTools
 
     [McpServerTool, Description("Activate a server instance by name (switches the active preset).")]
     public static string UseServer([Description("Server instance / preset name")] string name)
-        => J(Svc().SetPreset(name));
+        => Cp().SetPresetJson(name);
 
     [McpServerTool, Description("Check/mount/unmount the P: work drive. action = status|mount|unmount.")]
     public static string WorkDriveAction([Description("status|mount|unmount")] string action)
@@ -329,7 +334,7 @@ public static class DzlMcpTools
         var scaffold = ModScaffold.Scaffold(root, name, resolvedAuthor);
         if (author is not null) ModScaffold.SaveAuthor(configDir, author);
         var link = scaffold.Ok
-            ? Junction.Ensure(ProjectPaths.WorkDriveLink(name), ProjectPaths.ModDir(root, name))
+            ? Junction.Ensure(ProjectPaths.ResolveJunctionAnchor(Cfg(), name), ProjectPaths.ModDir(root, name))
             : null;
         return J(new { scaffold, link });
     }
@@ -337,15 +342,24 @@ public static class DzlMcpTools
     [McpServerTool, Description("Import an existing mod source folder into ProjectsRoot and link it on P:.")]
     public static string ImportMod([Description("Path to the existing mod source folder")] string path,
                                    [Description("Override the mod name (defaults to folder name)")] string? name = null)
-        => J(ModImport.Import(ProjectsRoot(), path, name));
+    {
+        var cfg = Cfg();
+        return J(ModImport.Import(ProjectsRoot(), path, name,
+            EnvDetect.WorkDriveSource(cfg.WorkDriveSource, cfg.DayzToolsPath)));
+    }
 
     [McpServerTool, Description("Create or repair the P:\\ junction for a mod source project.")]
     public static string LinkMod([Description("Mod name")] string name)
     {
         var root = ProjectsRoot();
-        return J(Junction.Ensure(ProjectPaths.WorkDriveLink(name), ProjectPaths.ModDir(root, name)));
+        return J(Junction.Ensure(ProjectPaths.ResolveJunctionAnchor(Cfg(), name), ProjectPaths.ModDir(root, name)));
     }
 
     [McpServerTool, Description("List mod source projects under ProjectsRoot with their P: link state.")]
-    public static string ListModProjects() => J(ModProjects.Discover(ProjectsRoot()));
+    public static string ListModProjects()
+    {
+        var cfg = Cfg();
+        return J(ModProjects.Discover(ProjectsRoot(),
+            EnvDetect.WorkDriveSource(cfg.WorkDriveSource, cfg.DayzToolsPath)));
+    }
 }

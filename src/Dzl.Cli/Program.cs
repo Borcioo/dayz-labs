@@ -146,10 +146,10 @@ logsCmd.SetHandler(ctx =>
     if (diagnose)
     {
         var tail = string.Join('\n', LogTail.LastLines(path, lines ?? 500));
-        var diags = Dzl.Core.Build.BuildDiagnostics.DiagnoseKick(tail);
+        var diags = Dzl.Core.Build.BuildDiagnostics.DiagnoseAll(tail);
         Console.WriteLine(diags.Count > 0
             ? Dzl.Core.Build.BuildDiagnostics.Format(diags)
-            : "no known kick/verification signatures in the tail");
+            : "no known kick/verification or build-tool signatures in the tail");
         return;
     }
     if (lines is int n)
@@ -702,7 +702,8 @@ importCmd.SetHandler(ctx =>
     var (cfg, _, _, _) = Resolve(ctx);
     var path = ctx.ParseResult.GetValueForArgument(importPathArg);
     var name = ctx.ParseResult.GetValueForOption(importNameOpt);
-    var result = ModImport.Import(ProjectPaths.Root(cfg), path, name);
+    var result = ModImport.Import(ProjectPaths.Root(cfg), path, name,
+        EnvDetect.WorkDriveSource(cfg.WorkDriveSource, cfg.DayzToolsPath));
     Console.WriteLine(result.Message);
     if (!result.Ok) ctx.ExitCode = 1;
 });

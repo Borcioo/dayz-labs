@@ -90,6 +90,17 @@ public static class BuildDiagnostics
     public static List<Diagnosis> DiagnoseKick(string logText) =>
         Match(logText, KickPatterns);
 
+    /// <summary>Full log diagnosis: verification kicks + build-tool symptoms in one pass. The one
+    /// entry point both frontends call — CLI <c>--diagnose</c> used to run only the kick half of
+    /// what the MCP tool reported.</summary>
+    public static List<Diagnosis> DiagnoseAll(string logText)
+    {
+        var result = Match(logText, KickPatterns);
+        foreach (var d in Match(logText, BuildPatterns))
+            if (!result.Contains(d)) result.Add(d);
+        return result;
+    }
+
     private static List<Diagnosis> Match(string logText, Pattern[] patterns)
     {
         var result = new List<Diagnosis>();

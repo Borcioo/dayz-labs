@@ -49,7 +49,7 @@ routed MCP tools switch from `LauncherService` direct to `ControlPlane`.
 5. **IPC/frontends**: `IpcMethods` table; ControlPlane + IpcDispatcher consume it;
    MCP via ControlPlane; junction anchor helper (fixes MCP drift);
    `BuildDiagnostics.DiagnoseAll` (CLI --diagnose was running half of MCP's
-   diagnostics); `DzlJson` consolidation of 5 serializer options + 3 J() helpers.
+   diagnostics).
 6. **Tray low-risk**: Workshop browse generation guard (race), `_logCts.Dispose()`
    removal (documented contradiction), LoadGitStatusesAsync generation guard.
 
@@ -69,6 +69,9 @@ routed MCP tools switch from `LauncherService` direct to `ControlPlane`.
 - Converter consolidation (BoolToBrush, BrushUtil.Freeze ×4).
 - Enum-as-string in ConfigStore.Json (visible output change — needs intent).
 - CLI Program.cs split into Commands/*.cs + CliOut helpers.
+- `DzlJson` consolidation of the 5 serializer-options instances + 3 J() helpers
+  (near-zero risk but wide churn; IpcContract.Json must stay non-indented —
+  line-framed pipe protocol).
 
 ## Constraints honored
 

@@ -6,7 +6,7 @@ public sealed record ImportResult(bool Ok, string ModDir, string Message);
 /// then link P:\&lt;Name&gt;. Refuses UNC sources and invalid names.</summary>
 public static class ModImport
 {
-    public static ImportResult Import(string root, string source, string? name = null)
+    public static ImportResult Import(string root, string source, string? name = null, string? workDriveSource = null)
     {
         if (string.IsNullOrWhiteSpace(source) || !Directory.Exists(source))
             return new ImportResult(false, "", $"source not found: {source}");
@@ -19,7 +19,7 @@ public static class ModImport
         var modDir = ProjectPaths.ModDir(root, modName);
         var linkInProjects = Junction.Ensure(modDir, System.IO.Path.GetFullPath(source));
         if (!linkInProjects.Ok) return new ImportResult(false, modDir, $"link into ProjectsRoot failed: {linkInProjects.Detail}");
-        var pLink = Junction.Ensure(ProjectPaths.WorkDriveLink(modName), modDir);
+        var pLink = Junction.Ensure(ProjectPaths.JunctionPath(workDriveSource, modName), modDir);
         if (!pLink.Ok) return new ImportResult(false, modDir, $"P:\\ link failed: {pLink.Detail}");
         return new ImportResult(true, modDir, "imported");
     }
