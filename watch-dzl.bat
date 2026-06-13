@@ -16,13 +16,15 @@ REM
 REM  Stop with Ctrl+C in this console window.
 REM ============================================================================
 setlocal
-set "ROOT=%~dp0"
-set "PROJ=%ROOT%src\Dzl.Tray\Dzl.Tray.csproj"
-REM Auto-restart on "rude" edits (new controls, changed signatures) instead of prompting.
 set "DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1"
+REM Run from the project folder so `dotnet watch run` resolves the single csproj
+REM unambiguously and scopes its file watching to the project (not the repo root /
+REM obj output) — running with --project from elsewhere made the rebuild fail with
+REM MSB1011 and pick up obj\App.g.cs.
+cd /d "%~dp0src\Dzl.Tray"
 
 echo [dzl] Hot Reload watch — edit .xaml / .cs and save to apply changes live.
 echo [dzl] Ctrl+C here to stop.
 echo.
-dotnet watch --project "%PROJ%" run
+dotnet watch run
 endlocal
