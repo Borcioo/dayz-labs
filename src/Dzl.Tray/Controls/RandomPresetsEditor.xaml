@@ -265,13 +265,30 @@
             </Grid.ColumnDefinitions>
             <!-- Editable autocomplete: substring-search item classnames from types.xml (free text still
                  allowed — preset items may reference classes outside the economy). We filter ItemSuggestions
-                 in the VM, so the combo's own text-search is off. -->
-            <ComboBox Grid.Column="0" Margin="0,0,4,0" FontSize="12" x:Name="ItemNameCombo"
-                      IsEditable="True" StaysOpenOnEdit="True" IsTextSearchEnabled="False"
-                      ItemsSource="{Binding ItemSuggestions}"
-                      Text="{Binding NewItemName, UpdateSourceTrigger=PropertyChanged}"
-                      ToolTip="Type to search item classnames (from types.xml) — free text allowed"
-                      KeyUp="OnItemComboKeyUp" SelectionChanged="OnItemComboSelectionChanged" />
+                 in the VM, so the combo's own text-search is off. An editable ComboBox has no native
+                 placeholder, so a hint TextBlock is overlaid while the text is empty. -->
+            <Grid Grid.Column="0" Margin="0,0,4,0">
+              <ComboBox FontSize="12" x:Name="ItemNameCombo"
+                        IsEditable="True" StaysOpenOnEdit="True" IsTextSearchEnabled="False"
+                        ItemsSource="{Binding ItemSuggestions}"
+                        Text="{Binding NewItemName, UpdateSourceTrigger=PropertyChanged}"
+                        ToolTip="Type to search item classnames (from types.xml) — free text allowed"
+                        KeyUp="OnItemComboKeyUp" SelectionChanged="OnItemComboSelectionChanged" />
+              <TextBlock Text="search item classname (e.g. TunaCan)" IsHitTestVisible="False"
+                         VerticalAlignment="Center" Margin="9,0,0,0" FontSize="12"
+                         Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding NewItemName}" Value="">
+                        <Setter Property="Visibility" Value="Visible" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
+            </Grid>
             <ctl:ChanceField Grid.Column="1" Margin="0,0,4,0" VerticalAlignment="Stretch" MinHeight="32"
                              Value="{Binding NewItemChanceValue, Mode=TwoWay}" />
             <ui:Button Grid.Column="2" Content="Add item" Click="OnAddItemClick" />
