@@ -106,10 +106,37 @@ public partial class ChanceField : UserControl
         var c = (ChanceField)d;
         if (e.Property == DecimalsProperty) { c.CoerceValue(ValueProperty); return; } // re-round; its own change re-runs this
         c.UpdateDisplay();
-        // The slider / number box live in the popup's own namescope and edit Value via ElementName; that write
-        // does NOT reliably flow back to the bound source (item.Chance, EditChanceValue, …). Force it so every
-        // consumer — grid cells AND standalone fields read on Apply/Add — sees the current value.
+        c.SyncEntryFromValue(); // keep the popup entry in step with the slider (skipped while the user is typing)
+        // The slider / entry live in the popup's own namescope and edit Value via ElementName / TextChanged;
+        // that write does NOT reliably flow back to the bound source (item.Chance, EditChanceValue, …). Force
+        // it so every consumer — grid cells AND standalone fields read on Apply/Add — sees the current value.
         BindingOperations.GetBindingExpression(c, ValueProperty)?.UpdateSource();
+    }
+
+    // Live two-way between the entry text and Value, without a binding (a converter binding rewrites the box
+    // mid-keystroke and eats the decimal point). _syncing breaks the echo: typing sets Value (moving the
+    // slider) without rewriting the box; a slider/external Value change rewrites the box but doesn't re-parse.
+    private bool _syncing;
+
+    private void SyncEntryFromValue()
+    {
+        if (_syncing || Num is null) return;
+        _syncing = true;
+        Num.Text = Value.ToString("0.###", CultureInfo.InvariantCulture);
+        _syncing = false;
+    }
+
+    private void OnEntryTextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_syncing) return;
+        var s = Num.Text.Replace(',', '.').Trim();
+        if (s.Length == 0) return;
+        if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
+        {
+            _syncing = true;
+            Value = d; // coercion clamps + rounds; moves the slider; pushes to the bound source
+            _syncing = false;
+        }
     }
 
     private void UpdateDisplay()
@@ -144,11 +171,8 @@ public partial class ChanceField : UserControl
         if (!System.Text.RegularExpressions.Regex.IsMatch(text, @"^[0-9]*[.,]?[0-9]*$")) e.CancelCommand();
     }
 
-    // After the entry commits on focus loss, Value may have been clamped (min/max) or rounded; re-display so
-    // the box shows that result (e.g. typing 5 with Max=1 settles to "1") and comma normalizes to a dot.
-    private void OnEntryLostFocus(object sender, RoutedEventArgs e) =>
-        Dispatcher.BeginInvoke(new Action(() => Num.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget()),
-            System.Windows.Threading.DispatcherPriority.Background);
+    // On focus loss, re-display the canonical value: clamp (min/max), Decimals rounding, comma→dot.
+    private void OnEntryLostFocus(object sender, RoutedEventArgs e) => SyncEntryFromValue();
 
     // WPF's Popup StaysOpen=False auto-close is unreliable inside a DataGrid (the grid captures the mouse),
     // so we close manually: while open, listen on the host window's PreviewMouseDown and close on any press
@@ -169,6 +193,7 @@ public partial class ChanceField : UserControl
     private void OpenPopup()
     {
         _openValue = Value; // baseline so closing only commits when the value actually changed
+        SyncEntryFromValue(); // seed the entry from the current value
         Pop.IsOpen = true;
         _hookedWindow = Window.GetWindow(this);
         if (_hookedWindow is not null) _hookedWindow.PreviewMouseDown += OnHostMouseDown;
@@ -176,10 +201,8 @@ public partial class ChanceField : UserControl
 
     private void ClosePopup()
     {
-        // Commit any text typed in the entry (LostFocus binding) BEFORE closing, so the close sees the value.
-        Num.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
         Unhook();
-        Pop.IsOpen = false; // raises Closed → ValueCommitted
+        Pop.IsOpen = false; // raises Closed → ValueCommitted (Value is already live from OnEntryTextChanged)
     }
 
     private void OnHostMouseDown(object sender, MouseButtonEventArgs e)
@@ -219,20 +242,5 @@ public partial class ChanceField : UserControl
     private void OnNumKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter) { ClosePopup(); e.Handled = true; } // closing the popup fires ValueCommitted
-    }
-}
-
-/// <summary>Two-way text↔double for the popup entry: shows the value dot-formatted (matching CE files),
-/// parses back tolerantly (accepts a comma too); leaves the value untouched on unparseable input.</summary>
-public sealed class ChanceTextConverter : IValueConverter
-{
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        value is double d ? d.ToString("0.###", CultureInfo.InvariantCulture) : "0";
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        var s = (value as string ?? "").Replace(',', '.').Trim();
-        return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var d)
-            ? d : Binding.DoNothing;
     }
 }
