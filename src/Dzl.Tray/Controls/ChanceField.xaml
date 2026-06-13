@@ -22,7 +22,7 @@
                  Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
     </Border>
     <Popup x:Name="Pop" PlacementTarget="{Binding ElementName=Toggle}" Placement="Custom"
-           StaysOpen="False" AllowsTransparency="True" Closed="OnPopupClosed">
+           StaysOpen="True" AllowsTransparency="True" Closed="OnPopupClosed">
       <Border Padding="10" CornerRadius="8" BorderThickness="1"
               Background="{DynamicResource ApplicationBackgroundBrush}"
               BorderBrush="{DynamicResource ControlElevationBorderBrush}">

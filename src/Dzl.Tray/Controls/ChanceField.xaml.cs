@@ -105,22 +105,56 @@ public partial class ChanceField : UserControl
         DisplayText = Value.ToString(format, CultureInfo.CurrentCulture);
     }
 
-    // The popup is StaysOpen=False (closes on any outside click). To make clicking the face TOGGLE it, we
-    // remember whether it was open at mouse-down (before the outside-click auto-close fires); if it was, the
-    // mouse-up must NOT reopen it. This also guarantees only one popup is ever open at a time.
+    // WPF's Popup StaysOpen=False auto-close is unreliable inside a DataGrid (the grid captures the mouse),
+    // so we close manually: while open, listen on the host window's PreviewMouseDown and close on any press
+    // that isn't on our own face. The popup (AllowsTransparency) is its own top-level window, so presses
+    // inside it never reach the host-window handler — it stays open while you drag the slider / type.
     private bool _wasOpen;
+    private Window? _hookedWindow;
 
     private void OnTogglePreviewDown(object sender, MouseButtonEventArgs e) => _wasOpen = Pop.IsOpen;
 
     private void OnToggleClick(object sender, MouseButtonEventArgs e)
     {
-        if (!_wasOpen) Pop.IsOpen = true;
+        if (_wasOpen) ClosePopup();   // clicking the face while open → close
+        else OpenPopup();             // was closed → open
     }
 
-    private void OnPopupClosed(object? sender, EventArgs e) => ValueCommitted?.Invoke(this, EventArgs.Empty);
+    private void OpenPopup()
+    {
+        Pop.IsOpen = true;
+        _hookedWindow = Window.GetWindow(this);
+        if (_hookedWindow is not null) _hookedWindow.PreviewMouseDown += OnHostMouseDown;
+    }
+
+    private void ClosePopup()
+    {
+        Unhook();
+        Pop.IsOpen = false; // raises Closed → ValueCommitted
+    }
+
+    private void OnHostMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        // A press the host window can see is outside the popup; close unless it's on our own face (the face
+        // click toggles it via OnToggleClick instead).
+        if (!Toggle.IsMouseOver) ClosePopup();
+    }
+
+    private void Unhook()
+    {
+        if (_hookedWindow is null) return;
+        _hookedWindow.PreviewMouseDown -= OnHostMouseDown;
+        _hookedWindow = null;
+    }
+
+    private void OnPopupClosed(object? sender, EventArgs e)
+    {
+        Unhook();
+        ValueCommitted?.Invoke(this, EventArgs.Empty);
+    }
 
     private void OnNumKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Enter) { Pop.IsOpen = false; e.Handled = true; } // closing the popup fires ValueCommitted
+        if (e.Key == Key.Enter) { ClosePopup(); e.Handled = true; } // closing the popup fires ValueCommitted
     }
 }
