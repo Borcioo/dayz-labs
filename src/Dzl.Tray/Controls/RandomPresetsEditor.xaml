@@ -88,8 +88,10 @@
                     EnableRowVirtualization="True"
                     RowBackground="Transparent" AlternatingRowBackground="Transparent"
                     CellEditEnding="OnPresetCellEditEnding">
+            <!-- BasedOn the WPF-UI DataGridRow style, or this override strips the Fluent look
+                 (incl. the selected-row accent bar); we only add the dimmed look for disabled rows. -->
             <DataGrid.RowStyle>
-              <Style TargetType="DataGridRow">
+              <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
                 <Setter Property="Opacity" Value="{Binding RowOpacity}" />
               </Style>
             </DataGrid.RowStyle>
