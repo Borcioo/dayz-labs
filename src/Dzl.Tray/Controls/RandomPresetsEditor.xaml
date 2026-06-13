@@ -161,7 +161,7 @@
                         Text="{Binding NewPresetName, UpdateSourceTrigger=PropertyChanged}" />
             <ui:NumberBox Grid.Column="1" Width="120" Margin="0,0,4,0" FontSize="12"
                           ToolTip="chance 0..1" Minimum="0" Maximum="1"
-                          SmallChange="0.05" LargeChange="0.1" MaxDecimalPlaces="3" SpinButtonPlacementMode="Compact"
+                          SmallChange="0.05" LargeChange="0.1" MaxDecimalPlaces="3" SpinButtonPlacementMode="Compact" ClearButtonEnabled="False"
                           Value="{Binding NewPresetChanceValue, Mode=TwoWay}" />
             <ComboBox Grid.Column="2" MinWidth="110" Margin="0,0,4,0" VerticalAlignment="Center"
                       SelectedIndex="0"
@@ -207,7 +207,7 @@
                             Text="{Binding EditName, UpdateSourceTrigger=PropertyChanged}"
                             KeyDown="OnEditNameKeyDown" />
                 <ui:NumberBox Grid.Column="1" Width="120" Margin="0,0,4,0" FontSize="12" ToolTip="chance 0..1"
-                              Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" MaxDecimalPlaces="3" SpinButtonPlacementMode="Compact"
+                              Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" MaxDecimalPlaces="3" SpinButtonPlacementMode="Compact" ClearButtonEnabled="False"
                               Value="{Binding EditChanceValue, Mode=TwoWay}"
                               KeyDown="OnEditNameKeyDown" />
                 <ComboBox Grid.Column="2" MinWidth="120" Margin="0,0,4,0" VerticalAlignment="Center"
@@ -269,7 +269,7 @@
                       KeyUp="OnItemComboKeyUp" SelectionChanged="OnItemComboSelectionChanged" />
             <ui:NumberBox Grid.Column="1" Width="120" Margin="0,0,4,0" FontSize="12"
                           ToolTip="chance 0..1" Minimum="0" Maximum="1"
-                          SmallChange="0.05" LargeChange="0.1" MaxDecimalPlaces="3" SpinButtonPlacementMode="Compact"
+                          SmallChange="0.05" LargeChange="0.1" MaxDecimalPlaces="3" SpinButtonPlacementMode="Compact" ClearButtonEnabled="False"
                           Value="{Binding NewItemChanceValue, Mode=TwoWay}"
                           KeyDown="OnAddItemKeyDown" />
             <ui:Button Grid.Column="2" Content="Add item" Click="OnAddItemClick" />
