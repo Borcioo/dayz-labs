@@ -791,47 +791,6 @@ public partial class MainWindow : FluentWindow
         }
     }
 
-    // === Bases (templates) ================================================
-    private void OnCreateBaseFromInstall(object sender, RoutedEventArgs e)
-    {
-        var name = NewBaseNameBox.Text.Trim();
-        if (name.Length == 0) { NewBaseStatus.Text = "Enter a base name."; return; }
-        var map = (NewBaseMapBox.SelectedItem as string) ?? "chernarus";
-        NewBaseStatus.Text = _vm.CreateBaseFromInstall(name, map);
-        if (NewBaseStatus.Text.StartsWith('✓')) NewBaseNameBox.Text = "";
-    }
-
-    private void OnCreateEmptyBase(object sender, RoutedEventArgs e)
-    {
-        var name = NewBaseNameBox.Text.Trim();
-        if (name.Length == 0) { NewBaseStatus.Text = "Enter a base name."; return; }
-        NewBaseStatus.Text = _vm.CreateEmptyBase(name);
-        if (NewBaseStatus.Text.StartsWith('✓')) NewBaseNameBox.Text = "";
-    }
-
-    private void OnDeleteBase(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string name }) return;
-        var ok = System.Windows.MessageBox.Show(
-            $"Delete base \"{name}\"?\n\nThis removes the template folder and all its files. " +
-            "Existing instances created from it are not affected.",
-            "Delete base", System.Windows.MessageBoxButton.YesNo,
-            System.Windows.MessageBoxImage.Warning) == System.Windows.MessageBoxResult.Yes;
-        if (!ok) return;
-        NewBaseStatus.Text = _vm.DeleteBase(name);
-    }
-
-    private void OnOpenBaseFolder(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string name }) return;
-        var dir = _vm.BaseDirOf(name);
-        if (!ShellOpen.Folder(dir))
-            System.Windows.MessageBox.Show($"Couldn't open the folder:\n{dir}", "Open base folder",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-    }
-
-    private void OnRefreshBases(object sender, RoutedEventArgs e) => _vm.RefreshBases();
-
     // === Shared pickers / folder open =====================================
 
     /// <summary>Show a folder picker (OpenFolderDialog on .NET 8 WPF); null if cancelled.</summary>
