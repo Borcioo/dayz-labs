@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace Dzl.Tray.Controls;
 
@@ -135,9 +136,23 @@ public partial class ChanceField : UserControl
 
     private void OnHostMouseDown(object sender, MouseButtonEventArgs e)
     {
-        // A press the host window can see is outside the popup; close unless it's on our own face (the face
-        // click toggles it via OnToggleClick instead).
-        if (!Toggle.IsMouseOver) ClosePopup();
+        // The host window sees presses anywhere — INCLUDING inside the popup, because routed events travel the
+        // logical tree across the Popup boundary even though it's a separate window. Close only when the press
+        // is neither on our own face (that toggles) nor inside the popup (the slider / number box).
+        if (Toggle.IsMouseOver || IsInsidePopup(e.OriginalSource)) return;
+        ClosePopup();
+    }
+
+    private bool IsInsidePopup(object? source)
+    {
+        if (Pop.Child is not DependencyObject child) return false;
+        for (var node = source as DependencyObject; node is not null;
+             node = node is Visual or System.Windows.Media.Media3D.Visual3D
+                 ? VisualTreeHelper.GetParent(node) : LogicalTreeHelper.GetParent(node))
+        {
+            if (ReferenceEquals(node, child)) return true;
+        }
+        return false;
     }
 
     private void Unhook()
