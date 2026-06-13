@@ -4,7 +4,6 @@ using System.Windows.Controls;
 using Dzl.Core.Tools;
 using Dzl.Tray.ViewModels;
 using Microsoft.Win32;
-using TextBox = System.Windows.Controls.TextBox;
 
 namespace Dzl.Tray.Views;
 

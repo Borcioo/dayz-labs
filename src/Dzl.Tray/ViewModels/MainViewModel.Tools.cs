@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Dzl.Core.Build;
 using Dzl.Core.Env;
 using Dzl.Core.Tools;
 

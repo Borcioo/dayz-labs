@@ -5,7 +5,6 @@ using CommunityToolkit.Mvvm.Input;
 using Dzl.Core.App;
 using Dzl.Core.Build;
 using Dzl.Core.Build.Preflight;
-using Dzl.Core.Env;
 using Dzl.Core.Projects;
 using Dzl.Core.Vcs;
 

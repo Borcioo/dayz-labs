@@ -8,7 +8,6 @@
         xmlns:views="clr-namespace:Dzl.Tray.Views"
         xmlns:vm="clr-namespace:Dzl.Tray.ViewModels"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-        xmlns:dd="urn:gong-wpf-dragdrop"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
         Title="DayZ Labs (DZL)"

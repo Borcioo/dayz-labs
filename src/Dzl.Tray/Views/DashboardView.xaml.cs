@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Controls;
-using Dzl.Tray;
 using Dzl.Tray.ViewModels;
 
 namespace Dzl.Tray.Views;
