@@ -7,8 +7,10 @@ using Dzl.Core.Economy.Lint;
 
 namespace Dzl.Tray.Controls;
 
-/// <summary>One stat tile on the Economy dashboard. Clicking it navigates to that file's editor tab.</summary>
-public sealed record CeStat(string Title, string Value, string Detail, CeKind Kind, bool Missing);
+/// <summary>One stat tile on the Economy dashboard. Clicking it navigates to that file's editor tab.
+/// <c>Issues</c>/<c>HasErrors</c> are filled after a full validation to badge the tile.</summary>
+public sealed record CeStat(string Title, string Value, string Detail, CeKind Kind, bool Missing,
+    int Issues = 0, bool HasErrors = false);
 
 /// <summary>One validation finding row. Clicking it jumps to the owning editor tab.</summary>
 public sealed record CeFindingRow(LintSeverity Severity, string Message, string File, string Entry, CeKind Kind)
@@ -58,32 +60,43 @@ public partial class CeDashboardVm : ObservableObject
         _world = new CeWorldLoader(_configPath).Load();
         MissionDir = _world.MissionDir;
         HasMission = _world.HasMission;
-        BuildStats(_world);
+        BuildStats(_world, _lastFindings);
     }
 
-    private void BuildStats(CeWorld w)
+    private IReadOnlyList<LintFinding> _lastFindings = Array.Empty<LintFinding>();
+
+    private void BuildStats(CeWorld w, IReadOnlyList<LintFinding> findings)
     {
         Stats.Clear();
         var types = w.Types.Entries;
         var vanilla = types.Count(t => t.SourceFile.Contains("db", StringComparison.OrdinalIgnoreCase));
-        Stats.Add(new("Types", types.Count.ToString("N0"),
-            $"{types.Count - vanilla:N0} in custom/mod files", CeKind.Types, Missing(w, CeKind.Types) && types.Count == 0));
-        Stats.Add(Tile("Events", w.Events.Count, "events", CeKind.Events, w));
-        Stats.Add(Tile("Globals", w.Globals.Count, "vars", CeKind.Globals, w));
-        Stats.Add(Tile("Spawnable Types", w.SpawnableTypes.Count, "types", CeKind.SpawnableTypes, w));
-        Stats.Add(Tile("Random Presets", w.RandomPresets.Count, "presets", CeKind.RandomPresets, w));
+        Stats.Add(Badge(new("Types", types.Count.ToString("N0"),
+            $"{types.Count - vanilla:N0} in custom/mod files", CeKind.Types, Missing(w, CeKind.Types) && types.Count == 0), findings));
+        Stats.Add(Tile("Events", w.Events.Count, "events", CeKind.Events, w, findings));
+        Stats.Add(Tile("Globals", w.Globals.Count, "vars", CeKind.Globals, w, findings));
+        Stats.Add(Tile("Spawnable Types", w.SpawnableTypes.Count, "types", CeKind.SpawnableTypes, w, findings));
+        Stats.Add(Tile("Random Presets", w.RandomPresets.Count, "presets", CeKind.RandomPresets, w, findings));
 
         var groups = w.PlayerSpawns.Sum(c => c.Bubbles.Sum(b => b.Groups.Count));
-        Stats.Add(new("Player Spawns", w.PlayerSpawns.Count.ToString(),
-            $"{groups} position group(s)", CeKind.PlayerSpawns, Missing(w, CeKind.PlayerSpawns)));
+        Stats.Add(Badge(new("Player Spawns", w.PlayerSpawns.Count.ToString(),
+            $"{groups} position group(s)", CeKind.PlayerSpawns, Missing(w, CeKind.PlayerSpawns)), findings));
 
         var dictNames = w.Limits.Usage.Count + w.Limits.Value.Count + w.Limits.Tag.Count + w.Limits.Category.Count;
-        Stats.Add(new("Dictionaries", dictNames.ToString(),
-            "usage / value / tag / category", CeKind.Dictionaries, dictNames == 0));
+        Stats.Add(Badge(new("Dictionaries", dictNames.ToString(),
+            "usage / value / tag / category", CeKind.Dictionaries, dictNames == 0), findings));
     }
 
-    private static CeStat Tile(string title, int count, string unit, CeKind kind, CeWorld w) =>
-        new(title, count.ToString("N0"), Missing(w, kind) ? "file not found" : $"{count:N0} {unit}", kind, Missing(w, kind));
+    private static CeStat Tile(string title, int count, string unit, CeKind kind, CeWorld w,
+                              IReadOnlyList<LintFinding> findings) =>
+        Badge(new(title, count.ToString("N0"), Missing(w, kind) ? "file not found" : $"{count:N0} {unit}", kind, Missing(w, kind)), findings);
+
+    /// <summary>Stamp a tile with its error+warning count (and whether any are errors) from the last run.</summary>
+    private static CeStat Badge(CeStat s, IReadOnlyList<LintFinding> findings)
+    {
+        var mine = findings.Where(f => f.Kind == s.Kind).ToList();
+        var issues = mine.Count(f => f.Severity != LintSeverity.Info);
+        return s with { Issues = issues, HasErrors = mine.Any(f => f.Severity == LintSeverity.Error) };
+    }
 
     private static bool Missing(CeWorld w, CeKind kind) =>
         w.Files.FirstOrDefault(f => f.Kind == kind) is { Exists: false };
@@ -99,6 +112,7 @@ public partial class CeDashboardVm : ObservableObject
             var world = _world ??= await Task.Run(() => new CeWorldLoader(_configPath).Load());
             var progress = new Progress<int>(p => Progress = p);
             var findings = await Task.Run(() => new CeValidator().ValidateFull(world, progress));
+            _lastFindings = findings;
 
             Findings.Clear();
             foreach (var f in findings.OrderBy(f => f.Severity).ThenBy(f => f.File))
@@ -110,6 +124,8 @@ public partial class CeDashboardVm : ObservableObject
             Summary = findings.Count == 0
                 ? "✓ No problems found."
                 : $"{ErrorCount} error(s) · {WarningCount} warning(s) · {InfoCount} info";
+
+            BuildStats(world, findings);   // re-stamp the tiles with per-file issue badges
         }
         finally
         {

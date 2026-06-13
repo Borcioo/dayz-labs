@@ -58,8 +58,43 @@
                             CommandParameter="{Binding Kind}" />
             </Border.InputBindings>
             <StackPanel>
-              <TextBlock Text="{Binding Title}" FontSize="12"
-                         Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="12" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <!-- Issue badge from the last full validation: red if any errors, else amber; hidden when 0. -->
+                <Border Grid.Column="1" CornerRadius="9" Padding="6,1" VerticalAlignment="Center">
+                  <Border.Style>
+                    <Style TargetType="Border">
+                      <Setter Property="Background" Value="#3A2A0F" />
+                      <Setter Property="Visibility" Value="Visible" />
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasErrors}" Value="True">
+                          <Setter Property="Background" Value="#5A1F1F" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Issues}" Value="0">
+                          <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <TextBlock Text="{Binding Issues}" FontSize="10" FontWeight="SemiBold">
+                    <TextBlock.Style>
+                      <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="#F0C04A" />
+                        <Style.Triggers>
+                          <DataTrigger Binding="{Binding HasErrors}" Value="True">
+                            <Setter Property="Foreground" Value="#FF6B6B" />
+                          </DataTrigger>
+                        </Style.Triggers>
+                      </Style>
+                    </TextBlock.Style>
+                  </TextBlock>
+                </Border>
+              </Grid>
               <TextBlock Text="{Binding Value}" FontSize="26" FontWeight="SemiBold" Margin="0,2,0,0" />
               <TextBlock Text="{Binding Detail}" FontSize="11" TextTrimming="CharacterEllipsis"
                          Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
