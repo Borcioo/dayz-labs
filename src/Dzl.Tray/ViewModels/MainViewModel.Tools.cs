@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Dzl.Core.Build;
 using Dzl.Core.Env;
 using Dzl.Core.Tools;
@@ -38,11 +39,14 @@ public partial class MainViewModel
         RefreshWorkDrive();
     }
 
+    [RelayCommand]
     public void RefreshWorkDrive() => WorkDriveMounted = WorkDrive.IsMounted();
 
     /// <summary>Launch a tool GUI on a background task (no UI block). Missing exes return false.</summary>
+    [RelayCommand]
     public void LaunchTool(ToolEntry tool) => Task.Run(() => { try { ToolLauncher.Launch(tool); } catch { } });
 
+    [RelayCommand]
     public void MountWorkDrive()
     {
         var exe = Path.Combine(_cfg.DayzToolsPath, "Bin", "WorkDrive", "WorkDrive.exe");
@@ -54,6 +58,7 @@ public partial class MainViewModel
         });
     }
 
+    [RelayCommand]
     public void UnmountWorkDrive()
     {
         var exe = Path.Combine(_cfg.DayzToolsPath, "Bin", "WorkDrive", "WorkDrive.exe");

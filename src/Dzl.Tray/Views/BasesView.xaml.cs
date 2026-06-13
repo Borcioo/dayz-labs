@@ -54,6 +54,4 @@ public partial class BasesView : UserControl
             System.Windows.MessageBox.Show($"Couldn't open the folder:\n{dir}", "Open base folder",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
-
-    private void OnRefreshBases(object sender, RoutedEventArgs e) => Vm?.RefreshBases();
 }

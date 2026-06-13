@@ -32,15 +32,6 @@ public partial class ToolsView : UserControl
     }
 
     private void OnRefreshTools(object sender, RoutedEventArgs e) => RefreshToolsPage();
-    private void OnRefreshWorkDrive(object sender, RoutedEventArgs e) => Vm?.RefreshWorkDrive();
-
-    private void OnLaunchTool(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: ToolEntry t }) Vm?.LaunchTool(t);
-    }
-
-    private void OnMountWorkDrive(object sender, RoutedEventArgs e) => Vm?.MountWorkDrive();
-    private void OnUnmountWorkDrive(object sender, RoutedEventArgs e) => Vm?.UnmountWorkDrive();
 
     private async void OnPackPbo(object sender, RoutedEventArgs e)
     {

@@ -57,7 +57,7 @@
                 <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
               <TextBlock Grid.Column="0" Text="Bases" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
-              <ui:Button Grid.Column="1" Content="Refresh" Icon="{ui:SymbolIcon ArrowSync24}" Click="OnRefreshBases" />
+              <ui:Button Grid.Column="1" Content="Refresh" Icon="{ui:SymbolIcon ArrowSync24}" Command="{Binding RefreshBasesCommand}" />
             </Grid>
             <ItemsControl ItemsSource="{Binding Bases}">
               <ItemsControl.ItemTemplate>

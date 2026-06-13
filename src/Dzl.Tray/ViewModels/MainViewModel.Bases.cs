@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.Input;
 using Dzl.Core.Bases;
 using Dzl.Core.Servers;
 
@@ -17,6 +18,7 @@ public partial class MainViewModel
     /// <summary>Base choices for the New-server dropdown: the vanilla sentinel + each base name.</summary>
     public ObservableCollection<string> BaseChoices { get; } = new();
 
+    [RelayCommand]
     public void RefreshBases()
     {
         var list = ServerBases.List(ProjectsRoot);

@@ -63,7 +63,8 @@
                           HorizontalContentAlignment="Left"
                           IsEnabled="{Binding Exists}"
                           Opacity="{Binding Exists, Converter={StaticResource BoolToOpacity}}"
-                          Click="OnLaunchTool" Tag="{Binding}"
+                          Command="{Binding DataContext.LaunchToolCommand, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}"
+                          CommandParameter="{Binding}"
                           ToolTip="{Binding ExePath}">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                       <ui:SymbolIcon Symbol="Open24" FontSize="18" Margin="0,0,10,0" VerticalAlignment="Center" />
@@ -93,10 +94,10 @@
                        Fill="{Binding WorkDriveMounted, Converter={StaticResource StatusDotConverter}}" />
               <TextBlock Text="{Binding WorkDriveStatus}" VerticalAlignment="Center" Margin="0,0,16,0" />
               <ui:Button Content="Mount" Appearance="Primary" Icon="{ui:SymbolIcon PlugConnected24}"
-                         Margin="0,0,8,0" Click="OnMountWorkDrive" />
+                         Margin="0,0,8,0" Command="{Binding MountWorkDriveCommand}" />
               <ui:Button Content="Unmount" Icon="{ui:SymbolIcon PlugDisconnected24}"
-                         Margin="0,0,8,0" Click="OnUnmountWorkDrive" />
-              <ui:Button Content="Refresh" Icon="{ui:SymbolIcon ArrowSync24}" Click="OnRefreshWorkDrive" />
+                         Margin="0,0,8,0" Command="{Binding UnmountWorkDriveCommand}" />
+              <ui:Button Content="Refresh" Icon="{ui:SymbolIcon ArrowSync24}" Command="{Binding RefreshWorkDriveCommand}" />
             </StackPanel>
           </StackPanel>
         </ui:Card>
