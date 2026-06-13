@@ -237,61 +237,8 @@ public partial class MainWindow : FluentWindow
         LoadSettingsFields();
     }
 
-    // === SERVERS page: open the per-server modal editor ===================
-
-    /// <summary>Open the modal editor for the active server on a given tab (0=Settings,1=Mods,2=Params).</summary>
-    private void OpenServerEditor(int tab)
-    {
-        var dlg = new ServerEditorWindow(_vm, tab) { Owner = this };
-        dlg.ShowDialog();
-        _vm.RefreshServers();   // name/active may have changed (rename/clone)
-    }
-
-    /// <summary>Servers row "Settings"/"Mods": activate the clicked server, then open its modal editor.</summary>
-    private void OpenServerForRow(object sender, int tab)
-    {
-        if (sender is not FrameworkElement { Tag: string name }) return;
-        _vm.UseServer(name);
-        OpenServerEditor(tab);
-    }
-
-    private void OnOpenServerSettings(object sender, RoutedEventArgs e) => OpenServerForRow(sender, 0);
-    private void OnOpenServerMods(object sender, RoutedEventArgs e) => OpenServerForRow(sender, 1);
-
-    /// <summary>Open a server instance's folder in Explorer (Tag = the instance dir).</summary>
-    private void OnOpenServerFolder(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string dir } || string.IsNullOrWhiteSpace(dir)) return;
-        if (!ShellOpen.Folder(dir))
-            System.Windows.MessageBox.Show($"Couldn't open the folder:\n{dir}", "Open server folder",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-    }
-
-    private void OnDeleteServer(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string name }) return;
-        var r = System.Windows.MessageBox.Show(
-            $"Delete server \"{name}\"?\n\n" +
-            "YES — delete the server AND all its files (serverDZ.cfg, mpmissions, profiles / logs). Cannot be undone.\n\n" +
-            "NO — remove it from dzl only; keep the folder + files on disk.\n\n" +
-            "CANCEL — don't delete.",
-            "Delete server", System.Windows.MessageBoxButton.YesNoCancel,
-            System.Windows.MessageBoxImage.Warning);
-        if (r == System.Windows.MessageBoxResult.Cancel) return;
-        NewServerStatus.Text = _vm.DeleteServer(name, removeFiles: r == System.Windows.MessageBoxResult.Yes);
-    }
-
-    private void OnWipeServerPersistence(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string dir } || string.IsNullOrWhiteSpace(dir)) return;
-        var ok = System.Windows.MessageBox.Show(
-            $"Wipe persistence for this server?\n\n{dir}\n\nThe world / loot / player state resets; DayZ " +
-            "regenerates fresh Central Economy storage on the next start. The mission files are kept.",
-            "Wipe persistence", System.Windows.MessageBoxButton.YesNo,
-            System.Windows.MessageBoxImage.Warning) == System.Windows.MessageBoxResult.Yes;
-        if (!ok) return;
-        NewServerStatus.Text = _vm.WipePersistenceDir(dir);
-    }
+    // (The Servers page — create/use/delete/wipe instances + open the per-server modal editor —
+    //  now lives in Views/ServersView.)
 
     private void OnAddScanRoot(object sender, RoutedEventArgs e)
     {
@@ -593,51 +540,6 @@ public partial class MainWindow : FluentWindow
             found == 0 ? "Couldn't find DayZ or DayZ Tools in your Steam libraries — set the paths manually."
                        : $"Filled {found} path(s) from Steam. Review, then Save.",
             "Auto-detect paths", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-    }
-
-    // === SERVERS page =====================================================
-
-    private void OnRefreshServers(object sender, RoutedEventArgs e) => _vm.RefreshServers();
-
-    private bool _creatingServer;
-
-    private async void OnCreateServer(object sender, RoutedEventArgs e)
-    {
-        if (_creatingServer) return;
-        var name = NewServerNameBox.Text.Trim();
-        if (name.Length == 0) { NewServerStatus.Text = "Enter an instance name."; return; }
-        var map = (NewServerMapBox.SelectedItem as string) ?? "chernarus";
-        int? port = int.TryParse(NewServerPortBox.Text.Trim(), out var p) ? p : null;
-        var baseSel = NewServerBaseBox.SelectedItem as string;
-        var baseName = (string.IsNullOrEmpty(baseSel) || baseSel == MainViewModel.VanillaChoice) ? null : baseSel;
-        _creatingServer = true;
-        NewServerButton.IsEnabled = false;
-        NewServerStatus.Text = "creating… (copying mission template — this can take a moment)";
-        try { NewServerStatus.Text = await _vm.CreateServerAsync(name, map, port, baseName); }
-        catch (Exception ex) { NewServerStatus.Text = "✗ " + ex.Message; }
-        finally { NewServerButton.IsEnabled = true; _creatingServer = false; }
-        if (NewServerStatus.Text.StartsWith('✓')) { NewServerNameBox.Text = ""; NewServerPortBox.Text = ""; }
-    }
-
-    private void OnUseServer(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: string name })
-            NewServerStatus.Text = _vm.UseServer(name);
-    }
-
-    // A base fixes its own map (baked into its serverDZ.cfg + mpmission). When one is
-    // selected, lock the map dropdown and reflect the base's map; only vanilla is free to pick.
-    private void OnNewServerBaseChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (NewServerMapBox is null) return;   // fires once during InitializeComponent before peers exist
-        var sel = NewServerBaseBox.SelectedItem as string;
-        var vanilla = string.IsNullOrEmpty(sel) || sel == MainViewModel.VanillaChoice;
-        NewServerMapBox.IsEnabled = vanilla;
-        if (!vanilla)
-        {
-            var b = _vm.Bases.FirstOrDefault(x => x.Name == sel);
-            if (b is not null) NewServerMapBox.SelectedItem = MapAliases.MapName(b.Mission);
-        }
     }
 
     // === Shared pickers / folder open =====================================
