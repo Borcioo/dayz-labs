@@ -13,17 +13,16 @@
        Height/VerticalAlignment="Stretch" in standalone use to match buttons/combos; leave it unset in a
        DataGrid cell for the compact row look. -->
   <Grid>
-    <Border x:Name="Toggle" MinWidth="48" Padding="8,0" CornerRadius="4" Cursor="Hand"
+    <Border x:Name="Toggle" MinWidth="48" Padding="8,0" CornerRadius="4" Cursor="Hand" Focusable="False"
             Background="{DynamicResource ControlFillColorDefaultBrush}"
             BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
-            MouseLeftButtonUp="OnToggleClick">
+            PreviewMouseLeftButtonDown="OnTogglePreviewDown" MouseLeftButtonUp="OnToggleClick">
       <TextBlock Text="{Binding DisplayText, ElementName=Root}" FontSize="12"
                  HorizontalAlignment="Center" VerticalAlignment="Center"
                  Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
     </Border>
     <Popup x:Name="Pop" PlacementTarget="{Binding ElementName=Toggle}" Placement="Custom"
-           StaysOpen="False" AllowsTransparency="True"
-           IsOpen="{Binding IsOpen, ElementName=Root, Mode=TwoWay}" Closed="OnPopupClosed">
+           StaysOpen="False" AllowsTransparency="True" Closed="OnPopupClosed">
       <Border Padding="10" CornerRadius="8" BorderThickness="1"
               Background="{DynamicResource ApplicationBackgroundBrush}"
               BorderBrush="{DynamicResource ControlElevationBorderBrush}">

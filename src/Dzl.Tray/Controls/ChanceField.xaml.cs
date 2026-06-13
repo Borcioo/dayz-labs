@@ -75,15 +75,6 @@ public partial class ChanceField : UserControl
         set => SetValue(DecimalsProperty, value);
     }
 
-    public static readonly DependencyProperty IsOpenProperty = DependencyProperty.Register(
-        nameof(IsOpen), typeof(bool), typeof(ChanceField), new PropertyMetadata(false));
-
-    public bool IsOpen
-    {
-        get => (bool)GetValue(IsOpenProperty);
-        set => SetValue(IsOpenProperty, value);
-    }
-
     private static readonly DependencyPropertyKey DisplayTextKey = DependencyProperty.RegisterReadOnly(
         nameof(DisplayText), typeof(string), typeof(ChanceField), new PropertyMetadata("0"));
 
@@ -114,12 +105,22 @@ public partial class ChanceField : UserControl
         DisplayText = Value.ToString(format, CultureInfo.CurrentCulture);
     }
 
-    private void OnToggleClick(object sender, MouseButtonEventArgs e) => IsOpen = true;
+    // The popup is StaysOpen=False (closes on any outside click). To make clicking the face TOGGLE it, we
+    // remember whether it was open at mouse-down (before the outside-click auto-close fires); if it was, the
+    // mouse-up must NOT reopen it. This also guarantees only one popup is ever open at a time.
+    private bool _wasOpen;
+
+    private void OnTogglePreviewDown(object sender, MouseButtonEventArgs e) => _wasOpen = Pop.IsOpen;
+
+    private void OnToggleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (!_wasOpen) Pop.IsOpen = true;
+    }
 
     private void OnPopupClosed(object? sender, EventArgs e) => ValueCommitted?.Invoke(this, EventArgs.Empty);
 
     private void OnNumKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Enter) { IsOpen = false; e.Handled = true; } // closing the popup fires ValueCommitted
+        if (e.Key == Key.Enter) { Pop.IsOpen = false; e.Handled = true; } // closing the popup fires ValueCommitted
     }
 }

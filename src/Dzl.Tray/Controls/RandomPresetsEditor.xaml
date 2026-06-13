@@ -234,7 +234,7 @@
               <DataGridTextColumn Header="Item name"
                                   Binding="{Binding Name, UpdateSourceTrigger=LostFocus}"
                                   Width="*" MinWidth="120" />
-              <DataGridTemplateColumn Header="Chance" Width="160" CanUserResize="False" IsReadOnly="True">
+              <DataGridTemplateColumn Header="Chance" Width="84" CanUserResize="False" IsReadOnly="True">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <ctl:ChanceField Value="{Binding Chance, Mode=TwoWay}" VerticalAlignment="Center"
