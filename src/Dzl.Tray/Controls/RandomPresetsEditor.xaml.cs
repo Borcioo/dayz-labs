@@ -27,28 +27,7 @@ public partial class RandomPresetsEditor : UserControl
 
     private void OnAddPresetClick(object sender, RoutedEventArgs e) => Vm?.AddPreset();
 
-    private void OnRemovePresetClick(object sender, RoutedEventArgs e) => Vm?.RemoveSelectedPreset();
-
-    private void OnRenamePresetClick(object sender, RoutedEventArgs e)
-    {
-        if (Vm is not { } vm || vm.SelectedPreset is not { } row) { if (Vm is { } v) v.Status = "✗ select a preset to rename"; return; }
-        var owner = Window.GetWindow(this);
-        if (owner is null) return;
-        var next = PromptDialog.Show(owner, $"Rename {row.KindLabel} preset", $"Rename \"{row.Name}\" to:", row.Name);
-        if (string.IsNullOrWhiteSpace(next)) return;
-        vm.RenameSelectedPreset(next.Trim());
-    }
-
-    // Per-row quick actions: select that row, then reuse the rename/remove flow.
-    private void OnRowRenamePresetClick(object sender, RoutedEventArgs e)
-    {
-        if (Vm is { } vm && sender is FrameworkElement { DataContext: PresetRowVm row })
-        {
-            vm.SelectedPreset = row;
-            OnRenamePresetClick(sender, e);
-        }
-    }
-
+    // Per-row delete: select that row, then reuse the remove flow (rename is done in the Edit card).
     private void OnRowRemovePresetClick(object sender, RoutedEventArgs e)
     {
         if (Vm is { } vm && sender is FrameworkElement { DataContext: PresetRowVm row })

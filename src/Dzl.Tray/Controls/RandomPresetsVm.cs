@@ -348,19 +348,6 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
         if (Report(result)) LoadPresetsKeepingSelection();
     }
 
-    public void RenameSelectedPreset(string newName)
-    {
-        if (SelectedPreset is not { } row) { Status = "✗ select a preset to rename"; return; }
-        newName = (newName ?? "").Trim();
-        if (newName.Length == 0) { Status = "✗ new name must not be empty"; return; }
-        PushUndo();
-        if (Report(_svc.RenamePreset(row.Kind, row.Name, newName)))
-        {
-            LoadPresetsKeepingSelection();
-            SelectedPreset = Presets.FirstOrDefault(r => r.Kind == row.Kind && r.Name == newName);
-        }
-    }
-
     public void AddItem()
     {
         if (SelectedPreset is not { } row) { Status = "✗ select a preset first"; return; }

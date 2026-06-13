@@ -145,16 +145,14 @@
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <!-- Per-row quick actions (fixed width so the buttons never get squeezed) -->
-              <DataGridTemplateColumn Header="" Width="124" CanUserResize="False" IsReadOnly="True">
+              <!-- Per-row quick actions: enable/disable toggle + delete (rename is done in the Edit card). -->
+              <DataGridTemplateColumn Header="" Width="88" CanUserResize="False" IsReadOnly="True">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                       <ui:Button Content="{Binding ToggleLabel}" Padding="6,2" Margin="0,0,3,0" FontSize="11"
                                  MinWidth="34" Appearance="Secondary"
                                  ToolTip="{Binding ToggleTooltip}" Click="OnRowToggleDisabledClick" />
-                      <ui:Button Icon="{ui:SymbolIcon Rename24}" Padding="5" Margin="0,0,3,0" FontSize="12"
-                                 Appearance="Secondary" ToolTip="Rename this preset" Click="OnRowRenamePresetClick" />
                       <ui:Button Icon="{ui:SymbolIcon Delete24}" Padding="5" FontSize="12"
                                  Appearance="Danger" ToolTip="Remove this preset" Click="OnRowRemovePresetClick" />
                     </StackPanel>
