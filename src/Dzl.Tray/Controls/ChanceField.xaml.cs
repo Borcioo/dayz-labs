@@ -241,6 +241,13 @@ public partial class ChanceField : UserControl
 
     private void OnNumKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Enter) { ClosePopup(); e.Handled = true; } // closing the popup fires ValueCommitted
+        switch (e.Key)
+        {
+            case Key.Enter: ClosePopup(); e.Handled = true; break; // closing fires ValueCommitted
+            // Up/Down step by SmallChange like the slider (coercion clamps + rounds). Left/Right stay free
+            // for caret movement within the number.
+            case Key.Up: Value += SmallChange; e.Handled = true; break;
+            case Key.Down: Value -= SmallChange; e.Handled = true; break;
+        }
     }
 }
