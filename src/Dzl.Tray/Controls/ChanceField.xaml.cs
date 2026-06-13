@@ -26,6 +26,11 @@ public partial class ChanceField : UserControl
         DataObject.AddPastingHandler(InlineEntry, OnEntryPaste);
         DataObject.AddPastingHandler(PopupEntry, OnEntryPaste);
         IsKeyboardFocusWithinChanged += OnFocusWithinChanged;
+        _commitTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(350),
+        };
+        _commitTimer.Tick += (_, _) => FlushCommit();
     }
 
     public static readonly DependencyProperty ValueProperty = DependencyProperty.Register(
@@ -117,6 +122,8 @@ public partial class ChanceField : UserControl
         // The slider edits Value via ElementName; force the outer binding (item.Chance, EditChanceValue, …) to
         // pick it up so every consumer sees the current value.
         BindingOperations.GetBindingExpression(c, ValueProperty)?.UpdateSource();
+        // Inline (grid) mode: auto-commit shortly after the last change, so edits persist without clicking away.
+        if (c.Inline) { c._commitTimer.Stop(); c._commitTimer.Start(); }
     }
 
     // Live two-way between the entry text and Value without a binding (a converter binding rewrites the box
@@ -186,16 +193,25 @@ public partial class ChanceField : UserControl
         }
     }
 
-    // ===== Inline mode: commit once when editing ends =====
-    private double _focusValue;
+    // ===== Inline mode: debounced auto-commit (persists ~350ms after the last change) + flush on focus leave =====
+    private readonly System.Windows.Threading.DispatcherTimer _commitTimer;
+    private double _committedValue;
+
+    private void FlushCommit()
+    {
+        _commitTimer.Stop();
+        if (Math.Abs(Value - _committedValue) > 1e-9)
+        {
+            _committedValue = Value;
+            ValueCommitted?.Invoke(this, EventArgs.Empty);
+        }
+    }
 
     private void OnFocusWithinChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-        if (!Inline) return; // popup-mode callers read Value directly on Apply/Add
-        if ((bool)e.NewValue)
-            _focusValue = Value;
-        else if (Math.Abs(Value - _focusValue) > 1e-9)
-            ValueCommitted?.Invoke(this, EventArgs.Empty);
+        if (!Inline) return;                 // popup-mode callers read Value directly on Apply/Add
+        if ((bool)e.NewValue) _committedValue = Value; // baseline when editing starts
+        else FlushCommit();                  // commit immediately when focus leaves the cell
     }
 
     // ===== Popup mode: button toggles a StaysOpen=False flyout (standalone use, never in a DataGrid) =====

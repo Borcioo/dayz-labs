@@ -67,7 +67,9 @@ public static class CeNum
 
     public static string Str(int v) => v.ToString(CultureInfo.InvariantCulture);
 
-    public static string Str(double v) => v.ToString(CultureInfo.InvariantCulture);
+    // Round to 10 dp before formatting so binary-float noise (e.g. 0.55 + 0.05 → 0.6000000000000001) never
+    // reaches the file, while keeping every realistic CE precision (chances ≤3 dp, coords well under 10 dp).
+    public static string Str(double v) => System.Math.Round(v, 10).ToString(CultureInfo.InvariantCulture);
 
     public static string Str(bool v) => v ? "1" : "0";
 }
