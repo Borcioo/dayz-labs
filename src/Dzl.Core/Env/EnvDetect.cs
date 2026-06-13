@@ -8,11 +8,10 @@ public sealed record DetectedPaths(string? DayzPath, string? ToolsPath, string? 
 
 public static class EnvDetect
 {
-    /// <summary>
-    /// True if THIS process runs elevated (Administrator). Matters because mapped/subst drives
-    /// (like the P: work drive) are per-session AND per-elevation: an admin process sees drives
-    /// the normal user session (Explorer, the game) does not, and vice versa. Windows-only.
-    /// </summary>
+    /// <summary>True if THIS process runs elevated (Administrator). Windows-only.</summary>
+    /// <remarks>Matters because mapped/subst drives (like the P: work drive) are per-session AND
+    /// per-elevation: an admin process sees drives the normal user session (Explorer, the game) does
+    /// not, and vice versa.</remarks>
     public static bool IsElevated()
     {
         try
@@ -81,11 +80,9 @@ public static class EnvDetect
         return result;
     }
 
-    /// <summary>
-    /// Read the <c>WorkDirPath</c> value out of a DayZ Tools <c>settings.ini</c>
-    /// (e.g. <c>WorkDirPath="C:\Users\m\DayZ Projects"</c>). Quotes and surrounding
-    /// whitespace are stripped. Returns null if absent.
-    /// </summary>
+    /// <summary>Read the work-drive source folder out of a DayZ Tools <c>settings.ini</c> (the
+    /// <c>[ProjectDrive] path=</c> value, with a legacy <c>WorkDirPath=</c> fallback). Quotes and
+    /// surrounding whitespace are stripped; null if absent.</summary>
     public static string? ParseWorkDir(string settingsIniText)
     {
         if (string.IsNullOrEmpty(settingsIniText)) return null;
@@ -139,11 +136,9 @@ public static class EnvDetect
         return null;
     }
 
-    /// <summary>
-    /// True if DayZ Tools' registry config exists (HKCU\SOFTWARE\Bohemia Interactive\Dayz Tools
-    /// with a non-empty `path`), i.e. Steam's install script ran. WorkDrive needs this; when it's
-    /// missing WorkDrive reports "install corrupted". Windows-only / not unit-tested.
-    /// </summary>
+    /// <summary>True if DayZ Tools' registry config exists (HKCU\SOFTWARE\Bohemia Interactive\Dayz Tools
+    /// with a non-empty <c>path</c>), i.e. Steam's install script ran. Windows-only.</summary>
+    /// <remarks>WorkDrive needs this; when it's missing WorkDrive reports "install corrupted".</remarks>
     public static bool ToolsRegistered()
     {
         try

@@ -44,10 +44,9 @@ class Missions
 """;
     }
 
-    /// <summary>
-    /// Create instance dir, write serverDZ.cfg (only if absent), make profiles/profiles_client,
-    /// and copy the mission from the DayZ install if present. Thin/manual; failures land in Notes.
-    /// </summary>
+    /// <summary>Create the instance dir, write serverDZ.cfg (only if absent), make
+    /// profiles/profiles_client, and copy the mission from the DayZ install if present. Failures land in
+    /// Notes.</summary>
     public static ScaffoldReport Scaffold(string dayzPath, string instanceDir,
         string missionName = "dayzOffline.chernarusplus")
     {

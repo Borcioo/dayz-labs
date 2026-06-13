@@ -2,12 +2,11 @@ using Dzl.Core.App;
 
 namespace Dzl.Core.Ipc;
 
-/// <summary>
-/// Single source of truth for the routed IPC surface. The dispatch table binds each method name to
-/// its <see cref="LauncherService"/> call exactly once — <see cref="IpcDispatcher"/> (tray side) and
-/// <see cref="ControlPlane"/>'s direct fallback both execute the same entry, so the two paths can't
-/// drift. Adding a method = one const + one table entry, then surface it in the frontends.
-/// </summary>
+/// <summary>Single source of truth for the routed IPC surface: the dispatch table binds each method
+/// name to its <see cref="LauncherService"/> call exactly once.</summary>
+/// <remarks><see cref="IpcDispatcher"/> (tray side) and <see cref="ControlPlane"/>'s direct fallback
+/// both execute the same entry, so the two paths can't drift. Adding a method = one const + one table
+/// entry, then surface it in the frontends.</remarks>
 public static class IpcMethods
 {
     public const string Status = "status";

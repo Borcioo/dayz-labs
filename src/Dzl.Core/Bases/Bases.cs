@@ -16,11 +16,10 @@ public sealed record BaseInfo
     public string Mission { get; init; } = "";
 }
 
-/// <summary>
-/// Manages server bases (templates). A base lives at <c>&lt;ProjectsRoot&gt;\bases\&lt;name&gt;\</c> with its
-/// <c>serverDZ.cfg</c> + <c>mpmissions\</c> and a <c>.dzl\base.json</c> descriptor. New server instances can
-/// copy from a base instead of the raw DayZ install — so users build/version their own templates.
-/// </summary>
+/// <summary>Manages server bases (templates). New server instances can copy from a base instead of the
+/// raw DayZ install — so users build/version their own templates.</summary>
+/// <remarks>A base lives at <c>&lt;ProjectsRoot&gt;\bases\&lt;name&gt;\</c> with its <c>serverDZ.cfg</c> +
+/// <c>mpmissions\</c> and a <c>.dzl\base.json</c> descriptor.</remarks>
 public static class ServerBases
 {
     private const string DzlDir = ".dzl";

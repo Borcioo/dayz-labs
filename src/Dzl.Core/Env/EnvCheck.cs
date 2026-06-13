@@ -10,10 +10,8 @@ public sealed record CheckItem(string Key, string Label, bool Ok, CheckSeverity 
 
 public static class EnvCheck
 {
-    /// <summary>
-    /// Diagnoses the local DayZ dev environment for a given config. Never throws:
-    /// any per-check exception is reported as a failed item with the message in Detail.
-    /// </summary>
+    /// <summary>Diagnoses the local DayZ dev environment for a given config. Never throws — any per-check
+    /// exception is reported as a failed item with the message in Detail.</summary>
     /// <param name="workdriveMounted">Stub for the P: check; defaults to the real WorkDrive.IsMounted().</param>
     /// <param name="toolsRegistered">Stub for the DayZ Tools registry check; defaults to EnvDetect.ToolsRegistered().</param>
     public static List<CheckItem> Run(DzlConfig cfg, Func<bool>? workdriveMounted = null, Func<bool>? toolsRegistered = null)
