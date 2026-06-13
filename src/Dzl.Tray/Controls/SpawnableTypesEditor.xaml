@@ -2,6 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:ctl="clr-namespace:Dzl.Tray.Controls"
              x:Name="Root">
   <!-- DataContext = SpawnableTypesVm. Edits cfgspawnabletypes.xml: master list of types (left) + a detail
        pane for the selected type (right) with hoarder/damage and cargo/attachments blocks. Each block is
@@ -65,9 +66,8 @@
             <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
               <TextBlock Text="chance" VerticalAlignment="Center" Margin="0,0,6,0"
                          Style="{StaticResource StHint}" />
-              <ui:TextBox Width="70" FontSize="12" ToolTip="0..1"
-                          Text="{Binding ChanceText, UpdateSourceTrigger=LostFocus}"
-                          LostFocus="OnBlockChanceLostFocus" KeyDown="OnBlockChanceKeyDown" Tag="{Binding}" />
+              <ctl:ChanceField VerticalAlignment="Center" Value="{Binding Chance, Mode=TwoWay}"
+                               ValueCommitted="OnBlockChanceFieldCommitted" Tag="{Binding}" />
             </StackPanel>
             <DataGrid ItemsSource="{Binding Items}"
                       AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
@@ -80,8 +80,15 @@
               <DataGrid.Columns>
                 <DataGridTextColumn Header="Item name"
                                     Binding="{Binding Name, UpdateSourceTrigger=LostFocus}" Width="*" />
-                <DataGridTextColumn Header="Chance"
-                                    Binding="{Binding ChanceText, UpdateSourceTrigger=LostFocus}" Width="80" />
+                <DataGridTemplateColumn Header="Chance" Width="160" CanUserResize="False" IsReadOnly="True">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <ctl:ChanceField Value="{Binding Chance, Mode=TwoWay}" VerticalAlignment="Center"
+                                       HorizontalAlignment="Left" Margin="2"
+                                       ValueCommitted="OnSpawnItemChanceCommitted" />
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
                 <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate>
@@ -100,8 +107,8 @@
               <ui:TextBox Grid.Column="0" Margin="0,0,4,0" FontSize="12"
                           PlaceholderText="item classname" Tag="{Binding}"
                           KeyDown="OnAddItemKeyDown" />
-              <ui:TextBox Grid.Column="1" Width="60" Margin="0,0,4,0" FontSize="12"
-                          ToolTip="0..1" Text="1.0" Tag="{Binding}" KeyDown="OnAddItemKeyDown" />
+              <ctl:ChanceField Grid.Column="1" Margin="0,0,4,0" VerticalAlignment="Center"
+                               Value="{Binding NewItemChance, Mode=TwoWay}" />
               <ui:Button Grid.Column="2" Content="Add item" FontSize="11" Padding="6,2"
                          Click="OnAddItemClick" Tag="{Binding}" />
             </Grid>

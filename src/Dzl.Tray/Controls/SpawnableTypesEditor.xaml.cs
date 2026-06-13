@@ -121,18 +121,16 @@ public partial class SpawnableTypesEditor : UserControl
         }
     }
 
-    private void OnBlockChanceLostFocus(object sender, RoutedEventArgs e)
+    // Block chance committed via its ChanceField (popup closed / Enter).
+    private void OnBlockChanceFieldCommitted(object sender, System.EventArgs e)
     {
-        if ((sender as FrameworkElement)?.Tag is SpawnBlockVm block) block.CommitChance();
+        if (sender is FrameworkElement { DataContext: SpawnBlockVm block }) block.CommitChance();
     }
 
-    private void OnBlockChanceKeyDown(object sender, KeyEventArgs e)
+    // Per-item chance committed via its ChanceField.
+    private void OnSpawnItemChanceCommitted(object sender, System.EventArgs e)
     {
-        if (e.Key == Key.Enter && (sender as FrameworkElement)?.Tag is SpawnBlockVm block)
-        {
-            block.CommitChance();
-            e.Handled = true;
-        }
+        if (sender is FrameworkElement { DataContext: SpawnItemVm item }) item.Commit();
     }
 
     private void OnItemCellEditEnding(object? sender, DataGridCellEditEndingEventArgs e)
@@ -165,16 +163,14 @@ public partial class SpawnableTypesEditor : UserControl
         e.Handled = true;
     }
 
-    /// <summary>Find the add-item TextBoxes that share the clicked control's parent Grid, read them and add.</summary>
+    /// <summary>Find the add-item name TextBox that shares the clicked control's parent Grid, read it and add.</summary>
     private void AddItemFromRow(DependencyObject? near, SpawnBlockVm block)
     {
         var grid = FindAncestor<Grid>(near);
-        if (grid is null) { Vm?.AddItem(block, "", "1.0"); return; }
-        var boxes = grid.Children.OfType<Wpf.Ui.Controls.TextBox>().ToList();
-        var name = boxes.ElementAtOrDefault(0)?.Text ?? "";
-        var chance = boxes.ElementAtOrDefault(1)?.Text ?? "1.0";
-        Vm?.AddItem(block, name, chance);
-        if (boxes.Count > 0) boxes[0].Text = "";
+        var nameBox = grid?.Children.OfType<Wpf.Ui.Controls.TextBox>().FirstOrDefault();
+        var name = nameBox?.Text ?? "";
+        Vm?.AddItem(block, name, block.NewItemChance.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        if (nameBox is not null) nameBox.Text = "";
     }
 
     /// <summary>Walk up the visual tree to find the SpawnBlockVm-tagged DataGrid that owns an item button.</summary>

@@ -307,7 +307,7 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
     private void OnBlockChanceEdited(SpawnBlockVm block)
     {
         if (_suspendPersist) return;
-        SetBlockChance(block, block.ChanceText);
+        SetBlockChance(block, block.Chance.ToString(CultureInfo.InvariantCulture));
     }
 
     public void AddItem(SpawnBlockVm? block, string itemName, string chanceText)
@@ -333,7 +333,7 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
     {
         if (_suspendPersist || SelectedType is not { } row) return;
         if (string.IsNullOrWhiteSpace(item.Name)) { Status = "✗ item name must not be empty"; return; }
-        if (!TryChance(item.ChanceText, out var chance)) { Status = "✗ chance must be a number 0..1"; return; }
+        var chance = Math.Clamp(item.Chance, 0, 1);
         PushUndo();
         Report(_svc.SetItem(row.Name, block.IsAttachments, block.Index, item.OriginalName, chance, item.Name));
         AfterBlockChange(row, block.IsAttachments);
@@ -391,6 +391,7 @@ public sealed partial class SpawnBlockVm : ObservableObject
         _isPreset = block.IsPreset;
         _presetText = block.Preset ?? "";
         _chanceText = block.Chance?.ToString(CultureInfo.InvariantCulture) ?? "1.0";
+        _chance = block.Chance ?? 1.0;
         foreach (var i in block.Items)
         {
             var ivm = new SpawnItemVm(i.Name, i.Chance);
@@ -414,6 +415,12 @@ public sealed partial class SpawnBlockVm : ObservableObject
 
     /// <summary>Chance text (when chance-based). Commit raises <see cref="ChanceEdited"/>.</summary>
     [ObservableProperty] private string _chanceText;
+
+    /// <summary>Chance as a number (when chance-based) — bound by the ChanceField; commit raises <see cref="ChanceEdited"/>.</summary>
+    [ObservableProperty] private double _chance;
+
+    /// <summary>Chance for the add-item row of this block (bound by its ChanceField).</summary>
+    [ObservableProperty] private double _newItemChance = 1.0;
 
     public ObservableCollection<SpawnItemVm> Items { get; } = new();
 
