@@ -151,14 +151,6 @@ public partial class MainWindow : FluentWindow
         _economyWin.Show();
     }
 
-    // --- Dashboard shortcut handlers --------------------------------------
-
-    /// <summary>"Edit mods" shortcut → open the active server's editor on the Mods tab.</summary>
-    private void OnEditMods(object sender, RoutedEventArgs e) => OpenServerEditor(1);
-
-    /// <summary>"Edit params" shortcut → open the active server's editor on the Params tab.</summary>
-    private void OnEditParams(object sender, RoutedEventArgs e) => OpenServerEditor(2);
-
     // --- Top action bar handlers ------------------------------------------
 
     private void OnModeToggleClick(object sender, RoutedEventArgs e)
