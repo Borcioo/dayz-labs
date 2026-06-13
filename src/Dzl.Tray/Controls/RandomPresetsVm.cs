@@ -194,6 +194,16 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
                 Presets.Add(r);
     }
 
+    /// <summary>Select the preset named <paramref name="name"/> (e.g. from a validation-finding click),
+    /// clearing the filter first if it would hide the row. No-op when no preset matches.</summary>
+    public void SelectByEntry(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return;
+        if (!Presets.Any(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase)))
+            Filter = "";   // unfilter so the target row is visible (rebuilds Presets via ApplyFilter)
+        SelectedPreset = Presets.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
+    }
+
     partial void OnSelectedPresetChanged(PresetRowVm? value) => LoadItemsForSelected();
 
     private void LoadItemsForSelected()

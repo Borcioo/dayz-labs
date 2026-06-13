@@ -75,6 +75,14 @@ public partial class RandomPresetsEditor : UserControl
             vm.ToggleDisabled(row);
     }
 
+    // Validation-finding click: select the offending preset in the master list and scroll it into view.
+    private void OnFindingClick(object sender, MouseButtonEventArgs e)
+    {
+        if (Vm is not { } vm || sender is not FrameworkElement { DataContext: CeFindingRow f }) return;
+        vm.SelectByEntry(f.Entry);
+        if (vm.SelectedPreset is { } sel) PresetGrid.ScrollIntoView(sel);
+    }
+
     private void OnAddItemClick(object sender, RoutedEventArgs e) => Vm?.AddItem();
 
     private void OnAddItemKeyDown(object sender, KeyEventArgs e)

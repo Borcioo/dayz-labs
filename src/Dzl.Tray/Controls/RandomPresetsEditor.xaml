@@ -249,7 +249,9 @@
                 <ItemsControl ItemsSource="{Binding Findings}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                      <Grid Margin="0,0,0,3">
+                      <Grid Margin="0,0,0,3" Background="Transparent" Cursor="Hand"
+                            ToolTip="Jump to this preset in the list"
+                            MouseLeftButtonUp="OnFindingClick">
                         <Grid.ColumnDefinitions>
                           <ColumnDefinition Width="Auto" />
                           <ColumnDefinition Width="*" />
