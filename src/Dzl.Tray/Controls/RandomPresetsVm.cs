@@ -358,13 +358,9 @@ public sealed partial class PresetRowVm : ObservableObject
 
     partial void OnIsDisabledChanged(bool value)
     {
-        OnPropertyChanged(nameof(RowOpacity));
         OnPropertyChanged(nameof(ToggleTooltip));
         OnPropertyChanged(nameof(ToggleLabel));
     }
-
-    /// <summary>Dim disabled rows so parked presets read as inactive at a glance.</summary>
-    public double RowOpacity => IsDisabled ? 0.5 : 1.0;
 
     public string ToggleLabel => IsDisabled ? "On" : "Off";
     public string ToggleTooltip => IsDisabled ? "Enable (uncomment) this preset" : "Disable (comment out) this preset";

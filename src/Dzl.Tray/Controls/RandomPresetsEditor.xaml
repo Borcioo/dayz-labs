@@ -88,16 +88,33 @@
                     EnableRowVirtualization="True"
                     RowBackground="Transparent" AlternatingRowBackground="Transparent"
                     CellEditEnding="OnPresetCellEditEnding">
-            <!-- BasedOn the WPF-UI DataGridRow style, or this override strips the Fluent look
-                 (incl. the selected-row accent bar); we only add the dimmed look for disabled rows. -->
-            <DataGrid.RowStyle>
-              <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
-                <Setter Property="Opacity" Value="{Binding RowOpacity}" />
-              </Style>
-            </DataGrid.RowStyle>
+            <!-- No custom RowStyle on purpose: WPF-UI's DataGrid style drives the selected-row accent bar
+                 via its own RowStyle setter, and an explicit RowStyle here overrides it (the accent vanishes).
+                 The disabled (commented-out) state is shown per-cell instead — struck through + dimmed name. -->
             <DataGrid.Columns>
-              <DataGridTextColumn Header="Kind" Binding="{Binding KindLabel}" IsReadOnly="True" Width="Auto" />
-              <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="*" />
+              <DataGridTextColumn Header="Kind" Binding="{Binding KindLabel}" IsReadOnly="True" Width="Auto">
+                <DataGridTextColumn.ElementStyle>
+                  <Style TargetType="TextBlock">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding IsDisabled}" Value="True">
+                        <Setter Property="Opacity" Value="0.5" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </DataGridTextColumn.ElementStyle>
+              </DataGridTextColumn>
+              <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="*">
+                <DataGridTextColumn.ElementStyle>
+                  <Style TargetType="TextBlock">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding IsDisabled}" Value="True">
+                        <Setter Property="Opacity" Value="0.5" />
+                        <Setter Property="TextDecorations" Value="Strikethrough" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </DataGridTextColumn.ElementStyle>
+              </DataGridTextColumn>
               <DataGridTextColumn Header="Chance"
                                   Binding="{Binding ChanceText, UpdateSourceTrigger=LostFocus}"
                                   Width="80" />
