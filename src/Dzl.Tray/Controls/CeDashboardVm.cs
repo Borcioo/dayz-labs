@@ -34,8 +34,9 @@ public partial class CeDashboardVm : ObservableObject
 
     public CeDashboardVm(string configPath) => _configPath = configPath;
 
-    /// <summary>Raised when a tile or finding is clicked — the host panel selects that file's tab.</summary>
-    public event Action<CeKind>? NavigateRequested;
+    /// <summary>Raised when a tile or finding is clicked — the host panel selects that file's tab and,
+    /// when an entry is given (a finding click), filters that editor's list to it.</summary>
+    public event Action<CeKind, string>? NavigateRequested;
 
     public ObservableCollection<CeStat> Stats { get; } = new();
     public ObservableCollection<CeFindingRow> Findings { get; } = new();
@@ -134,8 +135,16 @@ public partial class CeDashboardVm : ObservableObject
         }
     }
 
+    /// <summary>Tile click — jump to the file's editor, no filter.</summary>
     [RelayCommand]
-    private void Navigate(CeKind kind) => NavigateRequested?.Invoke(kind);
+    private void Navigate(CeKind kind) => NavigateRequested?.Invoke(kind, "");
+
+    /// <summary>Finding click — jump to the file's editor and filter its list to the finding's entry.</summary>
+    [RelayCommand]
+    private void NavigateFinding(CeFindingRow? row)
+    {
+        if (row is not null) NavigateRequested?.Invoke(row.Kind, row.Entry);
+    }
 
     [RelayCommand]
     private void OpenMissionFolder()

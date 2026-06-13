@@ -66,6 +66,7 @@
         <Grid>
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />  <!-- title -->
+            <RowDefinition Height="Auto" />  <!-- filter -->
             <RowDefinition Height="*" />     <!-- grid -->
             <RowDefinition Height="Auto" />  <!-- add row -->
             <RowDefinition Height="Auto" />  <!-- actions -->
@@ -73,7 +74,11 @@
 
           <TextBlock Grid.Row="0" Text="Presets" Style="{StaticResource RpSectionHeader}" Margin="0,0,0,6" />
 
-          <DataGrid Grid.Row="1" x:Name="PresetGrid"
+          <!-- Filter -->
+          <ui:TextBox Grid.Row="1" Margin="0,0,0,6" FontSize="12" PlaceholderText="filter by name"
+                      Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" />
+
+          <DataGrid Grid.Row="2" x:Name="PresetGrid"
                     ItemsSource="{Binding Presets}"
                     SelectedItem="{Binding SelectedPreset, Mode=TwoWay}"
                     AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
@@ -94,7 +99,7 @@
           </DataGrid>
 
           <!-- Add preset -->
-          <Grid Grid.Row="2" Margin="0,8,0,0">
+          <Grid Grid.Row="3" Margin="0,8,0,0">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="*" />
               <ColumnDefinition Width="Auto" />
@@ -116,7 +121,7 @@
             <ui:Button Grid.Column="3" Content="Add" Click="OnAddPresetClick" />
           </Grid>
 
-          <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,6,0,0">
+          <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,6,0,0">
             <ui:Button Content="Rename" Margin="0,0,4,0" FontSize="12" Click="OnRenamePresetClick"
                        ToolTip="Rename the selected preset" />
             <ui:Button Content="Remove" FontSize="12" Click="OnRemovePresetClick"

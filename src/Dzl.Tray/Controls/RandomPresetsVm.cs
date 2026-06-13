@@ -40,10 +40,17 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
     /// <inheritdoc/>
     protected override void InvalidateModelCache() => _model = null;
 
-    /// <summary>The master list of presets (both kinds), sorted by kind then name.</summary>
+    /// <summary>Unfiltered backing store (all presets, sorted).</summary>
+    private readonly List<PresetRowVm> _all = new();
+
+    /// <summary>The filtered master list shown in the list (both kinds), sorted by kind then name.</summary>
     public ObservableCollection<PresetRowVm> Presets { get; } = new();
 
     [ObservableProperty] private PresetRowVm? _selectedPreset;
+
+    [ObservableProperty] private string _filter = "";
+
+    partial void OnFilterChanged(string value) => ApplyFilter();
 
     /// <summary>Items of the currently selected preset (editable). Empty when none selected.</summary>
     public ObservableCollection<PresetItemVm> Items { get; } = new();
@@ -66,16 +73,27 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
         var prevKind = SelectedPreset?.Kind;
         var prevName = SelectedPreset?.Name;
 
-        Presets.Clear();
+        _all.Clear();
         foreach (var p in Model
                      .OrderBy(p => p.Kind)
                      .ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
         {
-            Presets.Add(new PresetRowVm(p.Kind, p.Name, p.Chance, p.Items.Count));
+            _all.Add(new PresetRowVm(p.Kind, p.Name, p.Chance, p.Items.Count));
         }
+
+        ApplyFilter();
 
         SelectedPreset = Presets.FirstOrDefault(r => r.Kind == prevKind && r.Name == prevName)
                          ?? Presets.FirstOrDefault();
+    }
+
+    private void ApplyFilter()
+    {
+        var f = (Filter ?? "").Trim();
+        Presets.Clear();
+        foreach (var r in _all)
+            if (f.Length == 0 || r.Name.Contains(f, StringComparison.OrdinalIgnoreCase))
+                Presets.Add(r);
     }
 
     partial void OnSelectedPresetChanged(PresetRowVm? value) => LoadItemsForSelected();

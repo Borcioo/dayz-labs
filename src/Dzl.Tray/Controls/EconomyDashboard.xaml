@@ -136,8 +136,8 @@
                           Background="{DynamicResource ControlFillColorDefaultBrush}">
                     <Border.InputBindings>
                       <MouseBinding MouseAction="LeftClick"
-                                    Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding Kind}" />
+                                    Command="{Binding DataContext.NavigateFindingCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}" />
                     </Border.InputBindings>
                     <Grid>
                       <Grid.ColumnDefinitions>

@@ -36,7 +36,7 @@ public partial class EconomyPanel : UserControl
         _navWired = true;
     }
 
-    private void SelectTabForKind(CeKind kind)
+    private void SelectTabForKind(CeKind kind, string entry)
     {
         var header = kind switch
         {
@@ -49,7 +49,18 @@ public partial class EconomyPanel : UserControl
             _ => "Types",
         };
         foreach (var item in EconomyTabControl.Items)
-            if (item is TabItem { Header: string h } ti && h == header) { EconomyTabControl.SelectedItem = ti; return; }
+            if (item is TabItem { Header: string h } ti && h == header) { EconomyTabControl.SelectedItem = ti; break; }
+
+        // A finding click also filters the target editor's list to the offending entry.
+        if (entry.Length == 0) return;
+        switch (kind)
+        {
+            case CeKind.Types: Vm.TypesEditor.TypesFilter = entry; break;
+            case CeKind.Events: Vm.Events.Filter = entry; break;
+            case CeKind.Globals: Vm.Globals.Filter = entry; break;
+            case CeKind.SpawnableTypes: Vm.SpawnableTypes.Filter = entry; break;
+            case CeKind.RandomPresets: Vm.RandomPresets.Filter = entry; break;
+        }
     }
 
     // Batch + remove operate on the CHECKED rows (checkbox column), NOT the grid's focused/edited row.
