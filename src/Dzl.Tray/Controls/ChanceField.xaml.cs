@@ -95,12 +95,15 @@ public partial class ChanceField : UserControl
     private static object CoerceValue(DependencyObject d, object baseValue)
     {
         var c = (ChanceField)d;
-        return Math.Clamp((double)baseValue, c.Minimum, c.Maximum);
+        var clamped = Math.Clamp((double)baseValue, c.Minimum, c.Maximum);
+        // Round to Decimals so slider float noise (e.g. 0.35000000000000003) never reaches the model/file.
+        return Math.Round(clamped, Math.Max(0, c.Decimals), MidpointRounding.AwayFromZero);
     }
 
     private static void OnVisualAffectingChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var c = (ChanceField)d;
+        if (e.Property == DecimalsProperty) { c.CoerceValue(ValueProperty); return; } // re-round; its own change re-runs this
         c.UpdateDisplay();
         // The slider / number box live in the popup's own namescope and edit Value via ElementName; that write
         // does NOT reliably flow back to the bound source (item.Chance, EditChanceValue, …). Force it so every
