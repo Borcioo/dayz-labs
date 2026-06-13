@@ -75,6 +75,7 @@
                       IsReadOnly="False" SelectionMode="Single"
                       Background="Transparent" BorderThickness="0"
                       MaxHeight="180"
+                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                       RowBackground="Transparent" AlternatingRowBackground="Transparent"
                       CellEditEnding="OnItemCellEditEnding" Tag="{Binding}">
               <DataGrid.Columns>
@@ -185,6 +186,7 @@
                     EnableRowVirtualization="True"
                     VirtualizingPanel.IsVirtualizing="True"
                     VirtualizingPanel.VirtualizationMode="Recycling"
+                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                     RowBackground="Transparent" AlternatingRowBackground="Transparent">
             <DataGrid.Columns>
               <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />

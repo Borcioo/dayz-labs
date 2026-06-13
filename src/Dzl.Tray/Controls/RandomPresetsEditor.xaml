@@ -87,6 +87,7 @@
                     IsReadOnly="False" SelectionMode="Single"
                     Background="Transparent" BorderThickness="0"
                     EnableRowVirtualization="True"
+                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                     RowBackground="Transparent" AlternatingRowBackground="Transparent">
             <!-- No custom RowStyle on purpose: WPF-UI's DataGrid style drives the selected-row accent bar
                  via its own RowStyle setter, and an explicit RowStyle here overrides it (the accent vanishes).
@@ -228,6 +229,7 @@
                     IsReadOnly="False" SelectionMode="Single"
                     Background="Transparent" BorderThickness="0"
                     EnableRowVirtualization="True"
+                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                     RowBackground="Transparent" AlternatingRowBackground="Transparent"
                     CellEditEnding="OnItemCellEditEnding">
             <DataGrid.Columns>
