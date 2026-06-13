@@ -55,8 +55,8 @@
           </Grid>
         </ui:Card>
 
-        <!-- Discovered library -->
-        <ui:Card Grid.Row="1" Margin="0,0,0,4" Padding="16">
+        <!-- Discovered library — fills the remaining height (list scrolls inside) -->
+        <ui:Card Grid.Row="1" Margin="0,0,0,4" Padding="16" VerticalAlignment="Stretch">
           <Grid>
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
             <Grid Grid.Row="0" Margin="0,0,0,12">
