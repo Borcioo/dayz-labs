@@ -1,6 +1,5 @@
 using Dzl.Core.Procs;
 using FluentAssertions;
-using Xunit;
 
 namespace Dzl.Core.Tests;
 

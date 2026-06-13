@@ -1,6 +1,5 @@
 using Dzl.Core.Launch;
 using FluentAssertions;
-using Xunit;
 
 public class ProcessManagerTests
 {

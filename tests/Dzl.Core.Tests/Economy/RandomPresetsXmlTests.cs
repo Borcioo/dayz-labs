@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Xml.Linq;
 using Dzl.Core.Economy;
 using FluentAssertions;
-using Xunit;
 
 /// <summary>Tests for RandomPresetsXml: parse (invariant doubles), preset add/remove/rename/chance,
 /// item add/remove/set, and round-trip preservation of comments + sibling presets.</summary>

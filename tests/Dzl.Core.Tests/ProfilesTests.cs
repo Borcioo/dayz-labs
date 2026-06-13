@@ -1,6 +1,5 @@
 using Dzl.Core.Config;
 using FluentAssertions;
-using Xunit;
 
 public class ProfilesTests
 {

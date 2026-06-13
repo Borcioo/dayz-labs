@@ -1,7 +1,6 @@
 using Dzl.Core.App;
 using Dzl.Core.Config;
 using FluentAssertions;
-using Xunit;
 
 public class LauncherServiceTests
 {

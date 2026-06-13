@@ -1,6 +1,5 @@
 using Dzl.Core.Economy;
 using FluentAssertions;
-using Xunit;
 
 /// <summary>Tests for the in-place edit methods on LimitsXml (AddName/RemoveName/RenameName/ToXml).</summary>
 public class LimitsXmlEditTests

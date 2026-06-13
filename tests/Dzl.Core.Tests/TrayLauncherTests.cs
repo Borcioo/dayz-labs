@@ -1,4 +1,5 @@
-using Xunit; using Dzl.Core.Launch; using FluentAssertions;
+using Dzl.Core.Launch;
+using FluentAssertions;
 public class TrayLauncherTests
 {
     [Fact]

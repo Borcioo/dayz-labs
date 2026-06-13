@@ -1,6 +1,5 @@
 using Dzl.Core.Logs;
 using FluentAssertions;
-using Xunit;
 
 public class LogsTests
 {

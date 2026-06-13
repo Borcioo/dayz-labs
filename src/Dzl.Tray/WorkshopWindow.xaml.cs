@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Windows;
 using Dzl.Core.App;
 using Dzl.Tray.ViewModels;

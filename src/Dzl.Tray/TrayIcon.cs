@@ -1,15 +1,12 @@
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using Dzl.Core.Config;
+using Dzl.Core.Env;
 using Dzl.Core.Ipc;
 using Dzl.Core.Launch;
-using Dzl.Core.Env;
 using Dzl.Core.Tools;
 using H.NotifyIcon;
 

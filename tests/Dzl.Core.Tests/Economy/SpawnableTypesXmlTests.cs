@@ -1,8 +1,5 @@
-using System.Globalization;
-using System.Threading;
 using Dzl.Core.Economy;
 using FluentAssertions;
-using Xunit;
 
 /// <summary>Tests for SpawnableTypesXml: parse (hoarder/damage/preset+chance blocks, cargo & attachments,
 /// invariant doubles), type add/remove/rename, hoarder/damage edits, block add/remove + preset/chance,

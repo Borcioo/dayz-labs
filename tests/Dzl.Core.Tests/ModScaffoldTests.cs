@@ -1,4 +1,3 @@
-using Xunit;
 using Dzl.Core.Projects;
 using FluentAssertions;
 

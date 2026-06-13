@@ -2,7 +2,6 @@ using Dzl.Core.App;
 using Dzl.Core.Config;
 using Dzl.Core.Vcs;
 using FluentAssertions;
-using Xunit;
 
 public class GitTests
 {

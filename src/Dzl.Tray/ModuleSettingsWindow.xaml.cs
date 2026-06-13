@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Windows;
 using Dzl.Tray.ViewModels;
 using Microsoft.Win32;

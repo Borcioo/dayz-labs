@@ -1,6 +1,5 @@
 using Dzl.Core.Tools;
 using FluentAssertions;
-using Xunit;
 
 public class ToolCatalogTests
 {

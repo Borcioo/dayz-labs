@@ -1,7 +1,5 @@
-using System.Xml.Linq;
 using Dzl.Core.Economy;
 using FluentAssertions;
-using Xunit;
 
 /// <summary>Tests for GlobalsXml: parse, SetVar (upsert), RemoveVar, RenameVar, and round-trip
 /// preservation of comments, sibling vars, and the XML declaration.</summary>

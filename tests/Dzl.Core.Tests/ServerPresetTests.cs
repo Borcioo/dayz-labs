@@ -1,4 +1,6 @@
-using Xunit; using Dzl.Core.Servers; using Dzl.Core.Config; using FluentAssertions;
+using Dzl.Core.Config;
+using Dzl.Core.Servers;
+using FluentAssertions;
 public class ServerPresetTests
 {
     [Fact]

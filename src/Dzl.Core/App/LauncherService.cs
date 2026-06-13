@@ -1,7 +1,6 @@
 using Dzl.Core.Config;
 using Dzl.Core.Launch;
 using Dzl.Core.Logs;
-using Dzl.Core.Mods;
 using Dzl.Core.Projects;
 
 namespace Dzl.Core.App;

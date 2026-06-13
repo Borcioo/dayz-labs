@@ -1,5 +1,5 @@
-using GongSolutions.Wpf.DragDrop;
 using Dzl.Tray.ViewModels;
+using GongSolutions.Wpf.DragDrop;
 
 namespace Dzl.Tray;
 

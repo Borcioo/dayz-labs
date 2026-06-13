@@ -1,15 +1,12 @@
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using Dzl.Core.Config;
 using Dzl.Core.Servers;
 using Dzl.Core.Tools;
 using Dzl.Tray.ViewModels;
 using Microsoft.Win32;
 using Wpf.Ui.Controls;
-using Button = Wpf.Ui.Controls.Button;
 using TextBox = System.Windows.Controls.TextBox;
 
 namespace Dzl.Tray;

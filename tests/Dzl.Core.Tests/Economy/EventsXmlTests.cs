@@ -1,7 +1,5 @@
-using System.Xml.Linq;
 using Dzl.Core.Economy;
 using FluentAssertions;
-using Xunit;
 
 /// <summary>Tests for EventsXml: parse (scalars/flags/position/limit/active/children),
 /// event add/remove/rename, scalar/flag/position/active setters, child add/remove/set,

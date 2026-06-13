@@ -1,7 +1,6 @@
 using Dzl.Core.Economy;
 using Dzl.Core.Economy.Lint;
 using FluentAssertions;
-using Xunit;
 
 public class LintTests
 {

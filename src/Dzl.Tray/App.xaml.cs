@@ -1,6 +1,4 @@
-using System.Linq;
 using System.IO;
-using System.Threading;
 using System.Windows;
 using Dzl.Core.App;
 using Dzl.Core.Config;

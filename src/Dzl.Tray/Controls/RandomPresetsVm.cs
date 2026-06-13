@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Dzl.Core.App;
 using Dzl.Core.Economy;

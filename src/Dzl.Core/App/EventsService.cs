@@ -1,5 +1,3 @@
-using System.Xml.Linq;
-using Dzl.Core.Config;
 using Dzl.Core.Economy;
 
 namespace Dzl.Core.App;

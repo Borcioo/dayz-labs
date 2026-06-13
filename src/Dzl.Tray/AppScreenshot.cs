@@ -1,7 +1,6 @@
 using System.Drawing;          // Bitmap / Graphics.CopyFromScreen (System.Drawing.Common, already used by the tray icon)
 using System.Drawing.Imaging;
 using System.IO;
-using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 

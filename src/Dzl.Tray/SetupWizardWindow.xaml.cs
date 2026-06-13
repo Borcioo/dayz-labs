@@ -1,6 +1,4 @@
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Dzl.Core.Config;
@@ -9,8 +7,8 @@ using Dzl.Core.Mods;
 using Dzl.Core.Tools;
 using Microsoft.Win32;
 using Wpf.Ui.Controls;
-using TextBox = System.Windows.Controls.TextBox;
 using TextBlock = System.Windows.Controls.TextBlock;
+using TextBox = System.Windows.Controls.TextBox;
 
 namespace Dzl.Tray;
 

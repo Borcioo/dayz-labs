@@ -1,6 +1,5 @@
 using Dzl.Core.Env;
 using FluentAssertions;
-using Xunit;
 
 public class EnvTests
 {

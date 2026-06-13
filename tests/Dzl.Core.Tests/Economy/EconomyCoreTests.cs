@@ -1,6 +1,5 @@
 using Dzl.Core.Economy;
 using FluentAssertions;
-using Xunit;
 
 public class EconomyCoreTests
 {

@@ -1,8 +1,6 @@
 using Dzl.Core.App;
-using Dzl.Core.Config;
 using Dzl.Core.Ipc;
 using FluentAssertions;
-using Xunit;
 
 public class IpcDispatcherTests
 {

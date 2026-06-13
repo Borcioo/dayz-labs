@@ -1,7 +1,6 @@
 using Dzl.Core.Config;
 using Dzl.Core.Mods;
 using FluentAssertions;
-using Xunit;
 
 public class ModClassifyTests
 {

@@ -1,7 +1,5 @@
-using System;
 using System.Windows;
 using System.Windows.Controls;
-using Dzl.Tray;
 
 namespace Dzl.Tray.Controls;
 

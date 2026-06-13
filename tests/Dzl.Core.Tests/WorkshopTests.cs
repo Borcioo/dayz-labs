@@ -1,6 +1,5 @@
 using Dzl.Core.Workshop;
 using FluentAssertions;
-using Xunit;
 
 public class WorkshopTests
 {

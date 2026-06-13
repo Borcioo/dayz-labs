@@ -3,7 +3,6 @@ using Dzl.Core.Build;
 using Dzl.Core.Config;
 using Dzl.Core.Projects;
 using FluentAssertions;
-using Xunit;
 
 public class ModBuildTests
 {

@@ -2,7 +2,6 @@ using Dzl.Core.App;
 using Dzl.Core.Config;
 using Dzl.Core.Economy;
 using FluentAssertions;
-using Xunit;
 
 public class TypesServiceMultiFileTests
 {
