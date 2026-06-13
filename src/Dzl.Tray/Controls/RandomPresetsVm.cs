@@ -94,7 +94,7 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
 
     // "Edit preset" card (right column): live name + chance + kind of the selected preset.
     [ObservableProperty] private string _editName = "";
-    [ObservableProperty] private string _editChance = "";
+    [ObservableProperty] private double _editChanceValue;
     /// <summary>0 = cargo, 1 = attachments (binds the kind combo).</summary>
     [ObservableProperty] private int _editKindIndex;
     private bool _suspendCardSync;
@@ -108,13 +108,13 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
 
     // new-preset form
     [ObservableProperty] private string _newPresetName = "";
-    [ObservableProperty] private string _newPresetChance = "0.1";
+    [ObservableProperty] private double _newPresetChanceValue = 0.1;
     /// <summary>true = Cargo, false = Attachments.</summary>
     [ObservableProperty] private bool _newPresetIsCargo = true;
 
     // new-item form
     [ObservableProperty] private string _newItemName = "";
-    [ObservableProperty] private string _newItemChance = "1.0";
+    [ObservableProperty] private double _newItemChanceValue = 1.0;
 
     /// <summary>Set while a dropdown pick commits the name, so we don't re-filter (which would Clear the
     /// suggestion list and yank the just-selected item out from under the combo, blanking the field).</summary>
@@ -219,7 +219,7 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
         // Sync the edit card to the new selection without echoing back as a rename/kind change.
         _suspendCardSync = true;
         EditName = value?.Name ?? "";
-        EditChance = value?.ChanceText ?? "";
+        EditChanceValue = value?.Chance ?? 0;
         EditKindIndex = value is { Kind: PresetKind.Attachments } ? 1 : 0;
         _suspendCardSync = false;
         OnPropertyChanged(nameof(HasSelection));
@@ -238,7 +238,7 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
         if (SelectedPreset is not { } row) return;
         var newName = (EditName ?? "").Trim();
         if (newName.Length == 0) { Status = "✗ name must not be empty"; return; }
-        if (!TryChance(EditChance, out var chance)) { Status = "✗ chance must be a number 0..1"; return; }
+        var chance = Math.Clamp(EditChanceValue, 0, 1);
 
         var renamed = !string.Equals(newName, row.Name, StringComparison.Ordinal);
         var chanceChanged = Math.Abs(chance - row.Chance) > 1e-9;
@@ -308,7 +308,7 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
     {
         var name = (NewPresetName ?? "").Trim();
         if (name.Length == 0) { Status = "✗ preset name must not be empty"; return; }
-        if (!TryChance(NewPresetChance, out var chance)) { Status = "✗ chance must be a number 0..1"; return; }
+        var chance = Math.Clamp(NewPresetChanceValue, 0, 1);
         var kind = NewPresetIsCargo ? PresetKind.Cargo : PresetKind.Attachments;
 
         PushUndo();
@@ -358,7 +358,7 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
         if (SelectedPreset is not { } row) { Status = "✗ select a preset first"; return; }
         var name = (NewItemName ?? "").Trim();
         if (name.Length == 0) { Status = "✗ item name must not be empty"; return; }
-        if (!TryChance(NewItemChance, out var chance)) { Status = "✗ chance must be a number 0..1"; return; }
+        var chance = Math.Clamp(NewItemChanceValue, 0, 1);
 
         PushUndo();
         if (Report(_svc.AddItem(row.Kind, row.Name, name, chance)))
