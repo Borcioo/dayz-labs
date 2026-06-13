@@ -25,13 +25,8 @@ public partial class MainWindow : FluentWindow
         Closed += (_, _) => _vm.Dispose();
 
         // Select Dashboard on load so a panel is always visible; selecting the first
-        // NavTop item raises OnNavChanged, which calls ShowPage("dashboard"). Also seed the
-        // Logs list-view row heights from the panes' initial IsExpanded state.
-        Loaded += (_, _) =>
-        {
-            NavGeneral.SelectedIndex = 0;   // Dashboard
-            PageLogs.UpdateLogListRowHeights();
-        };
+        // NavTop item raises OnNavChanged, which calls ShowPage("dashboard").
+        Loaded += (_, _) => NavGeneral.SelectedIndex = 0;   // Dashboard
     }
 
     /// <summary>Every nav rail (grouped sections + pinned system group). Selection is single across all of
@@ -117,7 +112,6 @@ public partial class MainWindow : FluentWindow
         PageSettings.Visibility = tag == "settings" ? Visibility.Visible : Visibility.Collapsed;
 
         // Refresh page-local state on show.
-        if (tag == "logs") PageLogs.UpdateLogListRowHeights();
         if (tag == "tools") PageTools.RefreshToolsPage();
         if (tag == "mymods") PageMyMods.RefreshOnShow();
         if (tag == "servers") { _vm.RefreshServers(); _vm.RefreshBases(); }   // base dropdown needs bases
@@ -158,9 +152,6 @@ public partial class MainWindow : FluentWindow
         if (_vm.SwitchPresetCommand.CanExecute(null))
             _vm.SwitchPresetCommand.Execute(null);
     }
-
-    // The Logs page (auto-scroll, list-view row heights, open-folder/clear) now lives in
-    // Views/LogsView. ShowPage("logs") seeds its row heights via PageLogs.UpdateLogListRowHeights().
 
     // === Work drive (bottom status bar) ===================================
 
