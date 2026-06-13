@@ -125,6 +125,58 @@ public class CeValidatorTests
         validator.ValidatePerFile(world, CeKind.SpawnableTypes).Should().BeEmpty();
     }
 
+    // --- RandomPresets / Globals / Dictionaries ---
+
+    [Fact]
+    public void Preset_chance_out_of_range_is_a_warning()
+    {
+        var world = new CeWorld
+        {
+            RandomPresets = new[] { new RandomPreset(PresetKind.Cargo, "p", 2.0, System.Array.Empty<PresetItem>()) },
+        };
+        new RandomPresetsRules().Check(world).Should().Contain(f => f.Code == "preset-chance-range");
+    }
+
+    [Fact]
+    public void Preset_referenced_by_a_spawnabletype_is_not_flagged_unused()
+    {
+        var world = new CeWorld
+        {
+            SpawnableTypes = new[] { Spawn("Foo", CargoPreset("used")) },
+            RandomPresets = new[]
+            {
+                new RandomPreset(PresetKind.Cargo, "used", 1.0, System.Array.Empty<PresetItem>()),
+                new RandomPreset(PresetKind.Cargo, "lonely", 1.0, System.Array.Empty<PresetItem>()),
+            },
+        };
+        var findings = new UnusedPresetRule().Check(world).ToList();
+        findings.Should().Contain(f => f.Code == "unused-preset" && f.EntryName == "lonely");
+        findings.Should().NotContain(f => f.EntryName == "used");
+    }
+
+    [Fact]
+    public void Global_bad_type_and_non_numeric_value_are_warnings()
+    {
+        var world = new CeWorld { Globals = new[] { new GlobalVar("Weird", 5, "notnum") } };
+        var codes = new GlobalsRules().Check(world).Select(f => f.Code).ToList();
+        codes.Should().Contain("global-type-range");
+        codes.Should().Contain("global-value-nan");
+    }
+
+    [Fact]
+    public void User_list_member_absent_from_base_definition_is_an_error()
+    {
+        var world = new CeWorld
+        {
+            Limits = new LimitsDef(
+                new HashSet<string>(System.StringComparer.OrdinalIgnoreCase) { "Town" },
+                new HashSet<string>(), new HashSet<string>(), new HashSet<string>()),
+            UserGroups = new[] { new LimitsUserGroup("TownNope", LimitsKind.Usage, new[] { "Town", "Nope" }) },
+        };
+        new DictionariesRules().Check(world)
+            .Should().Contain(f => f.Code == "user-list-unknown-member" && f.Message.Contains("Nope"));
+    }
+
     [Fact]
     public void Full_pass_reports_progress_to_100_and_includes_cross_file_findings()
     {

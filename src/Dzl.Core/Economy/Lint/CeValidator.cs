@@ -32,5 +32,9 @@ public sealed class CeValidator
         new TypesWorldRule(),
         new SpawnableTypesRules(),
         new EventsRules(),
+        new RandomPresetsRules(),
+        new UnusedPresetRule(),
+        new GlobalsRules(),
+        new DictionariesRules(),
     };
 }
