@@ -103,7 +103,8 @@
                   </Style>
                 </DataGridTextColumn.ElementStyle>
               </DataGridTextColumn>
-              <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="*">
+              <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True"
+                                  Width="*" MinWidth="120">
                 <DataGridTextColumn.ElementStyle>
                   <Style TargetType="TextBlock">
                     <Style.Triggers>
@@ -117,20 +118,22 @@
               </DataGridTextColumn>
               <DataGridTextColumn Header="Chance"
                                   Binding="{Binding ChanceText, UpdateSourceTrigger=LostFocus}"
-                                  Width="80" />
-              <DataGridTextColumn Header="#items" Binding="{Binding ItemCount}" IsReadOnly="True" Width="60" />
+                                  Width="80" MinWidth="60" />
+              <DataGridTextColumn Header="#items" Binding="{Binding ItemCount}" IsReadOnly="True"
+                                  Width="60" CanUserResize="False" />
               <!-- Per-row lint badge (amber when the preset has findings) -->
-              <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
+              <DataGridTemplateColumn Header="" Width="40" CanUserResize="False" IsReadOnly="True">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <TextBlock Text="{Binding LintGlyph}" Foreground="#F0C04A" FontSize="11"
-                               VerticalAlignment="Center" ToolTip="{Binding LintTooltip}"
+                               VerticalAlignment="Center" HorizontalAlignment="Center"
+                               ToolTip="{Binding LintTooltip}"
                                Visibility="{Binding HasLint, Converter={StaticResource BoolToVis}}" />
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <!-- Per-row quick actions -->
-              <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
+              <!-- Per-row quick actions (fixed width so the buttons never get squeezed) -->
+              <DataGridTemplateColumn Header="" Width="124" CanUserResize="False" IsReadOnly="True">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -200,13 +203,15 @@
                     CellEditEnding="OnItemCellEditEnding">
             <DataGrid.Columns>
               <DataGridTextColumn Header="Item name"
-                                  Binding="{Binding Name, UpdateSourceTrigger=LostFocus}" Width="*" />
+                                  Binding="{Binding Name, UpdateSourceTrigger=LostFocus}"
+                                  Width="*" MinWidth="120" />
               <DataGridTextColumn Header="Chance"
-                                  Binding="{Binding ChanceText, UpdateSourceTrigger=LostFocus}" Width="90" />
-              <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
+                                  Binding="{Binding ChanceText, UpdateSourceTrigger=LostFocus}"
+                                  Width="80" MinWidth="60" />
+              <DataGridTemplateColumn Header="" Width="84" CanUserResize="False" IsReadOnly="True">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>
-                    <ui:Button Content="Remove" FontSize="11" Padding="6,2"
+                    <ui:Button Content="Remove" FontSize="11" Padding="6,2" HorizontalAlignment="Center"
                                Click="OnRemoveItemClick" Tag="{Binding}" />
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
