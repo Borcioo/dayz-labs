@@ -200,16 +200,37 @@ public partial class ChanceField : UserControl
 
     // ===== Popup mode: button toggles a StaysOpen=False flyout (standalone use, never in a DataGrid) =====
     private bool _wasOpen;
+    private Window? _popupWindow;
 
     private void OnTogglePreviewDown(object sender, MouseButtonEventArgs e) => _wasOpen = Pop.IsOpen;
 
     private void OnToggleClick(object sender, MouseButtonEventArgs e)
     {
-        if (_wasOpen) Pop.IsOpen = false; // clicking the face while open → close (StaysOpen already closed it)
-        else { SyncEntryFromValue(); Pop.IsOpen = true; }
+        if (_wasOpen) { Pop.IsOpen = false; return; } // clicking the face while open → close
+        SyncEntryFromValue();
+        Pop.IsOpen = true;
+        // A Popup does not follow its window; close it if the window moves/resizes/deactivates so it can't be
+        // left floating detached from the button.
+        _popupWindow = Window.GetWindow(this);
+        if (_popupWindow is not null)
+        {
+            _popupWindow.LocationChanged += OnHostShifted;
+            _popupWindow.Deactivated += OnHostShifted;
+            _popupWindow.SizeChanged += OnHostResized;
+        }
     }
 
-    private void OnPopupClosed(object? sender, EventArgs e) { /* nothing to persist — Value is already live */ }
+    private void OnHostShifted(object? sender, EventArgs e) => Pop.IsOpen = false;
+    private void OnHostResized(object sender, SizeChangedEventArgs e) => Pop.IsOpen = false;
+
+    private void OnPopupClosed(object? sender, EventArgs e)
+    {
+        if (_popupWindow is null) return;
+        _popupWindow.LocationChanged -= OnHostShifted;
+        _popupWindow.Deactivated -= OnHostShifted;
+        _popupWindow.SizeChanged -= OnHostResized;
+        _popupWindow = null;
+    }
 
     /// <summary>Center the popup horizontally under the button (4px gap below it).</summary>
     private static CustomPopupPlacement[] PlaceCenteredBelow(Size popupSize, Size targetSize, Point offset) =>
