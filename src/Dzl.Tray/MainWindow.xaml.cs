@@ -125,7 +125,7 @@ public partial class MainWindow : FluentWindow
         // Refresh page-local state on show.
         if (tag == "logs") PageLogs.UpdateLogListRowHeights();
         if (tag == "tools") PageTools.RefreshToolsPage();
-        if (tag == "mymods") { _vm.RefreshModProjects(); if (NewModAuthorBox.Text.Length == 0) NewModAuthorBox.Text = _vm.CachedAuthor; }
+        if (tag == "mymods") PageMyMods.RefreshOnShow();
         if (tag == "servers") { _vm.RefreshServers(); _vm.RefreshBases(); }   // base dropdown needs bases
         if (tag == "bases") _vm.RefreshBases();
         if (tag == "settings") { LoadSettingsFields(); _ = _vm.RefreshGitHubAuthAsync(); _vm.RefreshSteamAccount(); }
@@ -272,156 +272,8 @@ public partial class MainWindow : FluentWindow
         }
     }
 
-    // === MY MODS page =====================================================
-
-    private void OnRefreshMyMods(object sender, RoutedEventArgs e) => _vm.RefreshModProjects();
-
-    // Re-entrancy guard for the create-mod flow (the button is disabled while it runs, but a fast
-    // double-tap before the first frame renders could still re-enter — bool gate is the belt-and-braces).
-    private bool _creatingMod;
-
-    private async void OnCreateMod(object sender, RoutedEventArgs e)
-    {
-        if (_creatingMod) return;
-        var name = NewModNameBox.Text.Trim();
-        var author = NewModAuthorBox.Text.Trim();
-        if (name.Length == 0) { NewModStatus.Text = "Enter a mod name."; return; }
-        _creatingMod = true;
-        NewModButton.IsEnabled = false;
-        NewModStatus.Text = "creating…";
-        try { NewModStatus.Text = await _vm.CreateModProjectAsync(name, author, NewModInitGit.IsChecked == true); }
-        catch (Exception ex) { NewModStatus.Text = "✗ " + ex.Message; }
-        finally { NewModButton.IsEnabled = true; _creatingMod = false; }
-        if (NewModStatus.Text.StartsWith('✓')) NewModNameBox.Text = "";
-    }
-
-    // Open the project's git remote in the browser (button disabled when there's no remote).
-    private void OnOpenRepoUrl(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string url } || string.IsNullOrWhiteSpace(url)) return;
-        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
-        catch { /* best-effort */ }
-    }
-
-    // Open the per-mod git client window.
-    private void OnOpenGit(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string name }) return;
-        // No Owner: an owned WPF-UI FluentWindow (Mica) can minimize/hide its owner when closed. As an
-        // independent top-level tool window, closing it can't touch the main window.
-        new GitWindow(_vm, name, _vm.ModDirOf(name)).Show();
-    }
-
-    // Open the per-mod build console (preflight + build log). Ownerless like GitWindow.
-    private void OnOpenBuildWindow(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string name }) return;
-        new BuildWindow(_vm, name).Show();
-    }
-
-    // Folder name follows the repo URL until the user types their own; emptying the box hands
-    // control back to the auto-fill. _ghNameAutoFill guards the programmatic write from being
-    // mistaken for user input.
-    private bool _ghNameIsAuto = true;
-    private bool _ghNameAutoFill;
-
-    private void OnGhRepoChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-    {
-        if (!_ghNameIsAuto) return;
-        _ghNameAutoFill = true;
-        GhNameBox.Text = MainViewModel.SuggestModName(GhRepoBox.Text);
-        _ghNameAutoFill = false;
-    }
-
-    private void OnGhNameChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-    {
-        if (_ghNameAutoFill) return;
-        _ghNameIsAuto = GhNameBox.Text.Trim().Length == 0;
-    }
-
-    private bool _importingGitHub;
-
-    private async void OnImportFromGitHub(object sender, RoutedEventArgs e)
-    {
-        if (_importingGitHub) return;
-        var repo = GhRepoBox.Text.Trim();
-        if (repo.Length == 0) { GhImportStatus.Text = "Enter a GitHub repo (owner/name or URL)."; return; }
-        var mode = GhModeCombo.SelectedIndex switch
-        {
-            1 => MainViewModel.GitHubImportMode.Snapshot,
-            2 => MainViewModel.GitHubImportMode.Fresh,
-            _ => MainViewModel.GitHubImportMode.Clone,
-        };
-        _importingGitHub = true;
-        GhImportButton.IsEnabled = false;
-        GhImportStatus.Text = "cloning…";   // now renders — the clone runs off the UI thread
-        try { GhImportStatus.Text = await _vm.ImportFromGitHubAsync(repo, GhNameBox.Text, mode); }
-        catch (Exception ex) { GhImportStatus.Text = "✗ " + ex.Message; }
-        finally { GhImportButton.IsEnabled = true; _importingGitHub = false; }
-        if (GhImportStatus.Text.StartsWith('✓')) { GhRepoBox.Text = ""; GhNameBox.Text = ""; }
-    }
-
-    private void OnImportMod(object sender, RoutedEventArgs e)
-    {
-        var path = ImportPathBox.Text.Trim();
-        if (path.Length == 0) { ImportStatus.Text = "Pick a mod source folder."; return; }
-        ImportStatus.Text = _vm.ImportModProject(path, ImportNameBox.Text);
-        if (ImportStatus.Text.StartsWith('✓')) { ImportPathBox.Text = ""; ImportNameBox.Text = ""; }
-    }
-
-    private void OnQuickJunction(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: string name })
-            NewModStatus.Text = _vm.QuickJunction(name);
-    }
-
-    // Open the per-module settings modal (⚙ on a page). Phase 1: "mods".
-    private void OnModuleSettings(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string module }) return;
-        new ModuleSettingsWindow(_vm, module) { Owner = this }.ShowDialog();
-        LoadSettingsFields();   // keep the global Settings page in sync if it was already populated
-    }
-
-    private void OnOpenModFolder(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string dir } || string.IsNullOrWhiteSpace(dir)) return;
-        if (!ShellOpen.Folder(dir))
-            System.Windows.MessageBox.Show($"Couldn't open the folder:\n{dir}\n\n(missing, or the P: link is broken — try Rescan / re-link)",
-                "Open mod folder", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-    }
-
-    private void OnUnlinkMod(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: string name })
-            NewModStatus.Text = _vm.UnlinkMod(name);
-    }
-
-    private bool _deletingProject;
-
-    // Delete a mod project (destructive). Yes = source + build, No = source only, Cancel = abort.
-    private async void OnDeleteProject(object sender, RoutedEventArgs e)
-    {
-        if (_deletingProject) return;
-        if (sender is not FrameworkElement { Tag: string name }) return;
-        var r = System.Windows.MessageBox.Show(
-            $"Delete project \"{name}\"?\n\nThis removes its P: link and deletes the source folder — this can't be undone.\n\n" +
-            "Yes  → also delete the built @" + name + " output\n" +
-            "No   → delete the source only\n" +
-            "Cancel → keep everything",
-            "Delete project", System.Windows.MessageBoxButton.YesNoCancel, System.Windows.MessageBoxImage.Warning);
-        if (r == System.Windows.MessageBoxResult.Cancel) return;
-        _deletingProject = true;
-        NewModStatus.Text = "deleting…";
-        try { NewModStatus.Text = await _vm.DeleteModProjectAsync(name, alsoBuild: r == System.Windows.MessageBoxResult.Yes); }
-        catch (Exception ex) { NewModStatus.Text = "✗ " + ex.Message; }
-        finally { _deletingProject = false; }
-    }
-
-    // Build opens the Build console window — one build flow (preflight findings, options, live
-    // log, diagnostics). Signing keys are managed in Settings → Signing.
-    private void OnBuildMod(object sender, RoutedEventArgs e) => OnOpenBuildWindow(sender, e);
-
+    // (The My Mods page — create/import/clone mod projects + per-project Build/Git/open/link/
+    //  delete, and the per-module settings modal — now lives in Views/MyModsView.)
 
     // GitHub OAuth login is interactive (device code + browser), so run it in a real terminal the
     // user can complete; afterwards they can re-open Settings to see the refreshed account.
@@ -519,15 +371,6 @@ public partial class MainWindow : FluentWindow
     {
         if (CfgEditorPath.SelectedItem is not Dzl.Core.Env.EditorInfo info) return;
         Dispatcher.BeginInvoke(() => CfgEditorPath.Text = info.Path);
-    }
-
-    private void OnOpenInEditor(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string folder }) return;
-        var msg = _vm.OpenInEditor(folder);
-        if (msg.StartsWith('✗'))
-            System.Windows.MessageBox.Show(msg.TrimStart('✗', ' '), "Open in editor",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 
     // Fill the DayZ + Tools path fields from the Steam libraries (same detection the setup wizard runs);
