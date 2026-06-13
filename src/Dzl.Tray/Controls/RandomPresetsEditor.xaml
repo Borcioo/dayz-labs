@@ -234,9 +234,15 @@
               <DataGridTextColumn Header="Item name"
                                   Binding="{Binding Name, UpdateSourceTrigger=LostFocus}"
                                   Width="*" MinWidth="120" />
-              <DataGridTextColumn Header="Chance"
-                                  Binding="{Binding ChanceText, UpdateSourceTrigger=LostFocus}"
-                                  Width="80" MinWidth="60" />
+              <DataGridTemplateColumn Header="Chance" Width="160" CanUserResize="False" IsReadOnly="True">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <ctl:ChanceField Value="{Binding Chance, Mode=TwoWay}" VerticalAlignment="Center"
+                                     HorizontalAlignment="Left" Margin="2"
+                                     ValueCommitted="OnItemChanceCommitted" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
               <DataGridTemplateColumn Header="" Width="84" CanUserResize="False" IsReadOnly="True">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>

@@ -117,6 +117,12 @@ public partial class RandomPresetsEditor : UserControl
         if ((sender as FrameworkElement)?.Tag is PresetItemVm item) Vm?.RemoveItem(item);
     }
 
+    // Items-grid chance committed (popup closed / Enter): persist that one item once.
+    private void OnItemChanceCommitted(object sender, System.EventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: PresetItemVm item }) item.Commit();
+    }
+
     private void OnItemCellEditEnding(object? sender, DataGridCellEditEndingEventArgs e)
     {
         if (e.EditAction != DataGridEditAction.Commit) return;

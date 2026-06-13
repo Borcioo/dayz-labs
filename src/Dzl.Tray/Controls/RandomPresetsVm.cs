@@ -385,7 +385,7 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
     {
         if (_suspendItemPersist || SelectedPreset is not { } row) return;
         if (string.IsNullOrWhiteSpace(item.Name)) { Status = "✗ item name must not be empty"; return; }
-        if (!TryChance(item.ChanceText, out var chance)) { Status = "✗ chance must be a number 0..1"; return; }
+        var chance = Math.Clamp(item.Chance, 0, 1);
 
         PushUndo();
         if (Report(_svc.SetItem(row.Kind, row.Name, item.OriginalName, chance, item.Name)))
