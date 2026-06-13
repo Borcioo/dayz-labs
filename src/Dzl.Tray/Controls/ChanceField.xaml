@@ -1,0 +1,43 @@
+<UserControl x:Class="Dzl.Tray.Controls.ChanceField"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             x:Name="Root">
+  <!-- A compact value button that opens a slider + number-box popup. Driven entirely by DependencyProperties
+       so it binds anywhere, including a DataGridTemplateColumn cell. Children bind back to Root's properties
+       via ElementName (a UserControl does not inherit the host window's resources, but ElementName to its own
+       named root is always safe). Value is clamped to [Minimum, Maximum] by a coercion callback. -->
+  <Grid>
+    <ToggleButton x:Name="Toggle" MinWidth="48" Padding="8,2" FontSize="12" HorizontalContentAlignment="Center"
+                  Content="{Binding DisplayText, ElementName=Root}"
+                  IsChecked="{Binding IsOpen, ElementName=Root, Mode=TwoWay}" />
+    <Popup x:Name="Pop" PlacementTarget="{Binding ElementName=Toggle}" Placement="Bottom"
+           StaysOpen="False" AllowsTransparency="True"
+           IsOpen="{Binding IsOpen, ElementName=Root, Mode=TwoWay}" Closed="OnPopupClosed">
+      <Border Padding="10" CornerRadius="8" BorderThickness="1" Margin="0,4,0,0"
+              Background="{DynamicResource ApplicationBackgroundBrush}"
+              BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+        <StackPanel Orientation="Horizontal">
+          <TextBlock Text="{Binding Minimum, ElementName=Root}" VerticalAlignment="Center" Margin="0,0,6,0"
+                     FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+          <Slider x:Name="Sld" Width="160" VerticalAlignment="Center"
+                  Minimum="{Binding Minimum, ElementName=Root}"
+                  Maximum="{Binding Maximum, ElementName=Root}"
+                  SmallChange="{Binding SmallChange, ElementName=Root}"
+                  LargeChange="{Binding SmallChange, ElementName=Root}"
+                  Value="{Binding Value, ElementName=Root, Mode=TwoWay}" />
+          <TextBlock Text="{Binding Maximum, ElementName=Root}" VerticalAlignment="Center" Margin="6,0,8,0"
+                     FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+          <ui:NumberBox x:Name="Num" Width="110" VerticalAlignment="Center" FontSize="12"
+                        Minimum="{Binding Minimum, ElementName=Root}"
+                        Maximum="{Binding Maximum, ElementName=Root}"
+                        SmallChange="{Binding SmallChange, ElementName=Root}"
+                        SpinButtonPlacementMode="Compact" ClearButtonEnabled="False"
+                        MaxDecimalPlaces="{Binding Decimals, ElementName=Root}"
+                        Value="{Binding Value, ElementName=Root, Mode=TwoWay}"
+                        KeyDown="OnNumKeyDown" />
+        </StackPanel>
+      </Border>
+    </Popup>
+  </Grid>
+</UserControl>
