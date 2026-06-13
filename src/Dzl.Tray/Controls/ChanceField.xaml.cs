@@ -144,6 +144,12 @@ public partial class ChanceField : UserControl
         if (!System.Text.RegularExpressions.Regex.IsMatch(text, @"^[0-9]*[.,]?[0-9]*$")) e.CancelCommand();
     }
 
+    // After the entry commits on focus loss, Value may have been clamped (min/max) or rounded; re-display so
+    // the box shows that result (e.g. typing 5 with Max=1 settles to "1") and comma normalizes to a dot.
+    private void OnEntryLostFocus(object sender, RoutedEventArgs e) =>
+        Dispatcher.BeginInvoke(new Action(() => Num.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget()),
+            System.Windows.Threading.DispatcherPriority.Background);
+
     // WPF's Popup StaysOpen=False auto-close is unreliable inside a DataGrid (the grid captures the mouse),
     // so we close manually: while open, listen on the host window's PreviewMouseDown and close on any press
     // that isn't on our own face. The popup (AllowsTransparency) is its own top-level window, so presses

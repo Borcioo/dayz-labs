@@ -45,7 +45,7 @@
           <ui:TextBox x:Name="Num" Width="56" VerticalAlignment="Center" FontSize="12"
                       TextAlignment="Center"
                       Text="{Binding Value, ElementName=Root, Converter={StaticResource ChanceConv}, UpdateSourceTrigger=LostFocus}"
-                      PreviewTextInput="OnEntryPreviewInput" KeyDown="OnNumKeyDown" />
+                      PreviewTextInput="OnEntryPreviewInput" LostFocus="OnEntryLostFocus" KeyDown="OnNumKeyDown" />
         </StackPanel>
       </Border>
     </Popup>
