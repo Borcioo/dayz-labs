@@ -117,10 +117,16 @@ public partial class RandomPresetsEditor : UserControl
         if ((sender as FrameworkElement)?.Tag is PresetItemVm item) Vm?.RemoveItem(item);
     }
 
-    // Items-grid chance committed (popup closed / Enter): persist that one item once.
+    // Items-grid chance committed (popup closed / Enter): persist that one item once. Read the value straight
+    // off the ChanceField — the Value↔Chance two-way binding does not write back across the popup namescope,
+    // so we sync it explicitly here before committing.
     private void OnItemChanceCommitted(object sender, System.EventArgs e)
     {
-        if (sender is FrameworkElement { DataContext: PresetItemVm item }) item.Commit();
+        if (sender is ChanceField { DataContext: PresetItemVm item } cf)
+        {
+            item.Chance = cf.Value;
+            item.Commit();
+        }
     }
 
     private void OnItemCellEditEnding(object? sender, DataGridCellEditEndingEventArgs e)

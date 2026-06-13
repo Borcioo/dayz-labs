@@ -121,16 +121,25 @@ public partial class SpawnableTypesEditor : UserControl
         }
     }
 
-    // Block chance committed via its ChanceField (popup closed / Enter).
+    // Block chance committed via its ChanceField (popup closed / Enter). Read the value straight off the
+    // control — the two-way binding does not write back across the popup namescope — then commit.
     private void OnBlockChanceFieldCommitted(object sender, System.EventArgs e)
     {
-        if (sender is FrameworkElement { DataContext: SpawnBlockVm block }) block.CommitChance();
+        if (sender is ChanceField { DataContext: SpawnBlockVm block } cf)
+        {
+            block.Chance = cf.Value;
+            block.CommitChance();
+        }
     }
 
-    // Per-item chance committed via its ChanceField.
+    // Per-item chance committed via its ChanceField (read the control's value, the binding doesn't write back).
     private void OnSpawnItemChanceCommitted(object sender, System.EventArgs e)
     {
-        if (sender is FrameworkElement { DataContext: SpawnItemVm item }) item.Commit();
+        if (sender is ChanceField { DataContext: SpawnItemVm item } cf)
+        {
+            item.Chance = cf.Value;
+            item.Commit();
+        }
     }
 
     private void OnItemCellEditEnding(object? sender, DataGridCellEditEndingEventArgs e)

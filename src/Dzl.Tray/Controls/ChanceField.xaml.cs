@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -97,8 +98,15 @@ public partial class ChanceField : UserControl
         return Math.Clamp((double)baseValue, c.Minimum, c.Maximum);
     }
 
-    private static void OnVisualAffectingChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) =>
-        ((ChanceField)d).UpdateDisplay();
+    private static void OnVisualAffectingChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var c = (ChanceField)d;
+        c.UpdateDisplay();
+        // The slider / number box live in the popup's own namescope and edit Value via ElementName; that write
+        // does NOT reliably flow back to the bound source (item.Chance, EditChanceValue, …). Force it so every
+        // consumer — grid cells AND standalone fields read on Apply/Add — sees the current value.
+        BindingOperations.GetBindingExpression(c, ValueProperty)?.UpdateSource();
+    }
 
     private void UpdateDisplay()
     {
