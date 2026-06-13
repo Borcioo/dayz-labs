@@ -8,6 +8,12 @@ public sealed record CeFileInfo(CeKind Kind, string FileName, string Path, bool 
 /// never mutated. Empty (not null) collections when a file is absent, so rules need no null checks.</summary>
 public sealed class CeWorld
 {
+    /// <summary>The resolved mission directory, or empty when no mission resolves for the active server.</summary>
+    public string MissionDir { get; init; } = "";
+
+    /// <summary>True when a mission resolved (CE data is meaningful).</summary>
+    public bool HasMission => MissionDir.Length > 0;
+
     public CeFileSet Types { get; init; } = new(Array.Empty<TypeEntry>());
     public LimitsDef Limits { get; init; } = LimitsDef.Empty;
     public IReadOnlyList<LimitsUserGroup> UserGroups { get; init; } = Array.Empty<LimitsUserGroup>();

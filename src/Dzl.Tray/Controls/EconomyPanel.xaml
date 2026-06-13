@@ -43,6 +43,11 @@
                 </Style>
               </TabControl.Resources>
 
+              <!-- Overview: per-file stats + aggregated validation. DataContext = MainViewModel.CeDashboard. -->
+              <TabItem Header="Dashboard">
+                <ctl:EconomyDashboard DataContext="{Binding CeDashboard}" />
+              </TabItem>
+
               <!-- DataContext = MainViewModel.TypesEditor (a TypesEditorVm) — same sub-VM pattern as the
                    other CE tabs below. -->
               <TabItem Header="Types">

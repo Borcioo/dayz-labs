@@ -79,6 +79,17 @@ public partial class MainViewModel
     /// <summary>(Re)load the Player Spawns tab from disk. Called when its tab is activated.</summary>
     public void RefreshPlayerSpawns() => PlayerSpawns.Reload();
 
+    // --- CE Dashboard tab (overview: stats + aggregated validation) --------
+    private Dzl.Tray.Controls.CeDashboardVm? _ceDashboard;
+
+    /// <summary>Backs the Economy Dashboard tab (first): per-file stat tiles + the aggregated
+    /// validation report. Created lazily so it shares this VM's config path.</summary>
+    public Dzl.Tray.Controls.CeDashboardVm CeDashboard =>
+        _ceDashboard ??= new Dzl.Tray.Controls.CeDashboardVm(_configPath);
+
+    /// <summary>(Re)load the dashboard stats from disk. Called when the dashboard tab is shown.</summary>
+    public void RefreshCeDashboard() => CeDashboard.Refresh();
+
     private static bool ConfirmDictionaryAction(string message) =>
         System.Windows.MessageBox.Show(message, "Dictionaries",
             System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)

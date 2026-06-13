@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using Dzl.Core.Economy;
 using Dzl.Tray.ViewModels;
 
 namespace Dzl.Tray.Controls;
@@ -20,8 +21,35 @@ public partial class EconomyPanel : UserControl
             if (DataContext is not MainViewModel) return;
             Vm.TypesEditor.LoadTypes();
             Vm.RefreshDictionaries();
+            Vm.RefreshCeDashboard();   // Dashboard is the default tab
             RefreshTypesBackupsMenu();
+            WireDashboardNavigation();
         };
+    }
+
+    // A dashboard tile/finding click asks to jump to that file's editor tab.
+    private bool _navWired;
+    private void WireDashboardNavigation()
+    {
+        if (_navWired) return;
+        Vm.CeDashboard.NavigateRequested += SelectTabForKind;
+        _navWired = true;
+    }
+
+    private void SelectTabForKind(CeKind kind)
+    {
+        var header = kind switch
+        {
+            CeKind.Dictionaries => "Dictionaries",
+            CeKind.RandomPresets => "Random Presets",
+            CeKind.SpawnableTypes => "Spawnable Types",
+            CeKind.Globals => "Globals",
+            CeKind.Events => "Events",
+            CeKind.PlayerSpawns => "Player Spawns",
+            _ => "Types",
+        };
+        foreach (var item in EconomyTabControl.Items)
+            if (item is TabItem { Header: string h } ti && h == header) { EconomyTabControl.SelectedItem = ti; return; }
     }
 
     // Batch + remove operate on the CHECKED rows (checkbox column), NOT the grid's focused/edited row.
@@ -60,7 +88,9 @@ public partial class EconomyPanel : UserControl
         // Only react to selection changes on the exact Economy TabControl, not bubbled events from
         // child controls (DataGrid, ComboBox, etc.) whose SelectionChanged also bubbles up.
         if (!ReferenceEquals(e.OriginalSource, EconomyTabControl)) return;
-        if (EconomyTabControl.SelectedItem is TabItem { Header: "Dictionaries" })
+        if (EconomyTabControl.SelectedItem is TabItem { Header: "Dashboard" })
+            Vm.RefreshCeDashboard();
+        else if (EconomyTabControl.SelectedItem is TabItem { Header: "Dictionaries" })
             Vm.RefreshDictionaries();
         else if (EconomyTabControl.SelectedItem is TabItem { Header: "Random Presets" })
             Vm.RefreshRandomPresets();

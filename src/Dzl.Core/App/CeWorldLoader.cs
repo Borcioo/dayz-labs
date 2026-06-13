@@ -1,4 +1,5 @@
 using System.IO;
+using Dzl.Core.Config;
 using Dzl.Core.Economy;
 
 namespace Dzl.Core.App;
@@ -23,8 +24,12 @@ public sealed class CeWorldLoader
         var presets = new RandomPresetsService(_configPath);
         var pspawn = new PlayerSpawnsService(_configPath);
 
+        var (cfg, _, _) = Profiles.ResolveActive(_configPath);
+        var mission = MissionLocator.Resolve(cfg);
+
         return new CeWorld
         {
+            MissionDir = mission?.MissionDir ?? "",
             Types = new CeFileSet(types.List()),
             Limits = dict.Load(),
             UserGroups = dict.LoadGroups(),
