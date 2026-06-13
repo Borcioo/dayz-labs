@@ -82,8 +82,7 @@ public partial class RandomPresetsEditor : UserControl
         if (e.Key == Key.Enter) { Vm?.AddItem(); e.Handled = true; }
     }
 
-    // Add-item classname combo: open the suggestion dropdown as the user types; Enter adds the item
-    // (after the combo has committed any arrow-highlighted suggestion into the text on its own KeyDown).
+    // Add-item classname combo: open the suggestion dropdown as the user types; Enter adds the item.
     private void OnItemComboKeyUp(object sender, KeyEventArgs e)
     {
         if (sender is not ComboBox cb) return;
@@ -96,6 +95,17 @@ public partial class RandomPresetsEditor : UserControl
         }
         if (e.Key is Key.Escape or Key.Up or Key.Down) return;
         cb.IsDropDownOpen = Vm is { ItemSuggestions.Count: > 0 };
+    }
+
+    // A dropdown pick (mouse or arrow-highlight): commit the name without re-filtering, so the Clear()
+    // inside the suggestion refresh can't drop the selection and blank the box.
+    private void OnItemComboSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (Vm is not { } vm || sender is not ComboBox cb) return;
+        if (cb.SelectedItem is not string pick) return;
+        vm.SuspendSuggestions = true;
+        vm.NewItemName = pick;
+        vm.SuspendSuggestions = false;
     }
 
     private void OnRemoveItemClick(object sender, RoutedEventArgs e)

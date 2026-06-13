@@ -212,7 +212,7 @@
                       ItemsSource="{Binding ItemSuggestions}"
                       Text="{Binding NewItemName, UpdateSourceTrigger=PropertyChanged}"
                       ToolTip="Type to search item classnames (from types.xml) — free text allowed"
-                      KeyUp="OnItemComboKeyUp" />
+                      KeyUp="OnItemComboKeyUp" SelectionChanged="OnItemComboSelectionChanged" />
             <ui:TextBox Grid.Column="1" Width="64" Margin="0,0,4,0" FontSize="12"
                         ToolTip="chance 0..1"
                         Text="{Binding NewItemChance, UpdateSourceTrigger=PropertyChanged}"

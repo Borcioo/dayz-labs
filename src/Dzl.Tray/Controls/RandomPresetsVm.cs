@@ -106,7 +106,14 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
     [ObservableProperty] private string _newItemName = "";
     [ObservableProperty] private string _newItemChance = "1.0";
 
-    partial void OnNewItemNameChanged(string value) => RefreshItemSuggestions(value);
+    /// <summary>Set while a dropdown pick commits the name, so we don't re-filter (which would Clear the
+    /// suggestion list and yank the just-selected item out from under the combo, blanking the field).</summary>
+    public bool SuspendSuggestions { get; set; }
+
+    partial void OnNewItemNameChanged(string value)
+    {
+        if (!SuspendSuggestions) RefreshItemSuggestions(value);
+    }
 
     private void RefreshItemSuggestions(string text)
     {
