@@ -50,6 +50,8 @@ public sealed class TrayIcon : IDisposable
             ContextMenu = BuildMenu(),
         };
         _icon.ForceCreate();
+        // Double-click the tray icon to open/focus the window (same as the menu's "Open main window").
+        _icon.TrayMouseDoubleClick += (_, _) => ShowMainWindow();
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
         _timer.Tick += (_, _) => _ = PollAsync();
