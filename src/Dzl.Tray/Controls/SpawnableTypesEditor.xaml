@@ -144,10 +144,11 @@
 
     <!-- Master (left) + detail (right) -->
     <Grid Grid.Row="1">
+      <!-- 50/50 split by default; the GridSplitter lets you rebalance. -->
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="2*" MinWidth="300" />
+        <ColumnDefinition Width="*" MinWidth="300" />
         <ColumnDefinition Width="8" />
-        <ColumnDefinition Width="3*" MinWidth="360" />
+        <ColumnDefinition Width="*" MinWidth="360" />
       </Grid.ColumnDefinitions>
 
       <!-- ===== Master: type list ===== -->
@@ -160,7 +161,6 @@
             <RowDefinition Height="Auto" />  <!-- filter -->
             <RowDefinition Height="*" />     <!-- grid -->
             <RowDefinition Height="Auto" />  <!-- add row -->
-            <RowDefinition Height="Auto" />  <!-- actions -->
           </Grid.RowDefinitions>
 
           <TextBlock Grid.Row="0" Text="Spawnable types" Style="{StaticResource StSectionHeader}" Margin="0,0,0,6" />
@@ -185,6 +185,19 @@
               <DataGridTextColumn Header="Damage" Binding="{Binding DamageLabel}" Width="Auto" />
               <DataGridTextColumn Header="#cargo" Binding="{Binding CargoCount}" Width="Auto" />
               <DataGridTextColumn Header="#att" Binding="{Binding AttachmentsCount}" Width="Auto" />
+              <!-- Per-row quick actions -->
+              <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                      <ui:Button Icon="{ui:SymbolIcon Rename24}" Padding="5" Margin="0,0,3,0" FontSize="12"
+                                 Appearance="Secondary" ToolTip="Rename this type" Click="OnRowRenameClick" />
+                      <ui:Button Icon="{ui:SymbolIcon Delete24}" Padding="5" FontSize="12"
+                                 Appearance="Danger" ToolTip="Remove this type" Click="OnRowRemoveClick" />
+                    </StackPanel>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
             </DataGrid.Columns>
           </DataGrid>
 
@@ -200,12 +213,6 @@
             <ui:Button Grid.Column="1" Content="Add" Click="OnAddTypeClick" />
           </Grid>
 
-          <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,6,0,0">
-            <ui:Button Content="Rename" Margin="0,0,4,0" FontSize="12" Click="OnRenameTypeClick"
-                       ToolTip="Rename the selected type" />
-            <ui:Button Content="Remove" FontSize="12" Click="OnRemoveTypeClick"
-                       ToolTip="Remove the selected type and its blocks" />
-          </StackPanel>
         </Grid>
       </Border>
 

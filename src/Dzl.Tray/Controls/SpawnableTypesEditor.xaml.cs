@@ -29,6 +29,25 @@ public partial class SpawnableTypesEditor : UserControl
 
     private void OnRemoveTypeClick(object sender, RoutedEventArgs e) => Vm?.RemoveSelectedType();
 
+    // Per-row quick actions: select that row, then reuse the rename/remove flow.
+    private void OnRowRenameClick(object sender, RoutedEventArgs e)
+    {
+        if (Vm is { } vm && sender is FrameworkElement { DataContext: SpawnTypeRowVm row })
+        {
+            vm.SelectedType = row;
+            OnRenameTypeClick(sender, e);
+        }
+    }
+
+    private void OnRowRemoveClick(object sender, RoutedEventArgs e)
+    {
+        if (Vm is { } vm && sender is FrameworkElement { DataContext: SpawnTypeRowVm row })
+        {
+            vm.SelectedType = row;
+            vm.RemoveSelectedType();
+        }
+    }
+
     private void OnRenameTypeClick(object sender, RoutedEventArgs e)
     {
         if (Vm is not { } vm || vm.SelectedType is not { } row)
