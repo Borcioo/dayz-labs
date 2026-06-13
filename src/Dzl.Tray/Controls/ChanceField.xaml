@@ -42,7 +42,7 @@
                         Minimum="{Binding Minimum, ElementName=Root}"
                         Maximum="{Binding Maximum, ElementName=Root}"
                         SmallChange="{Binding SmallChange, ElementName=Root}"
-                        SpinButtonPlacementMode="Compact" ClearButtonEnabled="False"
+                        SpinButtonPlacementMode="Hidden" ClearButtonEnabled="False"
                         MaxDecimalPlaces="{Binding Decimals, ElementName=Root}"
                         Value="{Binding Value, ElementName=Root, Mode=TwoWay}"
                         KeyDown="OnNumKeyDown" />
