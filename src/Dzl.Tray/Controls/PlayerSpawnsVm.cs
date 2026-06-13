@@ -25,7 +25,7 @@ public sealed partial class PlayerSpawnsVm : RawXmlEditorVm
 
     private PlayerSpawnsVm(PlayerSpawnsService svc, Func<string, bool> confirm)
         : base(svc.ReadRaw, svc.WriteRaw, svc.SpawnsPath,
-               "(no cfgplayerspawnpoints.xml — pick/scaffold a server mission)")
+               "(no cfgplayerspawnpoints.xml — pick/scaffold a server mission)", confirm)
     {
         _svc = svc;
         _confirm = confirm;

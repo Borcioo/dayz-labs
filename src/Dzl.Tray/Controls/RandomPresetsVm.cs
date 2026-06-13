@@ -32,7 +32,7 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
     private RandomPresetsVm(RandomPresetsService svc, SpawnableTypesService spawnSvc, TypesService types,
                             Func<string, bool> confirm)
         : base(svc.ReadRaw, svc.WriteRaw, svc.PresetsPath,
-               "(no cfgrandompresets.xml — pick/scaffold a server mission)")
+               "(no cfgrandompresets.xml — pick/scaffold a server mission)", confirm)
     {
         _svc = svc;
         _spawnSvc = spawnSvc;

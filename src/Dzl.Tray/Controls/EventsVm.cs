@@ -26,7 +26,7 @@ public sealed partial class EventsVm : RawXmlEditorVm
 
     private EventsVm(EventsService svc, Func<string, bool> confirm)
         : base(svc.ReadRaw, svc.WriteRaw, svc.EventsPath,
-               "(no events.xml — pick/scaffold a server mission)")
+               "(no events.xml — pick/scaffold a server mission)", confirm)
     {
         _svc = svc;
         _confirm = confirm;

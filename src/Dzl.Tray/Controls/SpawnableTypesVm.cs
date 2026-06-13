@@ -26,7 +26,7 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
 
     private SpawnableTypesVm(SpawnableTypesService svc, string configPath, Func<string, bool> confirm)
         : base(svc.ReadRaw, svc.WriteRaw, svc.SpawnableTypesPath,
-               "(no cfgspawnabletypes.xml — pick/scaffold a server mission)")
+               "(no cfgspawnabletypes.xml — pick/scaffold a server mission)", confirm)
     {
         _svc = svc;
         _presets = new RandomPresetsService(configPath);

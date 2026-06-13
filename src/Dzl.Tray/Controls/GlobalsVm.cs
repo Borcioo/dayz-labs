@@ -22,7 +22,7 @@ public sealed partial class GlobalsVm : RawXmlEditorVm
 
     private GlobalsVm(GlobalsService svc, Func<string, bool> confirm)
         : base(svc.ReadRaw, svc.WriteRaw, svc.GlobalsPath,
-               "(no globals.xml — pick/scaffold a server mission)")
+               "(no globals.xml — pick/scaffold a server mission)", confirm)
     {
         _svc = svc;
         _confirm = confirm;

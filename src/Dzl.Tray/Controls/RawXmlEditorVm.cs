@@ -22,21 +22,26 @@ public abstract partial class RawXmlEditorVm : ObservableObject
     private readonly Func<string, (bool ok, string msg)> _writeRaw;
     private readonly Func<string?> _filePath;
     private readonly string _missingHint;
+    private readonly Func<string, bool>? _confirm;
 
     /// <param name="readRaw">Reads the current raw file text (null when absent/unresolvable).</param>
     /// <param name="writeRaw">Overwrites the file verbatim (snapshots a backup first); returns ok + message.</param>
     /// <param name="filePath">Resolves the edited file's path (null when no mission is active).</param>
     /// <param name="missingHint">Shown as <see cref="FileLabel"/> when the file is unresolvable.</param>
+    /// <param name="confirm">Optional yes/no prompt. When set, <see cref="Reload"/> asks before discarding a
+    /// non-empty undo history (edits are already on disk, but the undo stack would be lost).</param>
     protected RawXmlEditorVm(
         Func<string?> readRaw,
         Func<string, (bool ok, string msg)> writeRaw,
         Func<string?> filePath,
-        string missingHint)
+        string missingHint,
+        Func<string, bool>? confirm = null)
     {
         _readRaw = readRaw;
         _writeRaw = writeRaw;
         _filePath = filePath;
         _missingHint = missingHint;
+        _confirm = confirm;
     }
 
     /// <summary>One-line feedback under the editor ("✓ saved …" / "✗ …").</summary>
@@ -60,6 +65,13 @@ public abstract partial class RawXmlEditorVm : ObservableObject
     /// and re-evaluates <see cref="HasFile"/>/<see cref="FileLabel"/>.</summary>
     public virtual void Reload()
     {
+        // Reload re-reads disk and drops undo/redo. Edits already auto-saved, so no data is lost — but the
+        // undo stack would be, and the button is easy to fat-finger. Confirm when there's history to lose.
+        if ((_undo.Count > 0 || _redo.Count > 0) && _confirm is { } confirm &&
+            !confirm($"Reload re-reads this file from disk and discards the undo history " +
+                     $"({_undo.Count} step(s)). Your saved edits stay on disk. Continue?"))
+            return;
+
         _undo.Clear();
         _redo.Clear();
         NotifyHistory();
