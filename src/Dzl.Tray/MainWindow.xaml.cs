@@ -1,13 +1,7 @@
-using System.Diagnostics;
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using Dzl.Core.Servers;
-using Dzl.Core.Tools;
 using Dzl.Tray.ViewModels;
-using Microsoft.Win32;
 using Wpf.Ui.Controls;
-using TextBox = System.Windows.Controls.TextBox;
 
 namespace Dzl.Tray;
 
@@ -128,7 +122,7 @@ public partial class MainWindow : FluentWindow
         if (tag == "mymods") PageMyMods.RefreshOnShow();
         if (tag == "servers") { _vm.RefreshServers(); _vm.RefreshBases(); }   // base dropdown needs bases
         if (tag == "bases") _vm.RefreshBases();
-        if (tag == "settings") { LoadSettingsFields(); _ = _vm.RefreshGitHubAuthAsync(); _vm.RefreshSteamAccount(); }
+        if (tag == "settings") { PageSettings.Reload(); _ = _vm.RefreshGitHubAuthAsync(); _vm.RefreshSteamAccount(); }
     }
 
     // --- Economy window (modeless, single instance) ------------------------
@@ -168,249 +162,32 @@ public partial class MainWindow : FluentWindow
     // The Logs page (auto-scroll, list-view row heights, open-folder/clear) now lives in
     // Views/LogsView. ShowPage("logs") seeds its row heights via PageLogs.UpdateLogListRowHeights().
 
-    // === Work drive (Settings page + bottom status bar) ===================
+    // === Work drive (bottom status bar) ===================================
 
-    // The Tools page owns its own copies of these (ToolsView); these stay here for the Settings
-    // page's "Work drive (P:)" card and the app-wide bottom status bar's "Mount P:" quick button.
+    // The Tools + Settings pages own their own copies (ToolsView / SettingsView); this stays for
+    // the app-wide bottom status bar's "Mount P:" quick button.
     private void OnMountWorkDrive(object sender, RoutedEventArgs e) => _vm.MountWorkDrive();
-    private void OnUnmountWorkDrive(object sender, RoutedEventArgs e) => _vm.UnmountWorkDrive();
 
-    // === SETTINGS page ====================================================
+    // === Setup wizard =====================================================
 
-    /// <summary>Re-read the global Settings page from the live config. Called by the Mods / My Mods
-    /// views after the per-module settings modal closes, so the Settings page mirrors any config
-    /// the module edited (the pages are never visible at once, but this keeps state consistent).</summary>
-    internal void SyncSettingsPage() => LoadSettingsFields();
-
-    // Settings = machine-global only. Per-server fields live on the Servers page (LoadServerEditor).
-    private void LoadSettingsFields()
-    {
-        var c = _vm.Cfg;
-        CfgDayzPath.Text = c.DayzPath;
-        CfgDayzToolsPath.Text = c.DayzToolsPath;
-        CfgProjectsRoot.Text = c.ProjectsRoot;
-        CfgExeDebug.Text = c.ExeDebug;
-        CfgExeNormal.Text = c.ExeNormal;
-        CfgClientExeDebug.Text = c.ClientExeDebug;
-        CfgClientExeNormal.Text = c.ClientExeNormal;
-        CfgScanRoots.Text = string.Join("\n", c.ScanRoots);
-        CfgEnableAutomationServer.IsChecked = c.EnableAutomationServer;
-        CfgAutomountWorkDrive.IsChecked = c.AutomountWorkDrive;
-        CfgWorkDriveSource.Text = c.WorkDriveSource;
-        // Keys dropdown: whatever exists in the keys folder, with the effective name selected —
-        // blank config falls back to the cached author handle; saving makes the choice explicit.
-        CfgSigningKey.ItemsSource = _vm.ListSigningKeys().Select(k => k.Name).ToList();
-        CfgSigningKey.Text = !string.IsNullOrWhiteSpace(c.SigningKey) ? c.SigningKey : _vm.CachedAuthor;
-        CfgKeysDir.Text = c.KeysDir;
-        RefreshSigningStatus();
-        CfgEditorPath.ItemsSource = _vm.DetectEditors();   // dropdown of detected editors; text stays the saved value
-        CfgEditorPath.Text = c.EditorPath;
-        CfgSteamCmdPath.Text = c.SteamCmdPath;
-        CfgSteamLogin.Text = c.SteamLogin;
-        SteamSignInStatus.Text = _vm.SteamSignedIn ? "✓ Subscribe works in-app" : "not signed in — Subscribe opens the Steam page";
-        ConfigError.Visibility = Visibility.Collapsed;
-    }
-
-    private void OnRevertConfig(object sender, RoutedEventArgs e) => LoadSettingsFields();
-
-    private void OnSaveConfig(object sender, RoutedEventArgs e)
-    {
-        ConfigError.Visibility = Visibility.Collapsed;
-        var roots = CfgScanRoots.Text.Replace("\r\n", "\n").Split('\n')
-            .Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
-
-        var edited = _vm.Cfg with
-        {
-            DayzPath = CfgDayzPath.Text.Trim(),
-            DayzToolsPath = CfgDayzToolsPath.Text.Trim(),
-            ProjectsRoot = CfgProjectsRoot.Text.Trim(),
-            ExeDebug = CfgExeDebug.Text.Trim(),
-            ExeNormal = CfgExeNormal.Text.Trim(),
-            ClientExeDebug = CfgClientExeDebug.Text.Trim(),
-            ClientExeNormal = CfgClientExeNormal.Text.Trim(),
-            ScanRoots = roots,
-            EnableAutomationServer = CfgEnableAutomationServer.IsChecked == true,
-            AutomountWorkDrive = CfgAutomountWorkDrive.IsChecked == true,
-            WorkDriveSource = CfgWorkDriveSource.Text.Trim(),
-            SigningKey = CfgSigningKey.Text.Trim(),
-            KeysDir = CfgKeysDir.Text.Trim(),
-            EditorPath = CfgEditorPath.Text.Trim(),
-            SteamCmdPath = CfgSteamCmdPath.Text.Trim(),
-            SteamLogin = CfgSteamLogin.Text.Trim(),
-        };
-        _vm.ApplyConfig(edited);
-        LoadSettingsFields();
-    }
-
-    // (The Servers page — create/use/delete/wipe instances + open the per-server modal editor —
-    //  now lives in Views/ServersView.)
-
-    private void OnAddScanRoot(object sender, RoutedEventArgs e)
-    {
-        var dir = PickFolder();
-        if (dir is null) return;
-        var existing = CfgScanRoots.Text.TrimEnd();
-        CfgScanRoots.Text = existing.Length == 0 ? dir : existing + "\n" + dir;
-    }
-
-    // (Per-server settings, mission/config pickers and the launch-params editor now live in
-    //  ServerEditorWindow — opened from the Servers page. Removed from the main window.)
-
-    /// <summary>Re-open the environment setup wizard (Settings button entry point).</summary>
-    private void OnRunSetupWizard(object sender, RoutedEventArgs e) => OpenSetupWizard();
-
-    /// <summary>Open the Setup Wizard modally; on Finish, reload the VM so the new
-    /// config/profile takes effect immediately. Shared by the Settings button and the
-    /// "Setup" nav-rail item.</summary>
-    private void OpenSetupWizard()
+    /// <summary>Open the Setup Wizard modally; on Finish, reload the VM so the new config/profile
+    /// takes effect immediately, and re-read the Settings page. Shared by the Settings page's
+    /// "Run setup wizard…" button (SettingsView) and the "Setup" nav-rail item.</summary>
+    internal void OpenSetupWizard()
     {
         var wizard = new SetupWizardWindow(App.ConfigPath()) { Owner = this };
         if (wizard.ShowDialog() == true)
         {
             _vm.Reload();
-            LoadSettingsFields();
+            PageSettings.Reload();
         }
     }
 
-    // (The My Mods page — create/import/clone mod projects + per-project Build/Git/open/link/
-    //  delete, and the per-module settings modal — now lives in Views/MyModsView.)
+    /// <summary>Re-read the global Settings page from the live config. Called by the Mods / My Mods
+    /// views after the per-module settings modal closes, so the Settings page mirrors any config
+    /// the module edited (the pages are never visible at once, but this keeps state consistent).</summary>
+    internal void SyncSettingsPage() => PageSettings.Reload();
 
-    // GitHub OAuth login is interactive (device code + browser), so run it in a real terminal the
-    // user can complete; afterwards they can re-open Settings to see the refreshed account.
-    private void OnGitHubLogin(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            Process.Start(new ProcessStartInfo("cmd.exe", "/k gh auth login --web --hostname github.com --git-protocol https")
-            { UseShellExecute = true });
-        }
-        catch (Exception ex)
-        {
-            System.Windows.MessageBox.Show("Could not launch gh login:\n" + ex.Message, "GitHub login",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-        }
-    }
-
-    private async void OnGitHubLogout(object sender, RoutedEventArgs e) => await _vm.GitHubLogoutAsync();
-
-    // Shared flow (SigningKeysUi): prompt for a NEW name, refuse taken ones, run DSCreateKey,
-    // then refresh the dropdown so the new key appears.
-    private void OnGenerateKey(object sender, RoutedEventArgs e)
-    {
-        var (name, status) = SigningKeysUi.GenerateInteractive(this, _vm, CfgKeysDir.Text);
-        if (name is null) return;
-        SigningStatus.Text = status;
-        CfgSigningKey.ItemsSource = _vm.ListSigningKeys().Select(k => k.Name).ToList();
-        CfgSigningKey.Text = name;
-    }
-
-    /// <summary>Live key state for the Settings page: ✓ ready / not created yet, for the
-    /// effective name + folder currently in the boxes (not yet necessarily saved).</summary>
-    private void RefreshSigningStatus() =>
-        SigningStatus.Text = SigningKeysUi.Status(_vm, CfgSigningKey.Text);
-
-    // Shared flow (SigningKeysUi): copy an existing .biprivatekey (+ .bikey) into the keys folder.
-    private void OnImportKeys(object sender, RoutedEventArgs e)
-    {
-        var (name, status) = SigningKeysUi.ImportInteractive(this, _vm, CfgKeysDir.Text);
-        if (name is null) { if (status.Length > 0) SigningStatus.Text = status; return; }
-        CfgSigningKey.ItemsSource = _vm.ListSigningKeys().Select(k => k.Name).ToList();
-        CfgSigningKey.Text = name;
-        SigningStatus.Text = status;
-    }
-
-    // === Steam Workshop ===================================================
-
-    // Open a clickable hyperlink (apikey page, etc.) in the default browser.
-    private void OnNavigateLink(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
-    {
-        try { Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); } catch { }
-        e.Handled = true;
-    }
-
-    private async void OnInstallSteamCmd(object sender, RoutedEventArgs e)
-    {
-        var btn = sender as System.Windows.Controls.Control;
-        if (btn is not null) btn.IsEnabled = false;
-        SteamCmdStatus.Text = "Downloading steamcmd…";
-        var (ok, path, msg) = await _vm.InstallSteamCmdAsync();
-        if (ok) CfgSteamCmdPath.Text = path;
-        SteamCmdStatus.Text = (ok ? "✓ " : "✗ ") + msg + (ok ? "  (Save to apply)" : "");
-        if (btn is not null) btn.IsEnabled = true;
-    }
-
-    private void OnSteamSignIn(object sender, RoutedEventArgs e)
-    {
-        var dlg = new SteamLoginWindow(_vm) { Owner = this };
-        dlg.ShowDialog();
-        _vm.RefreshSteamAccount();
-        LoadSettingsFields();   // sign-in auto-fills SteamLogin → reflect it in the steamcmd field
-        SteamSignInStatus.Text = _vm.SteamSignedIn ? "✓ Subscribe works in-app" : "not signed in — Subscribe opens the Steam page";
-    }
-
-    private void OnSteamSignOut(object sender, RoutedEventArgs e)
-    {
-        _vm.SteamSignOut();
-        _vm.RefreshSteamAccount();
-        SteamSignInStatus.Text = "signed out";
-    }
-
-    private void OnDetectEditor(object sender, RoutedEventArgs e)
-    {
-        var editors = _vm.DetectEditors();
-        CfgEditorPath.ItemsSource = editors;
-        if (editors.Count == 0) { EditorStatus.Text = "No editor found on PATH (cursor/code/…). Browse to one manually."; return; }
-        CfgEditorPath.Text = editors[0].Path;   // best match (Cursor first); the dropdown holds the rest
-        EditorStatus.Text = $"Found {editors.Count}: {string.Join(", ", editors.Select(x => x.Name))} — pick from the dropdown. Save to apply.";
-    }
-
-    // Selecting a detected editor from the dropdown puts its PATH into the editable text — the
-    // combo would otherwise render the record's ToString(). Deferred: the combo overwrites Text
-    // right after SelectionChanged.
-    private void OnEditorPicked(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-    {
-        if (CfgEditorPath.SelectedItem is not Dzl.Core.Env.EditorInfo info) return;
-        Dispatcher.BeginInvoke(() => CfgEditorPath.Text = info.Path);
-    }
-
-    // Fill the DayZ + Tools path fields from the Steam libraries (same detection the setup wizard runs);
-    // only overwrites a field when detection actually finds something, so manual entries survive a miss.
-    private void OnDetectPaths(object sender, RoutedEventArgs e)
-    {
-        var d = Dzl.Core.Env.EnvDetect.Detect();
-        if (!string.IsNullOrWhiteSpace(d.DayzPath)) CfgDayzPath.Text = d.DayzPath;
-        if (!string.IsNullOrWhiteSpace(d.ToolsPath)) CfgDayzToolsPath.Text = d.ToolsPath;
-        var found = (d.DayzPath is not null ? 1 : 0) + (d.ToolsPath is not null ? 1 : 0);
-        System.Windows.MessageBox.Show(
-            found == 0 ? "Couldn't find DayZ or DayZ Tools in your Steam libraries — set the paths manually."
-                       : $"Filled {found} path(s) from Steam. Review, then Save.",
-            "Auto-detect paths", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-    }
-
-    // === Shared pickers / folder open =====================================
-
-    /// <summary>Show a folder picker (OpenFolderDialog on .NET 8 WPF); null if cancelled.</summary>
-    private string? PickFolder()
-    {
-        var dlg = new OpenFolderDialog();
-        return dlg.ShowDialog(this) == true ? dlg.FolderName : null;
-    }
-
-    /// <summary>Browse into a named Settings TextBox. Tag form: "dir:&lt;FieldName&gt;".</summary>
-    private void OnBrowseInto(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string tag }) return;
-        var parts = tag.Split(':', 2);
-        if (parts.Length != 2) return;
-        var picked = parts[0] == "file" ? PickFile() : PickFolder();
-        if (picked is null) return;
-        if (FindName(parts[1]) is TextBox tb) tb.Text = picked;
-        else if (FindName(parts[1]) is System.Windows.Controls.ComboBox cb) cb.Text = picked;
-    }
-
-    private static string? PickFile()
-    {
-        var dlg = new OpenFileDialog { Filter = "Programs (*.exe;*.cmd;*.bat)|*.exe;*.cmd;*.bat|All files (*.*)|*.*" };
-        return dlg.ShowDialog() == true ? dlg.FileName : null;
-    }
+    // (The Servers / My Mods / Settings pages now live in Views/ServersView, MyModsView and
+    //  SettingsView; per-server settings + the launch-params editor live in ServerEditorWindow.)
 }
