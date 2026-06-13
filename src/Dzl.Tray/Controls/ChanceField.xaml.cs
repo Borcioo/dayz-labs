@@ -237,6 +237,11 @@ public partial class ChanceField : UserControl
         _hookedWindow = null;
     }
 
+    // The popup hangs logically under the DataGrid cell, so a left press inside it bubbles to the grid, which
+    // selects the row and steals focus (right-click worked precisely because the grid only selects on left).
+    // The entry/slider get the press on the way down; mark it handled here so it stops before the grid.
+    private void OnPopupContentMouseDown(object sender, MouseButtonEventArgs e) => e.Handled = true;
+
     private void OnPopupClosed(object? sender, EventArgs e)
     {
         Unhook();

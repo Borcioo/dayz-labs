@@ -25,7 +25,8 @@
            StaysOpen="True" AllowsTransparency="True" Closed="OnPopupClosed">
       <Border Padding="10" CornerRadius="8" BorderThickness="1"
               Background="{DynamicResource ApplicationBackgroundBrush}"
-              BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+              BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+              MouseDown="OnPopupContentMouseDown">
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
           <TextBlock Text="{Binding Minimum, ElementName=Root}" VerticalAlignment="Center" Margin="0,0,6,0"
                      FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
