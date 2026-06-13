@@ -100,4 +100,22 @@ public partial class MainViewModel
     /// <summary>Clear a pane's in-memory view (the underlying file is untouched).</summary>
     [RelayCommand]
     private void ClearLog(LogPaneVm? pane) => pane?.Clear();
+
+    /// <summary>Open the pane's log file in a PowerShell window that live-tails it
+    /// (<c>Get-Content -Wait</c>) — a real terminal view for grepping/following.</summary>
+    [RelayCommand]
+    private void OpenLogTerminal(LogPaneVm? pane)
+    {
+        var path = pane?.Path;
+        if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
+        try
+        {
+            // Single-quote the path (PowerShell literal); double any embedded quote.
+            var escaped = path.Replace("'", "''");
+            var args = $"-NoExit -Command \"Get-Content -LiteralPath '{escaped}' -Tail 200 -Wait\"";
+            System.Diagnostics.Process.Start(
+                new System.Diagnostics.ProcessStartInfo("powershell.exe", args) { UseShellExecute = true });
+        }
+        catch { /* best-effort */ }
+    }
 }

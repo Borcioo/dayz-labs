@@ -87,6 +87,10 @@
                          Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
+              <ui:Button Icon="{ui:SymbolIcon Console24}" ToolTip="Live-tail this log in PowerShell"
+                         Padding="6" Margin="0,0,6,0"
+                         Command="{Binding DataContext.OpenLogTerminalCommand, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}"
+                         CommandParameter="{Binding}" />
               <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open log folder"
                          Padding="6" Margin="0,0,6,0"
                          Command="{Binding DataContext.OpenLogFolderCommand, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}"
