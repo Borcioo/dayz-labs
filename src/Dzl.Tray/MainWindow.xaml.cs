@@ -177,6 +177,11 @@ public partial class MainWindow : FluentWindow
 
     // === SETTINGS page ====================================================
 
+    /// <summary>Re-read the global Settings page from the live config. Called by the Mods / My Mods
+    /// views after the per-module settings modal closes, so the Settings page mirrors any config
+    /// the module edited (the pages are never visible at once, but this keeps state consistent).</summary>
+    internal void SyncSettingsPage() => LoadSettingsFields();
+
     // Settings = machine-global only. Per-server fields live on the Servers page (LoadServerEditor).
     private void LoadSettingsFields()
     {
@@ -463,9 +468,6 @@ public partial class MainWindow : FluentWindow
     }
 
     // === Steam Workshop ===================================================
-
-    private void OnOpenWorkshop(object sender, RoutedEventArgs e)
-        => new WorkshopWindow(_vm).Show();   // no Owner — see OnOpenGit (owned FluentWindow can hide its owner)
 
     // Open a clickable hyperlink (apikey page, etc.) in the default browser.
     private void OnNavigateLink(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)

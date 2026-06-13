@@ -1,0 +1,151 @@
+<UserControl x:Class="Dzl.Tray.Views.ModsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="clr-namespace:Dzl.Tray"
+             xmlns:vm="clr-namespace:Dzl.Tray.ViewModels"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
+  <!-- Mods library page (Steam Workshop launcher + discovered library).
+       DataContext = MainViewModel (inherited from the host window). -->
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />  <!-- header + search -->
+      <RowDefinition Height="*" />     <!-- content -->
+    </Grid.RowDefinitions>
+
+    <!-- Header + search -->
+    <Grid Grid.Row="0" Margin="0,0,0,12">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <StackPanel Grid.Column="0" VerticalAlignment="Center">
+        <TextBlock Text="Mods" FontSize="20" FontWeight="SemiBold" />
+        <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   Text="Your mod library — what's discovered on this machine. Enable &amp; order mods per server on the Servers page." />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+        <ui:TextBox Width="260" VerticalAlignment="Center"
+                    PlaceholderText="filter mods…"
+                    Icon="{ui:SymbolIcon Search24}"
+                    Text="{Binding ModFilter, UpdateSourceTrigger=PropertyChanged}" />
+        <ui:Button Icon="{ui:SymbolIcon Settings24}" ToolTip="Mods settings" Margin="8,0,0,0"
+                   Appearance="Secondary" Padding="8,4" Tag="mods" Click="OnModuleSettings" />
+      </StackPanel>
+    </Grid>
+
+    <Grid Grid.Row="1" Margin="0,0,14,0">
+      <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+
+        <!-- Steam Workshop (SP5) — full browser in its own window -->
+        <ui:Card Grid.Row="0" Margin="0,0,0,12" Padding="16">
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+              <TextBlock Text="Steam Workshop" FontSize="16" FontWeight="SemiBold" />
+              <TextBlock FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"
+                         Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                         Text="Browse + search the Workshop, subscribe (Steam) or download (steamcmd), and see your subscribed mods — in a dedicated window. Keys/steamcmd in Settings → Steam." />
+            </StackPanel>
+            <ui:Button Grid.Column="1" Content="Open Workshop" Appearance="Primary"
+                       Icon="{ui:SymbolIcon Search24}" VerticalAlignment="Center" Click="OnOpenWorkshop" />
+          </Grid>
+        </ui:Card>
+
+        <!-- Discovered library -->
+        <ui:Card Grid.Row="1" Margin="0,0,0,4" Padding="16">
+          <Grid>
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+            <Grid Grid.Row="0" Margin="0,0,0,12">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Discovered mods" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding ModsSummary}" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+              </StackPanel>
+              <ui:Button Grid.Column="1" Content="Rescan" Icon="{ui:SymbolIcon ArrowSync24}" Command="{Binding RescanCommand}" />
+            </Grid>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+              <StackPanel>
+            <ItemsControl ItemsSource="{Binding ModsView}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Margin="0,0,0,6" Padding="10" CornerRadius="6"
+                          Background="{DynamicResource ControlFillColorDefaultBrush}"
+                          BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                          <TextBlock Text="{Binding Name}" FontWeight="Medium" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                          <Border CornerRadius="9" Padding="7,1" Margin="8,0,0,0" VerticalAlignment="Center" Background="{Binding KindBg}">
+                            <TextBlock Text="{Binding KindLabel}" FontSize="10" FontWeight="SemiBold" Foreground="{Binding KindFg}" />
+                          </Border>
+                        </StackPanel>
+                        <TextBlock Text="{Binding Path}" FontSize="11" TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                      </StackPanel>
+                      <Border Grid.Column="1" CornerRadius="9" Padding="8,2" Margin="0,0,8,0" Background="#5A1F1F"
+                              VerticalAlignment="Center"
+                              Visibility="{Binding Missing, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="missing" FontSize="11" FontWeight="SemiBold" Foreground="#FF6B6B" />
+                      </Border>
+                      <ui:Button Grid.Column="2" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger"
+                                 ToolTip="Remove this stale entry from the active server's run-list"
+                                 VerticalAlignment="Center"
+                                 Visibility="{Binding Missing, Converter={StaticResource BoolToVis}}"
+                                 Command="{Binding DataContext.RemoveModCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                 CommandParameter="{Binding}" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="(no mods discovered — set your scan-roots in Settings, then Rescan)" FontSize="12"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding Mods.Count}" Value="0">
+                      <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+        </ui:Card>
+    </Grid>
+
+    <!-- Blocking overlay: no projects root configured → the mods library can't resolve a home -->
+    <Border Grid.Row="0" Grid.RowSpan="2" Background="#CC1A1A1A"
+            Visibility="{Binding ModsBlocked, Converter={StaticResource BoolToVis}}">
+      <Border CornerRadius="8" Padding="28" MaxWidth="440" VerticalAlignment="Center" HorizontalAlignment="Center"
+              Background="{DynamicResource ApplicationBackgroundBrush}" BorderThickness="1"
+              BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+        <StackPanel>
+          <ui:SymbolIcon Symbol="Settings24" FontSize="34" HorizontalAlignment="Center" Foreground="#F0C04A" />
+          <TextBlock Text="Mods aren't set up yet" FontSize="16" FontWeight="SemiBold"
+                     HorizontalAlignment="Center" Margin="0,10,0,6" />
+          <TextBlock Text="{Binding ModsBlockMessage}" TextWrapping="Wrap" TextAlignment="Center"
+                     Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,16" />
+          <ui:Button Content="Configure mods" Appearance="Primary" Icon="{ui:SymbolIcon Settings24}"
+                     HorizontalAlignment="Center" Tag="mods" Click="OnModuleSettings" />
+        </StackPanel>
+      </Border>
+    </Border>
+  </Grid>
+</UserControl>
