@@ -9,12 +9,12 @@ namespace Dzl.Core.Workshop;
 /// <summary>Outcome of a Steam sign-in.</summary>
 public sealed record SteamLoginResult(bool Ok, string AccountName, string RefreshToken, string AccessToken, string Error);
 
-/// <summary>
-/// Steam sign-in via SteamKit2 — QR (scan with the Steam mobile app) or username/password (+ Steam Guard via
-/// an <see cref="IAuthenticator"/>). Returns a long-lived <b>refresh token</b> (store encrypted) + a short
-/// <b>access token</b>; <see cref="RenewAccessTokenAsync"/> mints a fresh access token from the refresh token
-/// without re-login. The access token is what the Workshop Subscribe API needs. Never throws.
-/// </summary>
+/// <summary>Steam sign-in via SteamKit2 — QR (scan with the Steam mobile app) or username/password
+/// (+ Steam Guard via an <see cref="IAuthenticator"/>). The access token it returns is what the Workshop
+/// Subscribe API needs. Never throws.</summary>
+/// <remarks>Returns a long-lived <b>refresh token</b> (store encrypted) + a short <b>access token</b>;
+/// <see cref="RenewAccessTokenAsync"/> mints a fresh access token from the refresh token without
+/// re-login.</remarks>
 public sealed class SteamAuth : IDisposable
 {
     private readonly SteamClient _client = new();

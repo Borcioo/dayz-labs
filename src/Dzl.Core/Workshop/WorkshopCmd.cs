@@ -2,11 +2,12 @@ using System.Diagnostics;
 
 namespace Dzl.Core.Workshop;
 
-/// <summary>Drives steamcmd for Workshop downloads. steamcmd always nests items under
-/// <c>steamapps\workshop\content\221100\&lt;id&gt;</c>, so it downloads into a hidden <c>.steamcmd</c> cache and a
-/// post-step junctions <c>&lt;installRoot&gt;\&lt;id&gt;</c> to that content — the user sees a clean path, the cache
-/// keeps steamcmd's manifests for incremental updates, and a junction needs no copy and no elevation. Path/arg
-/// building is pure + unit-tested; the run spawns a visible console so login / Steam Guard prompts are visible.</summary>
+/// <summary>Drives steamcmd for Workshop downloads. Path/arg building is pure + unit-tested; the run
+/// spawns a visible console so login / Steam Guard prompts are visible.</summary>
+/// <remarks>steamcmd always nests items under <c>steamapps\workshop\content\221100\&lt;id&gt;</c>, so it
+/// downloads into a hidden <c>.steamcmd</c> cache and a post-step junctions <c>&lt;installRoot&gt;\&lt;id&gt;</c>
+/// to that content — the user sees a clean path, the cache keeps steamcmd's manifests for incremental
+/// updates, and a junction needs no copy and no elevation.</remarks>
 public static class WorkshopCmd
 {
     public const string AppId = "221100";

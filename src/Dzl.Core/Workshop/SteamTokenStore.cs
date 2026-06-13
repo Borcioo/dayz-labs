@@ -4,9 +4,10 @@ using System.Text;
 namespace Dzl.Core.Workshop;
 
 /// <summary>Stores the Steam tokens encrypted at rest with Windows DPAPI (CurrentUser scope) next to the
-/// config — never in config.json. The <b>refresh token</b> (long-lived) lives in <c>steam.token</c>; the
-/// shorter-lived <b>access token</b> (what the Workshop API needs, ~24h) is cached in <c>steam.access</c> so a
-/// restart can reuse it without re-minting (token renewal from the refresh token is unreliable). Never throws.</summary>
+/// config — never in config.json. Never throws.</summary>
+/// <remarks>The <b>refresh token</b> (long-lived) lives in <c>steam.token</c>; the shorter-lived
+/// <b>access token</b> (what the Workshop API needs, ~24h) is cached in <c>steam.access</c> so a restart
+/// can reuse it without re-minting (token renewal from the refresh token is unreliable).</remarks>
 public static class SteamTokenStore
 {
     private static string Dir(string configPath) => Path.GetDirectoryName(configPath) ?? ".";

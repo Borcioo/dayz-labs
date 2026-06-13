@@ -36,13 +36,13 @@ public sealed record WorkshopSort(string Label, string BrowseSort);
 /// <summary>A "Most Popular" time window (label + <c>days</c>; -1 = all time).</summary>
 public sealed record WorkshopTimeFrame(string Label, int Days);
 
-/// <summary>
-/// Keyless Workshop browsing by scraping the Steam Community browse page — full filters (sort, time frame,
-/// DayZ Mod-Type tags, text search, pagination) server-side, no Web API key. Steam's markup uses hashed CSS
-/// classes, so the list parser keys off the stable <c>filedetails/?id=N"&gt;&lt;img src=preview alt=title&gt;</c>
-/// structure. Per-item detail (subscribers/description/tags) is fetched via the keyless
-/// <c>GetPublishedFileDetails</c> endpoint. URL/HTML/JSON helpers are pure + unit-tested; fetches are thin.
-/// </summary>
+/// <summary>Keyless Workshop browsing by scraping the Steam Community browse page — full filters (sort,
+/// time frame, DayZ Mod-Type tags, text search, pagination) server-side, no Web API key. URL/HTML/JSON
+/// helpers are pure + unit-tested; fetches are thin.</summary>
+/// <remarks>Steam's markup uses hashed CSS classes, so the list parser keys off the stable
+/// <c>filedetails/?id=N"&gt;&lt;img src=preview alt=title&gt;</c> structure. Per-item detail
+/// (subscribers/description/tags) is fetched via the keyless <c>GetPublishedFileDetails</c>
+/// endpoint.</remarks>
 public static class WorkshopWeb
 {
     public const string AppId = "221100";
