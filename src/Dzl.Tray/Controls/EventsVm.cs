@@ -32,10 +32,6 @@ public sealed partial class EventsVm : RawXmlEditorVm
         _confirm = confirm;
     }
 
-    // ------------------------------------------------------------------
-    // Parsed model (cached between writes — selection clicks reuse it)
-    // ------------------------------------------------------------------
-
     private List<CeEvent>? _model;
 
     /// <summary>The parsed file, re-read lazily after every write/undo/redo/reload.</summary>
@@ -43,10 +39,6 @@ public sealed partial class EventsVm : RawXmlEditorVm
 
     /// <inheritdoc/>
     protected override void InvalidateModelCache() => _model = null;
-
-    // ------------------------------------------------------------------
-    // State — master list
-    // ------------------------------------------------------------------
 
     /// <summary>Unfiltered backing store.</summary>
     private readonly List<EventRowVm> _all = new();
@@ -70,10 +62,6 @@ public sealed partial class EventsVm : RawXmlEditorVm
 
     partial void OnFilterChanged(string value) => ApplyFilter();
 
-    // ------------------------------------------------------------------
-    // Detail for selected event
-    // ------------------------------------------------------------------
-
     /// <summary>Children of the currently selected event (editable rows in the children grid).</summary>
     public ObservableCollection<EventChildRowVm> Children { get; } = new();
 
@@ -96,10 +84,6 @@ public sealed partial class EventsVm : RawXmlEditorVm
     [ObservableProperty] private string _detailPosition = "";
     [ObservableProperty] private string _detailLimit = "";
     [ObservableProperty] private bool _detailActive;
-
-    // ------------------------------------------------------------------
-    // Load
-    // ------------------------------------------------------------------
 
     /// <inheritdoc/>
     protected override void ReloadView() => LoadKeepingSelection();
@@ -177,10 +161,6 @@ public sealed partial class EventsVm : RawXmlEditorVm
         DetailActive = false;
     }
 
-    // ------------------------------------------------------------------
-    // Event-level commands
-    // ------------------------------------------------------------------
-
     public void AddEvent()
     {
         var name = (NewEventName ?? "").Trim();
@@ -214,10 +194,6 @@ public sealed partial class EventsVm : RawXmlEditorVm
             SelectedEvent = Events.FirstOrDefault(r => string.Equals(r.Name, newName, StringComparison.OrdinalIgnoreCase));
         }
     }
-
-    // ------------------------------------------------------------------
-    // Detail scalar/flag/string persistence
-    // ------------------------------------------------------------------
 
     private static bool TryInt(string? raw, out int value) =>
         int.TryParse((raw ?? "").Trim(), out value) && value >= 0;
@@ -279,10 +255,6 @@ public sealed partial class EventsVm : RawXmlEditorVm
         row.ChildrenCount = ev.Children.Count;
     }
 
-    // ------------------------------------------------------------------
-    // Child-level commands
-    // ------------------------------------------------------------------
-
     public void AddChild()
     {
         if (SelectedEvent is not { } row) { Status = "✗ select an event first"; return; }
@@ -336,10 +308,6 @@ public sealed partial class EventsVm : RawXmlEditorVm
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// Row VMs
-// ---------------------------------------------------------------------------
 
 /// <summary>One master-list row: an event with summary columns.</summary>
 public sealed partial class EventRowVm : ObservableObject

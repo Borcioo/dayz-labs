@@ -32,10 +32,6 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
         _confirm = confirm;
     }
 
-    // ------------------------------------------------------------------
-    // Parsed model (cached between writes — selection clicks reuse it)
-    // ------------------------------------------------------------------
-
     private List<RandomPreset>? _model;
 
     /// <summary>The parsed file, re-read lazily after every write/undo/redo/reload.</summary>
@@ -43,10 +39,6 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
 
     /// <inheritdoc/>
     protected override void InvalidateModelCache() => _model = null;
-
-    // ------------------------------------------------------------------
-    // State
-    // ------------------------------------------------------------------
 
     /// <summary>The master list of presets (both kinds), sorted by kind then name.</summary>
     public ObservableCollection<PresetRowVm> Presets { get; } = new();
@@ -65,10 +57,6 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
     // new-item form
     [ObservableProperty] private string _newItemName = "";
     [ObservableProperty] private string _newItemChance = "1.0";
-
-    // ------------------------------------------------------------------
-    // Load
-    // ------------------------------------------------------------------
 
     /// <inheritdoc/>
     protected override void ReloadView() => LoadPresetsKeepingSelection();
@@ -115,10 +103,6 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
         finally { _suspendItemPersist = false; }
     }
 
-    // ------------------------------------------------------------------
-    // Preset-level commands
-    // ------------------------------------------------------------------
-
     public void AddPreset()
     {
         var name = (NewPresetName ?? "").Trim();
@@ -164,10 +148,6 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
         PushUndo();
         if (Report(_svc.SetPresetChance(row.Kind, row.Name, chance))) row.Chance = chance;
     }
-
-    // ------------------------------------------------------------------
-    // Item-level commands
-    // ------------------------------------------------------------------
 
     public void AddItem()
     {

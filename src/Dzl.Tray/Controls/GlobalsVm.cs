@@ -28,10 +28,6 @@ public sealed partial class GlobalsVm : RawXmlEditorVm
         _confirm = confirm;
     }
 
-    // ------------------------------------------------------------------
-    // State
-    // ------------------------------------------------------------------
-
     /// <summary>All var rows loaded from disk.</summary>
     private readonly List<GlobalVarRowVm> _allRows = new();
 
@@ -48,10 +44,6 @@ public sealed partial class GlobalsVm : RawXmlEditorVm
     [ObservableProperty] private string _newVarName = "";
     [ObservableProperty] private string _newVarValue = "";
     [ObservableProperty] private int _newVarType = 0;
-
-    // ------------------------------------------------------------------
-    // Load
-    // ------------------------------------------------------------------
 
     /// <inheritdoc/>
     protected override void ReloadView() => LoadKeepingSelection();
@@ -79,10 +71,6 @@ public sealed partial class GlobalsVm : RawXmlEditorVm
                 Rows.Add(r);
         }
     }
-
-    // ------------------------------------------------------------------
-    // Commands
-    // ------------------------------------------------------------------
 
     /// <summary>Add a new var from the new-var form.</summary>
     public void AddVar()

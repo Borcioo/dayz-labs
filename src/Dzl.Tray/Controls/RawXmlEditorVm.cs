@@ -39,10 +39,6 @@ public abstract partial class RawXmlEditorVm : ObservableObject
         _missingHint = missingHint;
     }
 
-    // ------------------------------------------------------------------
-    // Status line
-    // ------------------------------------------------------------------
-
     /// <summary>One-line feedback under the editor ("✓ saved …" / "✗ …").</summary>
     [ObservableProperty] private string _status = "";
 
@@ -54,19 +50,11 @@ public abstract partial class RawXmlEditorVm : ObservableObject
         return result.ok;
     }
 
-    // ------------------------------------------------------------------
-    // File presence
-    // ------------------------------------------------------------------
-
     /// <summary>True when the file is resolvable (a mission is active) — gates the editor UI.</summary>
     public bool HasFile => _filePath() is not null;
 
     /// <summary>The resolved file path for the status/header (or a hint when unresolved).</summary>
     public string FileLabel => _filePath() ?? _missingHint;
-
-    // ------------------------------------------------------------------
-    // Reload
-    // ------------------------------------------------------------------
 
     /// <summary>(Re)load from disk: clears undo/redo history, reloads the view keeping selection,
     /// and re-evaluates <see cref="HasFile"/>/<see cref="FileLabel"/>.</summary>
@@ -91,10 +79,6 @@ public abstract partial class RawXmlEditorVm : ObservableObject
     /// <see cref="Reload"/>), so a cached model can never go stale through edits made via this VM.
     /// Default: no-op.</summary>
     protected virtual void InvalidateModelCache() { }
-
-    // ------------------------------------------------------------------
-    // Undo/redo (raw-file snapshots)
-    // ------------------------------------------------------------------
 
     private const int UndoCap = 50;
     private readonly List<string> _undo = new();
@@ -151,10 +135,6 @@ public abstract partial class RawXmlEditorVm : ObservableObject
         ReloadView();
         NotifyHistory();
     }
-
-    // ------------------------------------------------------------------
-    // Shared parsing
-    // ------------------------------------------------------------------
 
     /// <summary>Parse a CE chance: an invariant-culture float in 0..1.</summary>
     protected static bool TryChance(string raw, out double value) =>

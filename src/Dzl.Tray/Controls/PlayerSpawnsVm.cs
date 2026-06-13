@@ -31,10 +31,6 @@ public sealed partial class PlayerSpawnsVm : RawXmlEditorVm
         _confirm = confirm;
     }
 
-    // ------------------------------------------------------------------
-    // Parsed model (cached between writes — selection clicks reuse it)
-    // ------------------------------------------------------------------
-
     private List<SpawnCategory>? _model;
 
     /// <summary>The parsed file, re-read lazily after every write/undo/redo/reload.</summary>
@@ -42,10 +38,6 @@ public sealed partial class PlayerSpawnsVm : RawXmlEditorVm
 
     /// <inheritdoc/>
     protected override void InvalidateModelCache() => _model = null;
-
-    // ------------------------------------------------------------------
-    // State
-    // ------------------------------------------------------------------
 
     /// <summary>Names of the categories present in the file (fresh/hop/travel/…), in file order.</summary>
     public ObservableCollection<string> Categories { get; } = new();
@@ -74,10 +66,6 @@ public sealed partial class PlayerSpawnsVm : RawXmlEditorVm
 
     /// <summary>The container new groups are added to (defaults to generator_posbubbles).</summary>
     [ObservableProperty] private string _newGroupContainer = "generator_posbubbles";
-
-    // ------------------------------------------------------------------
-    // Load
-    // ------------------------------------------------------------------
 
     /// <inheritdoc/>
     protected override void ReloadView() => LoadCategoriesKeepingSelection();
@@ -174,16 +162,8 @@ public sealed partial class PlayerSpawnsVm : RawXmlEditorVm
         finally { _suspendPersist = false; }
     }
 
-    // ------------------------------------------------------------------
-    // Double parse (invariant culture)
-    // ------------------------------------------------------------------
-
     private static bool TryDouble(string raw, out double value) =>
         double.TryParse((raw ?? "").Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out value);
-
-    // ------------------------------------------------------------------
-    // Param edits
-    // ------------------------------------------------------------------
 
     private void OnParamEdited(SpawnParamVm param)
     {
@@ -202,10 +182,6 @@ public sealed partial class PlayerSpawnsVm : RawXmlEditorVm
         PushUndo();
         if (Report(_svc.SetParam(cat, section, name, value ?? ""))) LoadCategoryDetail();
     }
-
-    // ------------------------------------------------------------------
-    // Group edits
-    // ------------------------------------------------------------------
 
     public void AddGroup()
     {
@@ -249,10 +225,6 @@ public sealed partial class PlayerSpawnsVm : RawXmlEditorVm
                 string.Equals(g.Container, container, StringComparison.OrdinalIgnoreCase));
         }
     }
-
-    // ------------------------------------------------------------------
-    // Position edits
-    // ------------------------------------------------------------------
 
     public void AddPos(string xText, string zText)
     {

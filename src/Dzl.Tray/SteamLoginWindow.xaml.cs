@@ -59,7 +59,7 @@ public partial class SteamLoginWindow : FluentWindow
         if (password) PassStatus.Text = msg; else QrStatus.Text = msg;
     }
 
-    // --- Steam Guard prompt (driven by the IAuthenticator below) ---
+    // Steam Guard prompt — driven by the IAuthenticator below.
     private Task<string> PromptGuardAsync(string prompt)
     {
         _guard = new TaskCompletionSource<string>();

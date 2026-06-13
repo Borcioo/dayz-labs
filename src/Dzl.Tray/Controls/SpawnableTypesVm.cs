@@ -33,10 +33,6 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
         _confirm = confirm;
     }
 
-    // ------------------------------------------------------------------
-    // Parsed model (cached between writes — selection clicks reuse it)
-    // ------------------------------------------------------------------
-
     private List<SpawnableType>? _model;
 
     /// <summary>The parsed file, re-read lazily after every write/undo/redo/reload.</summary>
@@ -44,10 +40,6 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
 
     /// <inheritdoc/>
     protected override void InvalidateModelCache() => _model = null;
-
-    // ------------------------------------------------------------------
-    // State
-    // ------------------------------------------------------------------
 
     /// <summary>All types (unfiltered backing store).</summary>
     private readonly List<SpawnTypeRowVm> _all = new();
@@ -80,10 +72,6 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
     public ObservableCollection<string> AttachmentsPresetNames { get; } = new();
 
     partial void OnFilterChanged(string value) => ApplyFilter();
-
-    // ------------------------------------------------------------------
-    // Load
-    // ------------------------------------------------------------------
 
     /// <summary>(Re)load all types from disk. Also refreshes the preset-name dropdowns (which undo/redo
     /// deliberately leave alone — they belong to cfgrandompresets.xml, not this file).</summary>
@@ -194,10 +182,6 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
         }
     }
 
-    // ------------------------------------------------------------------
-    // Damage parsing/validation (optional 0..1, invariant culture)
-    // ------------------------------------------------------------------
-
     /// <summary>Parse an optional damage field: empty → null; otherwise must be 0..1.</summary>
     private static bool TryDamage(string raw, out double? value)
     {
@@ -211,10 +195,6 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
         }
         return false;
     }
-
-    // ------------------------------------------------------------------
-    // Type-level commands
-    // ------------------------------------------------------------------
 
     public void AddType()
     {
@@ -251,10 +231,6 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
         }
     }
 
-    // ------------------------------------------------------------------
-    // Detail: hoarder + damage
-    // ------------------------------------------------------------------
-
     /// <summary>Persist the hoarder toggle for the selected type.</summary>
     public void SaveHoarder()
     {
@@ -272,10 +248,6 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
         PushUndo();
         if (Report(_svc.SetDamage(row.Name, min, max))) row.DamageLabel = SpawnTypeRowVm.FormatDamage(min, max);
     }
-
-    // ------------------------------------------------------------------
-    // Block-level commands
-    // ------------------------------------------------------------------
 
     /// <summary>Add a chance-based block (chance 1.0, no items) to cargo or attachments.</summary>
     public void AddChanceBlock(bool isAttachments)
@@ -337,10 +309,6 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
         if (_suspendPersist) return;
         SetBlockChance(block, block.ChanceText);
     }
-
-    // ------------------------------------------------------------------
-    // Item-level commands (inside a chance block)
-    // ------------------------------------------------------------------
 
     public void AddItem(SpawnBlockVm? block, string itemName, string chanceText)
     {

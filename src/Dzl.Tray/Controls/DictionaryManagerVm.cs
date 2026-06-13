@@ -114,10 +114,7 @@ public sealed partial class DictionaryManagerVm : ObservableObject
         _onDictionaryChanged();
     }
 
-    // ------------------------------------------------------------------
-    // Combos (cfglimitsdefinitionuser.xml) — named usage/value groups.
-    // ------------------------------------------------------------------
-
+    // Combos = named usage/value groups from cfglimitsdefinitionuser.xml.
     public ObservableCollection<ComboVm> Combos { get; } = new();
 
     [ObservableProperty] private ComboVm? _selectedCombo;

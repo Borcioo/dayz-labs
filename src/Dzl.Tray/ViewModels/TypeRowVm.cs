@@ -28,7 +28,6 @@ public sealed partial class TypeRowVm : ObservableObject
 
     partial void OnIsSelectedChanged(bool value) => SelectionToggled?.Invoke();
 
-    // --- core numeric fields ---
     [ObservableProperty] private string _name;
     [ObservableProperty] private int _nominal;
     [ObservableProperty] private int _min;
@@ -36,14 +35,12 @@ public sealed partial class TypeRowVm : ObservableObject
     [ObservableProperty] private int _restock;
     [ObservableProperty] private int _cost;
 
-    // --- quant fields (new; -1 = not set, matching TypeEntry default) ---
+    // -1 = not set, matching TypeEntry's default.
     [ObservableProperty] private int _quantMin = -1;
     [ObservableProperty] private int _quantMax = -1;
 
-    // --- category ---
     [ObservableProperty] private string _category;
 
-    // --- flags (6 CE spawn flags) ---
     [ObservableProperty] private bool _countInCargo;
     [ObservableProperty] private bool _countInHoarder;
     [ObservableProperty] private bool _countInMap;
@@ -51,7 +48,6 @@ public sealed partial class TypeRowVm : ObservableObject
     [ObservableProperty] private bool _crafted;
     [ObservableProperty] private bool _deloot;
 
-    // --- list fields (editable collections) ---
     /// <summary>Usage categories (e.g. "Military", "Civilian"). Bound as <see cref="UsageText"/> in the grid.</summary>
     public ObservableCollection<string> Usage { get; } = new();
 
@@ -61,9 +57,8 @@ public sealed partial class TypeRowVm : ObservableObject
     /// <summary>Tags (e.g. "floor", "ground"). Bound as <see cref="TagText"/> in the grid.</summary>
     public ObservableCollection<string> Tag { get; } = new();
 
-    // --- display/edit text proxies for the grid columns (comma-joined strings) ---
-    // These are the properties that XAML binds to so existing grid columns still compile and show the right data.
-    // Setting them parses the comma-separated input back into the respective ObservableCollection.
+    // The grid columns bind to these comma-joined *Text proxies; setting one parses the
+    // input back into the matching ObservableCollection.
 
     /// <summary>Comma-joined display / edit string for <see cref="Usage"/>.
     /// XAML grid columns bind to this; setting it updates the <see cref="Usage"/> collection.</summary>
@@ -120,8 +115,6 @@ public sealed partial class TypeRowVm : ObservableObject
         OnPropertyChanged(nameof(TagText));
     }
 
-    // --- origin / source metadata ---
-
     /// <summary>Absolute path of the CE file this entry was read from / saves to.</summary>
     public string SourceFile { get; private set; }
 
@@ -135,12 +128,12 @@ public sealed partial class TypeRowVm : ObservableObject
     /// <summary>Just the file name of <see cref="SourceFile"/>, shown in the File column.</summary>
     public string FileName => string.IsNullOrEmpty(SourceFile) ? "(new)" : Path.GetFileName(SourceFile);
 
-    // --- origin pill (mirrors the mod-source pill used on the Mods/Servers pages) ---
+    // Origin pill — mirrors the mod-source pill used on the Mods/Servers pages.
     public string OriginLabel => OriginUi.Label(Origin);
     public Brush OriginBg => OriginUi.Bg(Origin);
     public Brush OriginFg => OriginUi.Fg(Origin);
 
-    // --- lint summary (per-row; refreshed from MainViewModel after load/edit) ---
+    // Per-row lint summary, refreshed from MainViewModel after load/edit.
     [ObservableProperty] private int _lintCount;
     [ObservableProperty] private string _lintTooltip = "";
 
@@ -152,8 +145,6 @@ public sealed partial class TypeRowVm : ObservableObject
         OnPropertyChanged(nameof(HasLint));
         OnPropertyChanged(nameof(LintGlyph));
     }
-
-    // --- constructors ---
 
     /// <summary>Loaded row: carries the source file + origin from <see cref="TypeRow"/>.</summary>
     public TypeRowVm(TypeRow row) : this(row.Entry, row.Origin, row.ModSource) { }
@@ -191,8 +182,6 @@ public sealed partial class TypeRowVm : ObservableObject
         ModSource = modSource;
     }
 
-    // --- helpers ---
-
     private static List<string> Split(string s) =>
         s.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
@@ -204,8 +193,7 @@ public sealed partial class TypeRowVm : ObservableObject
         return true;
     }
 
-    // --- ToEntry: writes EVERY field back so round-trips are lossless ---
-
+    // Writes EVERY field back onto the original entry so round-trips stay lossless.
     public TypeEntry ToEntry() => _original with
     {
         Name = Name.Trim(),

@@ -77,7 +77,7 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
             TypesFileFilter = "";
     }
 
-    // --- advanced filters (all substring/contains; blank = ignored) ---
+    // Advanced filters — all substring/contains; blank = ignored.
     [ObservableProperty] private string _typesUsageFilter = "";
     [ObservableProperty] private string _typesValueFilter = "";
     [ObservableProperty] private string _typesTagFilter = "";
@@ -134,7 +134,7 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
 
     public bool HasTypes => new TypesService(_configPath).TypesFile() is not null;
 
-    // --- limits (valid usage/value/tag/category names) for the editor dropdowns ---
+    // Valid usage/value/tag/category names backing the editor dropdowns.
     /// <summary>Valid usage names from cfglimitsdefinition.xml (selectable in the Usage editor; free-text still allowed).</summary>
     public ObservableCollection<string> LimitsUsage { get; } = new();
     /// <summary>Valid value/tier names (selectable in the Tiers editor).</summary>
@@ -177,7 +177,6 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
     public int SelectedTypeCount => SelectedTypes.Count;
     public bool HasSelection => SelectedTypes.Count > 0;
 
-    // --- checkbox selection (batch target) --------------------------------
     // Selection-for-edit (grid SelectedItem → detail form) and selection-for-batch (checkboxes → many
     // rows) are SEPARATE concepts. Batch ops act on the CHECKED rows below, not the grid's SelectedItems.
 
@@ -240,7 +239,7 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
     /// edit form to the batch operations panel.</summary>
     public bool BatchMode => CheckedTypeCount >= 2;
 
-    // --- lint summary across the whole loaded set ---
+    // Lint summary across the whole loaded set.
     [ObservableProperty] private string _typesLintSummary = "";
     /// <summary>True when the last lint pass found at least one warning or error; drives the lint-summary
     /// TextBlock's Visibility so it is hidden when there are no findings.</summary>
@@ -321,7 +320,7 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
         return true;
     }
 
-    // --- undo/redo (in-session history; snapshot-based) ---
+    // Undo/redo: in-session, snapshot-based history (whole entry-list snapshots).
     private const int UndoCap = 50;
     private readonly List<List<Dzl.Core.Economy.TypeEntry>> _typesUndo = new();
     private readonly List<List<Dzl.Core.Economy.TypeEntry>> _typesRedo = new();
@@ -520,8 +519,7 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
         return !set.Contains(name.Trim());
     }
 
-    // --- debounced lint ---------------------------------------------------
-    // RefreshTypesLint walks ~2000 rows; running it per keystroke freezes the editor. Rapid-edit paths
+    // Debounced lint: RefreshTypesLint walks ~2000 rows; running it per keystroke freezes the editor. Rapid-edit paths
     // (detail typing, steppers, batch) call ScheduleLint() which restarts a ~300 ms timer so bursts
     // coalesce into ONE lint pass. Load / undo / redo still lint immediately (RefreshTypesLint directly).
     private DispatcherTimer? _lintTimer;

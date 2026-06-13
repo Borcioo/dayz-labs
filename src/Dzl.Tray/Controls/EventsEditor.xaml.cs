@@ -18,8 +18,6 @@ public partial class EventsEditor : UserControl
 
     private void OnReloadClick(object sender, RoutedEventArgs e) => Vm?.Reload();
 
-    // --- event form ---
-
     private void OnAddEventClick(object sender, RoutedEventArgs e) => Vm?.AddEvent();
 
     private void OnAddEventKeyDown(object sender, KeyEventArgs e)
@@ -43,8 +41,7 @@ public partial class EventsEditor : UserControl
         vm.RenameSelectedEvent(next.Trim());
     }
 
-    // --- scalar fields (LostFocus → persist by field name stored in Tag) ---
-
+    // Scalar fields persist on LostFocus, keyed by the field name stored in each control's Tag.
     private void OnScalarLostFocus(object sender, RoutedEventArgs e)
     {
         if (Vm is not { } vm) return;
@@ -87,8 +84,6 @@ public partial class EventsEditor : UserControl
         vm.SaveFlag(flag, value);
     }
 
-    // --- child grid ---
-
     private void OnChildCellEditEnding(object? sender, DataGridCellEditEndingEventArgs e)
     {
         if (e.EditAction != DataGridEditAction.Commit) return;
@@ -102,8 +97,6 @@ public partial class EventsEditor : UserControl
     {
         if ((sender as FrameworkElement)?.Tag is EventChildRowVm child) Vm?.RemoveChild(child);
     }
-
-    // --- add child form ---
 
     private void OnAddChildClick(object sender, RoutedEventArgs e) => Vm?.AddChild();
 

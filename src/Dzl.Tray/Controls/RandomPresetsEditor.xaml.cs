@@ -19,8 +19,6 @@ public partial class RandomPresetsEditor : UserControl
 
     private void OnReloadClick(object sender, RoutedEventArgs e) => Vm?.Reload();
 
-    // --- preset form ---
-
     private void OnNewKindChanged(object sender, SelectionChangedEventArgs e)
     {
         // Index 0 = cargo, 1 = attachments.
@@ -51,8 +49,6 @@ public partial class RandomPresetsEditor : UserControl
         if (string.IsNullOrWhiteSpace(next)) return;
         vm.RenameSelectedPreset(next.Trim());
     }
-
-    // --- item form ---
 
     private void OnAddItemClick(object sender, RoutedEventArgs e) => Vm?.AddItem();
 

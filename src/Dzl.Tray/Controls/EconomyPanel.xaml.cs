@@ -24,8 +24,6 @@ public partial class EconomyPanel : UserControl
         };
     }
 
-    // === Economy (types.xml) editor =======================================
-
     // Batch + remove operate on the CHECKED rows (checkbox column), NOT the grid's focused/edited row.
     // The detail form edits the single focused row (grid SelectedItem) — selection-for-edit and
     // selection-for-batch are separate concepts now.

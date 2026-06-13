@@ -20,8 +20,6 @@ public partial class PlayerSpawnsEditor : UserControl
 
     private void OnReloadClick(object sender, RoutedEventArgs e) => Vm?.Reload();
 
-    // --- params ---
-
     private void OnParamCellEditEnding(object? sender, DataGridCellEditEndingEventArgs e)
     {
         if (e.EditAction != DataGridEditAction.Commit) return;
@@ -60,8 +58,6 @@ public partial class PlayerSpawnsEditor : UserControl
         if (boxes.Count > 1) boxes[1].Text = "";
     }
 
-    // --- groups ---
-
     private void OnAddGroupClick(object sender, RoutedEventArgs e) => Vm?.AddGroup();
 
     private void OnAddGroupKeyDown(object sender, KeyEventArgs e)
@@ -84,8 +80,6 @@ public partial class PlayerSpawnsEditor : UserControl
         if (string.IsNullOrWhiteSpace(next)) return;
         vm.RenameSelectedGroup(next.Trim());
     }
-
-    // --- positions ---
 
     private void OnPosCellEditEnding(object? sender, DataGridCellEditEndingEventArgs e)
     {

@@ -95,8 +95,6 @@ public partial class ServerEditorWindow : FluentWindow
         LoadParamsEditor();
     }
 
-    // --- params editor (active instance) ---
-
     private string SelectedTarget => (ParamTarget.SelectedItem as ComboBoxItem)?.Content as string ?? "server";
     private string SelectedParamMode => (ParamMode.SelectedItem as ComboBoxItem)?.Content as string ?? "debug";
 
@@ -117,8 +115,6 @@ public partial class ServerEditorWindow : FluentWindow
             .Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
         _vm.ApplyParams(SelectedTarget, SelectedParamMode, lines);
     }
-
-    // --- pickers (self-contained) ---
 
     private void OnBrowseInto(object sender, RoutedEventArgs e)
     {

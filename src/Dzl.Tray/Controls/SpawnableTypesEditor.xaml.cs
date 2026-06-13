@@ -20,8 +20,6 @@ public partial class SpawnableTypesEditor : UserControl
 
     private void OnReloadClick(object sender, RoutedEventArgs e) => Vm?.Reload();
 
-    // --- type list ---
-
     private void OnAddTypeClick(object sender, RoutedEventArgs e) => Vm?.AddType();
 
     private void OnAddTypeKeyDown(object sender, KeyEventArgs e)
@@ -45,8 +43,6 @@ public partial class SpawnableTypesEditor : UserControl
         vm.RenameSelectedType(next.Trim());
     }
 
-    // --- hoarder + damage ---
-
     private void OnHoarderClick(object sender, RoutedEventArgs e) => Vm?.SaveHoarder();
 
     private void OnDamageLostFocus(object sender, RoutedEventArgs e) => Vm?.SaveDamage();
@@ -55,8 +51,6 @@ public partial class SpawnableTypesEditor : UserControl
     {
         if (e.Key == Key.Enter) { Vm?.SaveDamage(); e.Handled = true; }
     }
-
-    // --- block add (per-section toolbars) ---
 
     private void OnAddCargoChanceClick(object sender, RoutedEventArgs e) => Vm?.AddChanceBlock(isAttachments: false);
     private void OnAddAttChanceClick(object sender, RoutedEventArgs e) => Vm?.AddChanceBlock(isAttachments: true);
@@ -68,8 +62,6 @@ public partial class SpawnableTypesEditor : UserControl
         Vm?.AddPresetBlock(isAttachments: true, ComboText(AttPresetCombo));
 
     private static string ComboText(ComboBox cb) => (cb.Text ?? cb.SelectedItem as string ?? "").Trim();
-
-    // --- block edits ---
 
     private void OnRemoveBlockClick(object sender, RoutedEventArgs e)
     {
@@ -123,8 +115,6 @@ public partial class SpawnableTypesEditor : UserControl
             e.Handled = true;
         }
     }
-
-    // --- item edits ---
 
     private void OnItemCellEditEnding(object? sender, DataGridCellEditEndingEventArgs e)
     {
