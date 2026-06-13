@@ -52,6 +52,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private DzlConfig _cfg;
     private bool _suppressPersist;
     private bool _disposed;
+    // Guards the status poll: the tick fires every 1.5s, but Status() spawns a tasklist per
+    // recorded PID and can outlast the interval — without this a slow poll would stack up.
+    private bool _statusBusy;
 
     [ObservableProperty] private string _mode = "debug";
     [ObservableProperty] private string _statusLine = "loading…";
@@ -213,9 +216,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         RefreshPreview();
 
         _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
-        _statusTimer.Tick += (_, _) => { RefreshStatus(); RefreshLogPaths(); RefreshWorkDrive(); };
+        _statusTimer.Tick += (_, _) => { _ = RefreshStatusAsync(); RefreshLogPaths(); RefreshWorkDrive(); };
         _statusTimer.Start();
-        RefreshStatus();
+        _ = RefreshStatusAsync();
 
         // Seed the GitHub/Steam pills once at startup (gh shells out — keep it off the UI thread;
         // login/logout flows re-run these on their own).
@@ -342,11 +345,18 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnModFilterChanged(string value) => ModsView.Refresh();
 
-    private void RefreshStatus()
+    /// <summary>Poll launcher status off the UI thread. <see cref="LauncherService.Status"/> spawns a
+    /// <c>tasklist</c> per recorded PID, so the work runs on a background thread and only the property
+    /// assignments hop back. Re-entrancy is guarded by <see cref="_statusBusy"/> (a slow poll can outlast
+    /// the 1.5s tick); the cached <see cref="_svc"/> is reused instead of allocating per tick.</summary>
+    private async Task RefreshStatusAsync()
     {
+        if (_statusBusy) return;
+        _statusBusy = true;
         try
         {
-            var r = new LauncherService(_configPath).Status();
+            var r = await Task.Run(() => _svc.Status());
+            if (_disposed) return;
             var srv = r.Server.State == "up"
                 ? $"up ({r.Server.Source}/{r.Server.Mode} pid {r.Server.Pid})"
                 : "down";
@@ -362,8 +372,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            StatusLine = "status error: " + ex.Message;
+            if (!_disposed) StatusLine = "status error: " + ex.Message;
         }
+        finally { _statusBusy = false; }
     }
 
     // --- Server / client ops (background; call the tray's LauncherService) -
@@ -371,7 +382,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void RunOp(Action op) => Task.Run(() =>
     {
         try { op(); } catch { /* surfaced via status poll */ }
-        finally { _dispatcher.BeginInvoke(RefreshStatus); }
+        finally { _dispatcher.BeginInvoke(() => _ = RefreshStatusAsync()); }
     });
 
     [RelayCommand]
@@ -841,22 +852,28 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>Scaffold a new mod project + link P:\&lt;Mod&gt;. Caches the author. Optionally initialises a
-    /// local git repo with a first commit. Returns a status line.</summary>
-    public string CreateModProject(string name, string author, bool initGit = false)
+    /// local git repo with a first commit. The scaffold + junction + git I/O runs off the UI thread; the
+    /// project-list refresh hops back. Returns a status line.</summary>
+    public async Task<string> CreateModProjectAsync(string name, string author, bool initGit = false)
     {
         var root = ProjectsRoot;
-        var res = ModScaffold.Scaffold(root, name, author);
-        if (!res.Ok) return $"✗ {res.Message}";
-        if (!string.IsNullOrWhiteSpace(author)) ModScaffold.SaveAuthor(ConfigDir, author);
+        var source = WorkDriveSource;
         var dir = ProjectPaths.ModDir(root, name);
-        var link = Junction.Ensure(ProjectPaths.JunctionPath(WorkDriveSource, name), dir);
-        var msg = link.Ok ? $"✓ created {name} + linked P:\\{name}" : $"✓ created {name}  (⚠ P:\\ link: {link.Detail})";
-        if (initGit)
+        var msg = await Task.Run(() =>
         {
-            var gi = Dzl.Core.Vcs.Git.Init(dir);
-            if (gi.ok) Dzl.Core.Vcs.Git.CommitAll(dir, "Initial commit (dzl scaffold)");
-            msg += gi.ok ? "  + git repo" : $"  (⚠ git: {gi.msg})";
-        }
+            var res = ModScaffold.Scaffold(root, name, author);
+            if (!res.Ok) return $"✗ {res.Message}";
+            if (!string.IsNullOrWhiteSpace(author)) ModScaffold.SaveAuthor(ConfigDir, author);
+            var link = Junction.Ensure(ProjectPaths.JunctionPath(source, name), dir);
+            var m = link.Ok ? $"✓ created {name} + linked P:\\{name}" : $"✓ created {name}  (⚠ P:\\ link: {link.Detail})";
+            if (initGit)
+            {
+                var gi = Dzl.Core.Vcs.Git.Init(dir);
+                if (gi.ok) Dzl.Core.Vcs.Git.CommitAll(dir, "Initial commit (dzl scaffold)");
+                m += gi.ok ? "  + git repo" : $"  (⚠ git: {gi.msg})";
+            }
+            return m;
+        });
         RefreshModProjects();
         return msg;
     }
@@ -869,37 +886,45 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>Clone a GitHub repo into the projects tree as a mod (folder named <paramref name="name"/> or
     /// derived from the repo), then link P:\&lt;Mod&gt;. Needs gh installed + logged in. Returns a status line.</summary>
-    public string ImportFromGitHub(string repo, string? name, GitHubImportMode mode = GitHubImportMode.Clone)
+    public async Task<string> ImportFromGitHubAsync(string repo, string? name, GitHubImportMode mode = GitHubImportMode.Clone)
     {
         repo = repo?.Trim() ?? "";
         if (repo.Length == 0) return "✗ enter a GitHub repo (owner/name or URL)";
         var modName = SanitizeModName(string.IsNullOrWhiteSpace(name) ? DeriveRepoName(repo) : name!.Trim());
         if (!ProjectPaths.IsValidName(modName)) return $"✗ couldn't derive a valid mod name — type one (letters, digits, _)";
         var root = ProjectsRoot;
+        var source = WorkDriveSource;
         var dest = ProjectPaths.ModDir(root, modName);
         if (Directory.Exists(dest)) return $"✗ {modName} already exists";
-        var clone = Dzl.Core.Vcs.GitHub.Clone(repo, dest);
-        if (!clone.ok) { RefreshModProjects(); return $"✗ clone failed: {clone.msg}"; }
 
-        var vcsNote = "";
-        if (mode != GitHubImportMode.Clone)
+        // Clone (network) + optional .git rewrite + junction all run off the UI thread; the
+        // project-list refresh always hops back afterward (even on a clone failure).
+        var msg = await Task.Run(() =>
         {
-            var (ok, msg) = DeleteGitDir(dest);
-            if (!ok) vcsNote = $"  (⚠ couldn't remove .git: {msg})";
-            else if (mode == GitHubImportMode.Fresh)
-            {
-                var init = Dzl.Core.Vcs.Git.Init(dest);
-                var commit = init.ok ? Dzl.Core.Vcs.Git.CommitAll(dest, $"Initial commit — imported from {repo} (dzl)") : init;
-                vcsNote = commit.ok ? "  (fresh repo, initial commit)" : $"  (⚠ re-init: {commit.msg})";
-            }
-            else vcsNote = "  (no .git — plain files)";
-        }
+            var clone = Dzl.Core.Vcs.GitHub.Clone(repo, dest);
+            if (!clone.ok) return $"✗ clone failed: {clone.msg}";
 
-        var link = Junction.Ensure(ProjectPaths.JunctionPath(WorkDriveSource, modName), dest);
+            var vcsNote = "";
+            if (mode != GitHubImportMode.Clone)
+            {
+                var (ok, m) = DeleteGitDir(dest);
+                if (!ok) vcsNote = $"  (⚠ couldn't remove .git: {m})";
+                else if (mode == GitHubImportMode.Fresh)
+                {
+                    var init = Dzl.Core.Vcs.Git.Init(dest);
+                    var commit = init.ok ? Dzl.Core.Vcs.Git.CommitAll(dest, $"Initial commit — imported from {repo} (dzl)") : init;
+                    vcsNote = commit.ok ? "  (fresh repo, initial commit)" : $"  (⚠ re-init: {commit.msg})";
+                }
+                else vcsNote = "  (no .git — plain files)";
+            }
+
+            var link = Junction.Ensure(ProjectPaths.JunctionPath(source, modName), dest);
+            return link.Ok
+                ? $"✓ imported {modName} from GitHub + linked P:\\{modName}{vcsNote}"
+                : $"✓ imported {modName}  (⚠ link: {link.Detail}){vcsNote}";
+        });
         RefreshModProjects();
-        return link.Ok
-            ? $"✓ imported {modName} from GitHub + linked P:\\{modName}{vcsNote}"
-            : $"✓ imported {modName}  (⚠ link: {link.Detail}){vcsNote}";
+        return msg;
     }
 
     /// <summary>Delete a clone's .git folder (read-only-safe via <see cref="FileOps.ForceDeleteDirectory"/>).</summary>
@@ -909,8 +934,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         catch (Exception ex) { return (false, ex.Message); }
     }
 
-    /// <summary>True when gh is installed + logged in (drives the "From GitHub" tab availability).</summary>
-    public bool GitHubReady => Dzl.Core.Vcs.GitHub.AuthStatus().LoggedIn;
+    /// <summary>True when gh is installed + logged in (drives the "From GitHub" tab availability).
+    /// Set off the UI thread by <see cref="RefreshGitHubAuthAsync"/> — never shell out during a binding read.</summary>
+    [ObservableProperty] private bool _gitHubReady;
 
     /// <summary>Suggested mod-folder name for a repo URL/slug (sanitized repo name; "" when the
     /// input doesn't look like a repo yet). Drives the name auto-fill on the From GitHub tab.</summary>
@@ -976,18 +1002,25 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>Delete a mod project: remove its P: source junction (link only), delete the source folder, and
     /// optionally the build output. Destructive — the caller confirms first. Returns a status line.</summary>
-    public string DeleteModProject(string name, bool alsoBuild)
+    public async Task<string> DeleteModProjectAsync(string name, bool alsoBuild)
     {
         var root = ProjectsRoot;
-        try
+        var source = WorkDriveSource;
+        // The recursive force-delete (read-only git files) can take a while; run it off the UI thread.
+        var error = await Task.Run(() =>
         {
-            Junction.Remove(ProjectPaths.JunctionPath(WorkDriveSource, name));   // drop the link, never the target
-            // Force-delete: cloned projects contain read-only git files that kill a plain delete.
-            FileOps.ForceDeleteDirectory(ProjectPaths.ModDir(root, name));
-            if (alsoBuild)
-                FileOps.ForceDeleteDirectory(ProjectPaths.BuildDir(root, name));
-        }
-        catch (Exception ex) { RefreshModProjects(); return $"✗ {name}: {ex.Message}"; }
+            try
+            {
+                Junction.Remove(ProjectPaths.JunctionPath(source, name));   // drop the link, never the target
+                // Force-delete: cloned projects contain read-only git files that kill a plain delete.
+                FileOps.ForceDeleteDirectory(ProjectPaths.ModDir(root, name));
+                if (alsoBuild)
+                    FileOps.ForceDeleteDirectory(ProjectPaths.BuildDir(root, name));
+                return (string?)null;
+            }
+            catch (Exception ex) { return ex.Message; }
+        });
+        if (error is not null) { RefreshModProjects(); return $"✗ {name}: {error}"; }
         RefreshModProjects();
         Reload();   // the mod also drops out of the library / run-list discovery
         return $"✓ deleted {name}" + (alsoBuild ? " (source + build)" : " (source)");
@@ -1161,8 +1194,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         WorkshopStatus = ok ? $"{WorkshopResults.Count} total (page {_workshopPage})" : $"✗ {error}";
     }
 
-    /// <summary>True when a Steam session is stored (signed in).</summary>
-    public bool SteamSignedIn => new WorkshopService(_configPath).SignedIn;
+    /// <summary>True when a Steam session is stored (signed in). Backed by a field rather than a live
+    /// getter — constructing a <see cref="WorkshopService"/> + reading the session off disk on every
+    /// binding evaluation was the disease. Refreshed by <see cref="NotifyWorkshopGate"/> /
+    /// <see cref="RefreshSteamAccount"/> (the existing call sites after any sign-in/out).</summary>
+    [ObservableProperty] private bool _steamSignedIn;
+
+    /// <summary>Recompute <see cref="SteamSignedIn"/> from the stored Steam session (disk read).</summary>
+    private void RefreshSteamSignedIn() => SteamSignedIn = new WorkshopService(_configPath).SignedIn;
 
     /// <summary>True when steamcmd is configured + present (drives the Workshop Download gating).</summary>
     public bool SteamCmdConfigured => !string.IsNullOrWhiteSpace(_cfg.SteamCmdPath) && File.Exists(_cfg.SteamCmdPath);
@@ -1170,18 +1209,22 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Re-evaluate the Workshop page's gating flags (sign-in / steamcmd) after a change.</summary>
     public void NotifyWorkshopGate()
     {
-        OnPropertyChanged(nameof(SteamSignedIn));
+        RefreshSteamSignedIn();
         OnPropertyChanged(nameof(SteamCmdConfigured));
     }
 
     /// <summary>Steam account label for the Settings → Accounts row (reflects the stored sign-in).</summary>
     [ObservableProperty] private string _steamAccount = "not signed in";
 
-    /// <summary>Refresh the Steam account label from the stored session + the account name saved on sign-in.</summary>
+    /// <summary>Refresh the Steam account label from the stored session + the account name saved on sign-in.
+    /// Also recomputes <see cref="SteamSignedIn"/> from disk (so its bindings stay live without a getter).</summary>
     public void RefreshSteamAccount()
-        => SteamAccount = SteamSignedIn
+    {
+        RefreshSteamSignedIn();
+        SteamAccount = SteamSignedIn
             ? (string.IsNullOrWhiteSpace(Cfg.SteamLogin) ? "signed in" : $"logged in as {Cfg.SteamLogin}")
             : "not signed in";
+    }
 
     public Task<Dzl.Core.Workshop.SteamLoginResult> SteamLoginQrAsync(Action<string> onUrl, System.Threading.CancellationToken ct)
         => new WorkshopService(_configPath).LoginViaQrAsync(onUrl, ct);
@@ -1261,10 +1304,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return (ok, exe, msg);
     }
 
-    /// <summary>Download a Workshop item by id via steamcmd (opens a console). Returns a status line.</summary>
-    public string WorkshopDownload(string id)
+    /// <summary>Download a Workshop item by id via steamcmd (opens a console). Runs off the UI thread;
+    /// the status line hops back. Returns the status line.</summary>
+    public async Task<string> WorkshopDownloadAsync(string id)
     {
-        var r = new WorkshopService(_configPath).Download(id);
+        var cp = _configPath;
+        WorkshopStatus = "downloading…";
+        var r = await Task.Run(() => new WorkshopService(cp).Download(id));
         WorkshopStatus = (r.Ok ? "✓ " : "✗ ") + r.Message;
         return WorkshopStatus;
     }
@@ -1273,10 +1319,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// download under ProjectsRoot), or null if it isn't downloaded yet.</summary>
     public string? ResolveModFolder(string id) => new WorkshopService(_configPath).ResolveContentDir(id);
 
-    /// <summary>Delete a steamcmd-downloaded item (junction + cached files), then refresh the lists.</summary>
-    public string DeleteDownloaded(string id)
+    /// <summary>Delete a steamcmd-downloaded item (junction + cached files) off the UI thread, then refresh
+    /// the lists on the UI thread. Returns the status line.</summary>
+    public async Task<string> DeleteDownloadedAsync(string id)
     {
-        var (ok, msg) = new WorkshopService(_configPath).DeleteDownloaded(id);
+        var cp = _configPath;
+        var (ok, msg) = await Task.Run(() => new WorkshopService(cp).DeleteDownloaded(id));
         WorkshopStatus = (ok ? "✓ " : "✗ ") + msg;
         if (ok) RefreshSubscribed();
         return WorkshopStatus;
@@ -1312,6 +1360,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var a = await Task.Run(() => GitHub.AuthStatus());
         GhLoggedIn = a.LoggedIn;
         GhAccount = a.Detail;
+        GitHubReady = a.LoggedIn;   // drives the "From GitHub" tab availability (same status read)
     }
 
     /// <summary>Log out of GitHub (gh auth logout), then refresh the label.</summary>
@@ -1418,9 +1467,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Create a new server instance (scaffold + atomic preset) and reload so it's active.
     /// <paramref name="baseName"/> = a base/template to copy from, or null for the DayZ install.
     /// Returns a status line.</summary>
-    public string CreateServer(string name, string map, int? port, string? baseName = null)
+    public async Task<string> CreateServerAsync(string name, string map, int? port, string? baseName = null)
     {
-        var res = new ServerService(_configPath).Create(name, map, port, activate: true, baseName: baseName);
+        var cp = _configPath;
+        // The mission-template copy can be hundreds of MB — run it off the UI thread; the
+        // active-preset reload + server-list refresh hop back afterward.
+        var res = await Task.Run(() => new ServerService(cp).Create(name, map, port, activate: true, baseName: baseName));
         Reload();              // active preset changed → refresh mods/paths/preset list
         RefreshServers();
         return res.Ok ? $"✓ {res.Message}  (port {res.Port})" : $"✗ {res.Message}";

@@ -478,14 +478,22 @@ public partial class MainWindow : FluentWindow
 
     private void OnRefreshMyMods(object sender, RoutedEventArgs e) => _vm.RefreshModProjects();
 
-    private void OnCreateMod(object sender, RoutedEventArgs e)
+    // Re-entrancy guard for the create-mod flow (the button is disabled while it runs, but a fast
+    // double-tap before the first frame renders could still re-enter — bool gate is the belt-and-braces).
+    private bool _creatingMod;
+
+    private async void OnCreateMod(object sender, RoutedEventArgs e)
     {
+        if (_creatingMod) return;
         var name = NewModNameBox.Text.Trim();
         var author = NewModAuthorBox.Text.Trim();
         if (name.Length == 0) { NewModStatus.Text = "Enter a mod name."; return; }
+        _creatingMod = true;
         NewModButton.IsEnabled = false;
-        try { NewModStatus.Text = _vm.CreateModProject(name, author, NewModInitGit.IsChecked == true); }
-        finally { NewModButton.IsEnabled = true; }
+        NewModStatus.Text = "creating…";
+        try { NewModStatus.Text = await _vm.CreateModProjectAsync(name, author, NewModInitGit.IsChecked == true); }
+        catch (Exception ex) { NewModStatus.Text = "✗ " + ex.Message; }
+        finally { NewModButton.IsEnabled = true; _creatingMod = false; }
         if (NewModStatus.Text.StartsWith('✓')) NewModNameBox.Text = "";
     }
 
@@ -533,8 +541,11 @@ public partial class MainWindow : FluentWindow
         _ghNameIsAuto = GhNameBox.Text.Trim().Length == 0;
     }
 
-    private void OnImportFromGitHub(object sender, RoutedEventArgs e)
+    private bool _importingGitHub;
+
+    private async void OnImportFromGitHub(object sender, RoutedEventArgs e)
     {
+        if (_importingGitHub) return;
         var repo = GhRepoBox.Text.Trim();
         if (repo.Length == 0) { GhImportStatus.Text = "Enter a GitHub repo (owner/name or URL)."; return; }
         var mode = GhModeCombo.SelectedIndex switch
@@ -543,8 +554,12 @@ public partial class MainWindow : FluentWindow
             2 => MainViewModel.GitHubImportMode.Fresh,
             _ => MainViewModel.GitHubImportMode.Clone,
         };
-        GhImportStatus.Text = "cloning…";
-        GhImportStatus.Text = _vm.ImportFromGitHub(repo, GhNameBox.Text, mode);
+        _importingGitHub = true;
+        GhImportButton.IsEnabled = false;
+        GhImportStatus.Text = "cloning…";   // now renders — the clone runs off the UI thread
+        try { GhImportStatus.Text = await _vm.ImportFromGitHubAsync(repo, GhNameBox.Text, mode); }
+        catch (Exception ex) { GhImportStatus.Text = "✗ " + ex.Message; }
+        finally { GhImportButton.IsEnabled = true; _importingGitHub = false; }
         if (GhImportStatus.Text.StartsWith('✓')) { GhRepoBox.Text = ""; GhNameBox.Text = ""; }
     }
 
@@ -584,9 +599,12 @@ public partial class MainWindow : FluentWindow
             NewModStatus.Text = _vm.UnlinkMod(name);
     }
 
+    private bool _deletingProject;
+
     // Delete a mod project (destructive). Yes = source + build, No = source only, Cancel = abort.
-    private void OnDeleteProject(object sender, RoutedEventArgs e)
+    private async void OnDeleteProject(object sender, RoutedEventArgs e)
     {
+        if (_deletingProject) return;
         if (sender is not FrameworkElement { Tag: string name }) return;
         var r = System.Windows.MessageBox.Show(
             $"Delete project \"{name}\"?\n\nThis removes its P: link and deletes the source folder — this can't be undone.\n\n" +
@@ -595,7 +613,11 @@ public partial class MainWindow : FluentWindow
             "Cancel → keep everything",
             "Delete project", System.Windows.MessageBoxButton.YesNoCancel, System.Windows.MessageBoxImage.Warning);
         if (r == System.Windows.MessageBoxResult.Cancel) return;
-        NewModStatus.Text = _vm.DeleteModProject(name, alsoBuild: r == System.Windows.MessageBoxResult.Yes);
+        _deletingProject = true;
+        NewModStatus.Text = "deleting…";
+        try { NewModStatus.Text = await _vm.DeleteModProjectAsync(name, alsoBuild: r == System.Windows.MessageBoxResult.Yes); }
+        catch (Exception ex) { NewModStatus.Text = "✗ " + ex.Message; }
+        finally { _deletingProject = false; }
     }
 
     // Build opens the Build console window — one build flow (preflight findings, options, live
@@ -731,17 +753,23 @@ public partial class MainWindow : FluentWindow
 
     private void OnRefreshServers(object sender, RoutedEventArgs e) => _vm.RefreshServers();
 
-    private void OnCreateServer(object sender, RoutedEventArgs e)
+    private bool _creatingServer;
+
+    private async void OnCreateServer(object sender, RoutedEventArgs e)
     {
+        if (_creatingServer) return;
         var name = NewServerNameBox.Text.Trim();
         if (name.Length == 0) { NewServerStatus.Text = "Enter an instance name."; return; }
         var map = (NewServerMapBox.SelectedItem as string) ?? "chernarus";
         int? port = int.TryParse(NewServerPortBox.Text.Trim(), out var p) ? p : null;
         var baseSel = NewServerBaseBox.SelectedItem as string;
         var baseName = (string.IsNullOrEmpty(baseSel) || baseSel == MainViewModel.VanillaChoice) ? null : baseSel;
+        _creatingServer = true;
         NewServerButton.IsEnabled = false;
-        try { NewServerStatus.Text = _vm.CreateServer(name, map, port, baseName); }
-        finally { NewServerButton.IsEnabled = true; }
+        NewServerStatus.Text = "creating… (copying mission template — this can take a moment)";
+        try { NewServerStatus.Text = await _vm.CreateServerAsync(name, map, port, baseName); }
+        catch (Exception ex) { NewServerStatus.Text = "✗ " + ex.Message; }
+        finally { NewServerButton.IsEnabled = true; _creatingServer = false; }
         if (NewServerStatus.Text.StartsWith('✓')) { NewServerNameBox.Text = ""; NewServerPortBox.Text = ""; }
     }
 

@@ -55,10 +55,14 @@ public sealed class TrayIcon : IDisposable
         _icon.ForceCreate();
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
-        _timer.Tick += (_, _) => Poll();
+        _timer.Tick += (_, _) => _ = PollAsync();
         _timer.Start();
-        Poll();
+        _ = PollAsync();
     }
+
+    // Guards the poll: StateFile.ReadLive spawns a tasklist per recorded PID and can outlast the
+    // 1.5s tick — without this a slow read would stack up behind the next tick.
+    private bool _polling;
 
     private ContextMenu BuildMenu()
     {
@@ -191,19 +195,24 @@ public sealed class TrayIcon : IDisposable
 
     // --- Status poll ---
 
-    private void Poll()
+    private async Task PollAsync()
     {
+        if (_polling) return;
+        _polling = true;
         bool up;
         try
         {
-            var live = StateFile.ReadLive(_configPath, ProcessManager.ImageOf);
+            // ReadLive validates each PID via tasklist (process spawn) — keep it off the UI thread.
+            var live = await Task.Run(() => StateFile.ReadLive(_configPath, ProcessManager.ImageOf));
             up = live.ContainsKey("server");
         }
         catch
         {
             up = false;
         }
+        finally { _polling = false; }
 
+        if (_disposed) return;
         if (up == _lastUp && _icon.Icon is not null) return;
         _lastUp = up;
         _icon.ToolTipText = up ? "DayZ Labs — server UP" : "DayZ Labs — server down";

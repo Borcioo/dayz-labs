@@ -24,12 +24,5 @@ internal static class OriginUi
         [CeOrigin.Custom]  = Pair("#1E3A5A", "#7FB6FF"),   // blue  — mission-custom CE file
     };
 
-    private static (Brush, Brush) Pair(string bg, string fg) => (Freeze(bg), Freeze(fg));
-
-    private static Brush Freeze(string hex)
-    {
-        var b = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
-        b.Freeze();
-        return b;
-    }
+    private static (Brush, Brush) Pair(string bg, string fg) => (BrushUtil.Freeze(bg), BrushUtil.Freeze(fg));
 }

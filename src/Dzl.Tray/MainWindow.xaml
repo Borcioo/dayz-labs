@@ -25,7 +25,7 @@
       <RowDefinition Height="Auto" />  <!-- bottom status bar -->
     </Grid.RowDefinitions>
     <Grid.Resources>
-      <local:StatusDotConverter x:Key="StatusDotConverter" />
+      <!-- StatusDotConverter now lives in App.xaml (bool->brush, shared with the status pills). -->
       <local:BoolToOpacityConverter x:Key="BoolToOpacity" />
       <local:StringEqualsConverter x:Key="StringEquals" />
       <local:StringEqualsVisibilityConverter x:Key="StringEqualsVis" />
@@ -893,7 +893,7 @@
                           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                           <ui:TextBox x:Name="GhRepoBox" Grid.Column="0" PlaceholderText="owner/name or GitHub URL"
                                       TextChanged="OnGhRepoChanged" />
-                          <ui:Button Grid.Column="1" Content="Import" Appearance="Primary"
+                          <ui:Button x:Name="GhImportButton" Grid.Column="1" Content="Import" Appearance="Primary"
                                      Icon="{ui:SymbolIcon ArrowDownload24}" Margin="8,0,0,0" Click="OnImportFromGitHub" />
                         </Grid>
                         <ui:TextBox x:Name="GhNameBox" Margin="0,0,0,8"

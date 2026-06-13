@@ -28,12 +28,5 @@ internal static class ModKindUi
         [ModKind.External]   = Pair("#3A3A3A", "#BBBBBB"),   // gray   — outside the structure
     };
 
-    private static (Brush, Brush) Pair(string bg, string fg) => (Freeze(bg), Freeze(fg));
-
-    private static Brush Freeze(string hex)
-    {
-        var b = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
-        b.Freeze();
-        return b;
-    }
+    private static (Brush, Brush) Pair(string bg, string fg) => (BrushUtil.Freeze(bg), BrushUtil.Freeze(fg));
 }

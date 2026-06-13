@@ -16,7 +16,25 @@
                  UserControls resolve them - UserControls never see host-window resources). -->
             <BooleanToVisibilityConverter x:Key="BoolToVis" />
             <local:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
-            <local:FlagBrushConverter x:Key="FlagBrush" />
+            <!-- One bool->brush converter, two configured instances (app scope so UserControls resolve
+                 them too). FlagBrush = CE flag glyphs (active green / muted); StatusDotConverter = the
+                 SERVER/CLIENT/P:/GitHub/Steam status dots (accent-green up / muted-grey down). -->
+            <local:BoolToBrushConverter x:Key="FlagBrush">
+                <local:BoolToBrushConverter.True>
+                    <SolidColorBrush Color="#7CE3A1" />
+                </local:BoolToBrushConverter.True>
+                <local:BoolToBrushConverter.False>
+                    <SolidColorBrush Color="#555B63" />
+                </local:BoolToBrushConverter.False>
+            </local:BoolToBrushConverter>
+            <local:BoolToBrushConverter x:Key="StatusDotConverter">
+                <local:BoolToBrushConverter.True>
+                    <SolidColorBrush Color="#4CAF50" />
+                </local:BoolToBrushConverter.True>
+                <local:BoolToBrushConverter.False>
+                    <SolidColorBrush Color="#6E6E6E" />
+                </local:BoolToBrushConverter.False>
+            </local:BoolToBrushConverter>
             <!-- Dark Fluent-friendly DataGrid style: the stock WPF DataGrid renders light/grey,
            so we restyle row height, gridlines, header and selection to match the theme. -->
             <Style x:Key="DarkDataGrid" TargetType="DataGrid">

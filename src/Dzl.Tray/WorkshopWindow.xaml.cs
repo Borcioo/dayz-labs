@@ -65,9 +65,9 @@ public partial class WorkshopWindow : FluentWindow
 
     private void OnRefreshSubscribed(object sender, RoutedEventArgs e) => _vm.RefreshSubscribed();
 
-    private void OnDownload(object sender, RoutedEventArgs e)
+    private async void OnDownload(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement { Tag: string id }) _vm.WorkshopDownload(id);
+        if (sender is FrameworkElement { Tag: string id }) await _vm.WorkshopDownloadAsync(id);
     }
 
     // Subscribe in-app via the Steam web token when set; otherwise open the item page in the Steam client.
@@ -128,17 +128,17 @@ public partial class WorkshopWindow : FluentWindow
     }
 
     // Delete a steamcmd-downloaded item (destructive → confirm first).
-    private void OnDeleteDownloaded(object sender, RoutedEventArgs e)
+    private async void OnDeleteDownloaded(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string id }) return;
         var name = _vm.WorkshopDownloaded.FirstOrDefault(d => d.Id == id)?.Name ?? id;
         var r = System.Windows.MessageBox.Show(
             $"Delete the downloaded files for \"{name}\" ({id})?\n\nThis removes them from your workshop folder. You can re-download later.",
             "Delete download", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
-        if (r == System.Windows.MessageBoxResult.Yes) _vm.DeleteDownloaded(id);
+        if (r == System.Windows.MessageBoxResult.Yes) await _vm.DeleteDownloadedAsync(id);
     }
 
-    private void OnAddById(object sender, RoutedEventArgs e)
+    private async void OnAddById(object sender, RoutedEventArgs e)
     {
         var input = PromptDialog.Show(this, "Add Workshop item", "Workshop id or URL:");
         if (string.IsNullOrWhiteSpace(input)) return;
@@ -150,6 +150,6 @@ public partial class WorkshopWindow : FluentWindow
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
             return;
         }
-        _vm.WorkshopDownload(id);
+        await _vm.WorkshopDownloadAsync(id);
     }
 }
