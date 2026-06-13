@@ -1,0 +1,17 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- App-defined brushes beyond the WPF-UI theme palette. These are the literal colors
+         that used to be inlined in the BoolToBrushConverter instances in App.xaml; naming
+         them here keeps the hex in one place and lets the converter config read by key.
+         (WPF-UI theme brushes like TextFillColorPrimaryBrush are NOT redefined here.) -->
+
+    <!-- "On" / active accents -->
+    <SolidColorBrush x:Key="FlagActiveBrush" Color="#7CE3A1" />   <!-- CE flag glyph: active -->
+    <SolidColorBrush x:Key="StatusUpBrush" Color="#4CAF50" />     <!-- status dot: up / online -->
+
+    <!-- "Off" / muted greys -->
+    <SolidColorBrush x:Key="FlagMutedBrush" Color="#555B63" />    <!-- CE flag glyph: inactive -->
+    <SolidColorBrush x:Key="StatusDownBrush" Color="#6E6E6E" />   <!-- status dot: down / offline -->
+
+</ResourceDictionary>

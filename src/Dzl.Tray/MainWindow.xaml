@@ -25,13 +25,9 @@
       <RowDefinition Height="Auto" />  <!-- bottom status bar -->
     </Grid.RowDefinitions>
     <Grid.Resources>
-      <!-- StatusDotConverter now lives in App.xaml (bool->brush, shared with the status pills). -->
-      <local:BoolToOpacityConverter x:Key="BoolToOpacity" />
-      <local:StringEqualsConverter x:Key="StringEquals" />
-      <local:StringEqualsVisibilityConverter x:Key="StringEqualsVis" />
-      <local:StringMatchVisibilityConverter x:Key="StringMatchVis" />
-      <local:NotNullToVisibilityConverter x:Key="NotNullToVis" />
-      <local:NullToVisibilityConverter x:Key="NullToVis" />
+      <!-- Shared converters (BoolToVis/InverseBoolToVis/BoolToOpacity/StringEquals*/NotNullToVis/
+           NullToVis/StatusDotConverter/FlagBrush) now live in App.xaml's merged Resources/Converters.xaml
+           at app scope, so they resolve here and in every UserControl. -->
 
       <!-- ===== Nav rail (plain-WPF ListBox; deterministic page switching) ===== -->
       <!-- A transparent ListBox whose items are pill-shaped rows with an icon + label.

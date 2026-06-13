@@ -1,0 +1,35 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:Dzl.Tray">
+
+    <!-- App-scope IValueConverters. Declared here (merged into App.xaml) so windows AND
+         UserControls resolve them by key — UserControls never see host-window resources, so
+         every converter a page binds against must live at app scope. -->
+
+    <!-- bool -> Visibility -->
+    <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    <local:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
+
+    <!-- bool -> Opacity (dim disabled / inactive elements) -->
+    <local:BoolToOpacityConverter x:Key="BoolToOpacity" />
+
+    <!-- string comparison helpers (selected-page / selected-tab styling) -->
+    <local:StringEqualsConverter x:Key="StringEquals" />
+    <local:StringEqualsVisibilityConverter x:Key="StringEqualsVis" />
+    <local:StringMatchVisibilityConverter x:Key="StringMatchVis" />
+
+    <!-- null-ness -> Visibility (show/hide detail panes) -->
+    <local:NotNullToVisibilityConverter x:Key="NotNullToVis" />
+    <local:NullToVisibilityConverter x:Key="NullToVis" />
+
+    <!-- One bool->brush converter, two configured instances. FlagBrush = CE flag glyphs
+         (active green / muted); StatusDotConverter = the SERVER/CLIENT/P:/GitHub/Steam status
+         dots (accent-green up / muted-grey down). Colors come from Colors.xaml (merged first). -->
+    <local:BoolToBrushConverter x:Key="FlagBrush"
+                                True="{StaticResource FlagActiveBrush}"
+                                False="{StaticResource FlagMutedBrush}" />
+    <local:BoolToBrushConverter x:Key="StatusDotConverter"
+                                True="{StaticResource StatusUpBrush}"
+                                False="{StaticResource StatusDownBrush}" />
+
+</ResourceDictionary>
