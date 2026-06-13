@@ -59,106 +59,6 @@
           </Grid>
         </Border>
 
-        <!-- Add a mod: New / Import folder / From GitHub -->
-        <ui:Card Margin="0,0,0,12" Padding="16">
-          <TabControl>
-            <TabControl.Resources>
-              <Style TargetType="TabItem">
-                <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
-                <Setter Property="FontSize" Value="13" />
-                <Setter Property="Template">
-                  <Setter.Value>
-                    <ControlTemplate TargetType="TabItem">
-                      <Border x:Name="Bd" Padding="12,7" Margin="0,0,4,0" CornerRadius="4,4,0,0"
-                              Background="Transparent" BorderThickness="0,0,0,2" BorderBrush="Transparent">
-                        <ContentPresenter ContentSource="Header" VerticalAlignment="Center" />
-                      </Border>
-                      <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                          <Setter TargetName="Bd" Property="Background" Value="#14FFFFFF" />
-                        </Trigger>
-                        <Trigger Property="IsSelected" Value="True">
-                          <Setter TargetName="Bd" Property="Background" Value="#1F2A3A" />
-                          <Setter TargetName="Bd" Property="BorderBrush" Value="#4FA3FF" />
-                          <Setter Property="Foreground" Value="#FFFFFF" />
-                          <Setter Property="FontWeight" Value="SemiBold" />
-                        </Trigger>
-                      </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                  </Setter.Value>
-                </Setter>
-              </Style>
-            </TabControl.Resources>
-            <!-- New -->
-            <TabItem Header="New">
-              <StackPanel Margin="0,12,0,0">
-                <Grid Margin="0,0,0,8">
-                  <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
-                  </Grid.ColumnDefinitions>
-                  <ui:TextBox x:Name="NewModNameBox" Grid.Column="0" Margin="0,0,4,0"
-                              PlaceholderText="ModName (letters, digits, _)" />
-                  <ui:TextBox x:Name="NewModAuthorBox" Grid.Column="1" Margin="4,0,4,0" PlaceholderText="author" />
-                  <ui:Button x:Name="NewModButton" Grid.Column="2" Content="Create" Appearance="Primary"
-                             Icon="{ui:SymbolIcon Add24}" Click="OnCreateMod" />
-                </Grid>
-                <CheckBox x:Name="NewModInitGit" Content="Initialize a git repo (commit the scaffold)" Margin="0,2,0,0" />
-                <TextBlock x:Name="NewModStatus" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-              </StackPanel>
-            </TabItem>
-
-            <!-- Import folder -->
-            <TabItem Header="Import folder">
-              <StackPanel Margin="0,12,0,0">
-                <Grid Margin="0,0,0,8">
-                  <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                  <ui:TextBox x:Name="ImportPathBox" Grid.Column="0" PlaceholderText="path to existing mod source…" />
-                  <ui:Button Grid.Column="1" Content="Browse" Icon="{ui:SymbolIcon FolderOpen24}"
-                             Margin="8,0,0,0" Tag="dir:ImportPathBox" Click="OnBrowseInto" />
-                </Grid>
-                <Grid Margin="0,0,0,8">
-                  <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                  <ui:TextBox x:Name="ImportNameBox" Grid.Column="0"
-                              PlaceholderText="name (optional — defaults to folder name)" />
-                  <ui:Button Grid.Column="1" Content="Import" Appearance="Primary"
-                             Icon="{ui:SymbolIcon ArrowImport24}" Margin="8,0,0,0" Click="OnImportMod" />
-                </Grid>
-                <TextBlock x:Name="ImportStatus" FontSize="12" TextWrapping="Wrap"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-              </StackPanel>
-            </TabItem>
-
-            <!-- From GitHub -->
-            <TabItem Header="From GitHub">
-              <StackPanel Margin="0,12,0,0">
-                <TextBlock FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"
-                           Foreground="#F0C04A"
-                           Visibility="{Binding GitHubReady, Converter={StaticResource InverseBoolToVis}}"
-                           Text="⚠ Needs the GitHub CLI (gh) installed and signed in — see Settings → Accounts." />
-                <Grid Margin="0,0,0,8">
-                  <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                  <ui:TextBox x:Name="GhRepoBox" Grid.Column="0" PlaceholderText="owner/name or GitHub URL"
-                              TextChanged="OnGhRepoChanged" />
-                  <ui:Button x:Name="GhImportButton" Grid.Column="1" Content="Import" Appearance="Primary"
-                             Icon="{ui:SymbolIcon ArrowDownload24}" Margin="8,0,0,0" Click="OnImportFromGitHub" />
-                </Grid>
-                <ui:TextBox x:Name="GhNameBox" Margin="0,0,0,8"
-                            PlaceholderText="folder name (auto-filled from the repo — edit freely)"
-                            TextChanged="OnGhNameChanged" />
-                <ComboBox x:Name="GhModeCombo" SelectedIndex="0" Margin="0,0,0,8"
-                          ToolTip="What happens to version control after the download">
-                  <ComboBoxItem Content="Keep .git — it's my repo (clone, push/pull works)" />
-                  <ComboBoxItem Content="Files only — strip .git (samples/templates you just want the content of)" />
-                  <ComboBoxItem Content="Fresh repo — strip .git, git init + initial commit (sample as the start of YOUR mod)" />
-                </ComboBox>
-                <TextBlock x:Name="GhImportStatus" FontSize="12" TextWrapping="Wrap"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-              </StackPanel>
-            </TabItem>
-          </TabControl>
-        </ui:Card>
-
         <!-- Projects list -->
         <ui:Card Margin="0,0,0,4" Padding="16">
           <StackPanel>
@@ -168,8 +68,16 @@
                 <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
               <TextBlock Grid.Column="0" Text="Projects" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
-              <ui:Button Grid.Column="1" Content="Refresh" Icon="{ui:SymbolIcon ArrowSync24}" Command="{Binding RefreshModProjectsCommand}" />
+              <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <ui:Button Content="Add" Icon="{ui:SymbolIcon Add24}" Appearance="Primary"
+                           ToolTip="Add a mod — new, import a folder, or clone from GitHub"
+                           Margin="0,0,8,0" Click="OnAddMod" />
+                <ui:Button Content="Refresh" Icon="{ui:SymbolIcon ArrowSync24}" Command="{Binding RefreshModProjectsCommand}" />
+              </StackPanel>
             </Grid>
+            <TextBlock x:Name="RowStatus" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"
+                       Visibility="Collapsed"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             <ItemsControl ItemsSource="{Binding ModProjects}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
