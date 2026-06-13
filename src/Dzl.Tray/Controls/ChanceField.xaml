@@ -7,8 +7,11 @@
        so it binds anywhere, including a DataGridTemplateColumn cell. Children bind back to Root's properties
        via ElementName (a UserControl does not inherit the host window's resources, but ElementName to its own
        named root is always safe). Value is clamped to [Minimum, Maximum] by a coercion callback. -->
+  <!-- The button fills the control, so the host sizes it: VerticalAlignment="Stretch" on the ChanceField makes
+       it match neighbouring buttons/combos; the compact default suits short DataGrid rows. -->
   <Grid>
-    <ToggleButton x:Name="Toggle" MinWidth="48" Padding="8,2" FontSize="12" HorizontalContentAlignment="Center"
+    <ToggleButton x:Name="Toggle" MinWidth="48" Padding="8,2" FontSize="12"
+                  HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                   Content="{Binding DisplayText, ElementName=Root}"
                   IsChecked="{Binding IsOpen, ElementName=Root, Mode=TwoWay}" />
     <Popup x:Name="Pop" PlacementTarget="{Binding ElementName=Toggle}" Placement="Bottom"
@@ -17,7 +20,7 @@
       <Border Padding="10" CornerRadius="8" BorderThickness="1" Margin="0,4,0,0"
               Background="{DynamicResource ApplicationBackgroundBrush}"
               BorderBrush="{DynamicResource ControlElevationBorderBrush}">
-        <StackPanel Orientation="Horizontal">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
           <TextBlock Text="{Binding Minimum, ElementName=Root}" VerticalAlignment="Center" Margin="0,0,6,0"
                      FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
           <Slider x:Name="Sld" Width="160" VerticalAlignment="Center"

@@ -160,7 +160,7 @@
             </Grid.ColumnDefinitions>
             <ui:TextBox Grid.Column="0" Margin="0,0,4,0" FontSize="12" PlaceholderText="new preset name"
                         Text="{Binding NewPresetName, UpdateSourceTrigger=PropertyChanged}" />
-            <ctl:ChanceField Grid.Column="1" Margin="0,0,4,0" VerticalAlignment="Center"
+            <ctl:ChanceField Grid.Column="1" Margin="0,0,4,0" VerticalAlignment="Stretch"
                              Value="{Binding NewPresetChanceValue, Mode=TwoWay}" />
             <ComboBox Grid.Column="2" MinWidth="110" Margin="0,0,4,0" VerticalAlignment="Center"
                       SelectedIndex="0"
@@ -205,7 +205,7 @@
                 <ui:TextBox Grid.Column="0" Margin="0,0,4,0" FontSize="12" PlaceholderText="preset name"
                             Text="{Binding EditName, UpdateSourceTrigger=PropertyChanged}"
                             KeyDown="OnEditNameKeyDown" />
-                <ctl:ChanceField Grid.Column="1" Margin="0,0,4,0" VerticalAlignment="Center"
+                <ctl:ChanceField Grid.Column="1" Margin="0,0,4,0" VerticalAlignment="Stretch"
                                  Value="{Binding EditChanceValue, Mode=TwoWay}" />
                 <ComboBox Grid.Column="2" MinWidth="120" Margin="0,0,4,0" VerticalAlignment="Center"
                           SelectedIndex="{Binding EditKindIndex}" ToolTip="preset kind (cargo / attachments)">
@@ -270,7 +270,7 @@
                       Text="{Binding NewItemName, UpdateSourceTrigger=PropertyChanged}"
                       ToolTip="Type to search item classnames (from types.xml) — free text allowed"
                       KeyUp="OnItemComboKeyUp" SelectionChanged="OnItemComboSelectionChanged" />
-            <ctl:ChanceField Grid.Column="1" Margin="0,0,4,0" VerticalAlignment="Center"
+            <ctl:ChanceField Grid.Column="1" Margin="0,0,4,0" VerticalAlignment="Stretch"
                              Value="{Binding NewItemChanceValue, Mode=TwoWay}" />
             <ui:Button Grid.Column="2" Content="Add item" Click="OnAddItemClick" />
           </Grid>
