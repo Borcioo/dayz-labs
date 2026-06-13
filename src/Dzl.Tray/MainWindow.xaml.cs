@@ -124,7 +124,7 @@ public partial class MainWindow : FluentWindow
 
         // Refresh page-local state on show.
         if (tag == "logs") UpdateLogListRowHeights();
-        if (tag == "tools") RefreshToolsPage();
+        if (tag == "tools") PageTools.RefreshToolsPage();
         if (tag == "mymods") { _vm.RefreshModProjects(); if (NewModAuthorBox.Text.Length == 0) NewModAuthorBox.Text = _vm.CachedAuthor; }
         if (tag == "servers") { _vm.RefreshServers(); _vm.RefreshBases(); }   // base dropdown needs bases
         if (tag == "bases") _vm.RefreshBases();
@@ -197,126 +197,12 @@ public partial class MainWindow : FluentWindow
     // Open-folder and clear are now VM commands (OpenLogFolderCommand/ClearLogCommand) bound
     // directly from LogPaneTemplate with the pane as CommandParameter.
 
-    // === TOOLS page =======================================================
+    // === Work drive (Settings page + bottom status bar) ===================
 
-    private void RefreshToolsPage()
-    {
-        _vm.RefreshTools();
-        PackToolMissing.Visibility = _vm.ToolExe("addonbuilder") is null ? Visibility.Visible : Visibility.Collapsed;
-        PackButton.IsEnabled = _vm.ToolExe("addonbuilder") is not null;
-        PaaToolMissing.Visibility = _vm.ToolExe("imagetopaa") is null ? Visibility.Visible : Visibility.Collapsed;
-        PaaButton.IsEnabled = _vm.ToolExe("imagetopaa") is not null;
-        UnbinToolMissing.Visibility = _vm.ToolExe("cfgconvert") is null ? Visibility.Visible : Visibility.Collapsed;
-        UnbinButton.IsEnabled = _vm.ToolExe("cfgconvert") is not null;
-    }
-
-    private void OnRefreshTools(object sender, RoutedEventArgs e) => RefreshToolsPage();
-    private void OnRefreshWorkDrive(object sender, RoutedEventArgs e) => _vm.RefreshWorkDrive();
-
-    private void OnLaunchTool(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: ToolEntry t }) _vm.LaunchTool(t);
-    }
-
+    // The Tools page owns its own copies of these (ToolsView); these stay here for the Settings
+    // page's "Work drive (P:)" card and the app-wide bottom status bar's "Mount P:" quick button.
     private void OnMountWorkDrive(object sender, RoutedEventArgs e) => _vm.MountWorkDrive();
     private void OnUnmountWorkDrive(object sender, RoutedEventArgs e) => _vm.UnmountWorkDrive();
-
-    private async void OnPackPbo(object sender, RoutedEventArgs e)
-    {
-        var exe = _vm.ToolExe("addonbuilder");
-        if (exe is null) { PackOutput.Text = "Addon Builder not found."; return; }
-        var src = PackSrcBox.Text.Trim();
-        var dst = PackDstBox.Text.Trim();
-        if (src.Length == 0 || dst.Length == 0) { PackOutput.Text = "Pick a source and output folder."; return; }
-
-        PackButton.IsEnabled = false;
-        PackOutput.Text = "Packing…";
-        try
-        {
-            var r = await _vm.PackAsync(exe, src, dst, PackPrefixBox.Text, PackSignBox.Text);
-            PackOutput.Text = $"{(r.Ok ? "OK" : $"FAILED (exit {r.ExitCode})")}\n{r.Output}";
-        }
-        catch (Exception ex) { PackOutput.Text = "Error: " + ex.Message; }
-        finally { PackButton.IsEnabled = true; PackOutput.ScrollToEnd(); }
-    }
-
-    private async void OnConvertPaa(object sender, RoutedEventArgs e)
-    {
-        var exe = _vm.ToolExe("imagetopaa");
-        if (exe is null) { PaaOutput.Text = "ImageToPAA not found."; return; }
-        var dir = PaaDirBox.Text.Trim();
-        if (dir.Length == 0) { PaaOutput.Text = "Pick an image folder."; return; }
-        var recursive = PaaRecursive.IsChecked == true;
-
-        // First surface suffix warnings from the plan.
-        var plan = _vm.PlanPaa(dir, recursive);
-        if (plan.Count == 0) { PaaOutput.Text = "No .png/.tga files found."; return; }
-        var warnings = plan.Where(j => !j.SuffixOk).ToList();
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine($"{plan.Count} file(s) to convert.");
-        if (warnings.Count > 0)
-        {
-            sb.AppendLine($"⚠ {warnings.Count} file(s) lack a known texture suffix (_co/_nohq/…):");
-            foreach (var w in warnings) sb.AppendLine("  " + Path.GetFileName(w.Input));
-        }
-        sb.AppendLine("Converting…");
-        PaaOutput.Text = sb.ToString();
-
-        PaaButton.IsEnabled = false;
-        var ok = 0; var fail = 0;
-        var progress = new Progress<PaaResult>(r =>
-        {
-            if (r.Ok) ok++; else fail++;
-            PaaOutput.AppendText($"{(r.Ok ? "  ok " : "  ✗  ")}{Path.GetFileName(r.Input)} — {r.Message}\n");
-            PaaOutput.ScrollToEnd();
-        });
-        try
-        {
-            await _vm.ConvertPaaAsync(exe, dir, recursive, progress);
-            PaaOutput.AppendText($"Done. {ok} ok, {fail} failed.\n");
-        }
-        catch (Exception ex) { PaaOutput.AppendText("Error: " + ex.Message + "\n"); }
-        finally { PaaButton.IsEnabled = true; PaaOutput.ScrollToEnd(); }
-    }
-
-    private async void OnUnbinarize(object sender, RoutedEventArgs e)
-    {
-        var exe = _vm.ToolExe("cfgconvert");
-        if (exe is null) { UnbinOutput.Text = "CfgConvert not found."; return; }
-        var bin = BinFileBox.Text.Trim();
-        if (bin.Length == 0) { UnbinOutput.Text = "Pick a .bin file."; return; }
-        var outCpp = Path.ChangeExtension(bin, ".cpp");
-
-        UnbinButton.IsEnabled = false;
-        UnbinOutput.Text = "Unbinarizing…";
-        try
-        {
-            var (ok, output) = await _vm.UnbinarizeAsync(exe, bin, outCpp);
-            UnbinOutput.Text = $"{(ok ? "OK → " + outCpp : "FAILED")}\n{output}";
-        }
-        catch (Exception ex) { UnbinOutput.Text = "Error: " + ex.Message; }
-        finally { UnbinButton.IsEnabled = true; UnbinOutput.ScrollToEnd(); }
-    }
-
-    // Folder picker → set the target TextBox text (Tag picks which one).
-    private void OnBrowseFolderInto(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string which }) return;
-        var dir = PickFolder();
-        if (dir is null) return;
-        switch (which)
-        {
-            case "packsrc": PackSrcBox.Text = dir; break;
-            case "packdst": PackDstBox.Text = dir; break;
-            case "paadir": PaaDirBox.Text = dir; break;
-        }
-    }
-
-    private void OnBrowseBinFile(object sender, RoutedEventArgs e)
-    {
-        var dlg = new OpenFileDialog { Filter = "Binarized config (*.bin)|*.bin|All files (*.*)|*.*" };
-        if (dlg.ShowDialog(this) == true) BinFileBox.Text = dlg.FileName;
-    }
 
     // === SETTINGS page ====================================================
 
