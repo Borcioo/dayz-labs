@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 
 namespace Dzl.Tray.Controls;
@@ -15,7 +16,17 @@ public partial class ChanceField : UserControl
     {
         InitializeComponent();
         UpdateDisplay();
+        Pop.CustomPopupPlacementCallback = PlaceCenteredBelow;
     }
+
+    /// <summary>Center the popup horizontally under the button (4px gap below it).</summary>
+    private static CustomPopupPlacement[] PlaceCenteredBelow(Size popupSize, Size targetSize, Point offset) =>
+        new[]
+        {
+            new CustomPopupPlacement(
+                new Point((targetSize.Width - popupSize.Width) / 2, targetSize.Height + 4),
+                PopupPrimaryAxis.Horizontal),
+        };
 
     public static readonly DependencyProperty ValueProperty = DependencyProperty.Register(
         nameof(Value), typeof(double), typeof(ChanceField),
