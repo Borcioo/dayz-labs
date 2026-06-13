@@ -9,6 +9,7 @@
        A UserControl does NOT inherit the host window's resources at realize time — declare local styles
        here; only DynamicResource theme brushes (resolved late) are safe to reference. -->
   <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="BoolToVis" />
     <Style x:Key="RpSectionHeader" TargetType="TextBlock">
       <Setter Property="FontSize" Value="13" />
       <Setter Property="FontWeight" Value="SemiBold" />
@@ -94,6 +95,16 @@
                                   Binding="{Binding ChanceText, UpdateSourceTrigger=LostFocus}"
                                   Width="80" />
               <DataGridTextColumn Header="#items" Binding="{Binding ItemCount}" IsReadOnly="True" Width="60" />
+              <!-- Per-row lint badge (amber when the preset has findings) -->
+              <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding LintGlyph}" Foreground="#F0C04A" FontSize="11"
+                               VerticalAlignment="Center" ToolTip="{Binding LintTooltip}"
+                               Visibility="{Binding HasLint, Converter={StaticResource BoolToVis}}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
               <!-- Per-row quick actions -->
               <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
                 <DataGridTemplateColumn.CellTemplate>
@@ -145,6 +156,7 @@
             <RowDefinition Height="Auto" />  <!-- title -->
             <RowDefinition Height="*" />     <!-- item grid -->
             <RowDefinition Height="Auto" />  <!-- add item row -->
+            <RowDefinition Height="Auto" />  <!-- validation findings -->
           </Grid.RowDefinitions>
 
           <TextBlock Grid.Row="0" Margin="0,0,0,6" Style="{StaticResource RpSectionHeader}"
@@ -192,6 +204,66 @@
                         KeyDown="OnAddItemKeyDown" />
             <ui:Button Grid.Column="2" Content="Add item" Click="OnAddItemClick" />
           </Grid>
+
+          <!-- ===== Per-page validation (chance ranges + unused presets) ===== -->
+          <Border Grid.Row="3" Margin="0,10,0,0" CornerRadius="6" Padding="8" MaxHeight="180"
+                  Background="{DynamicResource ControlFillColorDefaultBrush}"
+                  BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
+            <Border.Style>
+              <Style TargetType="Border">
+                <Setter Property="Visibility" Value="Visible" />
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Findings.Count}" Value="0">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </Border.Style>
+            <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+              </Grid.RowDefinitions>
+              <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6">
+                <ui:SymbolIcon Symbol="Warning24" Foreground="#F0C04A" Margin="0,0,6,0" />
+                <TextBlock Text="Validation" Style="{StaticResource RpSectionHeader}" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Findings.Count, StringFormat=' ({0})'}" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+              </StackPanel>
+              <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Findings}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Grid Margin="0,0,0,3">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="Auto" />
+                          <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding Glyph}" FontWeight="Bold" Margin="0,0,8,0"
+                                   VerticalAlignment="Top">
+                          <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                              <Setter Property="Foreground" Value="#7FB0FF" />
+                              <Style.Triggers>
+                                <DataTrigger Binding="{Binding Severity}" Value="Error">
+                                  <Setter Property="Foreground" Value="#FF6B6B" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                                  <Setter Property="Foreground" Value="#F0C04A" />
+                                </DataTrigger>
+                              </Style.Triggers>
+                            </Style>
+                          </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Grid.Column="1" Text="{Binding Message}" TextWrapping="Wrap" FontSize="12"
+                                   VerticalAlignment="Center" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </Grid>
+          </Border>
         </Grid>
       </Border>
 

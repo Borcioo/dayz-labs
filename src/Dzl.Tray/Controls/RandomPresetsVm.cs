@@ -3,6 +3,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Dzl.Core.App;
 using Dzl.Core.Economy;
+using Dzl.Core.Economy.Lint;
 
 namespace Dzl.Tray.Controls;
 
@@ -16,19 +17,22 @@ namespace Dzl.Tray.Controls;
 public sealed partial class RandomPresetsVm : RawXmlEditorVm
 {
     private readonly RandomPresetsService _svc;
+    private readonly SpawnableTypesService _spawnSvc;
     private readonly Func<string, bool> _confirm;
+    private readonly CeValidator _validator = new();
     private bool _suspendItemPersist;
 
     /// <param name="configPath">The resolved dzl config path.</param>
     /// <param name="confirm">Modal yes/no confirmation (returns true on Yes).</param>
     public RandomPresetsVm(string configPath, Func<string, bool> confirm)
-        : this(new RandomPresetsService(configPath), confirm) { }
+        : this(new RandomPresetsService(configPath), new SpawnableTypesService(configPath), confirm) { }
 
-    private RandomPresetsVm(RandomPresetsService svc, Func<string, bool> confirm)
+    private RandomPresetsVm(RandomPresetsService svc, SpawnableTypesService spawnSvc, Func<string, bool> confirm)
         : base(svc.ReadRaw, svc.WriteRaw, svc.PresetsPath,
                "(no cfgrandompresets.xml — pick/scaffold a server mission)")
     {
         _svc = svc;
+        _spawnSvc = spawnSvc;
         _confirm = confirm;
     }
 
@@ -40,8 +44,24 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
     /// <inheritdoc/>
     protected override void InvalidateModelCache() => _model = null;
 
+    /// <summary>Full reload from disk also drops the spawnable-types cache (the cross-file rule's referent).</summary>
+    public override void Reload()
+    {
+        _spawnTypes = null;
+        base.Reload();
+    }
+
+    /// <summary>Spawnable types, cached so the cross-file "unused preset" rule doesn't re-read the (possibly
+    /// large) cfgspawnabletypes.xml on every keystroke. They only change on the other tab, so we refresh
+    /// this on <see cref="Reload"/>, not per edit.</summary>
+    private List<SpawnableType>? _spawnTypes;
+    private List<SpawnableType> SpawnTypes => _spawnTypes ??= _spawnSvc.Load();
+
     /// <summary>Unfiltered backing store (all presets, sorted).</summary>
     private readonly List<PresetRowVm> _all = new();
+
+    /// <summary>Live per-page validation findings for this file (chance ranges + unused presets).</summary>
+    public ObservableCollection<CeFindingRow> Findings { get; } = new();
 
     /// <summary>The filtered master list shown in the list (both kinds), sorted by kind then name.</summary>
     public ObservableCollection<PresetRowVm> Presets { get; } = new();
@@ -85,6 +105,43 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
 
         SelectedPreset = Presets.FirstOrDefault(r => r.Kind == prevKind && r.Name == prevName)
                          ?? Presets.FirstOrDefault();
+
+        Validate();
+    }
+
+    /// <summary>Run the RandomPresets rules (chance ranges + unused presets) over the current model and the
+    /// cached spawnable types, populate the <see cref="Findings"/> panel, and stamp each row's lint badge.
+    /// Cheap enough to fire on every edit. Findings carry the preset name as their entry, so a row is "dirty"
+    /// when a finding's entry matches its name.</summary>
+    private void Validate()
+    {
+        var world = new CeWorld
+        {
+            RandomPresets = Model,
+            SpawnableTypes = SpawnTypes,
+            Files = new[] { new CeFileInfo(CeKind.RandomPresets, "cfgrandompresets.xml", FileLabel, HasFile) },
+        };
+        var findings = _validator.ValidateKind(world, CeKind.RandomPresets);
+
+        Findings.Clear();
+        foreach (var f in findings.OrderBy(f => f.Severity).ThenBy(f => f.EntryName, StringComparer.OrdinalIgnoreCase))
+            Findings.Add(new CeFindingRow(f.Severity, f.Message, f.File, f.EntryName, f.Kind));
+
+        var byEntry = findings.GroupBy(f => f.EntryName, StringComparer.OrdinalIgnoreCase)
+                              .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+        foreach (var row in _all)
+        {
+            if (byEntry.TryGetValue(row.Name, out var hits))
+            {
+                row.LintCount = hits.Count;
+                row.LintTooltip = string.Join("\n", hits.Select(h => h.Message));
+            }
+            else
+            {
+                row.LintCount = 0;
+                row.LintTooltip = "";
+            }
+        }
     }
 
     private void ApplyFilter()
@@ -240,6 +297,19 @@ public sealed partial class PresetRowVm : ObservableObject
     [ObservableProperty] private string _chanceText;
 
     [ObservableProperty] private int _itemCount;
+
+    // Per-row lint summary, refreshed by RandomPresetsVm.Validate after every load/edit.
+    [ObservableProperty] private int _lintCount;
+    [ObservableProperty] private string _lintTooltip = "";
+
+    public bool HasLint => LintCount > 0;
+    public string LintGlyph => LintCount == 0 ? "" : $"⚠ {LintCount}";
+
+    partial void OnLintCountChanged(int value)
+    {
+        OnPropertyChanged(nameof(HasLint));
+        OnPropertyChanged(nameof(LintGlyph));
+    }
 }
 
 /// <summary>One editable item row (Name + Chance) inside a preset.</summary>

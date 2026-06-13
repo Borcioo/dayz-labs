@@ -27,6 +27,14 @@ public sealed class CeValidator
               .SelectMany(r => r.Check(world))
               .ToList();
 
+    /// <summary>Run every rule that reports on one file kind (per-file AND cross-file) — for an editor
+    /// page that wants the full picture for its own file (e.g. chance ranges + unused presets). The
+    /// cross-file rules still need the related data populated in <paramref name="world"/>.</summary>
+    public IReadOnlyList<LintFinding> ValidateKind(CeWorld world, CeKind kind) =>
+        _rules.Where(r => r.Scope.Kind == kind)
+              .SelectMany(r => r.Check(world))
+              .ToList();
+
     public static IReadOnlyList<ICeWorldRule> DefaultRules() => new ICeWorldRule[]
     {
         new TypesWorldRule(),
