@@ -168,8 +168,9 @@
         </StackPanel>
       </Border>
 
-      <!-- Log selector (drives Focus mode; quick-jump elsewhere) -->
-      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+      <!-- Log selector — picks which pane Focus mode shows; only relevant (and only visible) there. -->
+      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
+                  Visibility="{Binding LogsViewMode, Converter={StaticResource StringEqualsVis}, ConverterParameter=focus}">
         <TextBlock Text="Show:" VerticalAlignment="Center" Margin="0,0,8,0"
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
         <ComboBox MinWidth="120"
