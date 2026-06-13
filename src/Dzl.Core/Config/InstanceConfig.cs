@@ -1,11 +1,10 @@
 namespace Dzl.Core.Config;
 
-/// <summary>
-/// Per-server settings — the unit of work in dzl. Each server instance owns its mission/map, port,
-/// serverDZ.cfg, profiles dirs, mod loadout, launch params and mode. Persisted as
-/// <c>instances/&lt;name&gt;.json</c>. Composed with the single <see cref="GlobalConfig"/> at runtime
-/// into a <see cref="DzlConfig"/>. Defaults mirror <see cref="DzlConfig"/> (a round-trip test guards drift).
-/// </summary>
+/// <summary>Per-server settings — the unit of work in dzl. Each server instance owns its mission/map,
+/// port, serverDZ.cfg, profiles dirs, mod loadout, launch params and mode.</summary>
+/// <remarks>Persisted as <c>instances/&lt;name&gt;.json</c>; composed with the single
+/// <see cref="GlobalConfig"/> at runtime into a <see cref="DzlConfig"/>. Defaults mirror
+/// <see cref="DzlConfig"/> (a round-trip test guards drift).</remarks>
 public sealed record InstanceConfig
 {
     public string ProfilesPath { get; init; } = @"E:\Steam\steamapps\common\DayZ\profiles";

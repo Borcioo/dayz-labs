@@ -14,10 +14,8 @@ public enum LinkAction
 /// <summary>Result of a <see cref="Junction.Ensure"/> call.</summary>
 public sealed record EnsureResult(bool Ok, LinkAction Action, string Detail);
 
-/// <summary>
-/// Symlink-first → junction-fallback link management for <c>P:\&lt;Mod&gt;</c>. SP0 ships the pure
-/// <see cref="Decide"/> rule; the thin <c>mklink</c> runner that acts on it lands with SP1.
-/// </summary>
+/// <summary>Symlink-first → junction-fallback link management for <c>P:\&lt;Mod&gt;</c>. The pure
+/// <see cref="Decide"/> rule chooses the action; a thin <c>mklink</c> runner acts on it.</summary>
 public static class Junction
 {
     /// <summary>Pure decision. <paramref name="currentTarget"/> is the link's resolved target, or null

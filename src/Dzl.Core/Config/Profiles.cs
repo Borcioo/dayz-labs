@@ -4,14 +4,13 @@ using Dzl.Core.Projects;
 
 namespace Dzl.Core.Config;
 
-/// <summary>
-/// Manages server <b>instances</b>. Each instance's dzl config lives <b>inside its own folder</b> at
+/// <summary>Manages server <b>instances</b>, composing the machine-global config + the active instance
+/// into the runtime <see cref="DzlConfig"/> (see <see cref="ResolveActive"/>).</summary>
+/// <remarks>Each instance's dzl config lives <b>inside its own folder</b> at
 /// <c>&lt;ProjectsRoot&gt;\servers\&lt;name&gt;\.dzl\instance.json</c> (next to its serverDZ.cfg / mpmissions /
 /// profiles), so a server is a self-contained, portable, git-friendly unit. The single machine-global
 /// config (<see cref="GlobalConfig"/> in <c>config.json</c>) holds only env paths + the active instance
-/// name. <see cref="ResolveActive"/> composes global + the active instance into the runtime
-/// <see cref="DzlConfig"/>. Public method names are kept stable across the storage evolutions.
-/// </summary>
+/// name.</remarks>
 public static partial class Profiles
 {
     [GeneratedRegex("[^A-Za-z0-9_.-]+")] private static partial Regex Unsafe();
@@ -60,13 +59,9 @@ public static partial class Profiles
         return DzlConfig.Compose(GlobalStore.Load(configPath), inst);
     }
 
-    /// <summary>Remove the instance's dzl config (and its now-empty <c>.dzl</c> dir). The server's own
-    /// files (serverDZ.cfg / mpmissions / profiles) are left on disk.</summary>
-    /// <summary>
-    /// Remove a server instance. By default only dzl's record is removed (the <c>.dzl</c> config + the
-    /// legacy flat backup) and the server's own files (serverDZ.cfg / mpmissions / profiles) are left on
-    /// disk. With <paramref name="removeFolder"/> the whole instance folder is deleted too.
-    /// </summary>
+    /// <summary>Remove a server instance. By default only dzl's record is removed (the <c>.dzl</c> config
+    /// + the legacy flat backup), leaving the server's own files (serverDZ.cfg / mpmissions / profiles) on
+    /// disk; with <paramref name="removeFolder"/> the whole instance folder is deleted too.</summary>
     public static bool Delete(string name, string configPath, bool removeFolder = false)
     {
         var removed = false;
@@ -134,7 +129,6 @@ public static partial class Profiles
         return "default";
     }
 
-    // ---- migration ------------------------------------------------------
     // Two one-time, idempotent, non-destructive steps run in order:
     //   1. legacy single-config + presets/  →  global config.json + flat instances/<name>.json
     //   2. flat instances/<name>.json       →  per-folder <ProjectsRoot>\servers\<name>\.dzl\instance.json

@@ -31,13 +31,12 @@ public static class ArgvBuilder
             : full;
     }
 
-    /// <summary>
-    /// Working directory to launch a target from. DayZ resolves <c>-config</c> and the mission
-    /// template <b>relative to the working directory</b> (it rejects an absolute <c>-config</c>). When a
-    /// server instance keeps its own <c>serverDZ.cfg</c> at an absolute path (under ProjectsRoot), we
-    /// run the server <b>from that instance dir</b> so its serverDZ.cfg + mpmissions are picked up.
-    /// Otherwise (and always for the client) we use the DayZ install dir.
-    /// </summary>
+    /// <summary>Working directory to launch a target from.</summary>
+    /// <remarks>DayZ resolves <c>-config</c> and the mission template <b>relative to the working
+    /// directory</b> (it rejects an absolute <c>-config</c>). When a server instance keeps its own
+    /// <c>serverDZ.cfg</c> at an absolute path (under ProjectsRoot), we run the server <b>from that
+    /// instance dir</b> so its serverDZ.cfg + mpmissions are picked up. Otherwise (and always for the
+    /// client) we use the DayZ install dir.</remarks>
     public static string WorkingDir(DzlConfig c, string target)
     {
         if (target == "server" && Path.IsPathRooted(c.ConfigName))

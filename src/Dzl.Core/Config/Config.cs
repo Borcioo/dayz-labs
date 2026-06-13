@@ -30,11 +30,9 @@ public sealed record DzlConfig
     public List<string> ClientParamsDebug { get; init; } = new() { "-window", "-nosplash", "-filePatching", "-doLogs", "-scriptDebug=true" };
     public List<string> ClientParamsNormal { get; init; } = new() { "-window", "-nosplash" };
 
-    /// <summary>
-    /// When true the tray hosts the named-pipe automation server so the dzl CLI and the
-    /// Claude MCP integration can drive this process. Off by default (opt-in); when off no
-    /// background pipe listener is started. .NET-only field (snake_case: enable_automation_server).
-    /// </summary>
+    /// <summary>When true the tray hosts the named-pipe automation server so the dzl CLI and the Claude
+    /// MCP integration can drive this process. Off by default (opt-in). snake_case:
+    /// enable_automation_server.</summary>
     public bool EnableAutomationServer { get; init; } = false;
 
     /// <summary>When a server is started from CLI/MCP and the tray isn't running, auto-launch it
@@ -77,9 +75,8 @@ public sealed record DzlConfig
 
     public static DzlConfig Default() => new();
 
-    // --- two-tier split: global (machine env) vs per-server instance ---
-    // DzlConfig stays the runtime composite every consumer uses; persistence + editing split
-    // into GlobalConfig (config.json) and InstanceConfig (instances/<name>.json).
+    // Two-tier split: DzlConfig stays the runtime composite every consumer uses; persistence + editing
+    // split into GlobalConfig (machine env, config.json) and InstanceConfig (per-server, instances/<name>.json).
 
     /// <summary>Extract the machine-global slice (with the given active instance name).</summary>
     public GlobalConfig GlobalPart(string activeInstance = "") => new()

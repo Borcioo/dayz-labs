@@ -30,13 +30,11 @@ public static class TrayLauncher
         catch { return false; }
     }
 
-    /// <summary>
-    /// Launch the tray hidden (--tray), de-elevated, as a monitor. Best-effort; never throws.
-    /// <para>Uses <see cref="ProcessElevation.Run"/> with <c>timeoutMs = 0</c>: both the normal and
+    /// <summary>Launch the tray hidden (--tray), de-elevated, as a monitor. Best-effort; never throws.</summary>
+    /// <remarks>Uses <see cref="ProcessElevation.Run"/> with <c>timeoutMs = 0</c>: both the normal and
     /// de-elevated code paths call WaitForExit/WaitForSingleObject with 0 ms, which returns immediately
     /// without waiting for the child to exit. The tray process keeps running detached — this call does
-    /// NOT block the CLI/MCP caller.</para>
-    /// </summary>
+    /// NOT block the CLI/MCP caller.</remarks>
     public static void LaunchMonitor(string baseDir)
     {
         var exe = Resolve(baseDir);

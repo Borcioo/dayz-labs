@@ -1,11 +1,10 @@
 namespace Dzl.Core.Config;
 
-/// <summary>
-/// Machine-global settings — the local DayZ install, tools, projects root, executable names,
-/// mod scan-roots and app prefs. These do NOT vary per server. Persisted in <c>config.json</c>.
-/// Per-server settings live in <see cref="InstanceConfig"/> (one file per server under <c>instances/</c>).
-/// Defaults mirror <see cref="DzlConfig"/> (a round-trip test guards against drift).
-/// </summary>
+/// <summary>Machine-global settings — the local DayZ install, tools, projects root, executable names,
+/// mod scan-roots and app prefs that do NOT vary per server. Persisted in <c>config.json</c>.</summary>
+/// <remarks>Per-server settings live in <see cref="InstanceConfig"/> (one file per server under
+/// <c>instances/</c>). Defaults mirror <see cref="DzlConfig"/> (a round-trip test guards against
+/// drift).</remarks>
 public sealed record GlobalConfig
 {
     public string DayzPath { get; init; } = @"E:\Steam\steamapps\common\DayZ";
