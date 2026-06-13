@@ -111,6 +111,7 @@ public partial class ChanceField : UserControl
     // that isn't on our own face. The popup (AllowsTransparency) is its own top-level window, so presses
     // inside it never reach the host-window handler — it stays open while you drag the slider / type.
     private bool _wasOpen;
+    private double _openValue;
     private Window? _hookedWindow;
 
     private void OnTogglePreviewDown(object sender, MouseButtonEventArgs e) => _wasOpen = Pop.IsOpen;
@@ -123,6 +124,7 @@ public partial class ChanceField : UserControl
 
     private void OpenPopup()
     {
+        _openValue = Value; // baseline so closing only commits when the value actually changed
         Pop.IsOpen = true;
         _hookedWindow = Window.GetWindow(this);
         if (_hookedWindow is not null) _hookedWindow.PreviewMouseDown += OnHostMouseDown;
@@ -165,7 +167,7 @@ public partial class ChanceField : UserControl
     private void OnPopupClosed(object? sender, EventArgs e)
     {
         Unhook();
-        ValueCommitted?.Invoke(this, EventArgs.Empty);
+        if (Math.Abs(Value - _openValue) > 1e-9) ValueCommitted?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnNumKeyDown(object sender, KeyEventArgs e)
