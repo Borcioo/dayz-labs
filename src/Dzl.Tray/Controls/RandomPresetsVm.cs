@@ -101,7 +101,11 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
 
     [ObservableProperty] private string _filter = "";
 
+    /// <summary>Master-list state filter: 0 = all, 1 = enabled only, 2 = disabled (commented-out) only.</summary>
+    [ObservableProperty] private int _stateFilterIndex;
+
     partial void OnFilterChanged(string value) => ApplyFilter();
+    partial void OnStateFilterIndexChanged(int value) => ApplyFilter();
 
     /// <summary>Items of the currently selected preset (editable). Empty when none selected.</summary>
     public ObservableCollection<PresetItemVm> Items { get; } = new();
@@ -200,8 +204,12 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
         var f = (Filter ?? "").Trim();
         Presets.Clear();
         foreach (var r in _all)
-            if (f.Length == 0 || r.Name.Contains(f, StringComparison.OrdinalIgnoreCase))
-                Presets.Add(r);
+        {
+            if (f.Length > 0 && !r.Name.Contains(f, StringComparison.OrdinalIgnoreCase)) continue;
+            if (StateFilterIndex == 1 && r.IsDisabled) continue;   // enabled only
+            if (StateFilterIndex == 2 && !r.IsDisabled) continue;  // disabled only
+            Presets.Add(r);
+        }
     }
 
     /// <summary>Select the preset named <paramref name="name"/> (e.g. from a validation-finding click),

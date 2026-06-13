@@ -75,9 +75,22 @@
 
           <TextBlock Grid.Row="0" Text="Presets" Style="{StaticResource RpSectionHeader}" Margin="0,0,0,6" />
 
-          <!-- Filter -->
-          <ui:TextBox Grid.Row="1" Margin="0,0,0,6" FontSize="12" PlaceholderText="filter by name"
-                      Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" />
+          <!-- Filter: name search + enabled/disabled state -->
+          <Grid Grid.Row="1" Margin="0,0,0,6">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ui:TextBox Grid.Column="0" Margin="0,0,4,0" FontSize="12" PlaceholderText="filter by name"
+                        Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" />
+            <ComboBox Grid.Column="1" MinWidth="96" FontSize="12" VerticalAlignment="Center"
+                      ToolTip="Filter by enabled/disabled (commented-out) state"
+                      SelectedIndex="{Binding StateFilterIndex, Mode=TwoWay}">
+              <ComboBoxItem Content="All" />
+              <ComboBoxItem Content="Enabled" />
+              <ComboBoxItem Content="Disabled" />
+            </ComboBox>
+          </Grid>
 
           <DataGrid Grid.Row="2" x:Name="PresetGrid"
                     ItemsSource="{Binding Presets}"
