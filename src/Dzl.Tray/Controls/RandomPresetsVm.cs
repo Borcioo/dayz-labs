@@ -92,8 +92,9 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
     /// <summary>True when a preset is selected — gates the right-column "Edit preset" card.</summary>
     public bool HasSelection => SelectedPreset is not null;
 
-    // "Edit preset" card (right column): live name + kind of the selected preset.
+    // "Edit preset" card (right column): live name + chance + kind of the selected preset.
     [ObservableProperty] private string _editName = "";
+    [ObservableProperty] private string _editChance = "";
     /// <summary>0 = cargo, 1 = attachments (binds the kind combo).</summary>
     [ObservableProperty] private int _editKindIndex;
     private bool _suspendCardSync;
@@ -218,6 +219,7 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
         // Sync the edit card to the new selection without echoing back as a rename/kind change.
         _suspendCardSync = true;
         EditName = value?.Name ?? "";
+        EditChance = value?.ChanceText ?? "";
         EditKindIndex = value is { Kind: PresetKind.Attachments } ? 1 : 0;
         _suspendCardSync = false;
         OnPropertyChanged(nameof(HasSelection));
@@ -229,14 +231,32 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
         if (!_suspendCardSync) ChangeSelectedKind(toCargo: value == 0);
     }
 
-    /// <summary>Apply the edit-card name box to the selected preset (rename).</summary>
-    public void ApplyRename()
+    /// <summary>Apply the edit-card name + chance to the selected preset in one undo step. Kind is applied
+    /// live by the combo (<see cref="ChangeSelectedKind"/>), so it's not handled here.</summary>
+    public void ApplyEdits()
     {
         if (SelectedPreset is not { } row) return;
-        var next = (EditName ?? "").Trim();
-        if (next.Length == 0) { Status = "✗ name must not be empty"; return; }
-        if (string.Equals(next, row.Name, StringComparison.Ordinal)) return;
-        RenameSelectedPreset(next);
+        var newName = (EditName ?? "").Trim();
+        if (newName.Length == 0) { Status = "✗ name must not be empty"; return; }
+        if (!TryChance(EditChance, out var chance)) { Status = "✗ chance must be a number 0..1"; return; }
+
+        var renamed = !string.Equals(newName, row.Name, StringComparison.Ordinal);
+        var chanceChanged = Math.Abs(chance - row.Chance) > 1e-9;
+        if (!renamed && !chanceChanged) return;
+
+        var kind = row.Kind;
+        var name = row.Name;
+        PushUndo();
+        if (renamed)
+        {
+            if (!Report(_svc.RenamePreset(kind, name, newName))) return;
+            name = newName;
+        }
+        if (chanceChanged) Report(_svc.SetPresetChance(kind, name, chance));
+
+        LoadPresetsKeepingSelection();
+        SelectedPreset = Presets.FirstOrDefault(r => r.Kind == kind &&
+            string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>Move the selected preset between cargo and attachments (from the edit-card kind combo).</summary>
@@ -331,15 +351,6 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
             LoadPresetsKeepingSelection();
             SelectedPreset = Presets.FirstOrDefault(r => r.Kind == row.Kind && r.Name == newName);
         }
-    }
-
-    /// <summary>Persist the selected preset's edited chance (called when its chance box commits).</summary>
-    public void SaveSelectedPresetChance()
-    {
-        if (SelectedPreset is not { } row) return;
-        if (!TryChance(row.ChanceText, out var chance)) { Status = "✗ chance must be a number 0..1"; return; }
-        PushUndo();
-        if (Report(_svc.SetPresetChance(row.Kind, row.Name, chance))) row.Chance = chance;
     }
 
     public void AddItem()

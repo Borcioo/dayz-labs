@@ -27,17 +27,6 @@ public partial class RandomPresetsEditor : UserControl
 
     private void OnAddPresetClick(object sender, RoutedEventArgs e) => Vm?.AddPreset();
 
-    private void OnPresetCellEditEnding(object? sender, DataGridCellEditEndingEventArgs e)
-    {
-        if (e.EditAction != DataGridEditAction.Commit) return;
-        if (e.Row.Item is not PresetRowVm row || Vm is not { } vm) return;
-        // Only the Chance column is editable; persist after the binding writes back.
-        Dispatcher.BeginInvoke(new System.Action(() =>
-        {
-            if (ReferenceEquals(vm.SelectedPreset, row)) vm.SaveSelectedPresetChance();
-        }), System.Windows.Threading.DispatcherPriority.Background);
-    }
-
     private void OnRemovePresetClick(object sender, RoutedEventArgs e) => Vm?.RemoveSelectedPreset();
 
     private void OnRenamePresetClick(object sender, RoutedEventArgs e)
@@ -83,11 +72,11 @@ public partial class RandomPresetsEditor : UserControl
         if (vm.SelectedPreset is { } sel) PresetGrid.ScrollIntoView(sel);
     }
 
-    private void OnApplyRenameClick(object sender, RoutedEventArgs e) => Vm?.ApplyRename();
+    private void OnApplyEditsClick(object sender, RoutedEventArgs e) => Vm?.ApplyEdits();
 
     private void OnEditNameKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Enter) { Vm?.ApplyRename(); e.Handled = true; }
+        if (e.Key == Key.Enter) { Vm?.ApplyEdits(); e.Handled = true; }
     }
 
     private void OnAddItemClick(object sender, RoutedEventArgs e) => Vm?.AddItem();
