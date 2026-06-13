@@ -58,7 +58,7 @@
               <ui:Button Grid.Column="2" Content="Login" Icon="{ui:SymbolIcon Person24}"
                          Margin="0,0,8,0" Click="OnGitHubLogin"
                          ToolTip="Runs 'gh auth login --web' in a terminal — browser OAuth, no keys to type" />
-              <ui:Button Grid.Column="3" Content="Logout" Click="OnGitHubLogout" />
+              <ui:Button Grid.Column="3" Content="Logout" Command="{Binding GitHubLogoutCommand}" />
             </Grid>
             <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                        Text="GitHub uses the gh CLI's browser OAuth — no token to paste. Publish/Release reuse this login." />
@@ -196,8 +196,8 @@
               <Ellipse Grid.Column="0" Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,8,0"
                        Fill="{Binding WorkDriveMounted, Converter={StaticResource StatusDotConverter}}" />
               <TextBlock Grid.Column="1" Text="{Binding WorkDriveStatus}" VerticalAlignment="Center" />
-              <ui:Button Grid.Column="2" Content="Mount" Margin="0,0,8,0" Click="OnMountWorkDrive" />
-              <ui:Button Grid.Column="3" Content="Unmount" Click="OnUnmountWorkDrive" />
+              <ui:Button Grid.Column="2" Content="Mount" Margin="0,0,8,0" Command="{Binding MountWorkDriveCommand}" />
+              <ui:Button Grid.Column="3" Content="Unmount" Command="{Binding UnmountWorkDriveCommand}" />
             </Grid>
 
             <TextBlock Text="Work drive source folder (the always-live folder P: maps to)"

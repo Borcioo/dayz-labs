@@ -1,5 +1,6 @@
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Dzl.Core.Config;
 using Dzl.Core.Env;
 using Dzl.Core.Projects;
@@ -108,6 +109,7 @@ public partial class MainViewModel
     }
 
     /// <summary>Log out of GitHub (gh auth logout), then refresh the label.</summary>
+    [RelayCommand]
     public async Task GitHubLogoutAsync()
     {
         await Task.Run(() => GitHub.Logout());

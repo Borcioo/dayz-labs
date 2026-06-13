@@ -95,10 +95,6 @@ public partial class SettingsView : UserControl
     private void OnRunSetupWizard(object sender, RoutedEventArgs e)
         => (Window.GetWindow(this) as MainWindow)?.OpenSetupWizard();
 
-    // === Work drive (Settings card) — the host bottom status bar + Tools page own their copies ===
-    private void OnMountWorkDrive(object sender, RoutedEventArgs e) => Vm?.MountWorkDrive();
-    private void OnUnmountWorkDrive(object sender, RoutedEventArgs e) => Vm?.UnmountWorkDrive();
-
     // === Accounts ===========================================================
 
     // GitHub OAuth login is interactive (device code + browser), so run it in a real terminal the
@@ -115,11 +111,6 @@ public partial class SettingsView : UserControl
             System.Windows.MessageBox.Show("Could not launch gh login:\n" + ex.Message, "GitHub login",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
         }
-    }
-
-    private async void OnGitHubLogout(object sender, RoutedEventArgs e)
-    {
-        if (Vm is not null) await Vm.GitHubLogoutAsync();
     }
 
     private void OnSteamSignIn(object sender, RoutedEventArgs e)
