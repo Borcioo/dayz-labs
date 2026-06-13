@@ -7,8 +7,10 @@
         xmlns:vm="clr-namespace:Dzl.Tray.ViewModels"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
-        Title="Add mod" Width="760" Height="420"
-        MinWidth="600" MinHeight="340"
+        Title="Add mod" Width="720"
+        MinWidth="560"
+        SizeToContent="Height"
+        ResizeMode="NoResize"
         WindowBackdropType="Mica"
         ExtendsContentIntoTitleBar="True"
         WindowStartupLocation="CenterOwner">
@@ -16,7 +18,7 @@
   <Grid Margin="16,8,16,16">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
-      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
 
     <ui:TitleBar Grid.Row="0" Title="Add mod" ShowMaximize="False" ShowMinimize="False" Margin="0,0,0,8" />
