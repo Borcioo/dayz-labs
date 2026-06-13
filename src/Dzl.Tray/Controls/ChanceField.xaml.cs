@@ -19,6 +19,7 @@ public partial class ChanceField : UserControl
         InitializeComponent();
         UpdateDisplay();
         Pop.CustomPopupPlacementCallback = PlaceCenteredBelow;
+        DataObject.AddPastingHandler(Num, OnEntryPaste); // sanitize pasted text to numeric
     }
 
     /// <summary>Center the popup horizontally under the button (4px gap below it).</summary>
@@ -114,7 +115,33 @@ public partial class ChanceField : UserControl
     private void UpdateDisplay()
     {
         var format = Decimals > 0 ? "0." + new string('#', Decimals) : "0";
-        DisplayText = Value.ToString(format, CultureInfo.CurrentCulture);
+        DisplayText = Value.ToString(format, CultureInfo.InvariantCulture); // dot, matching the CE files
+    }
+
+    // Numeric-only entry: allow digits and a single decimal separator ('.' or ',').
+    private void OnEntryPreviewInput(object sender, TextCompositionEventArgs e)
+    {
+        if (sender is TextBox tb) e.Handled = !IsNumericInput(tb, e.Text);
+    }
+
+    private static bool IsNumericInput(TextBox tb, string text)
+    {
+        foreach (var ch in text)
+        {
+            if (char.IsDigit(ch)) continue;
+            var isSeparator = ch is '.' or ',';
+            var separatorPresent = tb.Text.Contains('.') || tb.Text.Contains(',');
+            var selectionEatsSeparator = tb.SelectedText.Contains('.') || tb.SelectedText.Contains(',');
+            if (isSeparator && (!separatorPresent || selectionEatsSeparator)) continue;
+            return false;
+        }
+        return true;
+    }
+
+    private void OnEntryPaste(object sender, DataObjectPastingEventArgs e)
+    {
+        var text = e.DataObject.GetDataPresent(DataFormats.Text) ? (string)e.DataObject.GetData(DataFormats.Text) : "";
+        if (!System.Text.RegularExpressions.Regex.IsMatch(text, @"^[0-9]*[.,]?[0-9]*$")) e.CancelCommand();
     }
 
     // WPF's Popup StaysOpen=False auto-close is unreliable inside a DataGrid (the grid captures the mouse),
@@ -143,6 +170,8 @@ public partial class ChanceField : UserControl
 
     private void ClosePopup()
     {
+        // Commit any text typed in the entry (LostFocus binding) BEFORE closing, so the close sees the value.
+        Num.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
         Unhook();
         Pop.IsOpen = false; // raises Closed → ValueCommitted
     }
@@ -184,5 +213,20 @@ public partial class ChanceField : UserControl
     private void OnNumKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter) { ClosePopup(); e.Handled = true; } // closing the popup fires ValueCommitted
+    }
+}
+
+/// <summary>Two-way text↔double for the popup entry: shows the value dot-formatted (matching CE files),
+/// parses back tolerantly (accepts a comma too); leaves the value untouched on unparseable input.</summary>
+public sealed class ChanceTextConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is double d ? d.ToString("0.###", CultureInfo.InvariantCulture) : "0";
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var s = (value as string ?? "").Replace(',', '.').Trim();
+        return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var d)
+            ? d : Binding.DoNothing;
     }
 }

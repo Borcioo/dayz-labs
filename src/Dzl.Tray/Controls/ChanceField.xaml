@@ -2,7 +2,11 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:local="clr-namespace:Dzl.Tray.Controls"
              x:Name="Root">
+  <UserControl.Resources>
+    <local:ChanceTextConverter x:Key="ChanceConv" />
+  </UserControl.Resources>
   <!-- A compact value button that opens a slider + number-box popup. Driven entirely by DependencyProperties
        so it binds anywhere, including a DataGridTemplateColumn cell. Children bind back to Root's properties
        via ElementName (a UserControl does not inherit the host window's resources, but ElementName to its own
@@ -38,14 +42,10 @@
                   Value="{Binding Value, ElementName=Root, Mode=TwoWay}" />
           <TextBlock Text="{Binding Maximum, ElementName=Root}" VerticalAlignment="Center" Margin="6,0,8,0"
                      FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-          <ui:NumberBox x:Name="Num" Width="110" VerticalAlignment="Center" FontSize="12"
-                        Minimum="{Binding Minimum, ElementName=Root}"
-                        Maximum="{Binding Maximum, ElementName=Root}"
-                        SmallChange="{Binding SmallChange, ElementName=Root}"
-                        SpinButtonPlacementMode="Hidden" ClearButtonEnabled="False"
-                        MaxDecimalPlaces="{Binding Decimals, ElementName=Root}"
-                        Value="{Binding Value, ElementName=Root, Mode=TwoWay}"
-                        KeyDown="OnNumKeyDown" />
+          <ui:TextBox x:Name="Num" Width="56" VerticalAlignment="Center" FontSize="12"
+                      TextAlignment="Center"
+                      Text="{Binding Value, ElementName=Root, Converter={StaticResource ChanceConv}, UpdateSourceTrigger=LostFocus}"
+                      PreviewTextInput="OnEntryPreviewInput" KeyDown="OnNumKeyDown" />
         </StackPanel>
       </Border>
     </Popup>
