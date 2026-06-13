@@ -7,13 +7,20 @@
        so it binds anywhere, including a DataGridTemplateColumn cell. Children bind back to Root's properties
        via ElementName (a UserControl does not inherit the host window's resources, but ElementName to its own
        named root is always safe). Value is clamped to [Minimum, Maximum] by a coercion callback. -->
-  <!-- The button fills the control, so the host sizes it: VerticalAlignment="Stretch" on the ChanceField makes
-       it match neighbouring buttons/combos; the compact default suits short DataGrid rows. -->
+  <!-- The clickable face is a Border (not a ToggleButton): WPF-UI's implicit ToggleButton style fixes the
+       control height and ignores the host's Stretch/Height, which made the field shorter than its neighbours.
+       A Border has no such style, so it stretches to whatever height the host gives the ChanceField — set
+       Height/VerticalAlignment="Stretch" in standalone use to match buttons/combos; leave it unset in a
+       DataGrid cell for the compact row look. -->
   <Grid>
-    <ToggleButton x:Name="Toggle" MinWidth="48" Padding="8,2" FontSize="12"
-                  HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                  Content="{Binding DisplayText, ElementName=Root}"
-                  IsChecked="{Binding IsOpen, ElementName=Root, Mode=TwoWay}" />
+    <Border x:Name="Toggle" MinWidth="48" Padding="8,0" CornerRadius="4" Cursor="Hand"
+            Background="{DynamicResource ControlFillColorDefaultBrush}"
+            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+            MouseLeftButtonUp="OnToggleClick">
+      <TextBlock Text="{Binding DisplayText, ElementName=Root}" FontSize="12"
+                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+    </Border>
     <Popup x:Name="Pop" PlacementTarget="{Binding ElementName=Toggle}" Placement="Custom"
            StaysOpen="False" AllowsTransparency="True"
            IsOpen="{Binding IsOpen, ElementName=Root, Mode=TwoWay}" Closed="OnPopupClosed">

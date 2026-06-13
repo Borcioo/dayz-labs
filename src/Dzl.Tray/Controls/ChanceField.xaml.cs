@@ -114,6 +114,8 @@ public partial class ChanceField : UserControl
         DisplayText = Value.ToString(format, CultureInfo.CurrentCulture);
     }
 
+    private void OnToggleClick(object sender, MouseButtonEventArgs e) => IsOpen = true;
+
     private void OnPopupClosed(object? sender, EventArgs e) => ValueCommitted?.Invoke(this, EventArgs.Empty);
 
     private void OnNumKeyDown(object sender, KeyEventArgs e)
