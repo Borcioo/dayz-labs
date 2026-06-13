@@ -6,6 +6,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- App icon embedded in Dzl.Tray.exe: taskbar, alt-tab, Explorer, default window icon.
+         (The system-tray icon is a separate runtime-generated status dot — see TrayIcon.cs.) -->
+    <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
     <!--
       NU1701: H.NotifyIcon.Wpf 2.4.1 ships a WPF-compatible net4x asset that NuGet
       restores against this net8.0-windows project. The package is functional on
