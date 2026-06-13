@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Dzl.Core.App;
 using Dzl.Core.Build;
 using Dzl.Core.Build.Preflight;
@@ -28,6 +29,7 @@ public partial class MainViewModel
     public string CachedAuthor => ModScaffold.CachedAuthor(ConfigDir) ?? "";
 
     /// <summary>Re-enumerate mod source projects. Called on My Mods page show + after create/import/link.</summary>
+    [RelayCommand]
     public void RefreshModProjects()
     {
         ModProjects.Clear();

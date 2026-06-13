@@ -25,10 +25,6 @@ public partial class MyModsView : UserControl
         if (NewModAuthorBox.Text.Length == 0) NewModAuthorBox.Text = Vm.CachedAuthor;
     }
 
-    private void OnRefreshMyMods(object sender, RoutedEventArgs e) => Vm?.RefreshModProjects();
-
-    private void OnMountWorkDrive(object sender, RoutedEventArgs e) => Vm?.MountWorkDrive();
-
     // Re-entrancy guard for the create-mod flow (the button is disabled while it runs, but a fast
     // double-tap before the first frame renders could still re-enter — bool gate is belt-and-braces).
     private bool _creatingMod;

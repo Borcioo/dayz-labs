@@ -68,7 +68,7 @@
                 <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
               <TextBlock Grid.Column="0" Text="Instances" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
-              <ui:Button Grid.Column="1" Content="Refresh" Icon="{ui:SymbolIcon ArrowSync24}" Click="OnRefreshServers" />
+              <ui:Button Grid.Column="1" Content="Refresh" Icon="{ui:SymbolIcon ArrowSync24}" Command="{Binding RefreshServersCommand}" />
             </Grid>
             <ItemsControl ItemsSource="{Binding Servers}">
               <ItemsControl.ItemTemplate>

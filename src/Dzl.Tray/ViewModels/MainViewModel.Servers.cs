@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using CommunityToolkit.Mvvm.Input;
 using Dzl.Core.App;
 using Dzl.Core.Config;
 using Dzl.Core.Env;
@@ -18,6 +19,7 @@ public partial class MainViewModel
     /// <summary>Map choices for the New server form (aliases the Core resolves to mission templates).</summary>
     public static IReadOnlyList<string> Maps { get; } = new[] { "chernarus", "livonia", "sakhal" };
 
+    [RelayCommand]
     public void RefreshServers()
     {
         Servers.Clear();

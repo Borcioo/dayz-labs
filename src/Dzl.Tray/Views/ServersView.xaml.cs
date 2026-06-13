@@ -14,8 +14,6 @@ public partial class ServersView : UserControl
 
     public ServersView() => InitializeComponent();
 
-    private void OnRefreshServers(object sender, RoutedEventArgs e) => Vm?.RefreshServers();
-
     // Re-entrancy guard for the create-server flow (button disabled while it runs, but a fast
     // double-tap before the first frame renders could still re-enter).
     private bool _creatingServer;

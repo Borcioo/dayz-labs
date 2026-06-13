@@ -32,7 +32,7 @@
                  Fill="{Binding WorkDriveMounted, Converter={StaticResource StatusDotConverter}}" />
         <TextBlock Text="{Binding WorkDriveStatus}" VerticalAlignment="Center" FontSize="12"
                    Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,8,0" />
-        <ui:Button Content="Mount P:" Padding="8,2" FontSize="12" Click="OnMountWorkDrive"
+        <ui:Button Content="Mount P:" Padding="8,2" FontSize="12" Command="{Binding MountWorkDriveCommand}"
                    Visibility="{Binding WorkDriveMounted, Converter={StaticResource InverseBoolToVis}}" />
       </StackPanel>
     </StackPanel>
@@ -55,7 +55,7 @@
             <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap" Foreground="#F0D9A8"
                        Text="P: work drive is not mounted — building is disabled. Binarize resolves vanilla data and includes against P:. Mount it to build." />
             <ui:Button Grid.Column="2" Content="Mount P:" Appearance="Primary" VerticalAlignment="Center"
-                       Margin="12,0,0,0" Click="OnMountWorkDrive" />
+                       Margin="12,0,0,0" Command="{Binding MountWorkDriveCommand}" />
           </Grid>
         </Border>
 
@@ -168,7 +168,7 @@
                 <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
               <TextBlock Grid.Column="0" Text="Projects" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
-              <ui:Button Grid.Column="1" Content="Refresh" Icon="{ui:SymbolIcon ArrowSync24}" Click="OnRefreshMyMods" />
+              <ui:Button Grid.Column="1" Content="Refresh" Icon="{ui:SymbolIcon ArrowSync24}" Command="{Binding RefreshModProjectsCommand}" />
             </Grid>
             <ItemsControl ItemsSource="{Binding ModProjects}">
               <ItemsControl.ItemTemplate>
