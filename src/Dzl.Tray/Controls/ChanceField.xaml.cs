@@ -20,6 +20,8 @@ public partial class ChanceField : UserControl
         UpdateDisplay();
         Pop.CustomPopupPlacementCallback = PlaceCenteredBelow;
         DataObject.AddPastingHandler(Num, OnEntryPaste); // sanitize pasted text to numeric
+        Mouse.AddPreviewMouseDownOutsideCapturedElementHandler(this, OnOutsidePress);
+        LostMouseCapture += OnLostCapture;
     }
 
     /// <summary>Center the popup horizontally under the button (4px gap below it).</summary>
@@ -174,13 +176,13 @@ public partial class ChanceField : UserControl
     // On focus loss, re-display the canonical value: clamp (min/max), Decimals rounding, comma→dot.
     private void OnEntryLostFocus(object sender, RoutedEventArgs e) => SyncEntryFromValue();
 
-    // WPF's Popup StaysOpen=False auto-close is unreliable inside a DataGrid (the grid captures the mouse),
-    // so we close manually: while open, listen on the host window's PreviewMouseDown and close on any press
-    // that isn't on our own face. The popup (AllowsTransparency) is its own top-level window, so presses
-    // inside it never reach the host-window handler — it stays open while you drag the slider / type.
+    // A Popup hosting editable controls inside a DataGrid can't use StaysOpen (the grid steals the mouse) and
+    // its clicks otherwise bubble to the grid, which selects the row and grabs focus — so the entry was dead
+    // to clicks/arrows. Use the ComboBox pattern: while open, hold a SubTree mouse capture on this control.
+    // SubTree capture routes presses inside our subtree (the popup) to the slider/entry (and never to the
+    // grid), while a press outside raises PreviewMouseDownOutsideCapturedElement so we can close.
     private bool _wasOpen;
     private double _openValue;
-    private Window? _hookedWindow;
 
     private void OnTogglePreviewDown(object sender, MouseButtonEventArgs e) => _wasOpen = Pop.IsOpen;
 
@@ -195,56 +197,51 @@ public partial class ChanceField : UserControl
         _openValue = Value; // baseline so closing only commits when the value actually changed
         SyncEntryFromValue(); // seed the entry from the current value
         Pop.IsOpen = true;
-        // In a DataGrid the row keeps keyboard focus, so the popup entry/slider would be dead to typing and
-        // arrows. Pull focus into the entry once the popup has rendered.
-        Dispatcher.BeginInvoke(new Action(() => { Num.Focus(); Num.SelectAll(); }),
-            System.Windows.Threading.DispatcherPriority.Input);
-        _hookedWindow = Window.GetWindow(this);
-        if (_hookedWindow is not null) _hookedWindow.PreviewMouseDown += OnHostMouseDown;
+        // After the popup renders: capture the mouse to our subtree (so its clicks reach the slider/entry and
+        // never leak to the DataGrid) and focus the entry (so typing/arrows land there, not on the row).
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            Mouse.Capture(this, CaptureMode.SubTree);
+            Num.Focus();
+            Num.SelectAll();
+        }), System.Windows.Threading.DispatcherPriority.Input);
     }
 
     private void ClosePopup()
     {
-        Unhook();
-        Pop.IsOpen = false; // raises Closed → ValueCommitted (Value is already live from OnEntryTextChanged)
+        if (!Pop.IsOpen) return;
+        Pop.IsOpen = false; // set first so the re-entrant LostMouseCapture sees it already closed
+        if (ReferenceEquals(Mouse.Captured, this)) Mouse.Capture(null);
     }
 
-    private void OnHostMouseDown(object sender, MouseButtonEventArgs e)
+    // A press outside our captured subtree (another row, empty space, another field) → close.
+    private void OnOutsidePress(object sender, MouseButtonEventArgs e) => ClosePopup();
+
+    // A child (e.g. the slider thumb on press) can take capture from us. Reclaim it with SubTree so the drag
+    // keeps working (SubTree still delivers MouseMove to the child) AND we keep outside-click detection.
+    // If capture went somewhere outside our subtree, close instead.
+    private void OnLostCapture(object sender, MouseEventArgs e)
     {
-        // The host window sees presses anywhere — INCLUDING inside the popup, because routed events travel the
-        // logical tree across the Popup boundary even though it's a separate window. Close only when the press
-        // is neither on our own face (that toggles) nor inside the popup (the slider / number box).
-        if (Toggle.IsMouseOver || IsInsidePopup(e.OriginalSource)) return;
-        ClosePopup();
+        if (!Pop.IsOpen || ReferenceEquals(Mouse.Captured, this)) return;
+        if (Mouse.Captured is null || IsInOurSubtree(Mouse.Captured as DependencyObject))
+            Mouse.Capture(this, CaptureMode.SubTree);
+        else
+            ClosePopup();
     }
 
-    private bool IsInsidePopup(object? source)
+    private bool IsInOurSubtree(DependencyObject? node)
     {
-        if (Pop.Child is not DependencyObject child) return false;
-        for (var node = source as DependencyObject; node is not null;
+        for (; node is not null;
              node = node is Visual or System.Windows.Media.Media3D.Visual3D
                  ? VisualTreeHelper.GetParent(node) : LogicalTreeHelper.GetParent(node))
         {
-            if (ReferenceEquals(node, child)) return true;
+            if (ReferenceEquals(node, this) || ReferenceEquals(node, Pop.Child)) return true;
         }
         return false;
     }
 
-    private void Unhook()
-    {
-        if (_hookedWindow is null) return;
-        _hookedWindow.PreviewMouseDown -= OnHostMouseDown;
-        _hookedWindow = null;
-    }
-
-    // The popup hangs logically under the DataGrid cell, so a left press inside it bubbles to the grid, which
-    // selects the row and steals focus (right-click worked precisely because the grid only selects on left).
-    // The entry/slider get the press on the way down; mark it handled here so it stops before the grid.
-    private void OnPopupContentMouseDown(object sender, MouseButtonEventArgs e) => e.Handled = true;
-
     private void OnPopupClosed(object? sender, EventArgs e)
     {
-        Unhook();
         if (Math.Abs(Value - _openValue) > 1e-9) ValueCommitted?.Invoke(this, EventArgs.Empty);
     }
 
