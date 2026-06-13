@@ -2,11 +2,9 @@ using System.Text.RegularExpressions;
 
 namespace Dzl.Core.Build.Preflight.Rules;
 
-/// <summary>
-/// Cheap textual lint over Enforce Script (<c>.c</c>) plus known config-trap patterns.
-/// Everything here fails *silently* in game — no RPT error, the feature just doesn't work —
-/// which is exactly why a build-time warning earns its keep.
-/// </summary>
+/// <summary>Cheap textual lint over Enforce Script (<c>.c</c>) plus known config-trap patterns.</summary>
+/// <remarks>Everything here fails *silently* in game — no RPT error, the feature just doesn't work —
+/// which is exactly why a build-time warning earns its keep.</remarks>
 public static class ScriptRules
 {
     private static readonly Regex ModdedWithBaseRegex = new(

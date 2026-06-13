@@ -6,12 +6,11 @@ namespace Dzl.Core.Build.Preflight;
 /// <summary>One <c>class Name : Base { body }</c> block found in config text.</summary>
 public sealed record CppClassBlock(string Name, string Base, string Body, int StartIndex, int EndIndex);
 
-/// <summary>
-/// Minimal, string-aware text utilities for Bohemia config syntax (<c>config.cpp</c>/<c>.hpp</c>).
-/// Not a real parser — just enough structure (comments, strings, braces, arrays, includes) for
-/// preflight rules to reason about configs without choking on comments or quoted braces.
-/// All pure; file I/O only in <see cref="ReadWithIncludes"/> via an injectable reader.
-/// </summary>
+/// <summary>Minimal, string-aware text utilities for Bohemia config syntax
+/// (<c>config.cpp</c>/<c>.hpp</c>). Not a real parser — just enough structure (comments, strings,
+/// braces, arrays, includes) for preflight rules to reason about configs without choking on comments or
+/// quoted braces.</summary>
+/// <remarks>All pure; file I/O only in <see cref="ReadWithIncludes"/> via an injectable reader.</remarks>
 public static class CppText
 {
     /// <summary>Remove <c>//</c> and <c>/* */</c> comments without touching string literals.

@@ -12,11 +12,9 @@ public sealed record PboInfo(IReadOnlyDictionary<string, string> Properties, IRe
     public string Prefix => Properties.TryGetValue("prefix", out var p) ? p : "";
 }
 
-/// <summary>
-/// Minimal reader for the (public, long-documented) PBO container format — enough to verify what
-/// a build actually produced: the packed prefix property and the entry list. Never throws on bad
-/// input; returns null instead (verification treats unreadable as "couldn't verify", not crash).
-/// </summary>
+/// <summary>Minimal reader for the (public, long-documented) PBO container format — enough to verify
+/// what a build actually produced: the packed prefix property and the entry list. Never throws on bad
+/// input; returns null instead (verification treats unreadable as "couldn't verify", not crash).</summary>
 public static class PboHeader
 {
     private const uint VersMagic = 0x56657273;   // "Vers" — marks the leading properties entry

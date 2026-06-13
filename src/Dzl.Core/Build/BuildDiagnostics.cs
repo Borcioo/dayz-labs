@@ -3,11 +3,9 @@ namespace Dzl.Core.Build;
 /// <summary>One diagnosed likely cause: what the matched symptom means and what to do about it.</summary>
 public sealed record Diagnosis(string Title, string Cause, string Fix);
 
-/// <summary>
-/// Failure triage: pattern-match a build log (or a DayZ client/server log tail) against known
-/// symptoms and emit cause→fix entries. Pure string analysis — call it with whatever log text
-/// is at hand; it never throws and unknown text simply yields no diagnoses.
-/// </summary>
+/// <summary>Failure triage: pattern-match a build log (or a DayZ client/server log tail) against known
+/// symptoms and emit cause→fix entries. Pure string analysis — never throws, and unknown text simply
+/// yields no diagnoses.</summary>
 public static class BuildDiagnostics
 {
     private sealed record Pattern(string[] Needles, Diagnosis Diagnosis);

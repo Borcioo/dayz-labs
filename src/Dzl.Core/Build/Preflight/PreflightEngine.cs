@@ -2,10 +2,8 @@ using Dzl.Core.Build.Preflight.Rules;
 
 namespace Dzl.Core.Build.Preflight;
 
-/// <summary>
-/// Walks one mod project dir and runs the enabled rule families. Never throws on bad input —
-/// a missing dir is itself a finding. Frontends decide whether errors block a build.
-/// </summary>
+/// <summary>Walks one mod project dir and runs the enabled rule families. Never throws on bad input —
+/// a missing dir is itself a finding. Frontends decide whether errors block a build.</summary>
 public static class PreflightEngine
 {
     public static PreflightReport Run(string modDir, string modName, PreflightOptions? options = null)

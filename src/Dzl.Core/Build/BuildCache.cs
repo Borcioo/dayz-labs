@@ -6,12 +6,11 @@ using Dzl.Core.Json;
 
 namespace Dzl.Core.Build;
 
-/// <summary>
-/// Skip-unchanged support: a per-mod state hash over the packable payload + the settings that
-/// affect the output. Content-based (sha1 of file bytes), not timestamp-based — git checkouts
-/// touch mtimes without changing content, and a stale-positive cache that skips wrongly is
-/// worse than no cache. A per-run memo keyed by (path, size, mtime) keeps rehashing cheap.
-/// </summary>
+/// <summary>Skip-unchanged support: a per-mod state hash over the packable payload + the settings that
+/// affect the output.</summary>
+/// <remarks>Content-based (sha1 of file bytes), not timestamp-based — git checkouts touch mtimes
+/// without changing content, and a stale-positive cache that skips wrongly is worse than no cache. A
+/// per-run memo keyed by (path, size, mtime) keeps rehashing cheap.</remarks>
 public static class BuildCache
 {
     public sealed record Entry(string Hash, string Pbo, DateTime UpdatedUtc);

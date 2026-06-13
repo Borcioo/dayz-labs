@@ -2,11 +2,9 @@ using System.Text.RegularExpressions;
 
 namespace Dzl.Core.Build.Preflight;
 
-/// <summary>
-/// Path plumbing shared by preflight rules: reference normalization (the engine's path dialect),
-/// exclusion matching, prefix-file reading, and multi-candidate reference resolution.
-/// Pure except the explicit file probes in <see cref="Resolve"/> / <see cref="ReadPrefix"/>.
-/// </summary>
+/// <summary>Path plumbing shared by preflight rules: reference normalization (the engine's path
+/// dialect), exclusion matching, prefix-file reading, and multi-candidate reference resolution. Pure
+/// except the explicit file probes in <see cref="Resolve"/> / <see cref="ReadPrefix"/>.</summary>
 public static class PathResolver
 {
     private static readonly string[] PrefixFileNames =
@@ -77,12 +75,11 @@ public static class PathResolver
     public static string[] EffectiveExcludes(PreflightOptions opts) =>
         PreflightOptions.DefaultExcludes.Concat(opts.ExcludePatterns).ToArray();
 
-    /// <summary>
-    /// Resolve an engine reference to a file on disk. Candidates, in order:
-    /// the mod dir, the mod's parent (sibling-addon refs), prefix-relative (reference starting
-    /// with the mod's prefix or folder name maps into the mod dir), and the work-drive root
-    /// (vanilla refs like <c>dz\gear\...</c>). Returns the first hit, or (firstCandidate, false).
-    /// </summary>
+    /// <summary>Resolve an engine reference to a file on disk. Returns the first hit, or
+    /// (firstCandidate, false).</summary>
+    /// <remarks>Candidates, in order: the mod dir, the mod's parent (sibling-addon refs), prefix-relative
+    /// (a reference starting with the mod's prefix or folder name maps into the mod dir), and the
+    /// work-drive root (vanilla refs like <c>dz\gear\...</c>).</remarks>
     public static (string path, bool found) Resolve(string reference, string modDir, string prefix,
         string? workDriveRoot)
     {

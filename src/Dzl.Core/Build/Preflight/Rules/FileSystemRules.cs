@@ -1,10 +1,8 @@
 namespace Dzl.Core.Build.Preflight.Rules;
 
-/// <summary>
-/// Filesystem-layer checks over the packable payload: case conflicts, risky path characters,
-/// the official lowercase rule (Linux server binaries), texture freshness, already-binarized
-/// ODOL models, dev-only files that would ship, and mod.cpp presentation sanity.
-/// </summary>
+/// <summary>Filesystem-layer checks over the packable payload: case conflicts, risky path characters,
+/// the official lowercase rule (Linux server binaries), texture freshness, already-binarized ODOL
+/// models, dev-only files that would ship, and mod.cpp presentation sanity.</summary>
 public static class FileSystemRules
 {
     private static readonly char[] InvalidNameChars = { '<', '>', '"', '|', '?', '*' };

@@ -2,12 +2,10 @@ using System.Text.RegularExpressions;
 
 namespace Dzl.Core.Build.Preflight.Rules;
 
-/// <summary>
-/// Reference-layer checks: every quoted asset path in text files must resolve, must not be
-/// excluded from the PBO, and must not be an absolute dev-machine path. rvmat textures get a
-/// dedicated pass (source-format detection); .p3d binaries get a printable-string scan
-/// (warning-level — heuristic by nature).
-/// </summary>
+/// <summary>Reference-layer checks: every quoted asset path in text files must resolve, must not be
+/// excluded from the PBO, and must not be an absolute dev-machine path. rvmat textures get a dedicated
+/// pass (source-format detection); .p3d binaries get a printable-string scan (warning-level — heuristic
+/// by nature).</summary>
 public static class ReferenceRules
 {
     /// <summary>Text files worth scanning for references.</summary>

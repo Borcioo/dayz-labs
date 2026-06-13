@@ -1,9 +1,7 @@
 namespace Dzl.Core.Build.Preflight;
 
-/// <summary>
-/// What the engine knows about the environment + which rule families run.
-/// All checks default on except the expensive/binary ones noted below.
-/// </summary>
+/// <summary>What the engine knows about the environment + which rule families run. All checks default
+/// on except the expensive/binary ones noted below.</summary>
 public sealed record PreflightOptions
 {
     /// <summary>Work-drive root references resolve against (normally <c>P:\</c>). Null/empty = skip

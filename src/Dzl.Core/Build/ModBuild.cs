@@ -9,12 +9,11 @@ public sealed record BuildResult(
     bool Ok, string ModName, string ModDir, string PboPath, bool Registered, string Message, string Output,
     string Diagnostics = "", Preflight.PreflightView? Preflight = null);
 
-/// <summary>
-/// Side-effect-light helpers for the build→deploy pipeline: verifying a fresh PBO was produced, the
-/// ownership marker, and the run-list registration. Output paths now live in <c>ProjectPaths</c>
-/// (builds are physical under <c>&lt;ProjectsRoot&gt;\build\@&lt;Mod&gt;</c>); the I/O orchestration
-/// (junctions, AddonBuilder process, save) lives in <c>Dzl.Core.App.BuildService</c>.
-/// </summary>
+/// <summary>Side-effect-light helpers for the build→deploy pipeline: verifying a fresh PBO was
+/// produced, the ownership marker, and the run-list registration.</summary>
+/// <remarks>Output paths live in <c>ProjectPaths</c> (builds are physical under
+/// <c>&lt;ProjectsRoot&gt;\build\@&lt;Mod&gt;</c>); the I/O orchestration (junctions, AddonBuilder
+/// process, save) lives in <c>Dzl.Core.App.BuildService</c>.</remarks>
 public static class ModBuild
 {
     /// <summary>Newest <c>.pbo</c> in the Addons dir, or null if none exists.</summary>
@@ -40,12 +39,11 @@ public static class ModBuild
         File.WriteAllText(markerPath, detail);
     }
 
-    /// <summary>
-    /// Atomically publish a finished build: move every <c>*.pbo</c>/<c>*.bisign</c> from
-    /// <paramref name="workAddonsDir"/> into <paramref name="finalAddonsDir"/>, backing up what's
-    /// there first and restoring it when anything fails. A failed rebuild therefore never leaves
-    /// the loadable <c>@Mod\Addons</c> half-written (the server may be configured to load it).
-    /// </summary>
+    /// <summary>Atomically publish a finished build: move every <c>*.pbo</c>/<c>*.bisign</c> from
+    /// <paramref name="workAddonsDir"/> into <paramref name="finalAddonsDir"/>, backing up what's there
+    /// first and restoring it when anything fails.</summary>
+    /// <remarks>A failed rebuild therefore never leaves the loadable <c>@Mod\Addons</c> half-written
+    /// (the server may be configured to load it).</remarks>
     public static (bool Ok, string Detail) PublishAtomically(string workAddonsDir, string finalAddonsDir)
     {
         string[] Artifacts(string dir) =>

@@ -3,11 +3,10 @@ using Dzl.Core.Tools;
 
 namespace Dzl.Core.Build.Preflight.Rules;
 
-/// <summary>
-/// Config-layer checks: prefix file sanity, CfgPatches/requiredAddons, CfgMods ↔ scripts/
-/// cross-check, and the CfgConvert syntax gate. Per official docs, CfgPatches is the only
-/// required part of a PBO and CfgMods is required once the PBO ships scripts or inputs.
-/// </summary>
+/// <summary>Config-layer checks: prefix file sanity, CfgPatches/requiredAddons, CfgMods ↔ scripts/
+/// cross-check, and the CfgConvert syntax gate.</summary>
+/// <remarks>Per official docs, CfgPatches is the only required part of a PBO and CfgMods is required
+/// once the PBO ships scripts or inputs.</remarks>
 public static class ConfigRules
 {
     /// <summary>Classes whose vanilla definition lives in a known addon — inheriting from one
