@@ -178,6 +178,81 @@ public class RandomPresetsXmlTests
     }
 
     // ------------------------------------------------------------------
+    // Disable / enable (comment toggle)
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public void DisablePreset_comments_it_out_and_parse_surfaces_it_as_disabled()
+    {
+        var doc = RandomPresetsXml.ParseDoc(Fixture);
+
+        RandomPresetsXml.DisablePreset(doc, PresetKind.Cargo, "foodHermit").Should().BeTrue();
+
+        var xml = RandomPresetsXml.ToXml(doc);
+        // The element is commented, not removed — wrapped in <!-- … --> so the game won't load it.
+        xml.Should().Contain("<!-- <cargo");
+        xml.Should().Contain("name=\"foodHermit\""); // still present, inside the comment
+
+        var presets = RandomPresetsXml.Parse(xml);
+        var disabled = presets.Single(p => p.Name == "foodHermit");
+        disabled.Disabled.Should().BeTrue();
+        disabled.Items.Should().HaveCount(2);  // items still parsed from the comment
+        presets.Single(p => p.Name == "optics").Disabled.Should().BeFalse();
+    }
+
+    [Fact]
+    public void DisablePreset_then_EnablePreset_round_trips_to_a_live_element()
+    {
+        var doc = RandomPresetsXml.ParseDoc(Fixture);
+
+        RandomPresetsXml.DisablePreset(doc, PresetKind.Cargo, "foodHermit").Should().BeTrue();
+        RandomPresetsXml.EnablePreset(doc, PresetKind.Cargo, "foodHermit").Should().BeTrue();
+
+        var presets = RandomPresetsXml.Parse(RandomPresetsXml.ToXml(doc));
+        var revived = presets.Single(p => p.Name == "foodHermit");
+        revived.Disabled.Should().BeFalse();
+        revived.Items.Should().HaveCount(2);
+        revived.Chance.Should().BeApproximately(0.15, 1e-9);
+    }
+
+    [Fact]
+    public void DisablePreset_is_idempotent_and_Enable_reports_missing()
+    {
+        var doc = RandomPresetsXml.ParseDoc(Fixture);
+
+        RandomPresetsXml.DisablePreset(doc, PresetKind.Cargo, "foodHermit").Should().BeTrue();
+        // Already disabled (no live element to comment) → false.
+        RandomPresetsXml.DisablePreset(doc, PresetKind.Cargo, "foodHermit").Should().BeFalse();
+        // Enabling a preset that was never disabled → false.
+        RandomPresetsXml.EnablePreset(doc, PresetKind.Attachments, "optics").Should().BeFalse();
+    }
+
+    [Fact]
+    public void RemovePreset_removes_a_disabled_preset_too()
+    {
+        var doc = RandomPresetsXml.ParseDoc(Fixture);
+
+        RandomPresetsXml.DisablePreset(doc, PresetKind.Cargo, "foodHermit").Should().BeTrue();
+        RandomPresetsXml.RemovePreset(doc, PresetKind.Cargo, "foodHermit").Should().BeTrue();
+
+        var xml = RandomPresetsXml.ToXml(doc);
+        xml.Should().NotContain("foodHermit");
+        RandomPresetsXml.Parse(xml).Should().ContainSingle().Which.Name.Should().Be("optics");
+    }
+
+    [Fact]
+    public void DisablePreset_preserves_unrelated_human_comments()
+    {
+        var doc = RandomPresetsXml.ParseDoc(Fixture);
+        RandomPresetsXml.DisablePreset(doc, PresetKind.Attachments, "optics").Should().BeTrue();
+
+        var xml = RandomPresetsXml.ToXml(doc);
+        // The human note must NOT be treated as a disabled preset, and must survive.
+        xml.Should().Contain("<!-- keep me: hermit food drops -->");
+        RandomPresetsXml.Parse(xml).Should().NotContain(p => p.Name == "" && p.Disabled);
+    }
+
+    // ------------------------------------------------------------------
     // Round-trip
     // ------------------------------------------------------------------
 

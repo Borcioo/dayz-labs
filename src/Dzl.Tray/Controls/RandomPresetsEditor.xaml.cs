@@ -69,6 +69,12 @@ public partial class RandomPresetsEditor : UserControl
         }
     }
 
+    private void OnRowToggleDisabledClick(object sender, RoutedEventArgs e)
+    {
+        if (Vm is { } vm && sender is FrameworkElement { DataContext: PresetRowVm row })
+            vm.ToggleDisabled(row);
+    }
+
     private void OnAddItemClick(object sender, RoutedEventArgs e) => Vm?.AddItem();
 
     private void OnAddItemKeyDown(object sender, KeyEventArgs e)

@@ -10,6 +10,7 @@ public sealed class RandomPresetsRules : ICeWorldRule
         var file = world.FileNameOf(CeKind.RandomPresets);
         foreach (var p in world.RandomPresets)
         {
+            if (p.Disabled) continue; // commented-out presets are inert — nothing to validate
             if (p.Chance < 0 || p.Chance > 1)
                 yield return new(LintSeverity.Warning, "preset-chance-range",
                     $"preset '{p.Name}' chance {p.Chance} outside 0..1", file, p.Name, "chance", CeKind.RandomPresets, p.Name);
@@ -40,6 +41,7 @@ public sealed class UnusedPresetRule : ICeWorldRule
         var file = world.FileNameOf(CeKind.RandomPresets);
         foreach (var p in world.RandomPresets)
         {
+            if (p.Disabled) continue; // a disabled preset being unreferenced is expected, not a finding
             var referenced = p.Kind == PresetKind.Attachments ? refdAttach : refdCargo;
             if (!referenced.Contains(p.Name))
                 yield return new(LintSeverity.Info, "unused-preset",

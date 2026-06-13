@@ -10,8 +10,10 @@ public enum PresetKind { Cargo, Attachments }
 public sealed record PresetItem(string Name, double Chance);
 
 /// <summary>One <c>&lt;cargo|attachments chance="…" name="…"&gt;</c> block from
-/// <c>cfgrandompresets.xml</c> with its child items.</summary>
-public sealed record RandomPreset(PresetKind Kind, string Name, double Chance, IReadOnlyList<PresetItem> Items);
+/// <c>cfgrandompresets.xml</c> with its child items. <paramref name="Disabled"/> is true when the preset is
+/// commented out in the file (kept for re-enabling but inert — the game never loads it).</summary>
+public sealed record RandomPreset(PresetKind Kind, string Name, double Chance, IReadOnlyList<PresetItem> Items,
+    bool Disabled = false);
 
 /// <summary>
 /// Pure parse + in-place edit of a DayZ Central Economy <c>cfgrandompresets.xml</c> — the named
@@ -51,23 +53,48 @@ public static class RandomPresetsXml
             if (root is null) return new List<RandomPreset>();
 
             var result = new List<RandomPreset>();
-            foreach (var el in root.Elements())
+            foreach (var node in root.Nodes())
             {
-                var kind = KindOf(el.Name.LocalName);
-                if (kind is null) continue;
-                var name = el.Attribute("name")?.Value?.Trim() ?? "";
-                var chance = ParseChance(el.Attribute("chance")?.Value);
-                var items = el.Elements("item")
-                    .Select(i => new PresetItem(
-                        i.Attribute("name")?.Value?.Trim() ?? "",
-                        ParseChance(i.Attribute("chance")?.Value)))
-                    .Where(i => i.Name.Length > 0)
-                    .ToList();
-                result.Add(new RandomPreset(kind.Value, name, chance, items));
+                if (node is XElement el && KindOf(el.Name.LocalName) is { } kind)
+                    result.Add(BuildPreset(kind, el, disabled: false));
+                else if (node is XComment c && TryParseDisabled(c, out var dk, out _, out var dEl))
+                    result.Add(BuildPreset(dk, dEl!, disabled: true));
             }
             return result;
         }
         catch { return new List<RandomPreset>(); }
+    }
+
+    private static RandomPreset BuildPreset(PresetKind kind, XElement el, bool disabled)
+    {
+        var name = el.Attribute("name")?.Value?.Trim() ?? "";
+        var chance = ParseChance(el.Attribute("chance")?.Value);
+        var items = el.Elements("item")
+            .Select(i => new PresetItem(
+                i.Attribute("name")?.Value?.Trim() ?? "",
+                ParseChance(i.Attribute("chance")?.Value)))
+            .Where(i => i.Name.Length > 0)
+            .ToList();
+        return new RandomPreset(kind, name, chance, items, disabled);
+    }
+
+    /// <summary>True when a comment node holds exactly one commented-out preset element (our disable format).
+    /// Out-params expose its kind/name and the parsed element so callers can restore or remove it.</summary>
+    private static bool TryParseDisabled(XComment c, out PresetKind kind, out string name, out XElement? element)
+    {
+        kind = default; name = ""; element = null;
+        var inner = c.Value.Trim();
+        if (inner.Length == 0 || inner[0] != '<') return false;
+        try
+        {
+            var el = XElement.Parse(inner);
+            if (KindOf(el.Name.LocalName) is not { } k) return false;
+            kind = k;
+            name = el.Attribute("name")?.Value?.Trim() ?? "";
+            element = el;
+            return true;
+        }
+        catch { return false; }
     }
 
     /// <summary>Parse XML to an editable document for use with the edit methods.</summary>
@@ -75,6 +102,11 @@ public static class RandomPresetsXml
 
     private static XElement? FindPreset(XDocument doc, PresetKind kind, string name) =>
         doc.Root?.Elements(ElementName(kind)).ByName(name);
+
+    private static XComment? FindDisabled(XDocument doc, PresetKind kind, string name) =>
+        doc.Root?.Nodes().OfType<XComment>().FirstOrDefault(c =>
+            TryParseDisabled(c, out var k, out var n, out _) &&
+            k == kind && string.Equals(n, name, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Add a new <c>&lt;cargo|attachments name="…" chance="…"&gt;</c> preset (empty item list).
     /// Returns true if added, false if a preset of the same kind + name already exists (case-insensitive).</summary>
@@ -89,12 +121,34 @@ public static class RandomPresetsXml
         return true;
     }
 
-    /// <summary>Remove a preset by kind + name. Returns true if one was removed.</summary>
+    /// <summary>Remove a preset by kind + name — active or disabled (commented). Returns true if removed.</summary>
     public static bool RemovePreset(XDocument doc, PresetKind kind, string name)
+    {
+        if (FindPreset(doc, kind, name) is { } el) { el.Remove(); return true; }
+        if (FindDisabled(doc, kind, name) is { } c) { c.Remove(); return true; }
+        return false;
+    }
+
+    /// <summary>Disable a preset by commenting its element out in place (kept, not deleted, so it can be
+    /// re-enabled later). No-op-false if the preset is absent, already disabled, or its serialized form
+    /// contains <c>--</c> (illegal inside an XML comment). Returns true when it was commented out.</summary>
+    public static bool DisablePreset(XDocument doc, PresetKind kind, string name)
     {
         var el = FindPreset(doc, kind, name);
         if (el is null) return false;
-        el.Remove();
+        var text = el.ToString(SaveOptions.DisableFormatting);
+        if (text.Contains("--", StringComparison.Ordinal)) return false;
+        el.ReplaceWith(new XComment($" {text} "));
+        return true;
+    }
+
+    /// <summary>Re-enable a previously disabled (commented) preset of the given kind + name. Returns true
+    /// when a matching disabled preset was found and restored to a live element.</summary>
+    public static bool EnablePreset(XDocument doc, PresetKind kind, string name)
+    {
+        var c = FindDisabled(doc, kind, name);
+        if (c is null || !TryParseDisabled(c, out _, out _, out var el)) return false;
+        c.ReplaceWith(el!);
         return true;
     }
 

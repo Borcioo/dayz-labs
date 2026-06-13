@@ -88,6 +88,11 @@
                     EnableRowVirtualization="True"
                     RowBackground="Transparent" AlternatingRowBackground="Transparent"
                     CellEditEnding="OnPresetCellEditEnding">
+            <DataGrid.RowStyle>
+              <Style TargetType="DataGridRow">
+                <Setter Property="Opacity" Value="{Binding RowOpacity}" />
+              </Style>
+            </DataGrid.RowStyle>
             <DataGrid.Columns>
               <DataGridTextColumn Header="Kind" Binding="{Binding KindLabel}" IsReadOnly="True" Width="Auto" />
               <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="*" />
@@ -110,6 +115,9 @@
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                      <ui:Button Content="{Binding ToggleLabel}" Padding="6,2" Margin="0,0,3,0" FontSize="11"
+                                 MinWidth="34" Appearance="Secondary"
+                                 ToolTip="{Binding ToggleTooltip}" Click="OnRowToggleDisabledClick" />
                       <ui:Button Icon="{ui:SymbolIcon Rename24}" Padding="5" Margin="0,0,3,0" FontSize="12"
                                  Appearance="Secondary" ToolTip="Rename this preset" Click="OnRowRenamePresetClick" />
                       <ui:Button Icon="{ui:SymbolIcon Delete24}" Padding="5" FontSize="12"

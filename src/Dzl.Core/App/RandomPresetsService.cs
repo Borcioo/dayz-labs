@@ -39,6 +39,26 @@ public sealed class RandomPresetsService : CeFileService
             $"{kind} preset '{name}' not found");
     }
 
+    /// <summary>Disable a preset by commenting it out (kept for re-enabling, but the game won't load it).</summary>
+    public (bool ok, string msg) DisablePreset(PresetKind kind, string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return (false, "preset name must not be empty");
+        return Edit(
+            doc => RandomPresetsXml.DisablePreset(doc, kind, name),
+            $"disabled {kind} preset '{name}'",
+            $"{kind} preset '{name}' not found, already disabled, or its content can't be commented");
+    }
+
+    /// <summary>Re-enable a previously disabled (commented) preset.</summary>
+    public (bool ok, string msg) EnablePreset(PresetKind kind, string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return (false, "preset name must not be empty");
+        return Edit(
+            doc => RandomPresetsXml.EnablePreset(doc, kind, name),
+            $"enabled {kind} preset '{name}'",
+            $"no disabled {kind} preset '{name}' found");
+    }
+
     public (bool ok, string msg) RenamePreset(PresetKind kind, string oldName, string newName)
     {
         if (string.IsNullOrWhiteSpace(oldName)) return (false, "old name must not be empty");

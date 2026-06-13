@@ -98,7 +98,7 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
                      .OrderBy(p => p.Kind)
                      .ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
         {
-            _all.Add(new PresetRowVm(p.Kind, p.Name, p.Chance, p.Items.Count));
+            _all.Add(new PresetRowVm(p.Kind, p.Name, p.Chance, p.Items.Count, p.Disabled));
         }
 
         ApplyFilter();
@@ -202,6 +202,18 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
         if (Report(_svc.RemovePreset(row.Kind, row.Name))) LoadPresetsKeepingSelection();
     }
 
+    /// <summary>Toggle a preset between enabled and disabled (commented out in the file, not deleted), so an
+    /// unused preset can be parked without losing it. Reloads to reflect the new state.</summary>
+    public void ToggleDisabled(PresetRowVm? row)
+    {
+        if (row is null) { Status = "✗ select a preset to toggle"; return; }
+        PushUndo();
+        var result = row.IsDisabled
+            ? _svc.EnablePreset(row.Kind, row.Name)
+            : _svc.DisablePreset(row.Kind, row.Name);
+        if (Report(result)) LoadPresetsKeepingSelection();
+    }
+
     public void RenameSelectedPreset(string newName)
     {
         if (SelectedPreset is not { } row) { Status = "✗ select a preset to rename"; return; }
@@ -275,18 +287,36 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
 /// <summary>One master-list row: a cargo/attachments preset with its chance + item count.</summary>
 public sealed partial class PresetRowVm : ObservableObject
 {
-    public PresetRowVm(PresetKind kind, string name, double chance, int itemCount)
+    public PresetRowVm(PresetKind kind, string name, double chance, int itemCount, bool disabled = false)
     {
         Kind = kind;
         Name = name;
         _chance = chance;
         _chanceText = chance.ToString(CultureInfo.InvariantCulture);
         _itemCount = itemCount;
+        _isDisabled = disabled;
     }
 
     public PresetKind Kind { get; }
     public string Name { get; }
     public string KindLabel => Kind == PresetKind.Cargo ? "cargo" : "attachments";
+
+    /// <summary>True when this preset is commented out in the file (parked/inert). Drives the row's dimmed
+    /// look and the enable/disable toggle's icon + tooltip.</summary>
+    [ObservableProperty] private bool _isDisabled;
+
+    partial void OnIsDisabledChanged(bool value)
+    {
+        OnPropertyChanged(nameof(RowOpacity));
+        OnPropertyChanged(nameof(ToggleTooltip));
+        OnPropertyChanged(nameof(ToggleLabel));
+    }
+
+    /// <summary>Dim disabled rows so parked presets read as inactive at a glance.</summary>
+    public double RowOpacity => IsDisabled ? 0.5 : 1.0;
+
+    public string ToggleLabel => IsDisabled ? "On" : "Off";
+    public string ToggleTooltip => IsDisabled ? "Enable (uncomment) this preset" : "Disable (comment out) this preset";
 
     [ObservableProperty] private double _chance;
 
