@@ -3,47 +3,20 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              x:Name="Root">
-  <!-- A compact value button that opens a slider + number-box popup. Driven entirely by DependencyProperties
-       so it binds anywhere, including a DataGridTemplateColumn cell. Children bind back to Root's properties
-       via ElementName (a UserControl does not inherit the host window's resources, but ElementName to its own
-       named root is always safe). Value is clamped to [Minimum, Maximum] by a coercion callback. -->
-  <!-- The clickable face is a Border (not a ToggleButton): WPF-UI's implicit ToggleButton style fixes the
-       control height and ignores the host's Stretch/Height, which made the field shorter than its neighbours.
-       A Border has no such style, so it stretches to whatever height the host gives the ChanceField — set
-       Height/VerticalAlignment="Stretch" in standalone use to match buttons/combos; leave it unset in a
-       DataGrid cell for the compact row look. -->
-  <Grid>
-    <Border x:Name="Toggle" MinWidth="48" Padding="8,0" CornerRadius="4" Cursor="Hand" Focusable="False"
-            Background="{DynamicResource ControlFillColorDefaultBrush}"
-            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
-            PreviewMouseLeftButtonDown="OnTogglePreviewDown" MouseLeftButtonUp="OnToggleClick">
-      <TextBlock Text="{Binding DisplayText, ElementName=Root}" FontSize="12"
-                 HorizontalAlignment="Center" VerticalAlignment="Center"
-                 Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-    </Border>
-    <Popup x:Name="Pop" PlacementTarget="{Binding ElementName=Toggle}" Placement="Custom"
-           StaysOpen="True" AllowsTransparency="True" Closed="OnPopupClosed">
-      <Border Padding="10" CornerRadius="8" BorderThickness="1"
-              Background="{DynamicResource ApplicationBackgroundBrush}"
-              BorderBrush="{DynamicResource ControlElevationBorderBrush}">
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-          <TextBlock Text="{Binding Minimum, ElementName=Root}" VerticalAlignment="Center" Margin="0,0,6,0"
-                     FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-          <Slider x:Name="Sld" Width="160" VerticalAlignment="Center"
-                  Minimum="{Binding Minimum, ElementName=Root}"
-                  Maximum="{Binding Maximum, ElementName=Root}"
-                  SmallChange="{Binding SmallChange, ElementName=Root}"
-                  LargeChange="{Binding SmallChange, ElementName=Root}"
-                  TickFrequency="{Binding SmallChange, ElementName=Root}" IsSnapToTickEnabled="True"
-                  Value="{Binding Value, ElementName=Root, Mode=TwoWay}" />
-          <TextBlock Text="{Binding Maximum, ElementName=Root}" VerticalAlignment="Center" Margin="6,0,8,0"
-                     FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-          <ui:TextBox x:Name="Num" MinWidth="56" VerticalAlignment="Center" FontSize="12"
-                      TextAlignment="Center"
-                      TextChanged="OnEntryTextChanged"
-                      PreviewTextInput="OnEntryPreviewInput" LostFocus="OnEntryLostFocus" KeyDown="OnNumKeyDown" />
-        </StackPanel>
-      </Border>
-    </Popup>
-  </Grid>
+  <!-- Inline slider + numeric entry, NO popup. A Popup hosting a TextBox inside a DataGrid fights the grid
+       for keyboard focus (the grid yanks focus back to the row right after the click) and is unusable, so the
+       editor lives directly in the cell. Children bind to Root's DPs via ElementName. -->
+  <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+    <Slider x:Name="Sld" Width="110" MinWidth="50" VerticalAlignment="Center"
+            Minimum="{Binding Minimum, ElementName=Root}"
+            Maximum="{Binding Maximum, ElementName=Root}"
+            SmallChange="{Binding SmallChange, ElementName=Root}"
+            LargeChange="{Binding SmallChange, ElementName=Root}"
+            TickFrequency="{Binding SmallChange, ElementName=Root}" IsSnapToTickEnabled="True"
+            Value="{Binding Value, ElementName=Root, Mode=TwoWay}" />
+    <ui:TextBox x:Name="Num" MinWidth="48" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12"
+                TextAlignment="Center" ToolTip="0..1"
+                TextChanged="OnEntryTextChanged" PreviewTextInput="OnEntryPreviewInput"
+                LostFocus="OnEntryLostFocus" KeyDown="OnEntryKeyDown" />
+  </StackPanel>
 </UserControl>
