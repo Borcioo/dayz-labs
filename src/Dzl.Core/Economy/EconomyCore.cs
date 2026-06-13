@@ -2,7 +2,9 @@ using System.Xml.Linq;
 
 namespace Dzl.Core.Economy;
 
-public enum CeKind { Types, SpawnableTypes, Events, RandomPresets, Globals, Other }
+// New kinds appended (PlayerSpawns/Dictionaries) so existing ordinals stay put. cfgeconomycore.xml's
+// type= only maps the first five (+ Other); the CE validation grouping uses the full set.
+public enum CeKind { Types, SpawnableTypes, Events, RandomPresets, Globals, Other, PlayerSpawns, Dictionaries }
 public enum CeOrigin { Vanilla, Mod, Custom }
 
 public sealed record CeFileRef(string Path, CeKind Kind, CeOrigin Origin, string ModSource);
