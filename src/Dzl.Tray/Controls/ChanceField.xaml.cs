@@ -195,6 +195,10 @@ public partial class ChanceField : UserControl
         _openValue = Value; // baseline so closing only commits when the value actually changed
         SyncEntryFromValue(); // seed the entry from the current value
         Pop.IsOpen = true;
+        // In a DataGrid the row keeps keyboard focus, so the popup entry/slider would be dead to typing and
+        // arrows. Pull focus into the entry once the popup has rendered.
+        Dispatcher.BeginInvoke(new Action(() => { Num.Focus(); Num.SelectAll(); }),
+            System.Windows.Threading.DispatcherPriority.Input);
         _hookedWindow = Window.GetWindow(this);
         if (_hookedWindow is not null) _hookedWindow.PreviewMouseDown += OnHostMouseDown;
     }
