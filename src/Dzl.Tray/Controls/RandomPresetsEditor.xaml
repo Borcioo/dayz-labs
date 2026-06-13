@@ -204,10 +204,15 @@
               <ColumnDefinition Width="Auto" />
               <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <ui:TextBox Grid.Column="0" Margin="0,0,4,0" FontSize="12"
-                        PlaceholderText="item classname (e.g. TunaCan)"
-                        Text="{Binding NewItemName, UpdateSourceTrigger=PropertyChanged}"
-                        KeyDown="OnAddItemKeyDown" />
+            <!-- Editable autocomplete: substring-search item classnames from types.xml (free text still
+                 allowed — preset items may reference classes outside the economy). We filter ItemSuggestions
+                 in the VM, so the combo's own text-search is off. -->
+            <ComboBox Grid.Column="0" Margin="0,0,4,0" FontSize="12" x:Name="ItemNameCombo"
+                      IsEditable="True" StaysOpenOnEdit="True" IsTextSearchEnabled="False"
+                      ItemsSource="{Binding ItemSuggestions}"
+                      Text="{Binding NewItemName, UpdateSourceTrigger=PropertyChanged}"
+                      ToolTip="Type to search item classnames (from types.xml) — free text allowed"
+                      KeyUp="OnItemComboKeyUp" />
             <ui:TextBox Grid.Column="1" Width="64" Margin="0,0,4,0" FontSize="12"
                         ToolTip="chance 0..1"
                         Text="{Binding NewItemChance, UpdateSourceTrigger=PropertyChanged}"

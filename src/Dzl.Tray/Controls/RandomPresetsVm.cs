@@ -18,6 +18,7 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
 {
     private readonly RandomPresetsService _svc;
     private readonly SpawnableTypesService _spawnSvc;
+    private readonly TypesService _types;
     private readonly Func<string, bool> _confirm;
     private readonly CeValidator _validator = new();
     private bool _suspendItemPersist;
@@ -25,14 +26,17 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
     /// <param name="configPath">The resolved dzl config path.</param>
     /// <param name="confirm">Modal yes/no confirmation (returns true on Yes).</param>
     public RandomPresetsVm(string configPath, Func<string, bool> confirm)
-        : this(new RandomPresetsService(configPath), new SpawnableTypesService(configPath), confirm) { }
+        : this(new RandomPresetsService(configPath), new SpawnableTypesService(configPath),
+               new TypesService(configPath), confirm) { }
 
-    private RandomPresetsVm(RandomPresetsService svc, SpawnableTypesService spawnSvc, Func<string, bool> confirm)
+    private RandomPresetsVm(RandomPresetsService svc, SpawnableTypesService spawnSvc, TypesService types,
+                            Func<string, bool> confirm)
         : base(svc.ReadRaw, svc.WriteRaw, svc.PresetsPath,
                "(no cfgrandompresets.xml — pick/scaffold a server mission)")
     {
         _svc = svc;
         _spawnSvc = spawnSvc;
+        _types = types;
         _confirm = confirm;
     }
 
@@ -48,6 +52,7 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
     public override void Reload()
     {
         _spawnTypes = null;
+        _typeNames = null;
         base.Reload();
     }
 
@@ -56,6 +61,22 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
     /// this on <see cref="Reload"/>, not per edit.</summary>
     private List<SpawnableType>? _spawnTypes;
     private List<SpawnableType> SpawnTypes => _spawnTypes ??= _spawnSvc.Load();
+
+    /// <summary>Distinct classnames from every Types file of the mission — the suggestion pool for the
+    /// add-item box (a preset item references an item classname). Cached; refreshed on <see cref="Reload"/>.
+    /// Not a hard allowlist: preset items may legitimately reference classes outside types.xml, so free text
+    /// stays valid — this only powers autocomplete.</summary>
+    private List<string>? _typeNames;
+    private List<string> TypeNames => _typeNames ??= _types.List()
+        .Select(e => e.Name)
+        .Where(n => !string.IsNullOrEmpty(n))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    /// <summary>Up to 50 classnames matching the current add-item text (substring, case-insensitive),
+    /// shown in the add-item combo's dropdown.</summary>
+    public ObservableCollection<string> ItemSuggestions { get; } = new();
 
     /// <summary>Unfiltered backing store (all presets, sorted).</summary>
     private readonly List<PresetRowVm> _all = new();
@@ -84,6 +105,19 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
     // new-item form
     [ObservableProperty] private string _newItemName = "";
     [ObservableProperty] private string _newItemChance = "1.0";
+
+    partial void OnNewItemNameChanged(string value) => RefreshItemSuggestions(value);
+
+    private void RefreshItemSuggestions(string text)
+    {
+        ItemSuggestions.Clear();
+        var q = (text ?? "").Trim();
+        if (q.Length == 0) return;
+        foreach (var n in TypeNames
+                     .Where(n => n.Contains(q, StringComparison.OrdinalIgnoreCase))
+                     .Take(50))
+            ItemSuggestions.Add(n);
+    }
 
     /// <inheritdoc/>
     protected override void ReloadView() => LoadPresetsKeepingSelection();

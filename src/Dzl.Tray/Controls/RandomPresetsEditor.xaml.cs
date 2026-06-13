@@ -82,6 +82,22 @@ public partial class RandomPresetsEditor : UserControl
         if (e.Key == Key.Enter) { Vm?.AddItem(); e.Handled = true; }
     }
 
+    // Add-item classname combo: open the suggestion dropdown as the user types; Enter adds the item
+    // (after the combo has committed any arrow-highlighted suggestion into the text on its own KeyDown).
+    private void OnItemComboKeyUp(object sender, KeyEventArgs e)
+    {
+        if (sender is not ComboBox cb) return;
+        if (e.Key == Key.Enter)
+        {
+            cb.IsDropDownOpen = false;
+            Vm?.AddItem();
+            e.Handled = true;
+            return;
+        }
+        if (e.Key is Key.Escape or Key.Up or Key.Down) return;
+        cb.IsDropDownOpen = Vm is { ItemSuggestions.Count: > 0 };
+    }
+
     private void OnRemoveItemClick(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.Tag is PresetItemVm item) Vm?.RemoveItem(item);
