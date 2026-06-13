@@ -50,6 +50,25 @@ public partial class RandomPresetsEditor : UserControl
         vm.RenameSelectedPreset(next.Trim());
     }
 
+    // Per-row quick actions: select that row, then reuse the rename/remove flow.
+    private void OnRowRenamePresetClick(object sender, RoutedEventArgs e)
+    {
+        if (Vm is { } vm && sender is FrameworkElement { DataContext: PresetRowVm row })
+        {
+            vm.SelectedPreset = row;
+            OnRenamePresetClick(sender, e);
+        }
+    }
+
+    private void OnRowRemovePresetClick(object sender, RoutedEventArgs e)
+    {
+        if (Vm is { } vm && sender is FrameworkElement { DataContext: PresetRowVm row })
+        {
+            vm.SelectedPreset = row;
+            vm.RemoveSelectedPreset();
+        }
+    }
+
     private void OnAddItemClick(object sender, RoutedEventArgs e) => Vm?.AddItem();
 
     private void OnAddItemKeyDown(object sender, KeyEventArgs e)

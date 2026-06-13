@@ -69,7 +69,6 @@
             <RowDefinition Height="Auto" />  <!-- filter -->
             <RowDefinition Height="*" />     <!-- grid -->
             <RowDefinition Height="Auto" />  <!-- add row -->
-            <RowDefinition Height="Auto" />  <!-- actions -->
           </Grid.RowDefinitions>
 
           <TextBlock Grid.Row="0" Text="Presets" Style="{StaticResource RpSectionHeader}" Margin="0,0,0,6" />
@@ -95,6 +94,19 @@
                                   Binding="{Binding ChanceText, UpdateSourceTrigger=LostFocus}"
                                   Width="80" />
               <DataGridTextColumn Header="#items" Binding="{Binding ItemCount}" IsReadOnly="True" Width="60" />
+              <!-- Per-row quick actions -->
+              <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                      <ui:Button Icon="{ui:SymbolIcon Rename24}" Padding="5" Margin="0,0,3,0" FontSize="12"
+                                 Appearance="Secondary" ToolTip="Rename this preset" Click="OnRowRenamePresetClick" />
+                      <ui:Button Icon="{ui:SymbolIcon Delete24}" Padding="5" FontSize="12"
+                                 Appearance="Danger" ToolTip="Remove this preset" Click="OnRowRemovePresetClick" />
+                    </StackPanel>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
             </DataGrid.Columns>
           </DataGrid>
 
@@ -121,12 +133,6 @@
             <ui:Button Grid.Column="3" Content="Add" Click="OnAddPresetClick" />
           </Grid>
 
-          <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,6,0,0">
-            <ui:Button Content="Rename" Margin="0,0,4,0" FontSize="12" Click="OnRenamePresetClick"
-                       ToolTip="Rename the selected preset" />
-            <ui:Button Content="Remove" FontSize="12" Click="OnRemovePresetClick"
-                       ToolTip="Remove the selected preset and its items" />
-          </StackPanel>
         </Grid>
       </Border>
 
