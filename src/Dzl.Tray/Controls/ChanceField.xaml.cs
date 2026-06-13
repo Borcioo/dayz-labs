@@ -67,7 +67,7 @@ public partial class ChanceField : UserControl
     }
 
     public static readonly DependencyProperty DecimalsProperty = DependencyProperty.Register(
-        nameof(Decimals), typeof(int), typeof(ChanceField), new PropertyMetadata(3, OnVisualAffectingChanged));
+        nameof(Decimals), typeof(int), typeof(ChanceField), new PropertyMetadata(2, OnVisualAffectingChanged));
 
     public int Decimals
     {

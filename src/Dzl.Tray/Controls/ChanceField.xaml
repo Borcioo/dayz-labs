@@ -28,6 +28,7 @@
                   Maximum="{Binding Maximum, ElementName=Root}"
                   SmallChange="{Binding SmallChange, ElementName=Root}"
                   LargeChange="{Binding SmallChange, ElementName=Root}"
+                  TickFrequency="{Binding SmallChange, ElementName=Root}" IsSnapToTickEnabled="True"
                   Value="{Binding Value, ElementName=Root, Mode=TwoWay}" />
           <TextBlock Text="{Binding Maximum, ElementName=Root}" VerticalAlignment="Center" Margin="6,0,8,0"
                      FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
