@@ -2,6 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:ctl="clr-namespace:Dzl.Tray.Controls"
              x:Name="Root">
   <!-- DataContext = RandomPresetsVm. Edits cfgrandompresets.xml: master list of cargo/attachments presets
        (left) + the item grid of the selected preset (right). Every edit routes through the VM →
@@ -159,10 +160,8 @@
             </Grid.ColumnDefinitions>
             <ui:TextBox Grid.Column="0" Margin="0,0,4,0" FontSize="12" PlaceholderText="new preset name"
                         Text="{Binding NewPresetName, UpdateSourceTrigger=PropertyChanged}" />
-            <ui:NumberBox Grid.Column="1" Width="120" Margin="0,0,4,0" FontSize="12"
-                          ToolTip="chance 0..1" Minimum="0" Maximum="1"
-                          SmallChange="0.05" LargeChange="0.1" MaxDecimalPlaces="3" SpinButtonPlacementMode="Compact" ClearButtonEnabled="False"
-                          Value="{Binding NewPresetChanceValue, Mode=TwoWay}" />
+            <ctl:ChanceField Grid.Column="1" Margin="0,0,4,0" VerticalAlignment="Center"
+                             Value="{Binding NewPresetChanceValue, Mode=TwoWay}" />
             <ComboBox Grid.Column="2" MinWidth="110" Margin="0,0,4,0" VerticalAlignment="Center"
                       SelectedIndex="0"
                       SelectionChanged="OnNewKindChanged" ToolTip="preset kind"
@@ -206,10 +205,8 @@
                 <ui:TextBox Grid.Column="0" Margin="0,0,4,0" FontSize="12" PlaceholderText="preset name"
                             Text="{Binding EditName, UpdateSourceTrigger=PropertyChanged}"
                             KeyDown="OnEditNameKeyDown" />
-                <ui:NumberBox Grid.Column="1" Width="120" Margin="0,0,4,0" FontSize="12" ToolTip="chance 0..1"
-                              Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" MaxDecimalPlaces="3" SpinButtonPlacementMode="Compact" ClearButtonEnabled="False"
-                              Value="{Binding EditChanceValue, Mode=TwoWay}"
-                              KeyDown="OnEditNameKeyDown" />
+                <ctl:ChanceField Grid.Column="1" Margin="0,0,4,0" VerticalAlignment="Center"
+                                 Value="{Binding EditChanceValue, Mode=TwoWay}" />
                 <ComboBox Grid.Column="2" MinWidth="120" Margin="0,0,4,0" VerticalAlignment="Center"
                           SelectedIndex="{Binding EditKindIndex}" ToolTip="preset kind (cargo / attachments)">
                   <ComboBoxItem Content="cargo" />
@@ -267,11 +264,8 @@
                       Text="{Binding NewItemName, UpdateSourceTrigger=PropertyChanged}"
                       ToolTip="Type to search item classnames (from types.xml) — free text allowed"
                       KeyUp="OnItemComboKeyUp" SelectionChanged="OnItemComboSelectionChanged" />
-            <ui:NumberBox Grid.Column="1" Width="120" Margin="0,0,4,0" FontSize="12"
-                          ToolTip="chance 0..1" Minimum="0" Maximum="1"
-                          SmallChange="0.05" LargeChange="0.1" MaxDecimalPlaces="3" SpinButtonPlacementMode="Compact" ClearButtonEnabled="False"
-                          Value="{Binding NewItemChanceValue, Mode=TwoWay}"
-                          KeyDown="OnAddItemKeyDown" />
+            <ctl:ChanceField Grid.Column="1" Margin="0,0,4,0" VerticalAlignment="Center"
+                             Value="{Binding NewItemChanceValue, Mode=TwoWay}" />
             <ui:Button Grid.Column="2" Content="Add item" Click="OnAddItemClick" />
           </Grid>
 
