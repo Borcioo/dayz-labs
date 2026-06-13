@@ -183,16 +183,44 @@
               BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
         <Grid>
           <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />  <!-- edit card -->
             <RowDefinition Height="Auto" />  <!-- title -->
             <RowDefinition Height="*" />     <!-- item grid -->
             <RowDefinition Height="Auto" />  <!-- add item row -->
             <RowDefinition Height="Auto" />  <!-- validation findings -->
           </Grid.RowDefinitions>
 
-          <TextBlock Grid.Row="0" Margin="0,0,0,6" Style="{StaticResource RpSectionHeader}"
+          <!-- ===== Edit preset: rename + change kind (cargo/attachments) ===== -->
+          <Border Grid.Row="0" CornerRadius="6" Padding="10" Margin="0,0,0,10"
+                  Background="{DynamicResource ControlFillColorDefaultBrush}"
+                  BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                  Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+              <TextBlock Text="Edit preset" Style="{StaticResource RpSectionHeader}" Margin="0,0,0,6" />
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBox Grid.Column="0" Margin="0,0,4,0" FontSize="12" PlaceholderText="preset name"
+                            Text="{Binding EditName, UpdateSourceTrigger=PropertyChanged}"
+                            KeyDown="OnEditNameKeyDown" />
+                <ComboBox Grid.Column="1" MinWidth="120" Margin="0,0,4,0" VerticalAlignment="Center"
+                          SelectedIndex="{Binding EditKindIndex}" ToolTip="preset kind (cargo / attachments)">
+                  <ComboBoxItem Content="cargo" />
+                  <ComboBoxItem Content="attachments" />
+                </ComboBox>
+                <ui:Button Grid.Column="2" Content="Rename" Click="OnApplyRenameClick"
+                           ToolTip="Apply the new name" />
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <TextBlock Grid.Row="1" Margin="0,0,0,6" Style="{StaticResource RpSectionHeader}"
                      Text="Items in the selected preset" />
 
-          <DataGrid Grid.Row="1" x:Name="ItemGrid"
+          <DataGrid Grid.Row="2" x:Name="ItemGrid"
                     ItemsSource="{Binding Items}"
                     AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                     HeadersVisibility="Column" GridLinesVisibility="Horizontal"
@@ -220,7 +248,7 @@
           </DataGrid>
 
           <!-- Add item -->
-          <Grid Grid.Row="2" Margin="0,8,0,0">
+          <Grid Grid.Row="3" Margin="0,8,0,0">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="*" />
               <ColumnDefinition Width="Auto" />
@@ -243,7 +271,7 @@
           </Grid>
 
           <!-- ===== Per-page validation (chance ranges + unused presets) ===== -->
-          <Border Grid.Row="3" Margin="0,10,0,0" CornerRadius="6" Padding="8" MaxHeight="180"
+          <Border Grid.Row="4" Margin="0,10,0,0" CornerRadius="6" Padding="8" MaxHeight="180"
                   Background="{DynamicResource ControlFillColorDefaultBrush}"
                   BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
             <Border.Style>

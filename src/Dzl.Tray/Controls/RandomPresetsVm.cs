@@ -89,6 +89,15 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
 
     [ObservableProperty] private PresetRowVm? _selectedPreset;
 
+    /// <summary>True when a preset is selected — gates the right-column "Edit preset" card.</summary>
+    public bool HasSelection => SelectedPreset is not null;
+
+    // "Edit preset" card (right column): live name + kind of the selected preset.
+    [ObservableProperty] private string _editName = "";
+    /// <summary>0 = cargo, 1 = attachments (binds the kind combo).</summary>
+    [ObservableProperty] private int _editKindIndex;
+    private bool _suspendCardSync;
+
     [ObservableProperty] private string _filter = "";
 
     partial void OnFilterChanged(string value) => ApplyFilter();
@@ -204,7 +213,53 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
         SelectedPreset = Presets.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
     }
 
-    partial void OnSelectedPresetChanged(PresetRowVm? value) => LoadItemsForSelected();
+    partial void OnSelectedPresetChanged(PresetRowVm? value)
+    {
+        // Sync the edit card to the new selection without echoing back as a rename/kind change.
+        _suspendCardSync = true;
+        EditName = value?.Name ?? "";
+        EditKindIndex = value is { Kind: PresetKind.Attachments } ? 1 : 0;
+        _suspendCardSync = false;
+        OnPropertyChanged(nameof(HasSelection));
+        LoadItemsForSelected();
+    }
+
+    partial void OnEditKindIndexChanged(int value)
+    {
+        if (!_suspendCardSync) ChangeSelectedKind(toCargo: value == 0);
+    }
+
+    /// <summary>Apply the edit-card name box to the selected preset (rename).</summary>
+    public void ApplyRename()
+    {
+        if (SelectedPreset is not { } row) return;
+        var next = (EditName ?? "").Trim();
+        if (next.Length == 0) { Status = "✗ name must not be empty"; return; }
+        if (string.Equals(next, row.Name, StringComparison.Ordinal)) return;
+        RenameSelectedPreset(next);
+    }
+
+    /// <summary>Move the selected preset between cargo and attachments (from the edit-card kind combo).</summary>
+    public void ChangeSelectedKind(bool toCargo)
+    {
+        if (SelectedPreset is not { } row) return;
+        var to = toCargo ? PresetKind.Cargo : PresetKind.Attachments;
+        if (row.Kind == to) return;
+        PushUndo();
+        if (Report(_svc.SetPresetKind(row.Kind, row.Name, to)))
+        {
+            var name = row.Name;
+            LoadPresetsKeepingSelection();
+            SelectedPreset = Presets.FirstOrDefault(r => r.Kind == to &&
+                string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
+        }
+        else
+        {
+            _suspendCardSync = true; // revert the combo to the unchanged kind
+            EditKindIndex = row.Kind == PresetKind.Attachments ? 1 : 0;
+            _suspendCardSync = false;
+        }
+    }
 
     private void LoadItemsForSelected()
     {

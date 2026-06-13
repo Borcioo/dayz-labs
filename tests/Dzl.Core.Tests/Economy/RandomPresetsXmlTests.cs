@@ -241,6 +241,58 @@ public class RandomPresetsXmlTests
     }
 
     [Fact]
+    public void DisablePreset_lifts_inner_comments_out_and_still_round_trips()
+    {
+        // A preset whose body contains a dev note (vanilla pattern) — the inner comment carries "--",
+        // which would otherwise make the disabled block illegal. It must be lifted out, not block disable.
+        const string xml = """
+            <randompresets>
+              <attachments chance="0.00" name="glassesArmy">
+                <!--was chance="0.10"; removed coz slot missing -->
+                <item name="TacticalGoggles" chance="0.10" />
+              </attachments>
+            </randompresets>
+            """;
+        var doc = RandomPresetsXml.ParseDoc(xml);
+
+        RandomPresetsXml.DisablePreset(doc, PresetKind.Attachments, "glassesArmy").Should().BeTrue();
+
+        var outXml = RandomPresetsXml.ToXml(doc);
+        outXml.Should().Contain("removed coz slot missing");        // note preserved (now a sibling)
+        var parsed = RandomPresetsXml.Parse(outXml);
+        parsed.Single(p => p.Name == "glassesArmy").Disabled.Should().BeTrue();
+
+        // And it re-enables cleanly back to a live element.
+        RandomPresetsXml.EnablePreset(doc, PresetKind.Attachments, "glassesArmy").Should().BeTrue();
+        var revived = RandomPresetsXml.Parse(RandomPresetsXml.ToXml(doc)).Single(p => p.Name == "glassesArmy");
+        revived.Disabled.Should().BeFalse();
+        revived.Items.Should().ContainSingle().Which.Name.Should().Be("TacticalGoggles");
+    }
+
+    [Fact]
+    public void SetPresetKind_moves_between_cargo_and_attachments_preserving_items()
+    {
+        var doc = RandomPresetsXml.ParseDoc(Fixture);
+
+        RandomPresetsXml.SetPresetKind(doc, PresetKind.Cargo, "foodHermit", PresetKind.Attachments).Should().BeTrue();
+
+        var moved = RandomPresetsXml.Parse(RandomPresetsXml.ToXml(doc)).Single(p => p.Name == "foodHermit");
+        moved.Kind.Should().Be(PresetKind.Attachments);
+        moved.Items.Should().HaveCount(2); // items survive the kind change
+    }
+
+    [Fact]
+    public void SetPresetKind_noops_same_kind_and_rejects_target_clash()
+    {
+        var doc = RandomPresetsXml.ParseDoc(Fixture);
+        RandomPresetsXml.AddPreset(doc, PresetKind.Attachments, "foodHermit", 0.2); // clash target
+
+        RandomPresetsXml.SetPresetKind(doc, PresetKind.Cargo, "foodHermit", PresetKind.Cargo).Should().BeTrue();
+        RandomPresetsXml.SetPresetKind(doc, PresetKind.Cargo, "foodHermit", PresetKind.Attachments).Should().BeFalse();
+        RandomPresetsXml.SetPresetKind(doc, PresetKind.Cargo, "ghost", PresetKind.Attachments).Should().BeFalse();
+    }
+
+    [Fact]
     public void DisablePreset_preserves_unrelated_human_comments()
     {
         var doc = RandomPresetsXml.ParseDoc(Fixture);

@@ -83,6 +83,13 @@ public partial class RandomPresetsEditor : UserControl
         if (vm.SelectedPreset is { } sel) PresetGrid.ScrollIntoView(sel);
     }
 
+    private void OnApplyRenameClick(object sender, RoutedEventArgs e) => Vm?.ApplyRename();
+
+    private void OnEditNameKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter) { Vm?.ApplyRename(); e.Handled = true; }
+    }
+
     private void OnAddItemClick(object sender, RoutedEventArgs e) => Vm?.AddItem();
 
     private void OnAddItemKeyDown(object sender, KeyEventArgs e)

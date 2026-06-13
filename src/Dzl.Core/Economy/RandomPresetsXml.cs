@@ -130,15 +130,41 @@ public static class RandomPresetsXml
     }
 
     /// <summary>Disable a preset by commenting its element out in place (kept, not deleted, so it can be
-    /// re-enabled later). No-op-false if the preset is absent, already disabled, or its serialized form
-    /// contains <c>--</c> (illegal inside an XML comment). Returns true when it was commented out.</summary>
+    /// re-enabled later). Any comments inside the preset (e.g. vanilla dev notes) are lifted out as siblings
+    /// just before the disabled block — XML comments can't nest, and they'd carry illegal <c>--</c>. Returns
+    /// false only if the preset is absent or its serialized form still contains <c>--</c> (e.g. a class name
+    /// with a double hyphen).</summary>
     public static bool DisablePreset(XDocument doc, PresetKind kind, string name)
     {
         var el = FindPreset(doc, kind, name);
         if (el is null) return false;
+
+        // Pull inner comments out so the payload is comment-free (notes survive as siblings).
+        var notes = el.DescendantNodes().OfType<XComment>().ToList();
+        foreach (var c in notes) c.Remove();
+
         var text = el.ToString(SaveOptions.DisableFormatting);
-        if (text.Contains("--", StringComparison.Ordinal)) return false;
-        el.ReplaceWith(new XComment($" {text} "));
+        if (text.Contains("--", StringComparison.Ordinal))
+        {
+            foreach (var c in notes) el.Add(c); // bail: best-effort restore of the notes we lifted
+            return false;
+        }
+
+        var replacement = new List<XNode>(notes) { new XComment($" {text} ") };
+        el.ReplaceWith(replacement.Cast<object>().ToArray());
+        return true;
+    }
+
+    /// <summary>Change a preset's kind (cargo ↔ attachments) in place, preserving its name/chance/items and
+    /// position. No-op-true if already that kind; false if the source is absent or a preset of the target
+    /// kind already uses the name.</summary>
+    public static bool SetPresetKind(XDocument doc, PresetKind from, string name, PresetKind to)
+    {
+        var el = FindPreset(doc, from, name);
+        if (el is null) return false;
+        if (from == to) return true;
+        if (FindPreset(doc, to, name) is not null) return false;
+        el.Name = ElementName(to);
         return true;
     }
 

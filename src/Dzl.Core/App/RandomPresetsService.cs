@@ -59,6 +59,16 @@ public sealed class RandomPresetsService : CeFileService
             $"no disabled {kind} preset '{name}' found");
     }
 
+    /// <summary>Change a preset's kind (cargo ↔ attachments), keeping its name/chance/items.</summary>
+    public (bool ok, string msg) SetPresetKind(PresetKind from, string name, PresetKind to)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return (false, "preset name must not be empty");
+        return Edit(
+            doc => RandomPresetsXml.SetPresetKind(doc, from, name, to),
+            $"changed '{name}' kind {from} → {to}",
+            $"can't change kind: '{name}' not found or a {to} preset '{name}' already exists");
+    }
+
     public (bool ok, string msg) RenamePreset(PresetKind kind, string oldName, string newName)
     {
         if (string.IsNullOrWhiteSpace(oldName)) return (false, "old name must not be empty");
