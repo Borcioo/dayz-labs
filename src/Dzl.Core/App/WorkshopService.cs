@@ -9,8 +9,8 @@ namespace Dzl.Core.App;
 public sealed record SubscribedItem(string Id, string Name, string Dir);
 
 /// <summary>
-/// SP5 Steam Workshop: search (Steam Web API — needs a key) and download/update (steamcmd — owned/DayZ
-/// items need a Steam login). One facade per frontend; HTTP + process work live in <c>Dzl.Core.Workshop</c>.
+/// Steam Workshop facade: keyless search/browse plus download/update via steamcmd (owned/DayZ
+/// items need a Steam login). HTTP + process work live in <c>Dzl.Core.Workshop</c>.
 /// </summary>
 public sealed class WorkshopService
 {

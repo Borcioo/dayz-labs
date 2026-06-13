@@ -3,11 +3,8 @@ using Dzl.Core.Economy;
 namespace Dzl.Core.App;
 
 /// <summary>
-/// Facade for editing the active server instance's mission <c>cfgspawnabletypes.xml</c> — the per-type
+/// Facade for editing the active mission's <c>cfgspawnabletypes.xml</c> — the per-type
 /// hoarder flag, damage range, and cargo/attachments blocks (preset-based or inline chance-based).
-/// Mirrors the <see cref="RandomPresetsService"/> pattern: one facade per frontend, never throws (returns
-/// ok+message), snapshots a backup (<see cref="CeBackup"/>) before every write, edits in place so
-/// comments/order survive a round-trip (<see cref="SpawnableTypesXml"/>).
 /// </summary>
 public sealed class SpawnableTypesService : CeFileService
 {
@@ -23,10 +20,6 @@ public sealed class SpawnableTypesService : CeFileService
     /// <summary>Read all spawnable types. Returns an empty list when the file is absent or unresolvable.</summary>
     public List<SpawnableType> Load() => LoadList(SpawnableTypesXml.Parse);
 
-    // ------------------------------------------------------------------
-    // Type-level edits
-    // ------------------------------------------------------------------
-
     /// <summary>Add a new empty type. No-op when the name already exists (case-insensitive).</summary>
     public (bool ok, string msg) AddType(string name)
     {
@@ -37,7 +30,6 @@ public sealed class SpawnableTypesService : CeFileService
             $"type '{name}' already exists");
     }
 
-    /// <summary>Remove a type by name.</summary>
     public (bool ok, string msg) RemoveType(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return (false, "type name must not be empty");
@@ -47,7 +39,6 @@ public sealed class SpawnableTypesService : CeFileService
             $"type '{name}' not found");
     }
 
-    /// <summary>Rename a type.</summary>
     public (bool ok, string msg) RenameType(string oldName, string newName)
     {
         if (string.IsNullOrWhiteSpace(oldName)) return (false, "old name must not be empty");
@@ -78,10 +69,6 @@ public sealed class SpawnableTypesService : CeFileService
             $"type '{name}' not found");
     }
 
-    // ------------------------------------------------------------------
-    // Block-level edits
-    // ------------------------------------------------------------------
-
     /// <summary>Add a block (preset-based when <paramref name="preset"/> is non-empty, else chance-based).</summary>
     public (bool ok, string msg) AddBlock(string typeName, bool isAttachments, string? preset, double? chance)
     {
@@ -93,7 +80,6 @@ public sealed class SpawnableTypesService : CeFileService
             $"type '{typeName}' not found");
     }
 
-    /// <summary>Remove a block by kind + index.</summary>
     public (bool ok, string msg) RemoveBlock(string typeName, bool isAttachments, int index)
     {
         if (string.IsNullOrWhiteSpace(typeName)) return (false, "type name must not be empty");
@@ -126,10 +112,6 @@ public sealed class SpawnableTypesService : CeFileService
             $"set chance on {kind} block of '{typeName}'",
             $"{kind} block #{index} not found on '{typeName}'");
     }
-
-    // ------------------------------------------------------------------
-    // Item-level edits (inside chance blocks)
-    // ------------------------------------------------------------------
 
     /// <summary>Add an item to a chance block.</summary>
     public (bool ok, string msg) AddItem(string typeName, bool isAttachments, int index, string itemName, double chance)

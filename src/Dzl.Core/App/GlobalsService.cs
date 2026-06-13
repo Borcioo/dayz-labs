@@ -3,11 +3,8 @@ using Dzl.Core.Economy;
 namespace Dzl.Core.App;
 
 /// <summary>
-/// Facade for editing the active server instance's mission <c>db/globals.xml</c> — the flat list of
+/// Facade for editing the active mission's <c>db/globals.xml</c> — the flat list of
 /// simulation variables (animal counts, loot damage limits, etc.).
-/// Mirrors the <see cref="RandomPresetsService"/> pattern: one facade per frontend, never throws (returns
-/// ok+message), snapshots a backup (<see cref="CeBackup"/>) before every write, edits in place so
-/// comments/order survive a round-trip (<see cref="GlobalsXml"/>).
 /// </summary>
 public sealed class GlobalsService : CeFileService
 {
@@ -23,10 +20,6 @@ public sealed class GlobalsService : CeFileService
     /// <summary>Read all globals vars. Returns an empty list when the file is absent or unresolvable.</summary>
     public List<GlobalVar> Load() => LoadList(GlobalsXml.Parse);
 
-    // ------------------------------------------------------------------
-    // Var-level edits
-    // ------------------------------------------------------------------
-
     /// <summary>Upsert (add or update) a var. Returns ok=true with a message describing what happened.</summary>
     public (bool ok, string msg) SetVar(string name, int type, string value)
     {
@@ -37,7 +30,6 @@ public sealed class GlobalsService : CeFileService
             $"failed to set var '{name}'");
     }
 
-    /// <summary>Remove a var by name.</summary>
     public (bool ok, string msg) RemoveVar(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return (false, "var name must not be empty");

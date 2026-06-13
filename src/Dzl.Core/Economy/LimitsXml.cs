@@ -21,10 +21,6 @@ public enum LimitsKind { Usage, Value, Tag, Category }
 /// </summary>
 public static class LimitsXml
 {
-    // ------------------------------------------------------------------
-    // Read-only parse (existing, never-throw)
-    // ------------------------------------------------------------------
-
     public static LimitsDef Parse(string xml)
     {
         try
@@ -44,14 +40,9 @@ public static class LimitsXml
         catch { return LimitsDef.Empty; }
     }
 
-    // ------------------------------------------------------------------
-    // In-place edit helpers
-    // ------------------------------------------------------------------
-
     /// <summary>Parse XML to an editable document for use with the edit methods.</summary>
     public static XDocument ParseDoc(string xml) => CeXml.ParseDoc(xml);
 
-    /// <summary>Map a <see cref="LimitsKind"/> to the XML container element name and child element name.</summary>
     private static (string Container, string Child) KindNames(LimitsKind kind) => kind switch
     {
         LimitsKind.Usage    => ("usageflags", "usage"),
@@ -61,12 +52,9 @@ public static class LimitsXml
         _                   => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 
-    /// <summary>Find the container element for the given <paramref name="kind"/> under the document root,
-    /// or return null if it does not exist. Never mutates the document.</summary>
     private static XElement? FindContainer(XElement root, string containerName) =>
         root.Element(containerName);
 
-    /// <summary>Find or create the container element for the given <paramref name="kind"/> under the document root.</summary>
     private static XElement GetOrCreateContainer(XDocument doc, LimitsKind kind)
     {
         var (containerName, _) = KindNames(kind);

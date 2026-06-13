@@ -24,10 +24,6 @@ public static class CeBackup
     private static string Stem(string filePath) => Path.GetFileNameWithoutExtension(filePath);
     private static string Ext(string filePath)  => Path.GetExtension(filePath);
 
-    // -------------------------------------------------------------------
-    // Public API
-    // -------------------------------------------------------------------
-
     /// <summary>Snapshot the current file (if any). Prunes the backup folder to <see cref="Keep"/> afterwards.</summary>
     public static void Snapshot(string filePath) => SnapshotWithId(filePath, id: null);
 
@@ -100,10 +96,6 @@ public static class CeBackup
         }
         catch { return false; }
     }
-
-    // -------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------
 
     private static void Prune(string filePath, string dir)
     {

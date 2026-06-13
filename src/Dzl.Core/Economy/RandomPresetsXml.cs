@@ -14,21 +14,14 @@ public sealed record PresetItem(string Name, double Chance);
 public sealed record RandomPreset(PresetKind Kind, string Name, double Chance, IReadOnlyList<PresetItem> Items);
 
 /// <summary>
-/// Pure parse + in-place edit of a DayZ Central Economy <c>cfgrandompresets.xml</c>. A preset is a
-/// <c>&lt;cargo&gt;</c> or <c>&lt;attachments&gt;</c> element carrying a <c>name</c> + <c>chance</c> and a
-/// list of <c>&lt;item&gt;</c> children (each with <c>name</c> + <c>chance</c>). Presets are referenced by
-/// name from <c>cfgspawnabletypes.xml</c> (<c>&lt;cargo preset="foodHermit"/&gt;</c>).
-/// <para>The read-only <see cref="Parse"/> never throws (returns an empty list on absent/malformed XML),
-/// consistent with <see cref="LimitsXml"/>. Doubles are parsed/written with the invariant culture.</para>
-/// <para>In-place edit methods mutate an <see cref="XDocument"/> obtained via <see cref="ParseDoc"/> and
-/// preserve comments/order; serialize back with <see cref="ToXml"/>.</para>
+/// Pure parse + in-place edit of a DayZ Central Economy <c>cfgrandompresets.xml</c> — the named
+/// <c>&lt;cargo&gt;</c>/<c>&lt;attachments&gt;</c> presets referenced from <c>cfgspawnabletypes.xml</c>.
 /// </summary>
+/// <remarks>The read-only <see cref="Parse"/> never throws (empty list on absent/malformed XML);
+/// doubles use the invariant culture. The edit methods mutate an <see cref="XDocument"/> from
+/// <see cref="ParseDoc"/> and preserve comments/order; serialize back with <see cref="ToXml"/>.</remarks>
 public static class RandomPresetsXml
 {
-    // ------------------------------------------------------------------
-    // Kind <-> element name
-    // ------------------------------------------------------------------
-
     private static string ElementName(PresetKind kind) => kind switch
     {
         PresetKind.Cargo       => "cargo",
@@ -46,10 +39,6 @@ public static class RandomPresetsXml
     private static double ParseChance(string? raw) => CeNum.Dbl(raw);
 
     private static string FormatChance(double chance) => CeNum.Str(chance);
-
-    // ------------------------------------------------------------------
-    // Read-only parse (never-throw)
-    // ------------------------------------------------------------------
 
     /// <summary>Parse <c>cfgrandompresets.xml</c> text into presets (pure). Never throws — returns an
     /// empty list on absent or malformed XML.</summary>
@@ -81,14 +70,9 @@ public static class RandomPresetsXml
         catch { return new List<RandomPreset>(); }
     }
 
-    // ------------------------------------------------------------------
-    // In-place edit helpers
-    // ------------------------------------------------------------------
-
     /// <summary>Parse XML to an editable document for use with the edit methods.</summary>
     public static XDocument ParseDoc(string xml) => CeXml.ParseDoc(xml);
 
-    /// <summary>Find a preset element by kind + name (case-insensitive), or null.</summary>
     private static XElement? FindPreset(XDocument doc, PresetKind kind, string name) =>
         doc.Root?.Elements(ElementName(kind)).ByName(name);
 

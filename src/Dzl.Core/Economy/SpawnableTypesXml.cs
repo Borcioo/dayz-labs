@@ -29,16 +29,12 @@ public sealed record SpawnableType(
     IReadOnlyList<SpawnBlock> Attachments);
 
 /// <summary>
-/// Pure parse + in-place edit of a DayZ Central Economy <c>cfgspawnabletypes.xml</c>. Each
-/// <c>&lt;type name="…"&gt;</c> may carry a <c>&lt;hoarder/&gt;</c> flag, a <c>&lt;damage min max/&gt;</c>
-/// element, and any number of <c>&lt;cargo&gt;</c> / <c>&lt;attachments&gt;</c> blocks. Each block is either
-/// preset-based (a <c>preset</c> attribute naming an entry in <c>cfgrandompresets.xml</c>) or chance-based (a
-/// <c>chance</c> attribute plus inline <c>&lt;item&gt;</c> children).
-/// <para>The read-only <see cref="Parse"/> never throws (returns an empty list on absent/malformed XML),
-/// consistent with <see cref="RandomPresetsXml"/>. Doubles are parsed/written with the invariant culture.</para>
-/// <para>In-place edit methods mutate an <see cref="XDocument"/> obtained via <see cref="ParseDoc"/> and
-/// preserve comments/order; serialize back with <see cref="ToXml"/>.</para>
+/// Pure parse + in-place edit of a DayZ Central Economy <c>cfgspawnabletypes.xml</c>: per-type
+/// hoarder flag, damage range, and cargo/attachments blocks (preset-based or chance-based).
 /// </summary>
+/// <remarks>The read-only <see cref="Parse"/> never throws (empty list on absent/malformed XML);
+/// doubles use the invariant culture. The edit methods mutate an <see cref="XDocument"/> from
+/// <see cref="ParseDoc"/> and preserve comments/order; serialize back with <see cref="ToXml"/>.</remarks>
 public static class SpawnableTypesXml
 {
     private static string BlockElementName(bool isAttachments) => isAttachments ? "attachments" : "cargo";
@@ -48,10 +44,6 @@ public static class SpawnableTypesXml
     private static double? ParseDoubleOpt(string? raw) => CeNum.DblOpt(raw);
 
     private static string FormatDouble(double v) => CeNum.Str(v);
-
-    // ------------------------------------------------------------------
-    // Read-only parse (never-throw)
-    // ------------------------------------------------------------------
 
     /// <summary>Parse <c>cfgspawnabletypes.xml</c> text into spawnable types (pure). Never throws — returns an
     /// empty list on absent or malformed XML.</summary>
@@ -103,14 +95,9 @@ public static class SpawnableTypesXml
         return new SpawnBlock(isAttachments, null, chance, items);
     }
 
-    // ------------------------------------------------------------------
-    // In-place edit helpers
-    // ------------------------------------------------------------------
-
     /// <summary>Parse XML to an editable document for use with the edit methods.</summary>
     public static XDocument ParseDoc(string xml) => CeXml.ParseDoc(xml);
 
-    /// <summary>Find a <c>&lt;type&gt;</c> element by name (case-insensitive), or null.</summary>
     private static XElement? FindType(XDocument doc, string name) =>
         doc.Root?.Elements("type").ByName(name);
 
@@ -175,11 +162,8 @@ public static class SpawnableTypesXml
         return true;
     }
 
-    // ------------------------------------------------------------------
-    // Block-level edits. Blocks are addressed by (type, isAttachments, index)
-    // where index counts only blocks of that element name within the type.
-    // ------------------------------------------------------------------
-
+    // Blocks are addressed by (type, isAttachments, index) where index counts only blocks of
+    // that element name within the type.
     private static List<XElement> BlocksOf(XElement type, bool isAttachments) =>
         type.Elements(BlockElementName(isAttachments)).ToList();
 
@@ -244,10 +228,6 @@ public static class SpawnableTypesXml
         block.SetAttributeValue("chance", FormatDouble(chance));
         return true;
     }
-
-    // ------------------------------------------------------------------
-    // Item-level edits inside a chance block
-    // ------------------------------------------------------------------
 
     /// <summary>Add an <c>&lt;item name="…" chance="…"/&gt;</c> to a chance block. Strips any <c>preset</c>
     /// attribute on the block (an item-bearing block cannot be preset-based). Returns true if added; false if

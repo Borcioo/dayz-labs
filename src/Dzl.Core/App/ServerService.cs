@@ -13,8 +13,8 @@ public sealed class ServerService
     private readonly string _configPath;
     public ServerService(string configPath) { _configPath = configPath; }
 
-    /// <summary>All server instances = the per-server configs under instances/ (after SP8, an
-    /// instance IS the profile). Each entry's Dir/CfgPath come from its serverDZ.cfg path.</summary>
+    /// <summary>All server instances — an instance IS a config preset, so this enumerates the
+    /// presets and derives each entry's Dir/CfgPath from its serverDZ.cfg path.</summary>
     public IReadOnlyList<ServerInstance> List()
     {
         var list = new List<ServerInstance>();

@@ -25,22 +25,14 @@ public sealed record CeEvent(
     IReadOnlyList<EventChild> Children);
 
 /// <summary>
-/// Pure parse + in-place edit of a DayZ Central Economy <c>db/events.xml</c>. Each
-/// <c>&lt;event name="…"&gt;</c> carries integer scalar children (nominal/min/max/lifetime/restock/
-/// saferadius/distanceradius/cleanupradius), a <c>&lt;flags deletable init_random remove_damaged/&gt;</c>
-/// element, <c>&lt;position&gt;</c>, <c>&lt;limit&gt;</c>, <c>&lt;active&gt;</c>, and zero or more
-/// <c>&lt;child type min max lootmin lootmax/&gt;</c> rows.
-/// <para>The read-only <see cref="Parse"/> never throws (returns an empty list on absent/malformed XML).
-/// Booleans are encoded as "0"/"1". Missing scalars default to 0.</para>
-/// <para>In-place edit methods mutate an <see cref="XDocument"/> obtained via <see cref="ParseDoc"/> and
-/// preserve comments/order; serialize back with <see cref="ToXml"/>.</para>
+/// Pure parse + in-place edit of a DayZ Central Economy <c>db/events.xml</c>.
 /// </summary>
+/// <remarks>The read-only <see cref="Parse"/> never throws (empty list on absent/malformed XML);
+/// booleans are encoded as "0"/"1" and missing scalars default to 0. The edit methods mutate an
+/// <see cref="XDocument"/> from <see cref="ParseDoc"/> and preserve comments/order; serialize back
+/// with <see cref="ToXml"/>.</remarks>
 public static class EventsXml
 {
-    // ------------------------------------------------------------------
-    // Small helpers
-    // ------------------------------------------------------------------
-
     private static int ParseInt(string? raw) => CeNum.Int(raw);
 
     private static bool ParseBool(string? raw) => CeNum.Bool01(raw);
@@ -49,10 +41,6 @@ public static class EventsXml
 
     private static string Txt(XElement parent, string child) =>
         parent.Element(child)?.Value?.Trim() ?? "";
-
-    // ------------------------------------------------------------------
-    // Read-only parse (never-throw)
-    // ------------------------------------------------------------------
 
     /// <summary>Parse <c>db/events.xml</c> text into events (pure). Never throws — returns an empty list
     /// on absent or malformed XML.</summary>
@@ -108,14 +96,9 @@ public static class EventsXml
         catch { return new List<CeEvent>(); }
     }
 
-    // ------------------------------------------------------------------
-    // In-place edit helpers
-    // ------------------------------------------------------------------
-
     /// <summary>Parse XML to an editable document for use with the edit methods.</summary>
     public static XDocument ParseDoc(string xml) => CeXml.ParseDoc(xml);
 
-    /// <summary>Find an <c>&lt;event&gt;</c> element by name (case-insensitive), or null.</summary>
     private static XElement? FindEvent(XDocument doc, string name) =>
         doc.Root?.Elements("event").ByName(name);
 
@@ -209,10 +192,6 @@ public static class EventsXml
         ev.SetChildValue("active", FormatBool(active));
         return true;
     }
-
-    // ------------------------------------------------------------------
-    // Child-level edits inside <children>
-    // ------------------------------------------------------------------
 
     private static XElement? ChildrenOf(XElement ev)
     {

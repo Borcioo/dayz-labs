@@ -3,11 +3,8 @@ using Dzl.Core.Economy;
 namespace Dzl.Core.App;
 
 /// <summary>
-/// Facade for editing the active server instance's mission <c>cfgrandompresets.xml</c> — the cargo and
+/// Facade for editing the active mission's <c>cfgrandompresets.xml</c> — the cargo and
 /// attachments random presets referenced by name from <c>cfgspawnabletypes.xml</c>.
-/// Mirrors the <see cref="DictionaryService"/> pattern: one facade per frontend, never throws (returns
-/// ok+message), snapshots a backup (<see cref="CeBackup"/>) before every write, edits in place so
-/// comments/order survive a round-trip (<see cref="RandomPresetsXml"/>).
 /// </summary>
 public sealed class RandomPresetsService : CeFileService
 {
@@ -23,10 +20,6 @@ public sealed class RandomPresetsService : CeFileService
     /// <summary>Read all random presets. Returns an empty list when the file is absent or unresolvable.</summary>
     public List<RandomPreset> Load() => LoadList(RandomPresetsXml.Parse);
 
-    // ------------------------------------------------------------------
-    // Preset-level edits
-    // ------------------------------------------------------------------
-
     /// <summary>Add a new preset of the given kind. No-op when the name already exists for that kind.</summary>
     public (bool ok, string msg) AddPreset(PresetKind kind, string name, double chance)
     {
@@ -37,7 +30,6 @@ public sealed class RandomPresetsService : CeFileService
             $"{kind} preset '{name}' already exists");
     }
 
-    /// <summary>Remove a preset by kind + name.</summary>
     public (bool ok, string msg) RemovePreset(PresetKind kind, string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return (false, "preset name must not be empty");
@@ -47,7 +39,6 @@ public sealed class RandomPresetsService : CeFileService
             $"{kind} preset '{name}' not found");
     }
 
-    /// <summary>Rename a preset.</summary>
     public (bool ok, string msg) RenamePreset(PresetKind kind, string oldName, string newName)
     {
         if (string.IsNullOrWhiteSpace(oldName)) return (false, "old name must not be empty");
@@ -68,11 +59,6 @@ public sealed class RandomPresetsService : CeFileService
             $"{kind} preset '{name}' not found");
     }
 
-    // ------------------------------------------------------------------
-    // Item-level edits
-    // ------------------------------------------------------------------
-
-    /// <summary>Add an item to a preset.</summary>
     public (bool ok, string msg) AddItem(PresetKind kind, string presetName, string itemName, double chance)
     {
         if (string.IsNullOrWhiteSpace(presetName)) return (false, "preset name must not be empty");
@@ -83,7 +69,6 @@ public sealed class RandomPresetsService : CeFileService
             $"item '{itemName}' not added (preset missing or item already present)");
     }
 
-    /// <summary>Remove an item from a preset.</summary>
     public (bool ok, string msg) RemoveItem(PresetKind kind, string presetName, string itemName)
     {
         if (string.IsNullOrWhiteSpace(presetName)) return (false, "preset name must not be empty");

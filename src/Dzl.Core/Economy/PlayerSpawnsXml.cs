@@ -26,18 +26,14 @@ public sealed record SpawnCategory(
     IReadOnlyList<SpawnBubbles> Bubbles);
 
 /// <summary>
-/// Pure parse + in-place edit of a DayZ mission <c>cfgplayerspawnpoints.xml</c>. The file is hierarchical:
-/// <c>&lt;playerspawnpoints&gt;</c> → categories <c>&lt;fresh&gt;/&lt;hop&gt;/&lt;travel&gt;</c> (any may be
-/// absent) → each category has optional <c>&lt;spawn_params&gt;</c>, <c>&lt;generator_params&gt;</c>,
-/// <c>&lt;group_params&gt;</c> (each a flat bag of scalar child elements whose names vary) plus
-/// <c>&lt;generator_posbubbles&gt;</c> / <c>&lt;permanent&gt;</c> containers of named <c>&lt;group&gt;</c>s,
-/// each holding <c>&lt;pos x z/&gt;</c> points.
-/// <para>The read-only <see cref="Parse"/> never throws (returns an empty list on absent/malformed XML).
-/// Position doubles are parsed/written with the invariant culture, mirroring <see cref="RandomPresetsXml"/>.</para>
-/// <para>In-place edit methods mutate an <see cref="XDocument"/> obtained via <see cref="ParseDoc"/> and
-/// preserve comments/order; serialize back with <see cref="ToXml"/>. They operate on existing categories;
-/// <see cref="SetParam"/> will create a missing param section under an existing category.</para>
+/// Pure parse + in-place edit of a DayZ mission <c>cfgplayerspawnpoints.xml</c>: categories
+/// (<c>fresh</c>/<c>hop</c>/<c>travel</c>) with optional param bags and bubbles containers of
+/// named groups holding <c>&lt;pos x z/&gt;</c> points.
 /// </summary>
+/// <remarks>The read-only <see cref="Parse"/> never throws (empty list on absent/malformed XML);
+/// position doubles use the invariant culture. The edit methods mutate an <see cref="XDocument"/>
+/// from <see cref="ParseDoc"/>, preserve comments/order, and operate on existing categories only;
+/// serialize back with <see cref="ToXml"/>.</remarks>
 public static class PlayerSpawnsXml
 {
     /// <summary>The three param-bag section names, in canonical order.</summary>
@@ -46,10 +42,6 @@ public static class PlayerSpawnsXml
     private static double ParseDouble(string? raw) => CeNum.Dbl(raw);
 
     private static string FormatDouble(double value) => CeNum.Str(value);
-
-    // ------------------------------------------------------------------
-    // Read-only parse (never-throw)
-    // ------------------------------------------------------------------
 
     /// <summary>Parse <c>cfgplayerspawnpoints.xml</c> text into categories (pure). Never throws — returns an
     /// empty list on absent or malformed XML.</summary>
@@ -104,10 +96,6 @@ public static class PlayerSpawnsXml
             .Select(c => new SpawnParam(c.Name.LocalName, (c.Value ?? "").Trim()))
             .ToList();
     }
-
-    // ------------------------------------------------------------------
-    // In-place edit helpers
-    // ------------------------------------------------------------------
 
     /// <summary>Parse XML to an editable document for use with the edit methods.</summary>
     public static XDocument ParseDoc(string xml) => CeXml.ParseDoc(xml);

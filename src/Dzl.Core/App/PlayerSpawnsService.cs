@@ -3,11 +3,8 @@ using Dzl.Core.Economy;
 namespace Dzl.Core.App;
 
 /// <summary>
-/// Facade for editing the active server instance's mission <c>cfgplayerspawnpoints.xml</c> — the hierarchical
+/// Facade for editing the active mission's <c>cfgplayerspawnpoints.xml</c> — the hierarchical
 /// player-spawn config (fresh/hop/travel categories, their param bags, and named position-group bubbles).
-/// Mirrors the <see cref="RandomPresetsService"/> pattern: one facade per frontend, never throws (returns
-/// ok+message), snapshots a backup (<see cref="CeBackup"/>) before every write, edits in place so
-/// comments/order survive a round-trip (<see cref="PlayerSpawnsXml"/>).
 /// </summary>
 public sealed class PlayerSpawnsService : CeFileService
 {
@@ -23,10 +20,6 @@ public sealed class PlayerSpawnsService : CeFileService
     /// <summary>Read all spawn categories. Returns an empty list when the file is absent or unresolvable.</summary>
     public List<SpawnCategory> Load() => LoadList(PlayerSpawnsXml.Parse);
 
-    // ------------------------------------------------------------------
-    // Param edits
-    // ------------------------------------------------------------------
-
     /// <summary>Upsert a scalar param in a category's section (spawn_params|generator_params|group_params).</summary>
     public (bool ok, string msg) SetParam(string category, string section, string name, string value)
     {
@@ -37,10 +30,6 @@ public sealed class PlayerSpawnsService : CeFileService
             $"set {category}/{section}/{name}",
             $"category '{category}' not found");
     }
-
-    // ------------------------------------------------------------------
-    // Group edits
-    // ------------------------------------------------------------------
 
     /// <summary>Add a named group to a category's bubbles container.</summary>
     public (bool ok, string msg) AddGroup(string category, string container, string groupName)
@@ -72,10 +61,6 @@ public sealed class PlayerSpawnsService : CeFileService
             $"renamed group '{oldName}' → '{newName}'",
             $"rename failed: '{oldName}' not found or '{newName}' already exists");
     }
-
-    // ------------------------------------------------------------------
-    // Position edits
-    // ------------------------------------------------------------------
 
     /// <summary>Append a position to a group.</summary>
     public (bool ok, string msg) AddPos(string category, string container, string groupName, double x, double z)

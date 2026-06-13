@@ -3,11 +3,8 @@ using Dzl.Core.Economy;
 namespace Dzl.Core.App;
 
 /// <summary>
-/// Facade for editing the active server instance's mission <c>db/events.xml</c> — the CE spawn events
-/// list (each event drives a spawner: nominal counts, radii, flags, child types).
-/// Mirrors the <see cref="RandomPresetsService"/> pattern: one facade per frontend, never throws (returns
-/// ok+message), snapshots a backup (<see cref="CeBackup"/>) before every write, edits in place so
-/// comments/order survive a round-trip (<see cref="EventsXml"/>).
+/// Facade for editing the active mission's <c>db/events.xml</c> — the CE spawn events list
+/// (each event drives a spawner: nominal counts, radii, flags, child types).
 /// </summary>
 public sealed class EventsService : CeFileService
 {
@@ -23,10 +20,6 @@ public sealed class EventsService : CeFileService
     /// <summary>Read all CE events. Returns an empty list when the file is absent or unresolvable.</summary>
     public List<CeEvent> Load() => LoadList(EventsXml.Parse);
 
-    // ------------------------------------------------------------------
-    // Event-level edits
-    // ------------------------------------------------------------------
-
     /// <summary>Add a new event with default structure. No-op when the name already exists.</summary>
     public (bool ok, string msg) AddEvent(string name)
     {
@@ -37,7 +30,6 @@ public sealed class EventsService : CeFileService
             $"event '{name}' already exists");
     }
 
-    /// <summary>Remove an event by name.</summary>
     public (bool ok, string msg) RemoveEvent(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return (false, "event name must not be empty");
@@ -78,7 +70,6 @@ public sealed class EventsService : CeFileService
             $"event '{eventName}' not found");
     }
 
-    /// <summary>Set the position string on an event.</summary>
     public (bool ok, string msg) SetPosition(string eventName, string position)
     {
         if (string.IsNullOrWhiteSpace(eventName)) return (false, "event name must not be empty");
@@ -88,7 +79,6 @@ public sealed class EventsService : CeFileService
             $"event '{eventName}' not found");
     }
 
-    /// <summary>Set the limit string on an event.</summary>
     public (bool ok, string msg) SetLimit(string eventName, string limit)
     {
         if (string.IsNullOrWhiteSpace(eventName)) return (false, "event name must not be empty");
@@ -98,7 +88,6 @@ public sealed class EventsService : CeFileService
             $"event '{eventName}' not found");
     }
 
-    /// <summary>Set the active flag on an event.</summary>
     public (bool ok, string msg) SetActive(string eventName, bool active)
     {
         if (string.IsNullOrWhiteSpace(eventName)) return (false, "event name must not be empty");
@@ -108,11 +97,6 @@ public sealed class EventsService : CeFileService
             $"event '{eventName}' not found");
     }
 
-    // ------------------------------------------------------------------
-    // Child-level edits
-    // ------------------------------------------------------------------
-
-    /// <summary>Add a child entry to an event.</summary>
     public (bool ok, string msg) AddChild(string eventName, EventChild child)
     {
         if (string.IsNullOrWhiteSpace(eventName)) return (false, "event name must not be empty");
@@ -123,7 +107,6 @@ public sealed class EventsService : CeFileService
             $"child not added (event missing or child type already present)");
     }
 
-    /// <summary>Remove a child by type from an event.</summary>
     public (bool ok, string msg) RemoveChild(string eventName, string type)
     {
         if (string.IsNullOrWhiteSpace(eventName)) return (false, "event name must not be empty");

@@ -23,10 +23,6 @@ public sealed record LimitsUserGroup(string Name, LimitsKind Kind, IReadOnlyList
 /// </summary>
 public static class LimitsUserXml
 {
-    // ------------------------------------------------------------------
-    // Internal helpers
-    // ------------------------------------------------------------------
-
     private static readonly (string Container, string MemberElem, LimitsKind Kind)[] Sections =
     [
         ("usageflags", "usage", LimitsKind.Usage),
@@ -37,10 +33,6 @@ public static class LimitsUserXml
         kind == LimitsKind.Usage ? ("usageflags", "usage", LimitsKind.Usage)
         : kind == LimitsKind.Value ? ("valueflags", "value", LimitsKind.Value)
         : throw new ArgumentOutOfRangeException(nameof(kind), "Only Usage and Value kinds are supported in user lists");
-
-    // ------------------------------------------------------------------
-    // Read-only parse — never throws, returns empty on malformed
-    // ------------------------------------------------------------------
 
     /// <summary>Parse the user-lists file into groups. Returns an empty list when the XML is absent,
     /// empty, or malformed.</summary>
@@ -82,15 +74,9 @@ public static class LimitsUserXml
         return result;
     }
 
-    // ------------------------------------------------------------------
-    // In-place edit
-    // ------------------------------------------------------------------
-
     /// <summary>Parse XML to an editable document for use with the edit methods.</summary>
     public static XDocument ParseDoc(string xml) => CeXml.ParseDoc(xml);
 
-    /// <summary>Ensure the document has a root <c>&lt;user_lists&gt;</c> element (creates one if absent)
-    /// and return it.</summary>
     private static XElement GetOrCreateUserLists(XDocument doc)
     {
         var root = doc.Root;
@@ -108,8 +94,6 @@ public static class LimitsUserXml
         return ul;
     }
 
-    /// <summary>Get or create the section element (<c>usageflags</c> or <c>valueflags</c>) under
-    /// <c>&lt;user_lists&gt;</c>.</summary>
     private static XElement GetOrCreateSection(XDocument doc, LimitsKind kind)
     {
         var (containerName, _, _) = SectionFor(kind);
@@ -130,7 +114,6 @@ public static class LimitsUserXml
         var (_, memberElem, _) = SectionFor(kind);
         var section = GetOrCreateSection(doc, kind);
 
-        // Remove existing group with same name (case-insensitive).
         section.Elements("user").ByName(name)?.Remove();
 
         var user = new XElement("user", new XAttribute("name", name));
@@ -165,12 +148,10 @@ public static class LimitsUserXml
 
         if (user is null)
         {
-            // Group doesn't exist — create it.
             AddGroup(doc, kind, name, members);
             return false;
         }
 
-        // Replace members in-place.
         user.Elements(memberElem).Remove();
         foreach (var m in members)
             user.Add(new XElement(memberElem, new XAttribute("name", m)));

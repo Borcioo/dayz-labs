@@ -8,12 +8,14 @@ using Dzl.Core.Tools;
 namespace Dzl.Core.App;
 
 /// <summary>
-/// SP2 build→deploy: turn a mod <i>project</i> (source at <c>&lt;ProjectsRoot&gt;\mods\&lt;Mod&gt;</c>,
-/// reached via its <c>P:\&lt;Mod&gt;</c> junction) into a loadable PBO under
-/// <c>&lt;ProjectsRoot&gt;\build\@&lt;Mod&gt;\Addons\</c> (physical; surfaced on P: as
-/// <c>P:\Mods\@&lt;Mod&gt;</c> via a junction), then register that build into the active server's run-list
-/// by its <c>P:\Mods\@&lt;Mod&gt;</c> engine path. One facade per frontend; pure bits live in <see cref="ModBuild"/>.
+/// Build→deploy facade: packs a mod project into a loadable PBO and registers it in the
+/// active server's run-list. Pure bits live in <see cref="ModBuild"/>.
 /// </summary>
+/// <remarks>
+/// Source lives at <c>&lt;ProjectsRoot&gt;\mods\&lt;Mod&gt;</c> and is read via its <c>P:\&lt;Mod&gt;</c>
+/// junction; output lands at <c>&lt;ProjectsRoot&gt;\build\@&lt;Mod&gt;\Addons\</c> and is surfaced
+/// (and registered) as <c>P:\Mods\@&lt;Mod&gt;</c> via the build-area junction.
+/// </remarks>
 public sealed class BuildService
 {
     private readonly string _configPath;
@@ -21,8 +23,7 @@ public sealed class BuildService
 
     private string ConfigDir => Path.GetDirectoryName(_configPath) ?? ".";
 
-    /// <summary>The creator's signing-key name: the explicit config value, else the cached author handle,
-    /// else "" (no key configured). One key signs all of a creator's mods.</summary>
+    // Explicit config value, else the cached author handle, else "". One key signs all of a creator's mods.
     private string KeyName(DzlConfig cfg) =>
         !string.IsNullOrWhiteSpace(cfg.SigningKey) ? cfg.SigningKey.Trim()
         : (ModScaffold.CachedAuthor(ConfigDir) ?? "").Trim();
@@ -113,8 +114,9 @@ public sealed class BuildService
     }
 
     /// <summary>Run the preflight rule set over a mod project. Read-only on the project; writes
-    /// only the report files. CfgConvert syntax gate engages automatically when DayZ Tools is
-    /// configured; the work drive is used for vanilla-reference resolution only when mounted.</summary>
+    /// only the report files.</summary>
+    /// <remarks>The CfgConvert syntax gate engages automatically when DayZ Tools is configured;
+    /// the work drive is used for vanilla-reference resolution only when mounted.</remarks>
     public PreflightView Preflight(string modName, bool saveReport = true)
     {
         if (!ProjectPaths.IsValidName(modName))
@@ -213,13 +215,10 @@ public sealed class BuildService
         return new BuildResult(true, modName, buildDir, pbo, registered, note, pack.Output, "", preflight);
     }
 
-    /// <summary>Failed <see cref="BuildResult"/> with diagnostics derived from the output + message.</summary>
     private static BuildResult FailResult(string modName, PreflightView? preflight, string msg, string output = "") =>
         new(false, modName, "", "", false, msg, output,
             BuildDiagnostics.Format(BuildDiagnostics.Diagnose(output + "\n" + msg)), preflight);
 
-    /// <summary>Validate the build environment: the project exists, AddonBuilder is installed, P: is mounted.
-    /// Returns the resolved AddonBuilder entry, or null + the failure to surface.</summary>
     private static (ToolEntry? exe, BuildResult? fail) ValidateEnvironment(string modName, DzlConfig cfg, string projectDir)
     {
         if (!Directory.Exists(projectDir) || !ModProjects.IsProject(projectDir))
@@ -235,9 +234,9 @@ public sealed class BuildService
         return (exe, null);
     }
 
-    /// <summary>Preflight gate: AddonBuilder reports "Build Successful" even for configs it silently
-    /// mangles, so error-severity findings block the build (config flag to opt out). The view
-    /// rides along on the result so frontends can show the findings without a second run.</summary>
+    // AddonBuilder reports "Build Successful" even for configs it silently mangles, so error-severity
+    // findings block the build (preflight_before_build=false opts out). The view rides along on the
+    // result so frontends can show the findings without a second run.
     private (PreflightView? preflight, BuildResult? fail) GateOnPreflight(string modName, DzlConfig cfg, Action<string>? onLine)
     {
         if (!cfg.PreflightBeforeBuild)
@@ -257,8 +256,7 @@ public sealed class BuildService
         return (preflight, null);
     }
 
-    /// <summary>Resolve the signing key up front so we fail before building if signing was asked for but
-    /// no key exists. An explicit keyName overrides the configured/default key for this build.</summary>
+    // Resolved up front so a missing key fails before the (slow) build, not after.
     private (string? signKey, string effectiveKey, BuildResult? fail) ResolveSignKey(
         string modName, DzlConfig cfg, string root, bool sign, string? keyName,
         PreflightView? preflight, Action<string>? onLine)
@@ -276,8 +274,7 @@ public sealed class BuildService
         return (signKey, effectiveKey, null);
     }
 
-    /// <summary>Skip-unchanged: same payload + same settings + output still present → nothing to do.
-    /// Always returns the computed state hash + loaded cache so the publish phase can record the build.</summary>
+    // Skip-unchanged: same payload + same settings + output still present → nothing to do.
     private (string stateHash, Dictionary<string, BuildCache.Entry> cache, BuildResult? skip) TryCacheSkip(
         string modName, string projectDir, string exePath, string buildDir, string addonsDir,
         bool binarize, bool sign, bool force, string? signKey,
@@ -302,9 +299,8 @@ public sealed class BuildService
         return (stateHash, cache, null);
     }
 
-    /// <summary>Junctions anchored on the always-live work-drive source folder (survive P: unmounts): the source
-    /// so AddonBuilder reads it via P:\&lt;Mod&gt;, and the build so it surfaces at P:\Mods\@&lt;Mod&gt;. Both targets
-    /// live physically under ProjectsRoot (mods\ and build\).</summary>
+    // Junctions are anchored on the always-live work-drive source folder so they survive P: unmounts:
+    // the source one lets AddonBuilder read via P:\<Mod>, the build one surfaces output at P:\Mods\@<Mod>.
     private static BuildResult? EnsureJunctions(string modName, string? workDriveSource, string projectDir, string root, PreflightView? preflight)
     {
         var srcJunction = ProjectPaths.JunctionPath(workDriveSource, modName);
@@ -321,8 +317,8 @@ public sealed class BuildService
         return null;
     }
 
-    /// <summary>AddonBuilder writes into a work dir; the loadable Addons\ is only touched after the
-    /// output verifies, and then atomically (backup → swap → rollback on failure).</summary>
+    // AddonBuilder writes into a work dir; the loadable Addons\ is only touched after the output
+    // verifies, and then atomically (backup → swap → rollback on failure).
     private static (PackResult pack, string workDir, string workAddons, DateTime startUtc) PackToWorkDir(
         string exePath, string modName, string buildDir, bool clean, bool binarize, string? signKey, Action<string>? onLine)
     {
@@ -341,10 +337,9 @@ public sealed class BuildService
         return (pack, workDir, workAddons, startUtc);
     }
 
-    /// <summary>Post-pack verification: a fresh .pbo must exist (AddonBuilder can no-op and still report
-    /// success), the packed prefix must match the project's $PBOPREFIX$ (a mismatch means the mod loads
-    /// with every asset path broken), and a signed build must actually carry a signature
-    /// (AddonBuilder -sign can silently not sign).</summary>
+    // A fresh .pbo must exist (AddonBuilder can no-op and still report success), the packed prefix
+    // must match $PBOPREFIX$ (a mismatch breaks every asset path), and a signed build must actually
+    // carry a signature (AddonBuilder -sign can silently not sign).
     private static (string? workPbo, BuildResult? fail) VerifyPackedOutput(
         string modName, string projectDir, string workAddons, DateTime startUtc, bool sign,
         string packOutput, PreflightView? preflight, Action<string>? onLine)
@@ -370,8 +365,6 @@ public sealed class BuildService
         return (workPbo, null);
     }
 
-    /// <summary>Atomically publish the work-dir output into the loadable Addons\, drop the ownership
-    /// marker, and record the build in the skip-unchanged cache. Returns the published PBO path.</summary>
     private (string pbo, BuildResult? fail) PublishAndRecord(
         string modName, string root, string projectDir, string workDir, string workAddons, string addonsDir,
         string workPbo, DateTime startUtc, string stateHash, Dictionary<string, BuildCache.Entry> cache,
@@ -390,8 +383,8 @@ public sealed class BuildService
         return (pbo, null);
     }
 
-    /// <summary>Place the public key in the built mod's keys\ (sibling of Addons\, outside the PBO) so the
-    /// distributed/loaded @&lt;Mod&gt; carries it and servers can whitelist it. The private key stays put.</summary>
+    // The public key goes to the built mod's keys\ (sibling of Addons\, outside the PBO) so the
+    // distributed @<Mod> carries it and servers can whitelist it. The private key stays put.
     private static void ShipPublicKey(DzlConfig cfg, string root, string modName, string effectiveKey)
     {
         try
@@ -407,8 +400,8 @@ public sealed class BuildService
         catch { /* best-effort; the .bisign is already produced */ }
     }
 
-    /// <summary>Register by the engine/toolchain path P:\Mods\@&lt;Mod&gt; (the build is surfaced there via the
-    /// build-area junction). Clean + conventional ("Mods is on P:"), and it matches a P:\Mods scan so Merge dedupes.</summary>
+    // Registers by the engine path P:\Mods\@<Mod> (not the physical dir) so a P:\Mods scan matches
+    // it and Merge dedupes.
     private (bool registered, string note) RegisterInRunList(DzlConfig cfg, string active, string modName)
     {
         var updated = ModBuild.Register(cfg, ProjectPaths.BuildLink(modName));

@@ -5,9 +5,8 @@ using Dzl.Core.Vcs;
 namespace Dzl.Core.App;
 
 /// <summary>
-/// SP4 GitHub integration: treat each mod project as a git repo manageable from dzl — report status,
-/// publish to GitHub (init + first commit + <c>gh repo create --push</c>), and cut releases. One facade
-/// per frontend (CLI/MCP/tray); the git/gh shelling lives in <see cref="Git"/> / <see cref="GitHub"/>.
+/// Treats each mod project as a git repo manageable from dzl: status, publish to GitHub, releases.
+/// The git/gh shelling lives in <see cref="Git"/> / <see cref="GitHub"/>.
 /// </summary>
 public sealed class RepoService
 {
@@ -17,7 +16,6 @@ public sealed class RepoService
     private const string GitIgnore =
         "# dzl / DayZ build artifacts\n*.pbo\n*.bin\n*.log\nlogs/\n\n# editor / OS noise\n.vs/\n*.tmp\nThumbs.db\n";
 
-    /// <summary>Resolve a project dir under ProjectsRoot, or return null + an error message.</summary>
     private string? ResolveProject(string mod, out string error)
     {
         error = "";
@@ -54,7 +52,6 @@ public sealed class RepoService
             if (!init.ok) return new OpResult(false, $"git init failed: {init.msg}");
         }
 
-        // Seed a .gitignore (idempotent) so build artifacts don't get committed.
         var gi = Path.Combine(dir, ".gitignore");
         if (!File.Exists(gi)) { try { File.WriteAllText(gi, GitIgnore); } catch { /* best-effort */ } }
 

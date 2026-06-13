@@ -5,23 +5,15 @@ using Dzl.Core.Economy;
 namespace Dzl.Core.App;
 
 /// <summary>
-/// Facade for editing the DayZ Central Economy dictionary files of the active server instance's mission:
-/// <list type="bullet">
-/// <item><c>cfglimitsdefinition.xml</c> — base name lists (usage/value/tag/category flags)</item>
-/// <item><c>cfglimitsdefinitionuser.xml</c> — named combinations of those flags</item>
-/// </list>
-/// Mirrors the <c>TypesService</c> pattern: one facade per frontend, never throws (returns ok+message),
-/// snapshots a backup before every write.
+/// Facade for editing the active mission's CE dictionary files: <c>cfglimitsdefinition.xml</c>
+/// (base name lists) and <c>cfglimitsdefinitionuser.xml</c> (named combinations of those names).
+/// Never throws (returns ok+message); snapshots a backup before every write.
 /// </summary>
 public sealed class DictionaryService
 {
     private readonly string _configPath;
 
     public DictionaryService(string configPath) { _configPath = configPath; }
-
-    // ------------------------------------------------------------------
-    // Path resolution
-    // ------------------------------------------------------------------
 
     private MissionPaths? Mission()
     {
@@ -41,10 +33,6 @@ public sealed class DictionaryService
         return mp is null ? null : Path.Combine(mp.MissionDir, "cfglimitsdefinitionuser.xml");
     }
 
-    // ------------------------------------------------------------------
-    // cfglimitsdefinition.xml — read
-    // ------------------------------------------------------------------
-
     /// <summary>Read all valid names from <c>cfglimitsdefinition.xml</c>.
     /// Returns <see cref="LimitsDef.Empty"/> when the file is absent or unresolvable.</summary>
     public LimitsDef Load()
@@ -54,10 +42,6 @@ public sealed class DictionaryService
         try { return LimitsXml.Parse(File.ReadAllText(path)); }
         catch { return LimitsDef.Empty; }
     }
-
-    // ------------------------------------------------------------------
-    // cfglimitsdefinition.xml — write helpers
-    // ------------------------------------------------------------------
 
     private (bool ok, string msg) EditLimits(Func<XDocument, bool> edit, string successMsg, string noOpMsg)
     {
@@ -72,7 +56,6 @@ public sealed class DictionaryService
             }
             else
             {
-                // Seed an empty document with all four containers.
                 doc = new XDocument(
                     new XDeclaration("1.0", "UTF-8", null),
                     new XElement("lists",
@@ -121,10 +104,6 @@ public sealed class DictionaryService
             $"rename failed: '{oldName}' not found or '{newName}' already exists");
     }
 
-    // ------------------------------------------------------------------
-    // cfglimitsdefinitionuser.xml — read
-    // ------------------------------------------------------------------
-
     /// <summary>Read all user groups from <c>cfglimitsdefinitionuser.xml</c>.
     /// Returns an empty list when the file is absent or unresolvable.</summary>
     public List<LimitsUserGroup> LoadGroups()
@@ -135,12 +114,7 @@ public sealed class DictionaryService
         catch { return new List<LimitsUserGroup>(); }
     }
 
-    // ------------------------------------------------------------------
-    // cfglimitsdefinitionuser.xml — write helpers
-    // ------------------------------------------------------------------
-
-    /// <summary>Edits that cannot no-op (upserts) route through the Func overload with an
-    /// always-true edit.</summary>
+    // Upserts (edits that cannot no-op) route through the Func overload with an always-true edit.
     private (bool ok, string msg) EditLimitsUser(Action<XDocument> edit, string successMsg) =>
         EditLimitsUser(doc => { edit(doc); return true; }, successMsg, noOpMsg: "");
 

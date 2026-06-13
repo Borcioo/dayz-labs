@@ -6,11 +6,11 @@ namespace Dzl.Core.App;
 
 /// <summary>
 /// Shared plumbing for the single-file CE editor facades (events/globals/spawnable types/
-/// player spawns/random presets): resolve the active mission's file, snapshot a backup
-/// (<see cref="CeBackup"/>) before every write, edit in place so comments/order survive a
-/// round-trip, never throw (return ok+message). Subclasses own only the domain verbs and
-/// declare where their file lives and whether an absent file may be seeded.
+/// player spawns/random presets). Subclasses own only the domain verbs and declare where
+/// their file lives and whether an absent file may be seeded.
 /// </summary>
+/// <remarks>Invariants: a <see cref="CeBackup"/> snapshot before every write, in-place edits
+/// so comments/order survive a round-trip, and never throw (return ok+message).</remarks>
 public abstract class CeFileService
 {
     protected const string NoMissionMsg = "no mission resolved for the active server";

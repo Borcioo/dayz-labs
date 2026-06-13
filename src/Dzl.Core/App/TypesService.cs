@@ -10,20 +10,16 @@ namespace Dzl.Core.App;
 public sealed record TypeRow(TypeEntry Entry, CeOrigin Origin, string ModSource);
 
 /// <summary>
-/// Central Economy editor over ALL Types files of the active server instance's mission — the vanilla
-/// <c>db\types.xml</c> plus every <c>type="types"</c> file referenced from <c>cfgeconomycore.xml</c>.
-/// Reads union entries (each stamped with its <see cref="TypeEntry.SourceFile"/>); writes route each
-/// entry back to its own file. Every write snapshots a versioned backup (<see cref="CeBackup"/>) and
-/// edits in place (preserving comments/order via <see cref="TypesXml"/>). One facade per frontend.
+/// Central Economy editor over ALL Types files of the active mission — the vanilla <c>db\types.xml</c>
+/// plus every <c>type="types"</c> file referenced from <c>cfgeconomycore.xml</c>.
 /// </summary>
+/// <remarks>Reads union entries (each stamped with its <see cref="TypeEntry.SourceFile"/>); writes
+/// route each entry back to its own file. Every write snapshots a versioned backup
+/// (<see cref="CeBackup"/>) and edits in place so comments/order survive a round-trip.</remarks>
 public sealed class TypesService
 {
     private readonly string _configPath;
     public TypesService(string configPath) { _configPath = configPath; }
-
-    // ------------------------------------------------------------------
-    // File resolution
-    // ------------------------------------------------------------------
 
     private MissionPaths? Mission()
     {
@@ -31,13 +27,9 @@ public sealed class TypesService
         return MissionLocator.Resolve(cfg);
     }
 
-    /// <summary>All Types <see cref="CeFileRef"/>s for the active mission that exist on disk: the files
-    /// referenced by <c>cfgeconomycore.xml</c> (filtered to Types), plus vanilla <c>db/types.xml</c> as
-    /// <see cref="CeOrigin.Vanilla"/> if present and not already referenced. Empty when no mission.</summary>
     private List<CeFileRef> ResolveTypesFiles() => ResolveAll().Files;
 
-    /// <summary>Resolves the Types file list and primary path in one config read.
-    /// Primary = vanilla db/types.xml when present, else first resolved file.</summary>
+    // Primary = vanilla db/types.xml when present, else the first resolved file.
     private (List<CeFileRef> Files, string? Primary) ResolveAll()
     {
         var mp = Mission();
@@ -70,10 +62,6 @@ public sealed class TypesService
     /// <summary>The active mission's primary types file (vanilla db\types.xml, or the first resolved
     /// Types file). Kept for back-compat with callers that probe a single "the types file".</summary>
     public string? TypesFile() => ResolveAll().Primary;
-
-    // ------------------------------------------------------------------
-    // Read
-    // ------------------------------------------------------------------
 
     /// <summary>Union of every resolved Types file's entries, each stamped with its source file path.
     /// Per-file parse errors are skipped.</summary>
@@ -109,22 +97,16 @@ public sealed class TypesService
     /// <summary>Run the CE lint rules over the full multi-file Types set against the mission's limits.</summary>
     public IReadOnlyList<LintFinding> Lint() => new LintEngine().Run(new CeFileSet(List()), Limits());
 
-    // ------------------------------------------------------------------
-    // Write
-    // ------------------------------------------------------------------
-
     /// <summary>Sync every resolved Types file to the edited set: entries are grouped by their
-    /// <see cref="TypeEntry.SourceFile"/> (empty → the primary file; a path not in the resolved CE
-    /// set → the primary file, preventing writes to stray/orphan paths the server never loads).
-    /// Each target file is loaded (or created as <c>&lt;types/&gt;</c>), pruned of types no longer
-    /// kept for it, upserted, snapshotted, and written back. Per-file try/catch; ok only when no
-    /// file failed.</summary>
+    /// <see cref="TypeEntry.SourceFile"/> and each target file is pruned, upserted, snapshotted,
+    /// and written back. Ok only when no file failed.</summary>
+    /// <remarks>An empty or orphan SourceFile (a path not in the resolved CE set) routes to the
+    /// primary file, preventing writes to stray paths the server never loads.</remarks>
     public OpResult SaveAll(IReadOnlyList<TypeEntry> entries)
     {
-        var (resolved, primary) = ResolveAll();   // I1: resolve once
+        var (resolved, primary) = ResolveAll();
         if (primary is null) return new(false, "no types.xml files resolved");
 
-        // C1: build the set of valid write targets; route orphan SourceFile paths to primary.
         var valid = new HashSet<string>(resolved.Select(r => r.Path), StringComparer.OrdinalIgnoreCase) { primary };
         var groups = entries.GroupBy(e =>
             string.IsNullOrEmpty(e.SourceFile) ? primary
@@ -153,7 +135,6 @@ public sealed class TypesService
             catch { failed.Add(Path.GetFileName(file)); }
         }
 
-        // I4: informative partial result
         if (failed.Count == 0)
             return new(true, $"saved {entries.Count} types across {saved.Count} file(s)");
         if (saved.Count > 0)
@@ -171,13 +152,10 @@ public sealed class TypesService
     {
         if (string.IsNullOrWhiteSpace(name)) return new(false, "type name required");
 
-        var (resolved, primary) = ResolveAll();   // I1: resolve once
+        var (resolved, primary) = ResolveAll();
 
-        // Locate an existing entry with a cheap XElement probe over the resolved files, in resolved
-        // order (first file containing the name wins, same as the old Rows()-based lookup) — no
-        // TypeEntry materialization. Each parsed doc is kept so the edit below reuses it instead of
-        // re-reading the target file. Malformed files are skipped here exactly like Rows() skips them;
-        // if one of them ends up as the write target, ParseDoc in the edit reports the error.
+        // Probe in resolved order — the first file containing the name wins. Parsed docs are kept
+        // so the edit below reuses them; malformed files are skipped exactly like Rows() skips them.
         var probed = new Dictionary<string, XDocument>(StringComparer.OrdinalIgnoreCase);
         string? target = null;
         XElement? el = null;
@@ -194,16 +172,13 @@ public sealed class TypesService
             break;
         }
 
-        // Resolve the target write path:
-        //   1. Existing type (found above) → write back to the file it came from.
-        //   2. file param given → match it against the resolved CE file list (by basename or full path)
-        //      so a basename like "mymod_types.xml" lands in the real CE-registered file, not CWD.
-        //   3. Fall back to the primary types file.
+        // Target: the file the existing type came from, else the file param matched against the
+        // resolved CE list (by basename or full path, so "mymod_types.xml" lands in the real
+        // CE-registered file, not CWD), else the primary types file.
         if (target is null)
         {
             if (!string.IsNullOrEmpty(file))
             {
-                // Try to match against a resolved CE file path.
                 var matched = resolved.FirstOrDefault(r =>
                     Path.GetFileName(r.Path).Equals(file, StringComparison.OrdinalIgnoreCase) ||
                     r.Path.Equals(file, StringComparison.OrdinalIgnoreCase));
@@ -269,24 +244,17 @@ public sealed class TypesService
         return removed > 0 ? new(true, $"removed {name}") : new(false, $"no such type: {name}");
     }
 
-    // ------------------------------------------------------------------
-    // Backups / restore (primary file)
-    // ------------------------------------------------------------------
-
-    /// <summary>Lists versioned backups for the <b>primary</b> types file only (vanilla
-    /// <c>db\types.xml</c> or the first resolved file). Mod/custom CE files maintain their own
-    /// backup snapshots in <c>.dzl-&lt;stem&gt;-backups/</c> directories next to each file; full
-    /// multi-file backup browsing is a future sub-project.</summary>
+    /// <summary>Lists versioned backups for the <b>primary</b> types file only.</summary>
+    /// <remarks>Mod/custom CE files maintain their own snapshots in <c>.dzl-&lt;stem&gt;-backups/</c>
+    /// next to each file; full multi-file backup browsing is a future sub-project.</remarks>
     public List<TypesBackupInfo> Backups()
     {
         var f = ResolveAll().Primary;
         return f is null ? new() : TypesBackup.List(f);
     }
 
-    /// <summary>Restores the <b>primary</b> types file from a specific backup snapshot. Operates
-    /// on the primary file only (vanilla <c>db\types.xml</c> or the first resolved file). Mod/custom
-    /// CE files maintain their own backup snapshots in <c>.dzl-&lt;stem&gt;-backups/</c> directories
-    /// next to each file; full multi-file restore browsing is a future sub-project.</summary>
+    /// <summary>Restores the <b>primary</b> types file from a specific backup snapshot
+    /// (see <see cref="Backups"/> for the primary-only scope).</summary>
     public OpResult Restore(string backupFile)
     {
         var f = ResolveAll().Primary;
