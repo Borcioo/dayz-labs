@@ -3,12 +3,11 @@ using System.Runtime.InteropServices;
 
 namespace Dzl.Core.Tools;
 
-/// <summary>
-/// Launches a child process at the NORMAL (non-elevated) user level even when the current process
-/// is elevated — so things it mounts (the P: work drive) land in the user session the game/Explorer
-/// see. Uses the elevated process's linked (limited) token + CreateProcessWithTokenW. Falls back to
-/// a normal launch when not elevated or if anything fails (so it never regresses).
-/// </summary>
+/// <summary>Launches a child process at the NORMAL (non-elevated) user level even when the current
+/// process is elevated — so things it mounts (the P: work drive) land in the user session the
+/// game/Explorer see.</summary>
+/// <remarks>Uses the elevated process's linked (limited) token + CreateProcessWithTokenW. Falls back
+/// to a normal launch when not elevated or if anything fails (so it never regresses).</remarks>
 public static class ProcessElevation
 {
     /// <summary>Run exe+args, returning the exit code (null if it couldn't start / timed out).
@@ -38,7 +37,7 @@ public static class ProcessElevation
         catch { return null; }
     }
 
-    // ---- Win32: spawn as the linked (limited) user token --------------------
+    // Spawn the child via the elevated process's linked (limited) user token.
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     private static int? TryRunDeElevated(string exePath, IReadOnlyList<string> args, string workingDir, int timeoutMs, bool showWindow)
     {
@@ -144,7 +143,6 @@ public static class ProcessElevation
         sb.Append('"');
     }
 
-    // ---- P/Invoke declarations ----
     private const uint TOKEN_QUERY = 0x0008, TOKEN_DUPLICATE = 0x0002, TOKEN_ALL_ACCESS = 0xF01FF;
     private const uint LOGON_WITH_PROFILE = 0x00000001, CREATE_NO_WINDOW = 0x08000000;
 

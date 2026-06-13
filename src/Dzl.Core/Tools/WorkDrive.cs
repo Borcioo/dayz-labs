@@ -2,16 +2,15 @@ using System.Diagnostics;
 
 namespace Dzl.Core.Tools;
 
-/// <summary>
-/// Drives DayZ Tools' <c>WorkDrive.exe</c>, which mounts a configured work folder as the P: drive
-/// and unpacks vanilla game data into it. The real CLI is:
+/// <summary>Drives DayZ Tools' <c>WorkDrive.exe</c>, which mounts a configured work folder as the
+/// P: drive and unpacks vanilla game data into it.</summary>
+/// <remarks>The real CLI is:
 /// <code>
 ///   WorkDrive.exe /Mount [source]                         (source optional; uses configured WorkDirPath)
 ///   WorkDrive.exe /Dismount
 ///   WorkDrive.exe /extractGameData [gamePath] [destPath]  (unpack vanilla PBOs into P:)
 /// </code>
-/// Arg-builders are pure (and tested); the process wrappers are thin and never throw.
-/// </summary>
+/// Arg-builders are pure (and tested); the process wrappers are thin and never throw.</remarks>
 public static class WorkDrive
 {
     // P: is the conventional DayZ work drive. "Mounted" means a real, accessible drive in THIS
@@ -26,8 +25,6 @@ public static class WorkDrive
         }
         catch { return Directory.Exists(drive); }
     }
-
-    // ---- mount-target verification --------------------------------------
 
     // Strip the NT object-manager prefix from a QueryDosDevice result: "\??\D:\DayZWorkDrive" -> "D:\DayZWorkDrive".
     // Returns null for empty/whitespace. Pure — TESTED.
@@ -72,8 +69,6 @@ public static class WorkDrive
         catch { return false; }
     }
 
-    // ---- pure arg-builders (tested) -------------------------------------
-
     // Exact arg shape DayZ Tools itself uses (from WorkDrive's own log):
     //   /y /Silent /nowarnings /mount P: "<source>"
     //   /y /Silent /nowarnings /dismount P:
@@ -103,15 +98,10 @@ public static class WorkDrive
     // shows its own progress console — extract is long and the user wants to see it working.
     public static List<string> ExtractArgs() => new() { "/y", "/nowarnings", "/ExtractGameData" };
 
-    // ---- process wrappers (manual; never throw) -------------------------
-
-    /// <summary>
-    /// Mount the work drive. If already mounted, returns true. With a real <paramref name="exePath"/>
-    /// runs <c>WorkDrive.exe /Mount [source]</c> (creating <paramref name="source"/> first if given);
-    /// otherwise falls back to <c>subst</c> — but only when a source folder is supplied.
-    /// <para>New signature: exe first, source optional. Existing one-arg <c>Mount(exe)</c> callers still
-    /// compile and mean "mount the configured WorkDirPath".</para>
-    /// </summary>
+    /// <summary>Mount the work drive (returns true if already mounted). With a real
+    /// <paramref name="exePath"/> runs <c>WorkDrive.exe /Mount [source]</c> (creating
+    /// <paramref name="source"/> first if given); otherwise falls back to <c>subst</c>, but only when
+    /// a source folder is supplied.</summary>
     public static bool Mount(string exePath, string? source = null, string drive = "P:")
     {
         if (IsMounted(drive + "\\")) return true;
@@ -158,14 +148,13 @@ public static class WorkDrive
         p?.WaitForExit(10000);
     }
 
-    /// <summary>
-    /// Run DayZ Tools' game-data extraction (vanilla PBOs → P:\, using settings.ini's game path +
-    /// work-drive letter). It runs SYNCHRONOUSLY: WorkDrive unpacks every out-of-date PBO and then
-    /// exits 0 ("The tasks were executed."). It is also IDEMPOTENT — re-running it just version-checks
-    /// each PBO ("Data seems to be up to date") and exits in ~1s, so the same call doubles as a verify.
-    /// <paramref name="showWindow"/>: show WorkDrive's progress console (true for a real extract you want
-    /// to watch; false for a quiet re-check). Returns (exit==0, "") ; (false, "") on failure to start.
-    /// </summary>
+    /// <summary>Run DayZ Tools' game-data extraction (vanilla PBOs → P:\, using settings.ini's game
+    /// path + work-drive letter). Returns (exit==0, ""); (false, "") on failure to start.</summary>
+    /// <remarks>Runs SYNCHRONOUSLY: WorkDrive unpacks every out-of-date PBO and then exits 0 ("The
+    /// tasks were executed."). Also IDEMPOTENT — re-running version-checks each PBO ("Data seems to be
+    /// up to date") and exits in ~1s, so the same call doubles as a verify. <paramref name="showWindow"/>
+    /// shows WorkDrive's progress console (true for a real extract to watch; false for a quiet
+    /// re-check).</remarks>
     public static (bool ok, string output) ExtractGameData(string exePath, bool showWindow = true)
     {
         if (!File.Exists(exePath)) return (false, "");

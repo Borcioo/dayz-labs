@@ -4,8 +4,8 @@ namespace Dzl.Core.Tools;
 
 public static class ToolLauncher
 {
-    // Launch a tool GUI (fire-and-forget). Returns false if the exe is missing or the launch
-    // fails (access denied, no association) — wrappers never throw.
+    /// <summary>Launch a tool GUI (fire-and-forget). Returns false if the exe is missing or the launch
+    /// fails (access denied, no association); never throws.</summary>
     public static bool Launch(ToolEntry tool)
     {
         if (!tool.Exists) return false;
