@@ -3,20 +3,70 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              x:Name="Root">
-  <!-- Inline slider + numeric entry, NO popup. A Popup hosting a TextBox inside a DataGrid fights the grid
-       for keyboard focus (the grid yanks focus back to the row right after the click) and is unusable, so the
-       editor lives directly in the cell. Children bind to Root's DPs via ElementName. -->
-  <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-    <Slider x:Name="Sld" Width="110" MinWidth="50" VerticalAlignment="Center"
-            Minimum="{Binding Minimum, ElementName=Root}"
-            Maximum="{Binding Maximum, ElementName=Root}"
-            SmallChange="{Binding SmallChange, ElementName=Root}"
-            LargeChange="{Binding SmallChange, ElementName=Root}"
-            TickFrequency="{Binding SmallChange, ElementName=Root}" IsSnapToTickEnabled="True"
-            Value="{Binding Value, ElementName=Root, Mode=TwoWay}" />
-    <ui:TextBox x:Name="Num" MinWidth="48" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12"
-                TextAlignment="Center" ToolTip="0..1"
-                TextChanged="OnEntryTextChanged" PreviewTextInput="OnEntryPreviewInput"
-                LostFocus="OnEntryLostFocus" KeyDown="OnEntryKeyDown" />
-  </StackPanel>
+  <!-- Two modes, one control (Value/Minimum/Maximum/SmallChange/Decimals shared):
+         • Popup mode (default) — a compact button that opens a slider+entry flyout. For standalone use.
+         • Inline mode (Inline="True") — slider+entry directly in place. For DataGrid cells, where a popup
+           loses keyboard focus to the grid. -->
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="B2V" />
+  </UserControl.Resources>
+
+  <Grid>
+    <!-- ===== Inline mode ===== -->
+    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                Visibility="{Binding Inline, ElementName=Root, Converter={StaticResource B2V}}">
+      <Slider Width="110" MinWidth="50" VerticalAlignment="Center"
+              Minimum="{Binding Minimum, ElementName=Root}" Maximum="{Binding Maximum, ElementName=Root}"
+              SmallChange="{Binding SmallChange, ElementName=Root}" LargeChange="{Binding SmallChange, ElementName=Root}"
+              TickFrequency="{Binding SmallChange, ElementName=Root}" IsSnapToTickEnabled="True"
+              Value="{Binding Value, ElementName=Root, Mode=TwoWay}" />
+      <ui:TextBox x:Name="InlineEntry" MinWidth="48" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12"
+                  TextAlignment="Center" ToolTip="0..1"
+                  TextChanged="OnEntryTextChanged" PreviewTextInput="OnEntryPreviewInput"
+                  LostFocus="OnEntryLostFocus" KeyDown="OnEntryKeyDown" />
+    </StackPanel>
+
+    <!-- ===== Popup mode: button face ===== -->
+    <Border x:Name="Toggle" MinWidth="48" Padding="8,0" CornerRadius="4" Cursor="Hand" Focusable="False"
+            Background="{DynamicResource ControlFillColorDefaultBrush}"
+            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+            PreviewMouseLeftButtonDown="OnTogglePreviewDown" MouseLeftButtonUp="OnToggleClick">
+      <Border.Style>
+        <Style TargetType="Border">
+          <Setter Property="Visibility" Value="Visible" />
+          <Style.Triggers>
+            <DataTrigger Binding="{Binding Inline, ElementName=Root}" Value="True">
+              <Setter Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
+          </Style.Triggers>
+        </Style>
+      </Border.Style>
+      <TextBlock Text="{Binding DisplayText, ElementName=Root}" FontSize="12"
+                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+    </Border>
+
+    <Popup x:Name="Pop" PlacementTarget="{Binding ElementName=Toggle}" Placement="Custom"
+           StaysOpen="False" AllowsTransparency="True" Closed="OnPopupClosed">
+      <Border Padding="10" CornerRadius="8" BorderThickness="1"
+              Background="{DynamicResource ApplicationBackgroundBrush}"
+              BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <TextBlock Text="{Binding Minimum, ElementName=Root}" VerticalAlignment="Center" Margin="0,0,6,0"
+                     FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+          <Slider Width="160" VerticalAlignment="Center"
+                  Minimum="{Binding Minimum, ElementName=Root}" Maximum="{Binding Maximum, ElementName=Root}"
+                  SmallChange="{Binding SmallChange, ElementName=Root}" LargeChange="{Binding SmallChange, ElementName=Root}"
+                  TickFrequency="{Binding SmallChange, ElementName=Root}" IsSnapToTickEnabled="True"
+                  Value="{Binding Value, ElementName=Root, Mode=TwoWay}" />
+          <TextBlock Text="{Binding Maximum, ElementName=Root}" VerticalAlignment="Center" Margin="6,0,8,0"
+                     FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+          <ui:TextBox x:Name="PopupEntry" MinWidth="48" VerticalAlignment="Center" FontSize="12"
+                      TextAlignment="Center" ToolTip="0..1"
+                      TextChanged="OnEntryTextChanged" PreviewTextInput="OnEntryPreviewInput"
+                      LostFocus="OnEntryLostFocus" KeyDown="OnEntryKeyDown" />
+        </StackPanel>
+      </Border>
+    </Popup>
+  </Grid>
 </UserControl>

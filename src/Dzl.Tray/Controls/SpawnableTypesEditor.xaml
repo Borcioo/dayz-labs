@@ -84,7 +84,7 @@
                 <DataGridTemplateColumn Header="Chance" Width="190" CanUserResize="False" IsReadOnly="True">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate>
-                      <ctl:ChanceField Value="{Binding Chance, Mode=TwoWay}" VerticalAlignment="Center"
+                      <ctl:ChanceField Inline="True" Value="{Binding Chance, Mode=TwoWay}" VerticalAlignment="Center"
                                        HorizontalAlignment="Left" Margin="2"
                                        ValueCommitted="OnSpawnItemChanceCommitted" />
                     </DataTemplate>
