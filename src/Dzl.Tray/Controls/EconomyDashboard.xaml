@@ -36,6 +36,10 @@
         <ui:Button Content="Open mission folder" Icon="{ui:SymbolIcon FolderOpen24}" Margin="0,0,8,0"
                    Command="{Binding OpenMissionFolderCommand}"
                    Visibility="{Binding HasMission, Converter={StaticResource BoolToVis}}" />
+        <ui:Button Content="Disable unused presets" Icon="{ui:SymbolIcon Broom24}" Margin="0,0,8,0"
+                   ToolTip="Comment out every random preset no spawnabletype references (kept, re-enableable)"
+                   Command="{Binding DisableUnusedPresetsCommand}"
+                   Visibility="{Binding HasMission, Converter={StaticResource BoolToVis}}" />
         <ui:Button Content="Run full validation" Icon="{ui:SymbolIcon ClipboardCheckmark24}" Appearance="Primary"
                    Command="{Binding RunFullValidationCommand}" IsEnabled="{Binding CanValidate}" />
       </StackPanel>

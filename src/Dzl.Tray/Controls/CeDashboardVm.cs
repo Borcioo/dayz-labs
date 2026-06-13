@@ -30,9 +30,16 @@ public sealed record CeFindingRow(LintSeverity Severity, string Message, string 
 public partial class CeDashboardVm : ObservableObject
 {
     private readonly string _configPath;
+    private readonly RandomPresetsService _presets;
+    private readonly Func<string, bool> _confirm;
     private CeWorld? _world;
 
-    public CeDashboardVm(string configPath) => _configPath = configPath;
+    public CeDashboardVm(string configPath, Func<string, bool> confirm)
+    {
+        _configPath = configPath;
+        _confirm = confirm;
+        _presets = new RandomPresetsService(configPath);
+    }
 
     /// <summary>Raised when a tile or finding is clicked — the host panel selects that file's tab and,
     /// when an entry is given (a finding click), filters that editor's list to it.</summary>
@@ -150,5 +157,43 @@ public partial class CeDashboardVm : ObservableObject
     private void OpenMissionFolder()
     {
         if (HasMission) ShellOpen.Folder(MissionDir);
+    }
+
+    /// <summary>Comment out (not delete) every random preset that no spawnabletype references, so dead
+    /// presets stop loading without being lost. Confirms first, then re-validates to refresh the report.</summary>
+    [RelayCommand]
+    private void DisableUnusedPresets()
+    {
+        var world = _world ??= new CeWorldLoader(_configPath).Load();
+        var unused = FindUnusedPresets(world);
+        if (unused.Count == 0) { Summary = "✓ No unused presets to disable."; return; }
+
+        if (!_confirm($"Disable (comment out) {unused.Count} unused preset(s)? They stay in the file and can " +
+                      "be re-enabled per-row on the Random Presets tab.")) return;
+
+        var done = 0;
+        foreach (var (kind, name) in unused)
+            if (_presets.DisablePreset(kind, name).ok) done++;
+
+        _world = null; // file changed — drop the cached world so the next pass re-reads it
+        Refresh();
+        Summary = $"Disabled {done} unused preset(s). Run a full validation to refresh the report.";
+    }
+
+    /// <summary>The (kind, name) of every active preset referenced by no spawnabletype of its kind.</summary>
+    private static List<(PresetKind Kind, string Name)> FindUnusedPresets(CeWorld world)
+    {
+        var refdCargo = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var refdAttach = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var t in world.SpawnableTypes)
+            foreach (var b in t.Cargo.Concat(t.Attachments))
+                if (b.IsPreset && b.Preset is { } pr)
+                    (b.IsAttachments ? refdAttach : refdCargo).Add(pr);
+
+        return world.RandomPresets
+            .Where(p => !p.Disabled)
+            .Where(p => !(p.Kind == PresetKind.Attachments ? refdAttach : refdCargo).Contains(p.Name))
+            .Select(p => (p.Kind, p.Name))
+            .ToList();
     }
 }

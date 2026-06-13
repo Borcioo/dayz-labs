@@ -85,7 +85,7 @@ public partial class MainViewModel
     /// <summary>Backs the Economy Dashboard tab (first): per-file stat tiles + the aggregated
     /// validation report. Created lazily so it shares this VM's config path.</summary>
     public Dzl.Tray.Controls.CeDashboardVm CeDashboard =>
-        _ceDashboard ??= new Dzl.Tray.Controls.CeDashboardVm(_configPath);
+        _ceDashboard ??= new Dzl.Tray.Controls.CeDashboardVm(_configPath, ConfirmDictionaryAction);
 
     /// <summary>(Re)load the dashboard stats from disk. Called when the dashboard tab is shown.</summary>
     public void RefreshCeDashboard() => CeDashboard.Refresh();
