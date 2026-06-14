@@ -45,8 +45,15 @@ public static class TypesXml
         return e is null ? fallback : CeNum.Int(e.Value, fallback);
     }
 
-    private static bool FlagVal(XElement? flags, string attr) =>
-        CeNum.Bool01(flags?.Attribute(attr)?.Value);
+    // Default is false for every flag EXCEPT count_in_map: DayZ treats a missing/absent count_in_map as 1
+    // (the item still counts toward the map distribution), which TypeFlags.CountInMap=true encodes. A null
+    // attribute (no <flags> element, or the flag omitted) must therefore fall back to dflt, not to false —
+    // otherwise reading then re-saving a flags-less <type> would silently emit count_in_map="0".
+    private static bool FlagVal(XElement? flags, string attr, bool dflt = false)
+    {
+        var v = flags?.Attribute(attr)?.Value;
+        return v is null ? dflt : CeNum.Bool01(v);
+    }
 
     private static List<string> NamedChildren(XElement type, string child) =>
         type.Elements(child).Select(e => e.Attribute("name")?.Value.Trim() ?? "").Where(s => s.Length > 0).ToList();
@@ -72,7 +79,7 @@ public static class TypesXml
             {
                 CountInCargo = FlagVal(flags, "count_in_cargo"),
                 CountInHoarder = FlagVal(flags, "count_in_hoarder"),
-                CountInMap = FlagVal(flags, "count_in_map"),
+                CountInMap = FlagVal(flags, "count_in_map", dflt: true),
                 CountInPlayer = FlagVal(flags, "count_in_player"),
                 Crafted = FlagVal(flags, "crafted"),
                 Deloot = FlagVal(flags, "deloot"),

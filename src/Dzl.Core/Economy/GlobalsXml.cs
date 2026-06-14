@@ -62,7 +62,8 @@ public static class GlobalsXml
         }
         else
         {
-            el.SetAttributeValue("name", name);
+            // Value-only upsert: keep the stored name verbatim (FindVar already matched it
+            // case-insensitively). Re-casing an engine-consumed identifier here is RenameVar's job.
             el.SetAttributeValue("type", type.ToString());
             el.SetAttributeValue("value", value);
         }

@@ -77,6 +77,15 @@ public static class LimitsUserXml
     /// <summary>Parse XML to an editable document for use with the edit methods.</summary>
     public static XDocument ParseDoc(string xml) => CeXml.ParseDoc(xml);
 
+    /// <summary>Locate the <c>&lt;user_lists&gt;</c> element without creating it — used by read-only / no-op
+    /// paths so a failed lookup never mutates the document (see <see cref="RemoveGroup"/>).</summary>
+    private static XElement? FindUserLists(XDocument doc)
+    {
+        var root = doc.Root;
+        if (root is null) return null;
+        return root.Name.LocalName == "user_lists" ? root : root.Element("user_lists");
+    }
+
     private static XElement GetOrCreateUserLists(XDocument doc)
     {
         var root = doc.Root;
@@ -116,9 +125,11 @@ public static class LimitsUserXml
 
         section.Elements("user").ByName(name)?.Remove();
 
-        var user = new XElement("user", new XAttribute("name", name));
+        // Trim names on write so the stored value equals what Parse surfaces and what the game matches
+        // literally — a padded "<usage name=\" Town \"/>" would never resolve against the base flag "Town".
+        var user = new XElement("user", new XAttribute("name", name.Trim()));
         foreach (var m in members)
-            user.Add(new XElement(memberElem, new XAttribute("name", m)));
+            user.Add(new XElement(memberElem, new XAttribute("name", m.Trim())));
         section.Add(user);
     }
 
@@ -127,8 +138,8 @@ public static class LimitsUserXml
     public static bool RemoveGroup(XDocument doc, LimitsKind kind, string name)
     {
         var (containerName, _, _) = SectionFor(kind);
-        var userLists = GetOrCreateUserLists(doc);
-        var section = userLists.Element(containerName);
+        var userLists = FindUserLists(doc);          // non-mutating: a no-op remove must not inject <user_lists/>
+        var section = userLists?.Element(containerName);
         if (section is null) return false;
         var el = section.Elements("user").ByName(name);
         if (el is null) return false;
@@ -154,7 +165,7 @@ public static class LimitsUserXml
 
         user.Elements(memberElem).Remove();
         foreach (var m in members)
-            user.Add(new XElement(memberElem, new XAttribute("name", m)));
+            user.Add(new XElement(memberElem, new XAttribute("name", m.Trim())));
         return true;
     }
 

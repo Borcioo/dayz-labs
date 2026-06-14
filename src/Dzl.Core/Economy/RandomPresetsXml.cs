@@ -114,7 +114,9 @@ public static class RandomPresetsXml
     {
         if (string.IsNullOrWhiteSpace(name)) return false;
         var root = doc.Root ?? throw new InvalidOperationException("cfgrandompresets.xml has no root element");
-        if (FindPreset(doc, kind, name) is not null) return false;
+        // The kind+name namespace spans active AND disabled (commented-out) presets, so re-adding a name a
+        // disabled twin holds would let a later EnablePreset resurrect a same-name duplicate.
+        if (FindPreset(doc, kind, name) is not null || FindDisabled(doc, kind, name) is not null) return false;
         root.Add(new XElement(ElementName(kind),
             new XAttribute("chance", FormatChance(chance)),
             new XAttribute("name", name)));
@@ -163,7 +165,8 @@ public static class RandomPresetsXml
         var el = FindPreset(doc, from, name);
         if (el is null) return false;
         if (from == to) return true;
-        if (FindPreset(doc, to, name) is not null) return false;
+        // Reject if the target kind already holds the name as an active OR disabled preset (see AddPreset).
+        if (FindPreset(doc, to, name) is not null || FindDisabled(doc, to, name) is not null) return false;
         el.Name = ElementName(to);
         return true;
     }
@@ -174,14 +177,20 @@ public static class RandomPresetsXml
     {
         var c = FindDisabled(doc, kind, name);
         if (c is null || !TryParseDisabled(c, out _, out _, out var el)) return false;
+        // Don't resurrect onto a live twin of the same kind+name — that would yield two active presets.
+        if (FindPreset(doc, kind, name) is not null) return false;
         c.ReplaceWith(el!);
         return true;
     }
 
     /// <summary>Rename a preset in place (preserves position/items). Returns true if performed; false if
     /// <paramref name="oldName"/> does not exist or <paramref name="newName"/> already exists for the kind.</summary>
-    public static bool RenamePreset(XDocument doc, PresetKind kind, string oldName, string newName) =>
-        CeXml.RenameByName(doc.Root?.Elements(ElementName(kind)) ?? Enumerable.Empty<XElement>(), oldName, newName);
+    public static bool RenamePreset(XDocument doc, PresetKind kind, string oldName, string newName)
+    {
+        // A disabled twin of the new name also occupies the namespace (see AddPreset).
+        if (FindDisabled(doc, kind, newName) is not null) return false;
+        return CeXml.RenameByName(doc.Root?.Elements(ElementName(kind)) ?? Enumerable.Empty<XElement>(), oldName, newName);
+    }
 
     /// <summary>Set a preset's <c>chance</c> attribute. Returns true if the preset exists.</summary>
     public static bool SetPresetChance(XDocument doc, PresetKind kind, string name, double chance)

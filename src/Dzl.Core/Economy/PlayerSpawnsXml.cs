@@ -134,6 +134,28 @@ public static class PlayerSpawnsXml
         return true;
     }
 
+    /// <summary>Rename a param element in place inside a category's section (the param key IS the element
+    /// name, e.g. <c>&lt;grid_width&gt;</c>), preserving its value and position. Returns false if the
+    /// category/section/old element is missing, or an element named <paramref name="newName"/> already
+    /// exists in the section (case-insensitive).</summary>
+    public static bool RenameParam(XDocument doc, string category, string section, string oldName, string newName)
+    {
+        if (string.IsNullOrWhiteSpace(newName)) return false;
+        var cat = FindCategory(doc, category);
+        var sec = cat?.Element(section);
+        if (sec is null) return false;
+
+        var el = sec.Elements()
+                    .FirstOrDefault(e => string.Equals(e.Name.LocalName, oldName, StringComparison.OrdinalIgnoreCase));
+        if (el is null) return false;
+        if (!string.Equals(oldName, newName, StringComparison.OrdinalIgnoreCase) &&
+            sec.Elements().Any(e => e != el && string.Equals(e.Name.LocalName, newName, StringComparison.OrdinalIgnoreCase)))
+            return false;
+
+        el.Name = newName;
+        return true;
+    }
+
     /// <summary>Add a new empty named <c>&lt;group&gt;</c> to a category's container. Creates the container if
     /// missing (under an existing category). Returns true if added; false if the category is missing, the name
     /// is blank, or a group of that name already exists (case-insensitive).</summary>

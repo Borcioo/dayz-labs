@@ -31,6 +31,17 @@ public sealed class PlayerSpawnsService : CeFileService
             $"category '{category}' not found");
     }
 
+    /// <summary>Rename a scalar param within a category's section, preserving its value/position.</summary>
+    public (bool ok, string msg) RenameParam(string category, string section, string oldName, string newName)
+    {
+        if (string.IsNullOrWhiteSpace(oldName)) return (false, "old name must not be empty");
+        if (string.IsNullOrWhiteSpace(newName)) return (false, "new name must not be empty");
+        return Edit(
+            doc => PlayerSpawnsXml.RenameParam(doc, category, section, oldName, newName),
+            $"renamed {category}/{section}/{oldName} → {newName}",
+            $"rename failed: '{oldName}' not found or '{newName}' already exists in {category}/{section}");
+    }
+
     /// <summary>Add a named group to a category's bubbles container.</summary>
     public (bool ok, string msg) AddGroup(string category, string container, string groupName)
     {

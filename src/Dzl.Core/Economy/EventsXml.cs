@@ -245,8 +245,10 @@ public static class EventsXml
         var el = FindChild(ev, type);
         if (el is null) return false;
 
+        // Ordinal (not OrdinalIgnoreCase) so a case-only retype is still applied; the clash guard below stays
+        // case-insensitive, so renaming to a casing variant of THIS child (only el matches) is allowed.
         if (!string.IsNullOrWhiteSpace(updated.Type) &&
-            !string.Equals(updated.Type, type, StringComparison.OrdinalIgnoreCase))
+            !string.Equals(updated.Type, type, StringComparison.Ordinal))
         {
             if (ChildElements(ev).ByName(updated.Type, "type", excluding: el) is not null) return false;
             el.SetAttributeValue("type", updated.Type);

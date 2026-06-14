@@ -14,30 +14,39 @@ public static class CeXml
     public static XDocument ParseDoc(string xml) => XDocument.Parse(xml);
 
     /// <summary>Serialize back to text. Preserves the XML declaration if one is present; returns only the
-    /// root element text when no declaration exists (avoids a leading bare newline).</summary>
-    public static string Serialize(XDocument doc) =>
-        doc.Declaration is null
-            ? doc.Root!.ToString()
-            : doc.Declaration + Environment.NewLine + doc.Root;
+    /// document body when no declaration exists (avoids a leading bare newline). Emits every top-level node
+    /// (root plus any comment / processing-instruction before or after it), not just the root, so a
+    /// load → save round-trip never drops a pre/post-root comment.</summary>
+    public static string Serialize(XDocument doc)
+    {
+        var body = string.Concat(doc.Nodes().Select(n => n.ToString()));
+        return doc.Declaration is null
+            ? body
+            : doc.Declaration + Environment.NewLine + body;
+    }
 
     /// <summary>First element whose <paramref name="attr"/> attribute equals <paramref name="name"/>
-    /// (case-insensitive), or null. <paramref name="excluding"/> skips one element — used by
-    /// rename/clash checks to ignore the element being renamed.</summary>
+    /// (case-insensitive, ignoring surrounding whitespace on either side), or null. <paramref name="excluding"/>
+    /// skips one element — used by rename/clash checks to ignore the element being renamed.
+    /// <para>The stored value is trimmed before comparing because every CE <c>Parse</c> trims the name it
+    /// surfaces; without this the read key (trimmed) and the write key (raw) disagree, so an edit addressed
+    /// by a displayed name would silently miss a whitespace-padded element.</para></summary>
     public static XElement? ByName(this IEnumerable<XElement> els, string name, string attr = "name", XElement? excluding = null) =>
         els.FirstOrDefault(e => e != excluding &&
-            string.Equals(e.Attribute(attr)?.Value, name, StringComparison.OrdinalIgnoreCase));
+            string.Equals(e.Attribute(attr)?.Value?.Trim(), name?.Trim(), StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Rename guard shared by the CE editors: returns false on blank new name, missing old
-    /// element, or a case-insensitive clash with another element; otherwise sets the attribute.</summary>
+    /// element, or a case-insensitive clash with another element; otherwise sets the (trimmed) attribute.</summary>
     public static bool RenameByName(IEnumerable<XElement> els, string oldName, string newName, string attr = "name")
     {
         if (string.IsNullOrWhiteSpace(newName)) return false;
+        var trimmedNew = newName.Trim();
         var list = els as IReadOnlyCollection<XElement> ?? els.ToList();
         var el = list.ByName(oldName, attr);
         if (el is null) return false;
-        if (!string.Equals(oldName, newName, StringComparison.OrdinalIgnoreCase) &&
-            list.ByName(newName, attr, excluding: el) is not null) return false;
-        el.SetAttributeValue(attr, newName);
+        if (!string.Equals(oldName?.Trim(), trimmedNew, StringComparison.OrdinalIgnoreCase) &&
+            list.ByName(trimmedNew, attr, excluding: el) is not null) return false;
+        el.SetAttributeValue(attr, trimmedNew);
         return true;
     }
 
