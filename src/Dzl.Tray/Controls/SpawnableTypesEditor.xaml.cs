@@ -22,23 +22,12 @@ public partial class SpawnableTypesEditor : UserControl
 
     private void OnAddTypeClick(object sender, RoutedEventArgs e) => Vm?.AddType();
 
-    private void OnAddTypeKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter) { Vm?.AddType(); e.Handled = true; }
-    }
+    // New-type classname AutoSuggestBox raised Submitted (Enter) — add the type.
+    private void OnAddTypeSubmitted(object? sender, System.EventArgs e) => Vm?.AddType();
 
     private void OnRemoveTypeClick(object sender, RoutedEventArgs e) => Vm?.RemoveSelectedType();
 
-    // Per-row quick actions: select that row, then reuse the rename/remove flow.
-    private void OnRowRenameClick(object sender, RoutedEventArgs e)
-    {
-        if (Vm is { } vm && sender is FrameworkElement { DataContext: SpawnTypeRowVm row })
-        {
-            vm.SelectedType = row;
-            OnRenameTypeClick(sender, e);
-        }
-    }
-
+    // Per-row quick action: select that row then remove it (rename is inline in the detail header).
     private void OnRowRemoveClick(object sender, RoutedEventArgs e)
     {
         if (Vm is { } vm && sender is FrameworkElement { DataContext: SpawnTypeRowVm row })
@@ -48,19 +37,10 @@ public partial class SpawnableTypesEditor : UserControl
         }
     }
 
-    private void OnRenameTypeClick(object sender, RoutedEventArgs e)
-    {
-        if (Vm is not { } vm || vm.SelectedType is not { } row)
-        {
-            if (Vm is { } v) v.Status = "✗ select a type to rename";
-            return;
-        }
-        var owner = Window.GetWindow(this);
-        if (owner is null) return;
-        var next = PromptDialog.Show(owner, "Rename spawnable type", $"Rename \"{row.Name}\" to:", row.Name);
-        if (string.IsNullOrWhiteSpace(next)) return;
-        vm.RenameSelectedType(next.Trim());
-    }
+    // Inline rename (detail-header AutoSuggestBox): commit on the Rename button or Enter (Submitted).
+    private void OnRenameClick(object sender, RoutedEventArgs e) => Vm?.CommitRename();
+
+    private void OnRenameSubmitted(object? sender, System.EventArgs e) => Vm?.CommitRename();
 
     private void OnHoarderClick(object sender, RoutedEventArgs e) => Vm?.SaveHoarder();
 
@@ -85,26 +65,6 @@ public partial class SpawnableTypesEditor : UserControl
     private void OnRemoveBlockClick(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.Tag is SpawnBlockVm block) Vm?.RemoveBlock(block);
-    }
-
-    private void OnBlockModePresetChecked(object sender, RoutedEventArgs e)
-    {
-        if (Vm is not { } vm) return;
-        if ((sender as FrameworkElement)?.Tag is not SpawnBlockVm block) return;
-        if (block.IsPreset) return; // already preset (initial bind / no real change)
-        // Default to the first matching preset name when switching to preset mode.
-        var names = block.IsAttachments ? vm.AttachmentsPresetNames : vm.CargoPresetNames;
-        var preset = names.FirstOrDefault() ?? "";
-        if (string.IsNullOrEmpty(preset)) { vm.Status = "✗ no presets available — add one on the Random Presets tab"; return; }
-        vm.SetBlockPreset(block, preset);
-    }
-
-    private void OnBlockModeChanceChecked(object sender, RoutedEventArgs e)
-    {
-        if (Vm is not { } vm) return;
-        if ((sender as FrameworkElement)?.Tag is not SpawnBlockVm block) return;
-        if (block.IsChance) return; // already chance
-        vm.SetBlockChance(block, "1.0");
     }
 
     private void OnBlockPresetLostFocus(object sender, RoutedEventArgs e)
@@ -160,26 +120,21 @@ public partial class SpawnableTypesEditor : UserControl
 
     private void OnAddItemClick(object sender, RoutedEventArgs e)
     {
-        if ((sender as FrameworkElement)?.Tag is not SpawnBlockVm block) return;
-        AddItemFromRow(sender as DependencyObject, block);
+        if ((sender as FrameworkElement)?.Tag is SpawnBlockVm block) AddItem(block);
     }
 
-    private void OnAddItemKeyDown(object sender, KeyEventArgs e)
+    // The reusable AutoSuggestBox raised Submitted (Enter) — add the block's item.
+    private void OnItemSubmitted(object? sender, System.EventArgs e)
     {
-        if (e.Key != Key.Enter) return;
-        if ((sender as FrameworkElement)?.Tag is not SpawnBlockVm block) return;
-        AddItemFromRow(sender as DependencyObject, block);
-        e.Handled = true;
+        if (sender is FrameworkElement { DataContext: SpawnBlockVm block }) AddItem(block);
     }
 
-    /// <summary>Find the add-item name TextBox that shares the clicked control's parent Grid, read it and add.</summary>
-    private void AddItemFromRow(DependencyObject? near, SpawnBlockVm block)
+    /// <summary>Add the block's typed classname (NewItemName, bound to the autocomplete box) at NewItemChance,
+    /// then clear the box. The block carries both, so no visual-tree lookup is needed.</summary>
+    private void AddItem(SpawnBlockVm block)
     {
-        var grid = FindAncestor<Grid>(near);
-        var nameBox = grid?.Children.OfType<Wpf.Ui.Controls.TextBox>().FirstOrDefault();
-        var name = nameBox?.Text ?? "";
-        Vm?.AddItem(block, name, block.NewItemChance.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        if (nameBox is not null) nameBox.Text = "";
+        Vm?.AddItem(block, block.NewItemName, block.NewItemChance.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        block.NewItemName = "";
     }
 
     /// <summary>Walk up the visual tree to find the SpawnBlockVm-tagged DataGrid that owns an item button.</summary>

@@ -122,8 +122,11 @@ public partial class ChanceField : UserControl
         // The slider edits Value via ElementName; force the outer binding (item.Chance, EditChanceValue, …) to
         // pick it up so every consumer sees the current value.
         BindingOperations.GetBindingExpression(c, ValueProperty)?.UpdateSource();
-        // Inline (grid) mode: auto-commit shortly after the last change, so edits persist without clicking away.
-        if (c.Inline) { c._commitTimer.Stop(); c._commitTimer.Start(); }
+        // Inline (grid) mode: auto-commit shortly after the last change, so edits persist without clicking
+        // away. ONLY while the user is actually editing this field (focus within) — a programmatic Value
+        // change (the initial TwoWay binding when the items grid (re)builds its rows on preset select/rename)
+        // must NOT arm the commit timer, or every row would auto-persist ~350ms later as a phantom edit.
+        if (c.Inline && c.IsKeyboardFocusWithin) { c._commitTimer.Stop(); c._commitTimer.Start(); }
     }
 
     // Live two-way between the entry text and Value without a binding (a converter binding rewrites the box

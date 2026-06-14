@@ -72,11 +72,25 @@ public sealed partial class GlobalsVm : RawXmlEditorVm
         }
     }
 
+    /// <summary>Select the var named <paramref name="name"/> (e.g. from a dashboard finding click), clearing
+    /// the filter only if it would hide the row. Selects the entry directly — does NOT filter the list.</summary>
+    public void SelectByEntry(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return;
+        if (!Rows.Any(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase)))
+            Filter = "";
+        SelectedRow = Rows.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
+    }
+
     /// <summary>Add a new var from the new-var form.</summary>
     public void AddVar()
     {
         var name = (NewVarName ?? "").Trim();
         if (name.Length == 0) { Status = "✗ var name must not be empty"; return; }
+        // SetVar is an upsert; guard here so "Add" reports a duplicate instead of silently overwriting an
+        // existing var's type/value (consistent with the other CE Add commands rejecting duplicates).
+        if (_svc.Load().Any(v => string.Equals(v.Name, name, StringComparison.OrdinalIgnoreCase)))
+        { Status = $"✗ var \"{name}\" already exists"; return; }
 
         PushUndo();
         if (Report(_svc.SetVar(name, NewVarType, NewVarValue ?? "")))

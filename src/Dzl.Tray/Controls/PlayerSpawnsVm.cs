@@ -168,10 +168,26 @@ public sealed partial class PlayerSpawnsVm : RawXmlEditorVm
     private void OnParamEdited(SpawnParamVm param)
     {
         if (_suspendPersist || SelectedCategory is not { } cat) return;
-        if (string.IsNullOrWhiteSpace(param.Name)) { Status = "✗ param name must not be empty"; return; }
+        var newName = (param.Name ?? "").Trim();
+        if (newName.Length == 0) { Status = "✗ param name must not be empty"; return; }
         PushUndo();
-        Report(_svc.SetParam(cat, param.Section, param.Name, param.Value ?? ""));
+        // A param's key IS its element name, so a rename must move the element (not upsert under the new
+        // name, which would leave the old one orphaned). Route it through RenameParam first, like Globals.
+        if (!string.Equals(newName, param.OriginalName, StringComparison.Ordinal) &&
+            !string.IsNullOrEmpty(param.OriginalName))
+        {
+            if (!Report(_svc.RenameParam(cat, param.Section, param.OriginalName, newName)))
+            { LoadCategoryDetail(); return; }
+        }
+        if (Report(_svc.SetParam(cat, param.Section, newName, param.Value ?? ""))) param.CommitName();
     }
+
+    private ObservableCollection<SpawnParamVm> SectionRows(string section) => section switch
+    {
+        "generator_params" => GeneratorParams,
+        "group_params"     => GroupParams,
+        _                  => SpawnParams,
+    };
 
     /// <summary>Add a new param row (key + value) to a section of the selected category and persist it.</summary>
     public void AddParam(string section, string name, string value)
@@ -179,6 +195,10 @@ public sealed partial class PlayerSpawnsVm : RawXmlEditorVm
         if (SelectedCategory is not { } cat) { Status = "✗ select a category first"; return; }
         name = (name ?? "").Trim();
         if (name.Length == 0) { Status = "✗ param name must not be empty"; return; }
+        // SetParam is an upsert; guard here so the "Add" affordance reports a duplicate instead of silently
+        // overwriting an existing param's value (consistent with AddPreset/AddGroup rejecting duplicates).
+        if (SectionRows(section).Any(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
+        { Status = $"✗ param \"{name}\" already exists in {section}"; return; }
         PushUndo();
         if (Report(_svc.SetParam(cat, section, name, value ?? ""))) LoadCategoryDetail();
     }
@@ -276,7 +296,8 @@ public sealed partial class SpawnParamVm : ObservableObject
 
     public string Section { get; }
 
-    /// <summary>The param name as last persisted (the section is keyed by name; upsert uses the current Name).</summary>
+    /// <summary>The param name as last persisted — used to locate the element when the Name cell is
+    /// renamed. Adopted as the new baseline via <see cref="CommitName"/> only after a successful save.</summary>
     public string OriginalName { get; private set; }
 
     public event Action<SpawnParamVm>? Edited;
@@ -284,7 +305,12 @@ public sealed partial class SpawnParamVm : ObservableObject
     [ObservableProperty] private string _name;
     [ObservableProperty] private string _value;
 
-    public void Commit() { OriginalName = Name; Edited?.Invoke(this); }
+    /// <summary>Raise the edit so the VM persists (rename + value). Must NOT touch <see cref="OriginalName"/>
+    /// here — the VM needs the pre-edit name to locate the element; it calls <see cref="CommitName"/> on success.</summary>
+    public void Commit() => Edited?.Invoke(this);
+
+    /// <summary>Adopt the current Name as the persisted baseline after a successful save.</summary>
+    public void CommitName() => OriginalName = Name;
 }
 
 /// <summary>One groups-list row: a named position group plus the bubbles container it lives in and its count.</summary>

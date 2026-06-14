@@ -113,6 +113,16 @@ public sealed partial class EventsVm : RawXmlEditorVm
         }
     }
 
+    /// <summary>Select the event named <paramref name="name"/> (e.g. from a dashboard finding click), clearing
+    /// the filter only if it would hide the row. Selects the entry directly — does NOT filter the list.</summary>
+    public void SelectByEntry(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return;
+        if (!Events.Any(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase)))
+            Filter = "";
+        SelectedEvent = Events.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
+    }
+
     partial void OnSelectedEventChanged(EventRowVm? value) => LoadDetailForSelected();
 
     private void LoadDetailForSelected()

@@ -72,6 +72,7 @@ public abstract partial class RawXmlEditorVm : ObservableObject
                      $"({_undo.Count} step(s)). Your saved edits stay on disk. Continue?"))
             return;
 
+        _loaded = true;
         _undo.Clear();
         _redo.Clear();
         NotifyHistory();
@@ -79,6 +80,18 @@ public abstract partial class RawXmlEditorVm : ObservableObject
         ReloadView();
         OnPropertyChanged(nameof(HasFile));
         OnPropertyChanged(nameof(FileLabel));
+    }
+
+    private bool _loaded;
+
+    /// <summary>Load the view the FIRST time the tab is shown; re-activating an already-loaded tab is a
+    /// no-op. This is the tab-activation entry point — it must never re-read the file or drop the in-progress
+    /// undo history just because the user switched tabs (which is what calling <see cref="Reload"/> on every
+    /// activation did, popping the discard-undo confirm). Use the explicit Reload button to force a fresh read.</summary>
+    public void EnsureLoaded()
+    {
+        if (_loaded) return;
+        Reload();   // first load: undo/redo empty, so no confirm; derived Reload overrides still run
     }
 
     /// <summary>Reload the VM's collections from disk keeping the current selection (and, where the

@@ -28,6 +28,31 @@ public sealed class NonNegativeIntRule : ValidationRule
 // The compact Flags column glyphs (active green / muted) now use the shared BoolToBrushConverter
 // (declared in App.xaml as "FlagBrush"); the dedicated FlagBrushConverter was retired.
 
+/// <summary>Maps the bound container's <c>ActualWidth</c> to a responsive column count: 2 when wide enough,
+/// else 1 (stacked). Lets the Spawnable Types cargo/attachments sections sit side by side on a wide pane and
+/// stack on a narrow one without a SizeChanged handler.</summary>
+public sealed class WidthToColumnsConverter : IValueConverter
+{
+    /// <summary>Below this width (device-independent px) the layout collapses to a single column.</summary>
+    public double Threshold { get; set; } = 720;
+
+    public object Convert(object value, Type targetType, object? parameter, CultureInfo culture)
+        => value is double w && w >= Threshold ? 2 : 1;
+
+    public object ConvertBack(object value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>Visibility = Visible when the bound count is 0 (drives an empty-state hint), else Collapsed.</summary>
+public sealed class ZeroCountToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object? parameter, CultureInfo culture)
+        => value is int n && n == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
 /// <summary>Visibility = Collapsed when the bound object is null (no row selected), else Visible.
 /// The detail panel uses this (and its inverse) to swap between the editor and the placeholder.</summary>
 public sealed class NotNullToVisibilityConverter : IValueConverter

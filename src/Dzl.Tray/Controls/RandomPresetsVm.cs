@@ -52,8 +52,18 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
     public override void Reload()
     {
         _spawnTypes = null;
-        _typeNames = null;
+        LoadTypeNames();
         base.Reload();
+    }
+
+    /// <summary>Refresh ONLY the cross-file reference data (spawnable types for the unused-preset rule, item
+    /// classnames for autocomplete) and re-validate, without reloading this file's model — so switching INTO
+    /// this tab reflects Spawnable Types / Types edits while keeping the selection + undo history.</summary>
+    public void RefreshReferences()
+    {
+        _spawnTypes = null;
+        LoadTypeNames();
+        Validate();
     }
 
     /// <summary>Spawnable types, cached so the cross-file "unused preset" rule doesn't re-read the (possibly
@@ -63,20 +73,20 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
     private List<SpawnableType> SpawnTypes => _spawnTypes ??= _spawnSvc.Load();
 
     /// <summary>Distinct classnames from every Types file of the mission — the suggestion pool for the
-    /// add-item box (a preset item references an item classname). Cached; refreshed on <see cref="Reload"/>.
-    /// Not a hard allowlist: preset items may legitimately reference classes outside types.xml, so free text
-    /// stays valid — this only powers autocomplete.</summary>
-    private List<string>? _typeNames;
-    private List<string> TypeNames => _typeNames ??= _types.List()
-        .Select(e => e.Name)
-        .Where(n => !string.IsNullOrEmpty(n))
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
-        .ToList();
+    /// add-item box, bound to the reusable <see cref="AutoSuggestBox"/> (which owns the filter/dropdown).
+    /// Refreshed on <see cref="Reload"/>. Free text stays valid (a preset item may reference a class outside
+    /// types.xml); this only powers autocomplete.</summary>
+    public ObservableCollection<string> TypeNames { get; } = new();
 
-    /// <summary>Up to 50 classnames matching the current add-item text (substring, case-insensitive),
-    /// shown in the add-item combo's dropdown.</summary>
-    public ObservableCollection<string> ItemSuggestions { get; } = new();
+    private void LoadTypeNames()
+    {
+        TypeNames.Clear();
+        foreach (var n in _types.List().Select(e => e.Name)
+                     .Where(n => !string.IsNullOrEmpty(n))
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .OrderBy(n => n, StringComparer.OrdinalIgnoreCase))
+            TypeNames.Add(n);
+    }
 
     /// <summary>Unfiltered backing store (all presets, sorted).</summary>
     private readonly List<PresetRowVm> _all = new();
@@ -120,26 +130,6 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
     [ObservableProperty] private string _newItemName = "";
     [ObservableProperty] private double _newItemChanceValue = 1.0;
 
-    /// <summary>Set while a dropdown pick commits the name, so we don't re-filter (which would Clear the
-    /// suggestion list and yank the just-selected item out from under the combo, blanking the field).</summary>
-    public bool SuspendSuggestions { get; set; }
-
-    partial void OnNewItemNameChanged(string value)
-    {
-        if (!SuspendSuggestions) RefreshItemSuggestions(value);
-    }
-
-    private void RefreshItemSuggestions(string text)
-    {
-        ItemSuggestions.Clear();
-        var q = (text ?? "").Trim();
-        if (q.Length == 0) return;
-        foreach (var n in TypeNames
-                     .Where(n => n.Contains(q, StringComparison.OrdinalIgnoreCase))
-                     .Take(50))
-            ItemSuggestions.Add(n);
-    }
-
     /// <inheritdoc/>
     protected override void ReloadView() => LoadPresetsKeepingSelection();
 
@@ -153,7 +143,8 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
                      .OrderBy(p => p.Kind)
                      .ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
         {
-            _all.Add(new PresetRowVm(p.Kind, p.Name, p.Chance, p.Items.Count, p.Disabled));
+            _all.Add(new PresetRowVm(p.Kind, p.Name, p.Chance, p.Items.Count, p.Disabled,
+                string.Join(" ", p.Items.Select(i => i.Name))));
         }
 
         ApplyFilter();
@@ -201,15 +192,27 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
 
     private void ApplyFilter()
     {
+        // Preserve the selection across a rebuild when the selected row is still visible (the Clear() resets
+        // the bound SelectedItem to null otherwise) — matches SpawnableTypesVm.ApplyFilter.
+        var prev = SelectedPreset;
         var f = (Filter ?? "").Trim();
         Presets.Clear();
-        foreach (var r in _all)
+
+        IEnumerable<PresetRowVm> rows = _all.Where(r =>
+            (StateFilterIndex != 1 || !r.IsDisabled) &&   // enabled only
+            (StateFilterIndex != 2 || r.IsDisabled));     // disabled only
+
+        if (f.Length > 0)
         {
-            if (f.Length > 0 && !r.Name.Contains(f, StringComparison.OrdinalIgnoreCase)) continue;
-            if (StateFilterIndex == 1 && r.IsDisabled) continue;   // enabled only
-            if (StateFilterIndex == 2 && !r.IsDisabled) continue;  // disabled only
-            Presets.Add(r);
+            bool NameHit(PresetRowVm r) => r.Name.Contains(f, StringComparison.OrdinalIgnoreCase);
+            // Match a preset by its name OR a contained item classname; rank name matches first (stable sort
+            // keeps the kind/name order within each group).
+            rows = rows.Where(r => NameHit(r) || r.ItemsText.Contains(f, StringComparison.OrdinalIgnoreCase))
+                       .OrderByDescending(NameHit);
         }
+
+        foreach (var r in rows) Presets.Add(r);
+        if (prev is not null && Presets.Contains(prev)) SelectedPreset = prev;
     }
 
     /// <summary>Select the preset named <paramref name="name"/> (e.g. from a validation-finding click),
@@ -399,10 +402,12 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
 /// <summary>One master-list row: a cargo/attachments preset with its chance + item count.</summary>
 public sealed partial class PresetRowVm : ObservableObject
 {
-    public PresetRowVm(PresetKind kind, string name, double chance, int itemCount, bool disabled = false)
+    public PresetRowVm(PresetKind kind, string name, double chance, int itemCount, bool disabled = false,
+                       string itemsText = "")
     {
         Kind = kind;
         Name = name;
+        ItemsText = itemsText;
         _chance = chance;
         _chanceText = chance.ToString(CultureInfo.InvariantCulture);
         _itemCount = itemCount;
@@ -411,6 +416,10 @@ public sealed partial class PresetRowVm : ObservableObject
 
     public PresetKind Kind { get; }
     public string Name { get; }
+
+    /// <summary>Space-joined item classnames in this preset — the secondary search haystack so the filter can
+    /// find a preset by an item it contains. Preset-name matches still rank above item-only matches.</summary>
+    public string ItemsText { get; }
     public string KindLabel => Kind == PresetKind.Cargo ? "cargo" : "attachments";
 
     /// <summary>True when this preset is commented out in the file (parked/inert). Drives the row's dimmed

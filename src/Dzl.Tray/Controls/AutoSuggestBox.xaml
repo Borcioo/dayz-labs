@@ -1,0 +1,29 @@
+<UserControl x:Class="Dzl.Tray.Controls.AutoSuggestBox"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root">
+  <!-- Reusable "type to search a string pool" box: editable ComboBox whose dropdown opens + filters as you
+       type (filtering done in code via AutoSuggest.Filter, so the combo's native text-search is off), a pick
+       commits without re-filtering, free text is allowed, and Enter raises Submitted. An editable ComboBox
+       has no placeholder, so a hint TextBlock is overlaid while the text is empty. -->
+  <Grid>
+    <ComboBox x:Name="Combo"
+              IsEditable="True" StaysOpenOnEdit="True" IsTextSearchEnabled="False"
+              Text="{Binding Text, ElementName=Root, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+              KeyUp="OnKeyUp" SelectionChanged="OnSelectionChanged" />
+    <TextBlock IsHitTestVisible="False" Margin="10,0,0,0" VerticalAlignment="Center"
+               Text="{Binding Placeholder, ElementName=Root}"
+               Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+      <TextBlock.Style>
+        <Style TargetType="TextBlock">
+          <Setter Property="Visibility" Value="Collapsed" />
+          <Style.Triggers>
+            <DataTrigger Binding="{Binding Text, ElementName=Root}" Value="">
+              <Setter Property="Visibility" Value="Visible" />
+            </DataTrigger>
+          </Style.Triggers>
+        </Style>
+      </TextBlock.Style>
+    </TextBlock>
+  </Grid>
+</UserControl>

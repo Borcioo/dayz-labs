@@ -51,15 +51,15 @@ public partial class EconomyPanel : UserControl
         foreach (var item in EconomyTabControl.Items)
             if (item is TabItem { Header: string h } ti && h == header) { EconomyTabControl.SelectedItem = ti; break; }
 
-        // A finding click also filters the target editor's list to the offending entry.
+        // A finding click SELECTS the offending entry directly (it does not narrow the list to a filter).
         if (entry.Length == 0) return;
         switch (kind)
         {
-            case CeKind.Types: Vm.TypesEditor.TypesFilter = entry; break;
-            case CeKind.Events: Vm.Events.Filter = entry; break;
-            case CeKind.Globals: Vm.Globals.Filter = entry; break;
-            case CeKind.SpawnableTypes: Vm.SpawnableTypes.Filter = entry; break;
-            case CeKind.RandomPresets: Vm.RandomPresets.Filter = entry; break;
+            case CeKind.Types: Vm.TypesEditor.TypesFilter = entry; break;   // huge grid — a filter finds the row
+            case CeKind.Events: Vm.Events.SelectByEntry(entry); break;
+            case CeKind.Globals: Vm.Globals.SelectByEntry(entry); break;
+            case CeKind.SpawnableTypes: Vm.SpawnableTypes.SelectByEntry(entry); break;
+            case CeKind.RandomPresets: Vm.RandomPresets.SelectByEntry(entry); break;
         }
     }
 
@@ -99,6 +99,9 @@ public partial class EconomyPanel : UserControl
         // Only react to selection changes on the exact Economy TabControl, not bubbled events from
         // child controls (DataGrid, ComboBox, etc.) whose SelectionChanged also bubbles up.
         if (!ReferenceEquals(e.OriginalSource, EconomyTabControl)) return;
+        // The TabControl raises its initial SelectionChanged during realization — which can run before the
+        // MainViewModel DataContext is bound. Bail until it is, like the Loaded handler does (Vm would NRE).
+        if (DataContext is not MainViewModel) return;
         if (EconomyTabControl.SelectedItem is TabItem { Header: "Dashboard" })
             Vm.RefreshCeDashboard();
         else if (EconomyTabControl.SelectedItem is TabItem { Header: "Dictionaries" })

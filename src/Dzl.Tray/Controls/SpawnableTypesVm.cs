@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Dzl.Core.App;
 using Dzl.Core.Economy;
@@ -18,6 +19,7 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
 {
     private readonly SpawnableTypesService _svc;
     private readonly RandomPresetsService _presets;
+    private readonly TypesService _types;
     private readonly Func<string, bool> _confirm;
     private bool _suspendPersist;
 
@@ -30,7 +32,24 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
     {
         _svc = svc;
         _presets = new RandomPresetsService(configPath);
+        _types = new TypesService(configPath);
         _confirm = confirm;
+    }
+
+    /// <summary>Distinct item classnames from every Types file of the mission — the suggestion pool for the
+    /// chance-block add-item box. Cached; refreshed on <see cref="Reload"/>. Not a hard allowlist: an item
+    /// may legitimately reference a class outside types.xml, so free text stays valid — this only powers
+    /// autocomplete.</summary>
+    public ObservableCollection<string> TypeNames { get; } = new();
+
+    private void LoadTypeNames()
+    {
+        TypeNames.Clear();
+        foreach (var n in _types.List().Select(e => e.Name)
+                     .Where(n => !string.IsNullOrEmpty(n))
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .OrderBy(n => n, StringComparer.OrdinalIgnoreCase))
+            TypeNames.Add(n);
     }
 
     private List<SpawnableType>? _model;
@@ -48,6 +67,13 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
     public ObservableCollection<SpawnTypeRowVm> Types { get; } = new();
 
     [ObservableProperty] private SpawnTypeRowVm? _selectedType;
+
+    /// <summary>True when a type is selected — gates the inline rename row in the detail header.</summary>
+    public bool HasSelectedType => SelectedType is not null;
+
+    /// <summary>Editable copy of the selected type's name for the inline rename box (synced on selection,
+    /// committed via <see cref="CommitRename"/> — replaces the old modal rename dialog).</summary>
+    [ObservableProperty] private string _renameText = "";
 
     /// <summary>Cargo blocks of the selected type.</summary>
     public ObservableCollection<SpawnBlockVm> CargoBlocks { get; } = new();
@@ -71,14 +97,50 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
     /// <summary>Attachments preset names from cfgrandompresets.xml (for the add-block dropdown).</summary>
     public ObservableCollection<string> AttachmentsPresetNames { get; } = new();
 
-    partial void OnFilterChanged(string value) => ApplyFilter();
+    partial void OnFilterChanged(string value) => ScheduleFilter();
+
+    // Debounce the master-list filter: rebuilding the (potentially thousands of) rows on every keystroke
+    // stutters, so coalesce a burst of typing into one ApplyFilter ~200 ms after the last change.
+    private DispatcherTimer? _filterTimer;
+
+    private void ScheduleFilter()
+    {
+        _filterTimer ??= CreateFilterTimer();
+        _filterTimer.Stop();
+        _filterTimer.Start();
+    }
+
+    private DispatcherTimer CreateFilterTimer()
+    {
+        var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        t.Tick += (_, _) => { t.Stop(); ApplyFilter(); };
+        return t;
+    }
+
+    /// <summary>Apply the filter immediately, cancelling any pending debounce — used by tests and by code
+    /// (e.g. <see cref="SelectByEntry"/>) that needs the filtered list current synchronously.</summary>
+    public void ApplyFilterNow()
+    {
+        _filterTimer?.Stop();
+        ApplyFilter();
+    }
 
     /// <summary>(Re)load all types from disk. Also refreshes the preset-name dropdowns (which undo/redo
     /// deliberately leave alone — they belong to cfgrandompresets.xml, not this file).</summary>
     public override void Reload()
     {
         LoadPresetNames();
+        LoadTypeNames();
         base.Reload();
+    }
+
+    /// <summary>Refresh ONLY the cross-file reference pools (preset names from cfgrandompresets.xml, item
+    /// classnames from types.xml) without reloading this file's model — so switching INTO this tab picks up
+    /// edits made on the Random Presets / Types tabs, while keeping the current selection + undo history.</summary>
+    public void RefreshReferences()
+    {
+        LoadPresetNames();
+        LoadTypeNames();
     }
 
     /// <inheritdoc/>
@@ -120,14 +182,31 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
         var f = (Filter ?? "").Trim();
         IEnumerable<SpawnTypeRowVm> rows = _all;
         if (!string.IsNullOrEmpty(f))
-            rows = rows.Where(r => !string.IsNullOrEmpty(r.Name) &&
-                r.Name.Contains(f, StringComparison.OrdinalIgnoreCase));
+            rows = rows.Where(r => r.SearchText.Contains(f, StringComparison.OrdinalIgnoreCase));
         foreach (var r in rows) Types.Add(r);
 
         if (prev is not null && Types.Contains(prev)) SelectedType = prev;
     }
 
-    partial void OnSelectedTypeChanged(SpawnTypeRowVm? value) => LoadDetailForSelected();
+    /// <summary>Select the type named <paramref name="name"/> (e.g. from a dashboard finding click), clearing
+    /// the filter first only if it would otherwise hide the row. Selects the entry directly — it does NOT
+    /// narrow the list to a filter.</summary>
+    public void SelectByEntry(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return;
+        if (!Types.Any(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase)))
+        {
+            Filter = "";
+            ApplyFilterNow();   // the filter is debounced — unfilter now so the target row is present to select
+        }
+        SelectedType = Types.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    partial void OnSelectedTypeChanged(SpawnTypeRowVm? value)
+    {
+        OnPropertyChanged(nameof(HasSelectedType));
+        LoadDetailForSelected();
+    }
 
     private SpawnableType? FindModel(string name) =>
         Model.FirstOrDefault(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase));
@@ -141,6 +220,7 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
             DetachBlocks(AttachmentsBlocks);
             CargoBlocks.Clear();
             AttachmentsBlocks.Clear();
+            RenameText = SelectedType?.Name ?? "";
 
             if (SelectedType is { } row && FindModel(row.Name) is { } model)
             {
@@ -165,7 +245,8 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
 
     private void AddBlockVm(ObservableCollection<SpawnBlockVm> dest, SpawnBlock block, int index, bool isAttachments)
     {
-        var vm = new SpawnBlockVm(block, index, isAttachments);
+        var presetSuggestions = isAttachments ? AttachmentsPresetNames : CargoPresetNames;
+        var vm = new SpawnBlockVm(block, index, isAttachments, presetSuggestions, TypeNames);
         vm.PresetEdited += OnBlockPresetEdited;
         vm.ChanceEdited += OnBlockChanceEdited;
         vm.ItemEdited += OnItemEdited;
@@ -217,6 +298,9 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
         PushUndo();
         if (Report(_svc.RemoveType(row.Name))) LoadTypesKeepingSelection();
     }
+
+    /// <summary>Commit the inline rename box (the detail-header name field) — renames the selected type.</summary>
+    public void CommitRename() => RenameSelectedType(RenameText);
 
     public void RenameSelectedType(string newName)
     {
@@ -357,6 +441,7 @@ public sealed partial class SpawnTypeRowVm : ObservableObject
     public SpawnTypeRowVm(SpawnableType t)
     {
         Name = t.Name;
+        SearchText = BuildSearchText(t);
         _hoarder = t.Hoarder;
         _damageLabel = FormatDamage(t.DamageMin, t.DamageMax);
         _cargoCount = t.Cargo.Count;
@@ -364,6 +449,22 @@ public sealed partial class SpawnTypeRowVm : ObservableObject
     }
 
     public string Name { get; }
+
+    /// <summary>Haystack for the master-list search: the type name PLUS every referenced preset name and every
+    /// inline item classname across its cargo/attachments blocks — so the filter finds a type by what it
+    /// contains (a preset it uses, an item it spawns), not only by its own name.</summary>
+    public string SearchText { get; }
+
+    private static string BuildSearchText(SpawnableType t)
+    {
+        var parts = new List<string> { t.Name };
+        foreach (var b in t.Cargo.Concat(t.Attachments))
+        {
+            if (!string.IsNullOrEmpty(b.Preset)) parts.Add(b.Preset!);
+            foreach (var i in b.Items) parts.Add(i.Name);
+        }
+        return string.Join(" ", parts);
+    }
 
     [ObservableProperty] private bool _hoarder;
     [ObservableProperty] private string _damageLabel;
@@ -384,10 +485,13 @@ public sealed partial class SpawnTypeRowVm : ObservableObject
 /// selected type (used to address it for edits).</summary>
 public sealed partial class SpawnBlockVm : ObservableObject
 {
-    public SpawnBlockVm(SpawnBlock block, int index, bool isAttachments)
+    public SpawnBlockVm(SpawnBlock block, int index, bool isAttachments,
+                        ObservableCollection<string> presetSuggestions, IReadOnlyList<string> itemPool)
     {
         Index = index;
         IsAttachments = isAttachments;
+        PresetSuggestions = presetSuggestions;
+        ItemPool = itemPool;
         _isPreset = block.IsPreset;
         _presetText = block.Preset ?? "";
         _chanceText = block.Chance?.ToString(CultureInfo.InvariantCulture) ?? "1.0";
@@ -403,12 +507,29 @@ public sealed partial class SpawnBlockVm : ObservableObject
     public int Index { get; }
     public bool IsAttachments { get; }
 
+    /// <summary>Preset-name autocomplete pool for this block's kind (cargo or attachments), from the parent VM.</summary>
+    public ObservableCollection<string> PresetSuggestions { get; }
+
+    /// <summary>The classname pool (the mission's Types classnames) the add-item box filters for suggestions.
+    /// Bound to the reusable <see cref="AutoSuggestBox"/>, which owns the filter/open/pick behaviour.</summary>
+    public IReadOnlyList<string> ItemPool { get; }
+
+    /// <summary>Bound to the add-item box's text; the classname to add (cleared on a successful add).</summary>
+    [ObservableProperty] private string _newItemName = "";
+
     [ObservableProperty] private bool _isPreset;
 
     /// <summary>True when this block is chance-based (inverse of <see cref="IsPreset"/>), for visibility binds.</summary>
     public bool IsChance => !IsPreset;
 
-    partial void OnIsPresetChanged(bool value) => OnPropertyChanged(nameof(IsChance));
+    /// <summary>Header label: "Preset block" or "Chance block" (drives the block's type pill).</summary>
+    public string BlockKindLabel => IsPreset ? "Preset block" : "Chance block";
+
+    partial void OnIsPresetChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsChance));
+        OnPropertyChanged(nameof(BlockKindLabel));
+    }
 
     /// <summary>Preset name (when preset-based). Bound to the preset combo; commit raises <see cref="PresetEdited"/>.</summary>
     [ObservableProperty] private string _presetText;

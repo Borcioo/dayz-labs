@@ -60,36 +60,8 @@ public partial class RandomPresetsEditor : UserControl
 
     private void OnAddItemClick(object sender, RoutedEventArgs e) => Vm?.AddItem();
 
-    private void OnAddItemKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter) { Vm?.AddItem(); e.Handled = true; }
-    }
-
-    // Add-item classname combo: open the suggestion dropdown as the user types; Enter adds the item.
-    private void OnItemComboKeyUp(object sender, KeyEventArgs e)
-    {
-        if (sender is not ComboBox cb) return;
-        if (e.Key == Key.Enter)
-        {
-            cb.IsDropDownOpen = false;
-            Vm?.AddItem();
-            e.Handled = true;
-            return;
-        }
-        if (e.Key is Key.Escape or Key.Up or Key.Down) return;
-        cb.IsDropDownOpen = Vm is { ItemSuggestions.Count: > 0 };
-    }
-
-    // A dropdown pick (mouse or arrow-highlight): commit the name without re-filtering, so the Clear()
-    // inside the suggestion refresh can't drop the selection and blank the box.
-    private void OnItemComboSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (Vm is not { } vm || sender is not ComboBox cb) return;
-        if (cb.SelectedItem is not string pick) return;
-        vm.SuspendSuggestions = true;
-        vm.NewItemName = pick;
-        vm.SuspendSuggestions = false;
-    }
+    // The reusable AutoSuggestBox raised Submitted (Enter) — add the item.
+    private void OnItemSubmitted(object? sender, System.EventArgs e) => Vm?.AddItem();
 
     private void OnRemoveItemClick(object sender, RoutedEventArgs e)
     {
