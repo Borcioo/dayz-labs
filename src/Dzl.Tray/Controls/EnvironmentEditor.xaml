@@ -1,0 +1,129 @@
+<UserControl x:Class="Dzl.Tray.Controls.EnvironmentEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:ctl="clr-namespace:Dzl.Tray.Controls"
+             xmlns:help="clr-namespace:Dzl.Tray.Help"
+             x:Name="Root">
+  <!-- DataContext = EnvironmentVm. Edits cfgenvironment.xml: animal/infected territories. Master (territories)
+       + detail (editable item knobs + read-only spawns + env-file shortcuts). Routes through the VM →
+       EnvironmentService. Local styles only; app-scope DarkDataGrid* + DynamicResource theme brushes are safe. -->
+  <UserControl.Resources>
+    <Style x:Key="EvHint" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+    </Style>
+    <Style x:Key="EvHead" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+    </Style>
+  </UserControl.Resources>
+
+  <Grid Margin="0,12,0,0">
+    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+
+    <Grid Grid.Row="0" Margin="0,0,0,8">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+      <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+        <ui:SymbolIcon Symbol="Document24" Margin="0,0,6,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+        <TextBlock Text="{Binding FileLabel}" VerticalAlignment="Center" FontSize="12"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" MaxWidth="440" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal">
+        <ctl:GlossaryButton Title="Environment" Entries="{x:Static help:Glossary.Environment}" Margin="0,0,12,0" />
+        <ui:Button Content="Reload" Margin="0,0,6,0" Click="OnReloadClick" ToolTip="Re-read cfgenvironment.xml (discards undo)" />
+        <ui:Button Margin="0,0,6,0" Command="{Binding UndoCommand}" ToolTip="Undo"><ui:SymbolIcon Symbol="ArrowUndo24" /></ui:Button>
+        <ui:Button Command="{Binding RedoCommand}" ToolTip="Redo"><ui:SymbolIcon Symbol="ArrowRedo24" /></ui:Button>
+      </StackPanel>
+    </Grid>
+
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="240" /><ColumnDefinition Width="10" /><ColumnDefinition Width="*" MinWidth="280" />
+      </Grid.ColumnDefinitions>
+
+      <!-- Master: territories -->
+      <Border Grid.Column="0" CornerRadius="8" Padding="8"
+              Background="{DynamicResource ControlFillColorDefaultBrush}"
+              BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
+        <DataGrid x:Name="TerritoryGrid" ItemsSource="{Binding Territories}" SelectedItem="{Binding SelectedTerritory, Mode=TwoWay}"
+                  Style="{StaticResource DarkDataGrid}" ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeader}"
+                  RowStyle="{StaticResource DarkDataGridRow}" CellStyle="{StaticResource DarkDataGridCell}"
+                  AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                  HeadersVisibility="Column" SelectionMode="Single" IsReadOnly="True"
+                  Background="Transparent" BorderThickness="0" EnableRowVirtualization="True"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Territory" Binding="{Binding Name}" Width="*" />
+            <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="Auto" />
+          </DataGrid.Columns>
+        </DataGrid>
+      </Border>
+
+      <!-- Detail: knobs + spawns + files -->
+      <Border Grid.Column="2" CornerRadius="8" Padding="12,10"
+              Background="{DynamicResource ControlFillColorDefaultBrush}"
+              BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock Text="{Binding SelectedTerritory.Name, StringFormat='Tuning — {0}', FallbackValue='Tuning'}"
+                       Style="{StaticResource EvHead}" Margin="0,0,0,2" />
+            <TextBlock Text="{Binding SelectedTerritory.Behavior}" Style="{StaticResource EvHint}" Margin="0,0,0,8" />
+
+            <ItemsControl ItemsSource="{Binding Items}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid Margin="0,2">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="96" /></Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <ui:TextBox Grid.Column="1" FontSize="12" Text="{Binding ValText, UpdateSourceTrigger=PropertyChanged}"
+                                LostFocus="OnItemLostFocus" KeyDown="OnItemKeyDown" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Spawns (read-only) -->
+            <TextBlock Text="Spawns" Style="{StaticResource EvHead}" Margin="0,14,0,4" />
+            <TextBlock Text="(read-only — edit agent classes / chances in the file directly)" Style="{StaticResource EvHint}" Margin="0,0,0,4" />
+            <ItemsControl ItemsSource="{Binding Spawns}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock FontSize="12" Margin="0,1" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                    <Run Text="{Binding Agent, Mode=OneWay}" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    <Run Text="{Binding ConfigName, Mode=OneWay}" />
+                    <Run Text="{Binding Chance, Mode=OneWay, StringFormat='· chance {0}'}" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                  </TextBlock>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Territory zone files (geometry) → open externally -->
+            <TextBlock Text="Territory files" Style="{StaticResource EvHead}" Margin="0,14,0,4" />
+            <TextBlock Text="Zone geometry — open in an external editor; not edited here." Style="{StaticResource EvHint}" Margin="0,0,0,4" />
+            <ItemsControl ItemsSource="{Binding Files}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid Margin="0,2">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                      <ui:Button Content="VS Code" FontSize="11" Padding="8,2" Margin="0,0,4,0" Click="OnEditFileClick" Tag="{Binding}" />
+                      <ui:Button Content="Reveal" FontSize="11" Padding="8,2" Click="OnRevealFileClick" Tag="{Binding}" />
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+    </Grid>
+
+    <TextBlock Grid.Row="2" Text="{Binding Status}" Margin="0,8,0,0" FontSize="12"
+               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+  </Grid>
+</UserControl>

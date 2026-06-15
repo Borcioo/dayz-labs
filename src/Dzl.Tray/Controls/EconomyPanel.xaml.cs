@@ -24,6 +24,7 @@ public partial class EconomyPanel : UserControl
             Vm.RefreshCeDashboard();   // Dashboard is the default tab
             RefreshTypesBackupsMenu();
             WireDashboardNavigation();
+            ModuleRail.SelectedIndex = 0;   // open the Economy module (→ shows its tabs, selects Dashboard)
         };
     }
 
@@ -48,6 +49,7 @@ public partial class EconomyPanel : UserControl
             CeKind.PlayerSpawns => "Player Spawns",
             _ => "Types",
         };
+        SelectModuleForHeader(header);   // reveal the module that owns this tab first
         foreach (var item in EconomyTabControl.Items)
             if (item is TabItem { Header: string h } ti && h == header) { EconomyTabControl.SelectedItem = ti; break; }
 
@@ -116,6 +118,63 @@ public partial class EconomyPanel : UserControl
             Vm.RefreshEvents();
         else if (EconomyTabControl.SelectedItem is TabItem { Header: "Player Spawns" })
             Vm.RefreshPlayerSpawns();
+        else if (EconomyTabControl.SelectedItem is TabItem { Header: "Economy core" })
+            Vm.RefreshEconomyCore();
+        else if (EconomyTabControl.SelectedItem is TabItem { Header: "CE Config" })
+            Vm.RefreshCeCore();
+        else if (EconomyTabControl.SelectedItem is TabItem { Header: "Event Spawns" })
+            Vm.RefreshEventSpawns();
+        else if (EconomyTabControl.SelectedItem is TabItem { Header: "Event Groups" })
+            Vm.RefreshEventGroups();
+        else if (EconomyTabControl.SelectedItem is TabItem { Header: "Ignore list" })
+            Vm.RefreshIgnoreList();
+        else if (EconomyTabControl.SelectedItem is TabItem { Header: "Map files" })
+            Vm.RefreshMapFiles();
+        else if (EconomyTabControl.SelectedItem is TabItem { Header: "Weather" })
+            Vm.RefreshWeather();
+        else if (EconomyTabControl.SelectedItem is TabItem { Header: "Environment" })
+            Vm.RefreshEnvironment();
+        else if (EconomyTabControl.SelectedItem is TabItem { Header: "Messages" })
+            Vm.RefreshMessages();
+    }
+
+    // ── MISSION CONFIG modules ────────────────────────────────────────────
+    // Which file tabs belong to each module (left rail). The files aren't all "economy", so they're grouped
+    // into logical sections per the DayZ docs; selecting a module shows only its tabs.
+    private static readonly System.Collections.Generic.Dictionary<string, string[]> Modules = new()
+    {
+        ["Economy"] = new[] { "Dashboard", "Types", "Spawnable Types", "Random Presets", "Dictionaries", "Globals", "Economy core", "CE Config", "Ignore list" },
+        ["Events"] = new[] { "Events", "Event Spawns", "Event Groups" },
+        ["World"] = new[] { "Player Spawns", "Weather", "Environment" },
+        ["Server"] = new[] { "Messages" },
+        ["Map files"] = new[] { "Map files" },
+    };
+
+    private void OnModuleChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!ReferenceEquals(e.OriginalSource, ModuleRail)) return;
+        if (ModuleRail.SelectedItem is not ListBoxItem { Tag: string module } || !Modules.TryGetValue(module, out var headers))
+            return;
+
+        TabItem? first = null;
+        foreach (var obj in EconomyTabControl.Items)
+            if (obj is TabItem { Header: string h } ti)
+            {
+                var inModule = System.Array.IndexOf(headers, h) >= 0;
+                ti.Visibility = inModule ? Visibility.Visible : Visibility.Collapsed;
+                if (inModule && first is null) first = ti;
+            }
+        if (first is not null) EconomyTabControl.SelectedItem = first;   // → OnEconomyTabSelectionChanged refreshes it
+    }
+
+    /// <summary>Select the module rail item whose tab set contains <paramref name="header"/> (so a dashboard
+    /// jump to a tab in a hidden module reveals it first).</summary>
+    private void SelectModuleForHeader(string header)
+    {
+        var module = Modules.FirstOrDefault(kv => System.Array.IndexOf(kv.Value, header) >= 0).Key;
+        if (module is null) return;
+        foreach (var obj in ModuleRail.Items)
+            if (obj is ListBoxItem { Tag: string m } item && m == module) { ModuleRail.SelectedItem = item; break; }
     }
 
     private void OnAddType(object sender, RoutedEventArgs e)

@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:ctl="clr-namespace:Dzl.Tray.Controls"
+             xmlns:help="clr-namespace:Dzl.Tray.Help"
              x:Name="Root">
   <!-- DataContext = RandomPresetsVm. Edits cfgrandompresets.xml: master list of cargo/attachments presets
        (left) + the item grid of the selected preset (right). Every edit routes through the VM →
@@ -45,6 +46,7 @@
         <ui:Button Content="Disable unused" Icon="{ui:SymbolIcon Broom24}" Margin="0,0,6,0"
                    Click="OnDisableUnusedClick"
                    ToolTip="Comment out every preset no spawnabletype references (kept, re-enableable per row)" />
+        <ctl:GlossaryButton Title="Random Presets" Entries="{x:Static help:Glossary.RandomPresets}" Margin="0,0,12,0" />
         <ui:Button Content="Reload" Margin="0,0,6,0" Click="OnReloadClick"
                    ToolTip="Re-read cfgrandompresets.xml from disk (discards the undo history)" />
         <ui:Button Margin="0,0,6,0" Command="{Binding UndoCommand}" ToolTip="Undo the last edit">
@@ -101,16 +103,18 @@
                     ItemsSource="{Binding Presets}"
                     SelectedItem="{Binding SelectedPreset, Mode=TwoWay}"
                     SelectionChanged="OnPresetSelectionChanged"
+                    Style="{StaticResource DarkDataGrid}" ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeader}"
                     AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                     HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                     IsReadOnly="False" SelectionMode="Single"
                     Background="Transparent" BorderThickness="0"
                     EnableRowVirtualization="True"
                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                    RowBackground="Transparent" AlternatingRowBackground="Transparent">
-            <!-- No custom RowStyle on purpose: WPF-UI's DataGrid style drives the selected-row accent bar
-                 via its own RowStyle setter, and an explicit RowStyle here overrides it (the accent vanishes).
-                 The disabled (commented-out) state is shown per-cell instead — struck through + dimmed name. -->
+                    RowStyle="{StaticResource DarkDataGridRow}" CellStyle="{StaticResource DarkDataGridCell}">
+            <!-- Shared CE row selection (DarkDataGridRow + DarkDataGridCell) — the muted-navy active row that
+                 matches the Dictionaries tab. This deliberately replaces WPF-UI's own selected-row accent so
+                 every CE tab looks the same. The disabled (commented-out) state stays per-cell — struck through
+                 + dimmed name — independent of the row highlight. -->
             <DataGrid.Columns>
               <DataGridTextColumn Header="Kind" Binding="{Binding KindLabel}" IsReadOnly="True" Width="Auto">
                 <DataGridTextColumn.ElementStyle>
@@ -245,13 +249,14 @@
 
           <DataGrid Grid.Row="2" x:Name="ItemGrid"
                     ItemsSource="{Binding Items}"
+                    Style="{StaticResource DarkDataGrid}" ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeader}"
                     AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                     HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                     IsReadOnly="False" SelectionMode="Single"
                     Background="Transparent" BorderThickness="0"
                     EnableRowVirtualization="True"
                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                    RowBackground="Transparent" AlternatingRowBackground="Transparent"
+                    RowStyle="{StaticResource DarkDataGridRow}" CellStyle="{StaticResource DarkDataGridCell}"
                     CellEditEnding="OnItemCellEditEnding">
             <DataGrid.Columns>
               <DataGridTextColumn Header="Item name"

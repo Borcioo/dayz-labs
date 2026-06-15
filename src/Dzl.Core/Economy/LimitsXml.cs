@@ -8,6 +8,21 @@ public sealed record LimitsDef(
 {
     public static LimitsDef Empty { get; } = new(
         new HashSet<string>(), new HashSet<string>(), new HashSet<string>(), new HashSet<string>());
+
+    /// <summary>Fold named combos (cfglimitsdefinitionuser.xml) into the known usage/value sets. A combo name
+    /// is a valid usage/value reference in types.xml — the engine expands it to its member flags — so it must
+    /// count as "known" for validation, autocomplete and the "add to dictionary" prompt. Value combos extend
+    /// <see cref="Value"/>, all others extend <see cref="Usage"/> (matching the engine). Case-insensitive.
+    /// Returns <c>this</c> unchanged when there are no combos. Tag/Category are untouched (no combos exist for them).</summary>
+    public LimitsDef WithCombos(IReadOnlyList<LimitsUserGroup> combos)
+    {
+        if (combos.Count == 0) return this;
+        var usage = new HashSet<string>(Usage, StringComparer.OrdinalIgnoreCase);
+        var value = new HashSet<string>(Value, StringComparer.OrdinalIgnoreCase);
+        foreach (var g in combos)
+            (g.Kind == LimitsKind.Value ? value : usage).Add(g.Name);
+        return this with { Usage = usage, Value = value };
+    }
 }
 
 /// <summary>Which name-list in <c>cfglimitsdefinition.xml</c> an operation targets.</summary>

@@ -4,53 +4,99 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:conv="clr-namespace:Dzl.Tray"
              xmlns:ctl="clr-namespace:Dzl.Tray.Controls"
+             xmlns:help="clr-namespace:Dzl.Tray.Help"
              x:Name="Root">
-  <!-- DataContext = PlayerSpawnsVm. Edits cfgplayerspawnpoints.xml: a category selector (fresh/hop/travel)
-       drives three editable param sections (left) + a groups list and the selected group's positions grid
-       (right). Every edit routes through the VM → PlayerSpawnsService (snapshot + write, never throws).
-       Per-tab undo/redo snapshots the whole file. A UserControl does NOT inherit the host window's resources
-       at realize time — declare local styles here; only DynamicResource theme brushes are safe to reference. -->
+  <!-- DataContext = PlayerSpawnsVm. Dashboard for cfgplayerspawnpoints.xml: a category nav-rail
+       (fresh/hop/travel) drives a detail pane of friendly setting cards (built from the documented fields)
+       plus a groups↔positions master-detail. Every edit routes through the VM → PlayerSpawnsService
+       (snapshot + write, never throws); per-tab undo/redo snapshots the whole file. A UserControl does NOT
+       inherit the host window's resources — declare local styles here; app-scope keys (DarkDataGrid*, CeRow*)
+       and DynamicResource theme brushes are safe to reference. -->
   <UserControl.Resources>
-    <Style x:Key="PsSectionHeader" TargetType="TextBlock">
+    <Style x:Key="PsCardTitle" TargetType="TextBlock">
       <Setter Property="FontSize" Value="13" />
       <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
     </Style>
-    <Style x:Key="PsBlockLabel" TargetType="TextBlock">
+    <Style x:Key="PsFieldLabel" TargetType="TextBlock">
       <Setter Property="FontSize" Value="12" />
-      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
     </Style>
     <Style x:Key="PsHint" TargetType="TextBlock">
       <Setter Property="FontSize" Value="11" />
       <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style x:Key="PsSectionHeader" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
     <Style x:Key="PsCard" TargetType="Border">
-      <Setter Property="CornerRadius" Value="6" />
-      <Setter Property="Padding" Value="10" />
-      <Setter Property="Margin" Value="0,0,0,10" />
-      <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="12,10" />
+      <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
       <Setter Property="BorderThickness" Value="1" />
     </Style>
     <Style x:Key="PsInfo" TargetType="ui:SymbolIcon">
       <Setter Property="Symbol" Value="Info24" />
-      <Setter Property="FontSize" Value="15" />
+      <Setter Property="FontSize" Value="14" />
       <Setter Property="Margin" Value="6,0,0,0" />
       <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
     </Style>
+    <!-- Numeric field: native WPF-UI NumberBox (signed + nullable). BasedOn the Fluent NumberBox or it loses
+         its theme template. No inline spin/clear chrome — these are dense tuning fields. -->
+    <Style x:Key="PsNum" TargetType="ui:NumberBox" BasedOn="{StaticResource {x:Type ui:NumberBox}}">
+      <Setter Property="ClearButtonEnabled" Value="False" />
+      <Setter Property="SpinButtonPlacementMode" Value="Hidden" />
+      <Setter Property="MaxDecimalPlaces" Value="6" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="MinWidth" Value="56" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+
+    <!-- Nav-rail tile: rounded, app-accent selected (the shared CE selection look) + left accent bar. -->
+    <Style x:Key="PsNavItem" TargetType="ListBoxItem">
+      <Setter Property="Padding" Value="10,8" />
+      <Setter Property="Margin" Value="0,1" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Border x:Name="Bd" Background="Transparent" CornerRadius="6"
+                    BorderThickness="2,0,0,0" BorderBrush="Transparent" Padding="{TemplateBinding Padding}">
+              <ContentPresenter />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="{StaticResource CeRowHoverBrush}" />
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="{StaticResource CeRowSelectedBrush}" />
+                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource CeAccentBarBrush}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
     <conv:ZeroCountToVisibilityConverter x:Key="ZeroToVis" />
   </UserControl.Resources>
 
   <Grid Margin="0,12,0,0">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />  <!-- toolbar -->
-      <RowDefinition Height="*" />     <!-- params + groups/positions -->
+      <RowDefinition Height="*" />     <!-- nav-rail + detail -->
       <RowDefinition Height="Auto" />  <!-- status -->
     </Grid.RowDefinitions>
 
-    <!-- Toolbar: file label + category selector + Reload/Undo/Redo -->
+    <!-- Toolbar: file label + Reload/Undo/Redo -->
     <Grid Grid.Row="0" Margin="0,0,0,8">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
@@ -60,15 +106,10 @@
                        Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
         <TextBlock Text="{Binding FileLabel}" VerticalAlignment="Center"
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12"
-                   TextTrimming="CharacterEllipsis" MaxWidth="520" />
+                   TextTrimming="CharacterEllipsis" MaxWidth="560" />
       </StackPanel>
       <StackPanel Grid.Column="1" Orientation="Horizontal">
-        <TextBlock Text="Category" VerticalAlignment="Center" Margin="0,0,6,0"
-                   Style="{StaticResource PsHint}" />
-        <ComboBox MinWidth="130" Margin="0,0,8,0" VerticalAlignment="Center"
-                  ItemsSource="{Binding Categories}"
-                  SelectedItem="{Binding SelectedCategory, Mode=TwoWay}"
-                  ToolTip="Spawn category present in the file" />
+        <ctl:GlossaryButton Title="Player Spawns" Entries="{x:Static help:Glossary.PlayerSpawns}" Margin="0,0,12,0" />
         <ui:Button Content="Reload" Margin="0,0,6,0" Click="OnReloadClick"
                    ToolTip="Re-read cfgplayerspawnpoints.xml from disk (discards the undo history)" />
         <ui:Button Margin="0,0,6,0" Command="{Binding UndoCommand}" ToolTip="Undo the last edit">
@@ -80,277 +121,341 @@
       </StackPanel>
     </Grid>
 
-    <!-- Params (left) + groups/positions (right) -->
+    <!-- Nav-rail (categories) + detail -->
     <Grid Grid.Row="1">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="2*" MinWidth="320" />
-        <ColumnDefinition Width="8" />
-        <ColumnDefinition Width="3*" MinWidth="360" />
+        <ColumnDefinition Width="186" />
+        <ColumnDefinition Width="12" />
+        <ColumnDefinition Width="*" MinWidth="420" />
       </Grid.ColumnDefinitions>
 
-      <!-- ===== Params of the selected category ===== -->
-      <Border Grid.Column="0" CornerRadius="8" Padding="10"
-              Background="{DynamicResource ControlFillColorDefaultBrush}"
-              BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
-        <Grid>
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" /><RowDefinition Height="*" />
-          </Grid.RowDefinitions>
-          <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
-            <TextBlock Style="{StaticResource PsSectionHeader}" VerticalAlignment="Center"
-                       Text="{Binding SelectedCategory, StringFormat='Parameters: {0}', FallbackValue='Parameters'}" />
-            <ui:SymbolIcon Style="{StaticResource PsInfo}"
-                           ToolTip="Spawn category (switch it in the toolbar). fresh = first spawn after death; hop = reconnect / server-hop; travel = arriving via in-game map travel." />
-          </StackPanel>
-          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel>
-              <!-- spawn_params -->
-              <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                <TextBlock Text="spawn_params" Style="{StaticResource PsBlockLabel}" VerticalAlignment="Center" />
-                <ui:SymbolIcon Style="{StaticResource PsInfo}"
-                               ToolTip="Spawn tuning for this category — e.g. min/max distance from other players, area spread. Name = param, Value = its number." />
-              </StackPanel>
-              <Border Style="{StaticResource PsCard}">
+      <!-- ===== Category nav-rail ===== -->
+      <Border Grid.Column="0" Style="{StaticResource PsCard}" Padding="8">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="CATEGORIES" Margin="4,2,0,8"
+                     FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+          <ListBox ItemsSource="{Binding CategoryTabs}" SelectedItem="{Binding SelectedTab, Mode=TwoWay}"
+                   Background="Transparent" BorderThickness="0"
+                   ItemContainerStyle="{StaticResource PsNavItem}"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
                 <StackPanel>
-                  <DataGrid ItemsSource="{Binding SpawnParams}"
-                            AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
-                            HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                            IsReadOnly="False" SelectionMode="Single"
-                            Background="Transparent" BorderThickness="0" MaxHeight="200"
-                            EnableRowVirtualization="True"
-                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                            RowBackground="Transparent" AlternatingRowBackground="Transparent"
-                            CellEditEnding="OnParamCellEditEnding" Tag="spawn_params">
-                    <DataGrid.Columns>
-                      <DataGridTextColumn Header="Name" Binding="{Binding Name, UpdateSourceTrigger=LostFocus}" Width="*" />
-                      <DataGridTextColumn Header="Value" Binding="{Binding Value, UpdateSourceTrigger=LostFocus}" Width="120" />
-                    </DataGrid.Columns>
-                  </DataGrid>
-                  <Grid Margin="0,6,0,0">
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBox Grid.Column="0" Margin="0,0,4,0" FontSize="12" PlaceholderText="param name" Tag="spawn_params"
-                                KeyDown="OnAddParamKeyDown" />
-                    <ui:TextBox Grid.Column="1" Width="90" Margin="0,0,4,0" FontSize="12" PlaceholderText="value" Tag="spawn_params"
-                                ctl:NumericBehavior.FloatOnly="True" KeyDown="OnAddParamKeyDown" />
-                    <ui:Button Grid.Column="2" Content="Add" FontSize="11" Padding="6,2" Click="OnAddParamClick" Tag="spawn_params" />
-                  </Grid>
+                  <DockPanel>
+                    <TextBlock Text="{Binding GroupCount}" DockPanel.Dock="Right" FontSize="11"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               ToolTip="position groups in this category" />
+                    <TextBlock Text="{Binding Display}" FontSize="14" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                  </DockPanel>
+                  <TextBlock Text="{Binding Subtitle}" FontSize="11"
+                             Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                 </StackPanel>
-              </Border>
-
-              <!-- generator_params -->
-              <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                <TextBlock Text="generator_params" Style="{StaticResource PsBlockLabel}" VerticalAlignment="Center" />
-                <ui:SymbolIcon Style="{StaticResource PsInfo}"
-                               ToolTip="Controls the spawn-point generator (e.g. area radius, number of generated points) for this category." />
-              </StackPanel>
-              <Border Style="{StaticResource PsCard}">
-                <StackPanel>
-                  <DataGrid ItemsSource="{Binding GeneratorParams}"
-                            AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
-                            HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                            IsReadOnly="False" SelectionMode="Single"
-                            Background="Transparent" BorderThickness="0" MaxHeight="200"
-                            EnableRowVirtualization="True"
-                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                            RowBackground="Transparent" AlternatingRowBackground="Transparent"
-                            CellEditEnding="OnParamCellEditEnding" Tag="generator_params">
-                    <DataGrid.Columns>
-                      <DataGridTextColumn Header="Name" Binding="{Binding Name, UpdateSourceTrigger=LostFocus}" Width="*" />
-                      <DataGridTextColumn Header="Value" Binding="{Binding Value, UpdateSourceTrigger=LostFocus}" Width="120" />
-                    </DataGrid.Columns>
-                  </DataGrid>
-                  <Grid Margin="0,6,0,0">
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBox Grid.Column="0" Margin="0,0,4,0" FontSize="12" PlaceholderText="param name" Tag="generator_params"
-                                KeyDown="OnAddParamKeyDown" />
-                    <ui:TextBox Grid.Column="1" Width="90" Margin="0,0,4,0" FontSize="12" PlaceholderText="value" Tag="generator_params"
-                                ctl:NumericBehavior.FloatOnly="True" KeyDown="OnAddParamKeyDown" />
-                    <ui:Button Grid.Column="2" Content="Add" FontSize="11" Padding="6,2" Click="OnAddParamClick" Tag="generator_params" />
-                  </Grid>
-                </StackPanel>
-              </Border>
-
-              <!-- group_params -->
-              <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                <TextBlock Text="group_params" Style="{StaticResource PsBlockLabel}" VerticalAlignment="Center" />
-                <ui:SymbolIcon Style="{StaticResource PsInfo}"
-                               ToolTip="Defaults applied to every position group in this category." />
-              </StackPanel>
-              <Border Style="{StaticResource PsCard}">
-                <StackPanel>
-                  <DataGrid ItemsSource="{Binding GroupParams}"
-                            AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
-                            HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                            IsReadOnly="False" SelectionMode="Single"
-                            Background="Transparent" BorderThickness="0" MaxHeight="200"
-                            EnableRowVirtualization="True"
-                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                            RowBackground="Transparent" AlternatingRowBackground="Transparent"
-                            CellEditEnding="OnParamCellEditEnding" Tag="group_params">
-                    <DataGrid.Columns>
-                      <DataGridTextColumn Header="Name" Binding="{Binding Name, UpdateSourceTrigger=LostFocus}" Width="*" />
-                      <DataGridTextColumn Header="Value" Binding="{Binding Value, UpdateSourceTrigger=LostFocus}" Width="120" />
-                    </DataGrid.Columns>
-                  </DataGrid>
-                  <Grid Margin="0,6,0,0">
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBox Grid.Column="0" Margin="0,0,4,0" FontSize="12" PlaceholderText="param name" Tag="group_params"
-                                KeyDown="OnAddParamKeyDown" />
-                    <ui:TextBox Grid.Column="1" Width="90" Margin="0,0,4,0" FontSize="12" PlaceholderText="value" Tag="group_params"
-                                ctl:NumericBehavior.FloatOnly="True" KeyDown="OnAddParamKeyDown" />
-                    <ui:Button Grid.Column="2" Content="Add" FontSize="11" Padding="6,2" Click="OnAddParamClick" Tag="group_params" />
-                  </Grid>
-                </StackPanel>
-              </Border>
-            </StackPanel>
-          </ScrollViewer>
-        </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
       </Border>
 
-      <GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Stretch" Background="Transparent" />
+      <!-- ===== Detail ===== -->
+      <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+        <StackPanel>
 
-      <!-- ===== Groups (top) + positions of the selected group (bottom) ===== -->
-      <Border Grid.Column="2" CornerRadius="8" Padding="10"
-              Background="{DynamicResource ControlFillColorDefaultBrush}"
-              BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
-        <Grid>
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />  <!-- groups title -->
-            <RowDefinition Height="*" />     <!-- groups grid -->
-            <RowDefinition Height="Auto" />  <!-- add group -->
-            <RowDefinition Height="Auto" />  <!-- group actions -->
-            <RowDefinition Height="Auto" />  <!-- positions title -->
-            <RowDefinition Height="*" />     <!-- positions grid -->
-            <RowDefinition Height="Auto" />  <!-- add pos -->
-          </Grid.RowDefinitions>
-
-          <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6">
-            <TextBlock Text="Spawn groups" Style="{StaticResource PsSectionHeader}" VerticalAlignment="Center" />
-            <ui:SymbolIcon Style="{StaticResource PsInfo}"
-                           ToolTip="Named clusters of spawn positions in this category. Select one to edit its X/Z positions below." />
+          <!-- Category header -->
+          <StackPanel Orientation="Horizontal" Margin="2,0,0,10">
+            <TextBlock Text="{Binding SelectedTab.Display, FallbackValue='Player spawns'}"
+                       FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"
+                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+            <TextBlock Text="{Binding SelectedTab.Subtitle}" Margin="10,0,0,0" VerticalAlignment="Bottom"
+                       FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
           </StackPanel>
 
-          <Border Grid.Row="1" Style="{StaticResource PsCard}">
+          <!-- Settings cards: spawn scoring + grid generation, side by side -->
+          <Grid Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" /><ColumnDefinition Width="10" /><ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Spawn scoring -->
+            <Border Grid.Column="0" Style="{StaticResource PsCard}">
+              <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                  <ui:SymbolIcon Symbol="Target24" FontSize="16" VerticalAlignment="Center"
+                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                  <TextBlock Text="Spawn scoring" Margin="6,0,0,0" Style="{StaticResource PsCardTitle}" />
+                  <ui:SymbolIcon Style="{StaticResource PsInfo}"
+                                 ToolTip="At spawn time each candidate point is scored by distance. Within the min distance the point is avoided; the score peaks between min and max, then fades. Weights: players 3×, infected 2×, buildings 1×." />
+                </StackPanel>
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="80" /><ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="14" /><ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" /><RowDefinition Height="6" />
+                    <RowDefinition Height="Auto" /><RowDefinition Height="6" />
+                    <RowDefinition Height="Auto" />
+                  </Grid.RowDefinitions>
+                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Infected" Style="{StaticResource PsFieldLabel}" />
+                  <ui:NumberBox Grid.Row="0" Grid.Column="1" Style="{StaticResource PsNum}" PlaceholderText="min"
+                                Value="{Binding ScoreInfectedMin.Number, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                  <TextBlock Grid.Row="0" Grid.Column="2" Text="–" HorizontalAlignment="Center"
+                             VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                  <ui:NumberBox Grid.Row="0" Grid.Column="3" Style="{StaticResource PsNum}" PlaceholderText="max"
+                                Value="{Binding ScoreInfectedMax.Number, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+
+                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Players" Style="{StaticResource PsFieldLabel}" />
+                  <ui:NumberBox Grid.Row="2" Grid.Column="1" Style="{StaticResource PsNum}" PlaceholderText="min"
+                                Value="{Binding ScorePlayerMin.Number, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                  <TextBlock Grid.Row="2" Grid.Column="2" Text="–" HorizontalAlignment="Center"
+                             VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                  <ui:NumberBox Grid.Row="2" Grid.Column="3" Style="{StaticResource PsNum}" PlaceholderText="max"
+                                Value="{Binding ScorePlayerMax.Number, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+
+                  <TextBlock Grid.Row="4" Grid.Column="0" Text="Buildings" Style="{StaticResource PsFieldLabel}"
+                             ToolTip="distance from static objects (buildings)" />
+                  <ui:NumberBox Grid.Row="4" Grid.Column="1" Style="{StaticResource PsNum}" PlaceholderText="min"
+                                Value="{Binding ScoreStaticMin.Number, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                  <TextBlock Grid.Row="4" Grid.Column="2" Text="–" HorizontalAlignment="Center"
+                             VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                  <ui:NumberBox Grid.Row="4" Grid.Column="3" Style="{StaticResource PsNum}" PlaceholderText="max"
+                                Value="{Binding ScoreStaticMax.Number, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                </Grid>
+                <TextBlock Text="min–max metres · greater distance = preferred spawn"
+                           Style="{StaticResource PsHint}" Margin="0,8,0,0" />
+              </StackPanel>
+            </Border>
+
+            <!-- Grid generation -->
+            <Border Grid.Column="2" Style="{StaticResource PsCard}">
+              <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                  <ui:SymbolIcon Symbol="Grid24" FontSize="16" VerticalAlignment="Center"
+                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                  <TextBlock Text="Grid generation" Margin="6,0,0,0" Style="{StaticResource PsCardTitle}" />
+                  <ui:SymbolIcon Style="{StaticResource PsInfo}"
+                                 ToolTip="Around each spawn position a rectangle (width × height metres) is created and sampled as a grid for candidate points. Density = samples per side; steepness = allowed terrain slope in degrees." />
+                </StackPanel>
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="80" /><ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="14" /><ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" /><RowDefinition Height="6" />
+                    <RowDefinition Height="Auto" /><RowDefinition Height="6" />
+                    <RowDefinition Height="Auto" /><RowDefinition Height="6" />
+                    <RowDefinition Height="Auto" />
+                  </Grid.RowDefinitions>
+                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Density" Style="{StaticResource PsFieldLabel}" />
+                  <ui:NumberBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="3" Style="{StaticResource PsNum}"
+                                Value="{Binding GenDensity.Number, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+
+                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Size (m)" Style="{StaticResource PsFieldLabel}" />
+                  <ui:NumberBox Grid.Row="2" Grid.Column="1" Style="{StaticResource PsNum}" PlaceholderText="width"
+                                Value="{Binding GenWidth.Number, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                  <TextBlock Grid.Row="2" Grid.Column="2" Text="×" HorizontalAlignment="Center"
+                             VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                  <ui:NumberBox Grid.Row="2" Grid.Column="3" Style="{StaticResource PsNum}" PlaceholderText="height"
+                                Value="{Binding GenHeight.Number, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+
+                  <TextBlock Grid.Row="4" Grid.Column="0" Text="Steepness°" Style="{StaticResource PsFieldLabel}" />
+                  <ui:NumberBox Grid.Row="4" Grid.Column="1" Style="{StaticResource PsNum}" PlaceholderText="min"
+                                Value="{Binding GenSteepMin.Number, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                  <TextBlock Grid.Row="4" Grid.Column="2" Text="–" HorizontalAlignment="Center"
+                             VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                  <ui:NumberBox Grid.Row="4" Grid.Column="3" Style="{StaticResource PsNum}" PlaceholderText="max"
+                                Value="{Binding GenSteepMax.Number, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+
+                  <TextBlock Grid.Row="6" Grid.Column="0" Text="Buildings" Style="{StaticResource PsFieldLabel}"
+                             ToolTip="distance from static objects when generating points" />
+                  <ui:NumberBox Grid.Row="6" Grid.Column="1" Style="{StaticResource PsNum}" PlaceholderText="min"
+                                Value="{Binding GenStaticMin.Number, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                  <TextBlock Grid.Row="6" Grid.Column="2" Text="–" HorizontalAlignment="Center"
+                             VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                  <ui:NumberBox Grid.Row="6" Grid.Column="3" Style="{StaticResource PsNum}" PlaceholderText="max"
+                                Value="{Binding GenStaticMax.Number, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                </Grid>
+              </StackPanel>
+            </Border>
+          </Grid>
+
+          <!-- Group cycling -->
+          <Border Style="{StaticResource PsCard}" Margin="0,0,0,10">
             <StackPanel>
-              <TextBlock Text="No groups yet — add one below." Style="{StaticResource PsHint}" Margin="0,0,0,4"
-                         Visibility="{Binding Groups.Count, Converter={StaticResource ZeroToVis}}" />
-              <DataGrid x:Name="GroupGrid"
-                        ItemsSource="{Binding Groups}"
-                        SelectedItem="{Binding SelectedGroup, Mode=TwoWay}"
+              <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <ui:SymbolIcon Symbol="ArrowSync24" FontSize="16" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <TextBlock Text="Group cycling" Margin="6,0,0,0" Style="{StaticResource PsCardTitle}" />
+                <ui:SymbolIcon Style="{StaticResource PsInfo}"
+                               ToolTip="When enabled, players spawn within one active position group; after its lifetime expires the active group rotates. Counter = how many spawning players reset the lifetime (-1 = off). Disable to treat every point as a flat list." />
+              </StackPanel>
+              <WrapPanel Orientation="Horizontal">
+                <ui:ToggleSwitch Content="Enable groups" Margin="0,0,24,8"
+                                 IsChecked="{Binding GrpEnable.Flag, Mode=TwoWay}" />
+                <ui:ToggleSwitch Content="Groups as regular list" Margin="0,0,24,8"
+                                 IsChecked="{Binding GrpAsRegular.Flag, Mode=TwoWay}"
+                                 ToolTip="Use the grouped points as a plain list when grouping is disabled." />
+                <StackPanel Orientation="Horizontal" Margin="0,0,24,8">
+                  <TextBlock Text="Lifetime (s)" Style="{StaticResource PsFieldLabel}" Margin="0,0,6,0" />
+                  <ui:NumberBox Style="{StaticResource PsNum}" MinWidth="72"
+                                Value="{Binding GrpLifetime.Number, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                  <TextBlock Text="Counter" Style="{StaticResource PsFieldLabel}" Margin="0,0,6,0" />
+                  <ui:NumberBox Style="{StaticResource PsNum}" MinWidth="72"
+                                Value="{Binding GrpCounter.Number, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                </StackPanel>
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+
+          <!-- Other (non-canonical) params — only when present, so nothing in the file is lost -->
+          <Border Style="{StaticResource PsCard}" Margin="0,0,0,10"
+                  Visibility="{Binding HasOtherParams, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+              <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <ui:SymbolIcon Symbol="MoreHorizontal24" FontSize="16" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <TextBlock Text="Other params" Margin="6,0,0,0" Style="{StaticResource PsCardTitle}" />
+                <ui:SymbolIcon Style="{StaticResource PsInfo}"
+                               ToolTip="Non-standard keys found in this category, preserved as-is. Edit name/value inline." />
+              </StackPanel>
+              <DataGrid ItemsSource="{Binding OtherParams}"
+                        Style="{StaticResource DarkDataGrid}" ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeader}"
+                        RowStyle="{StaticResource DarkDataGridRow}" CellStyle="{StaticResource DarkDataGridCell}"
                         AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
-                        HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                        IsReadOnly="True" SelectionMode="Single"
-                        Background="Transparent" BorderThickness="0" MaxHeight="220"
-                        EnableRowVirtualization="True"
-                        VirtualizingPanel.IsVirtualizing="True"
-                        VirtualizingPanel.VirtualizationMode="Recycling"
+                        HeadersVisibility="Column" SelectionMode="Single" IsReadOnly="False"
+                        Background="Transparent" BorderThickness="0" MaxHeight="180"
                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                        RowBackground="Transparent" AlternatingRowBackground="Transparent">
+                        CellEditEnding="OnParamCellEditEnding">
                 <DataGrid.Columns>
-                  <DataGridTextColumn Header="Group" Binding="{Binding Name}" Width="*" />
-                  <DataGridTextColumn Header="Container" Binding="{Binding Container}" Width="Auto" />
-                  <DataGridTextColumn Header="#pos" Binding="{Binding PosCount}" Width="60" />
-                  <!-- Per-row remove — consistent icon action with the other CE tabs. -->
-                  <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True" CanUserSort="False">
-                    <DataGridTemplateColumn.CellTemplate>
-                      <DataTemplate>
-                        <ui:Button Icon="{ui:SymbolIcon Delete24}" Padding="5" FontSize="12" Appearance="Danger"
-                                   ToolTip="Remove this group and its positions" Click="OnRowRemoveGroupClick" Tag="{Binding}" />
-                      </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                  </DataGridTemplateColumn>
+                  <DataGridTextColumn Header="Section" Binding="{Binding Section}" Width="Auto" IsReadOnly="True" />
+                  <DataGridTextColumn Header="Name" Binding="{Binding Name, UpdateSourceTrigger=LostFocus}" Width="*" />
+                  <DataGridTextColumn Header="Value" Binding="{Binding Value, UpdateSourceTrigger=LostFocus}" Width="120" />
                 </DataGrid.Columns>
               </DataGrid>
             </StackPanel>
           </Border>
 
-          <!-- Add group -->
-          <Grid Grid.Row="2" Margin="0,8,0,0">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <ui:TextBox Grid.Column="0" Margin="0,0,4,0" FontSize="12" PlaceholderText="new group name"
-                        Text="{Binding NewGroupName, UpdateSourceTrigger=PropertyChanged}"
-                        KeyDown="OnAddGroupKeyDown" />
-            <ComboBox Grid.Column="1" Width="180" Margin="0,0,4,0" FontSize="12" IsEditable="True"
-                      Text="{Binding NewGroupContainer, UpdateSourceTrigger=PropertyChanged}"
-                      ToolTip="generator_posbubbles = randomly generated spawn points; permanent = fixed/exact points">
-              <ComboBoxItem Content="generator_posbubbles" />
-              <ComboBoxItem Content="permanent" />
-            </ComboBox>
-            <ui:Button Grid.Column="2" Content="Add group" Click="OnAddGroupClick" />
-          </Grid>
-
-          <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,6,0,0">
-            <ui:Button Content="Rename" FontSize="12" Click="OnRenameGroupClick"
-                       ToolTip="Rename the selected group" />
-          </StackPanel>
-
-          <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,12,0,6">
-            <TextBlock Style="{StaticResource PsBlockLabel}" VerticalAlignment="Center"
-                       Text="{Binding SelectedGroup.Name, StringFormat='Positions in {0}', FallbackValue='Positions'}" />
+          <!-- Spawn locations -->
+          <StackPanel Orientation="Horizontal" Margin="2,2,0,8">
+            <ui:SymbolIcon Symbol="Location24" FontSize="16" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            <TextBlock Text="Spawn locations" Margin="6,0,0,0" Style="{StaticResource PsSectionHeader}" />
             <ui:SymbolIcon Style="{StaticResource PsInfo}"
-                           ToolTip="World X / Z coordinates a player can spawn at within the selected group." />
+                           ToolTip="Named position groups and their world X / Z points. Each point is the centre of a generated grid 'bubble'." />
           </StackPanel>
 
-          <Border Grid.Row="5" Style="{StaticResource PsCard}">
-            <StackPanel>
-              <TextBlock Text="No positions here yet — add X / Z below." Style="{StaticResource PsHint}" Margin="0,0,0,4"
-                         Visibility="{Binding Positions.Count, Converter={StaticResource ZeroToVis}}" />
-              <DataGrid x:Name="PosGrid"
-                        ItemsSource="{Binding Positions}"
-                        AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
-                        HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                        IsReadOnly="False" SelectionMode="Single"
-                        Background="Transparent" BorderThickness="0" MaxHeight="240"
-                        EnableRowVirtualization="True"
-                        VirtualizingPanel.IsVirtualizing="True"
-                        VirtualizingPanel.VirtualizationMode="Recycling"
-                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                        RowBackground="Transparent" AlternatingRowBackground="Transparent"
-                        CellEditEnding="OnPosCellEditEnding">
-                <DataGrid.Columns>
-                  <DataGridTextColumn Header="X" Binding="{Binding XText, UpdateSourceTrigger=LostFocus}" Width="*" />
-                  <DataGridTextColumn Header="Z" Binding="{Binding ZText, UpdateSourceTrigger=LostFocus}" Width="*" />
-                  <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True">
-                    <DataGridTemplateColumn.CellTemplate>
-                      <DataTemplate>
-                        <ui:Button Icon="{ui:SymbolIcon Delete24}" Padding="5" FontSize="12" Appearance="Danger"
-                                   ToolTip="Remove this position" Click="OnRemovePosClick" Tag="{Binding}" />
-                      </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                  </DataGridTemplateColumn>
-                </DataGrid.Columns>
-              </DataGrid>
-            </StackPanel>
-          </Border>
-
-          <!-- Add pos -->
-          <Grid Grid.Row="6" Margin="0,8,0,0">
+          <Grid MinHeight="300">
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="220" /><ColumnDefinition Width="10" /><ColumnDefinition Width="*" MinWidth="240" />
             </Grid.ColumnDefinitions>
-            <ui:TextBox Grid.Column="0" x:Name="NewPosX" Margin="0,0,4,0" FontSize="12" PlaceholderText="X"
-                        ctl:NumericBehavior.FloatOnly="True" KeyDown="OnAddPosKeyDown"
-                        ToolTip="World X coordinate in metres (east-west)" />
-            <ui:TextBox Grid.Column="1" x:Name="NewPosZ" Margin="0,0,4,0" FontSize="12" PlaceholderText="Z"
-                        ctl:NumericBehavior.FloatOnly="True" KeyDown="OnAddPosKeyDown"
-                        ToolTip="World Z coordinate in metres (north-south; not height)" />
-            <ui:Button Grid.Column="2" Content="Add pos" Click="OnAddPosClick" />
+
+            <!-- Groups -->
+            <Border Grid.Column="0" Style="{StaticResource PsCard}" Padding="8">
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="No groups yet — add one below." Style="{StaticResource PsHint}"
+                           Margin="2,0,0,6" Visibility="{Binding Groups.Count, Converter={StaticResource ZeroToVis}}" />
+                <!-- Add group -->
+                <Grid DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                  </Grid.RowDefinitions>
+                  <ui:TextBox Grid.Row="0" Grid.Column="0" Margin="0,0,4,4" FontSize="12" PlaceholderText="new group name"
+                              Text="{Binding NewGroupName, UpdateSourceTrigger=PropertyChanged}" KeyDown="OnAddGroupKeyDown" />
+                  <ui:Button Grid.Row="0" Grid.Column="1" Margin="0,0,0,4" Click="OnAddGroupClick" ToolTip="Add group">
+                    <ui:SymbolIcon Symbol="Add24" />
+                  </ui:Button>
+                  <ComboBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" FontSize="12" IsEditable="True"
+                            Text="{Binding NewGroupContainer, UpdateSourceTrigger=PropertyChanged}"
+                            ToolTip="generator_posbubbles = grid-generated points (normal); permanent = exact fixed points">
+                    <ComboBoxItem Content="generator_posbubbles" />
+                    <ComboBoxItem Content="permanent" />
+                  </ComboBox>
+                </Grid>
+                <DataGrid x:Name="GroupGrid" ItemsSource="{Binding Groups}"
+                          SelectedItem="{Binding SelectedGroup, Mode=TwoWay}"
+                          Style="{StaticResource DarkDataGrid}" ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeader}"
+                          RowStyle="{StaticResource DarkDataGridRow}" CellStyle="{StaticResource DarkDataGridCell}"
+                          AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                          HeadersVisibility="Column" SelectionMode="Single" IsReadOnly="True"
+                          Background="Transparent" BorderThickness="0"
+                          EnableRowVirtualization="True"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                  <DataGrid.Columns>
+                    <DataGridTextColumn Header="Group" Binding="{Binding Name}" Width="*" />
+                    <DataGridTextColumn Header="#pos" Binding="{Binding PosCount}" Width="Auto" />
+                    <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True" CanUserSort="False">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                          <ui:Button Icon="{ui:SymbolIcon Delete24}" Padding="5" FontSize="12" Appearance="Danger"
+                                     ToolTip="Remove this group and its positions" Click="OnRowRemoveGroupClick" Tag="{Binding}" />
+                        </DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                  </DataGrid.Columns>
+                </DataGrid>
+              </DockPanel>
+            </Border>
+
+            <!-- Positions of the selected group -->
+            <Border Grid.Column="2" Style="{StaticResource PsCard}" Padding="8,10">
+              <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="2,0,0,6">
+                  <TextBlock Style="{StaticResource PsFieldLabel}"
+                             Text="{Binding SelectedGroup.Name, StringFormat='Positions in {0}', FallbackValue='Positions'}" />
+                  <TextBlock Text="world X / Z" Margin="10,0,0,0" VerticalAlignment="Center" Style="{StaticResource PsHint}" />
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
+                  <ui:Button Content="Rename group" FontSize="12" Padding="8,3" Margin="0,0,6,0"
+                             Click="OnRenameGroupClick" ToolTip="Rename the selected group" />
+                </StackPanel>
+                <!-- Add position -->
+                <Grid DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <ui:NumberBox x:Name="NewPosX" Grid.Column="0" Margin="0,0,4,0" Style="{StaticResource PsNum}" PlaceholderText="X" />
+                  <ui:NumberBox x:Name="NewPosZ" Grid.Column="1" Margin="0,0,4,0" Style="{StaticResource PsNum}" PlaceholderText="Z" />
+                  <ui:Button Grid.Column="2" Click="OnAddPosClick" ToolTip="Add position">
+                    <ui:SymbolIcon Symbol="Add24" />
+                  </ui:Button>
+                </Grid>
+                <DataGrid x:Name="PosGrid" ItemsSource="{Binding Positions}"
+                          Style="{StaticResource DarkDataGrid}" ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeader}"
+                          RowStyle="{StaticResource DarkDataGridRow}" CellStyle="{StaticResource DarkDataGridCell}"
+                          AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                          HeadersVisibility="Column" SelectionMode="Single" IsReadOnly="False"
+                          Background="Transparent" BorderThickness="0"
+                          EnableRowVirtualization="True"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          CellEditEnding="OnPosCellEditEnding">
+                  <DataGrid.Columns>
+                    <DataGridTextColumn Header="X" Binding="{Binding XText, UpdateSourceTrigger=LostFocus}" Width="*" />
+                    <DataGridTextColumn Header="Z" Binding="{Binding ZText, UpdateSourceTrigger=LostFocus}" Width="*" />
+                    <DataGridTemplateColumn Header="" Width="Auto" IsReadOnly="True" CanUserSort="False">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                          <ui:Button Icon="{ui:SymbolIcon Delete24}" Padding="5" FontSize="12" Appearance="Danger"
+                                     ToolTip="Remove this position" Click="OnRemovePosClick" Tag="{Binding}" />
+                        </DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                  </DataGrid.Columns>
+                </DataGrid>
+              </DockPanel>
+            </Border>
           </Grid>
-        </Grid>
-      </Border>
+        </StackPanel>
+      </ScrollViewer>
     </Grid>
 
-    <!-- Status -->
-    <TextBlock Grid.Row="2" Margin="0,8,0,0" FontSize="12"
-               Text="{Binding Status}"
+    <TextBlock Grid.Row="2" Text="{Binding Status}" Margin="0,8,0,0" FontSize="12"
                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
   </Grid>
 </UserControl>

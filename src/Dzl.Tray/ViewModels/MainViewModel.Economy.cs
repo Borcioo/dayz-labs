@@ -89,6 +89,98 @@ public partial class MainViewModel
     /// <summary>(Re)load the Player Spawns tab from disk. Called when its tab is activated.</summary>
     public void RefreshPlayerSpawns() => PlayerSpawns.EnsureLoaded();
 
+    // --- Server: Messages tab (db/messages.xml — broadcast / restart scheduler) ----------------
+    private Dzl.Tray.Controls.MessagesVm? _messages;
+
+    /// <summary>Backs the Messages tab (db/messages.xml). Created lazily so it shares this VM's config path.</summary>
+    public Dzl.Tray.Controls.MessagesVm Messages =>
+        _messages ??= new Dzl.Tray.Controls.MessagesVm(_configPath, Confirm("Messages"));
+
+    /// <summary>(Re)load the Messages tab from disk. Called when its tab is activated.</summary>
+    public void RefreshMessages() => Messages.EnsureLoaded();
+
+    // --- World: Environment tab (cfgenvironment.xml — animal/infected territories) -------------
+    private Dzl.Tray.Controls.EnvironmentVm? _environment;
+
+    /// <summary>Backs the Environment tab (cfgenvironment.xml). Created lazily so it shares this VM's config path.</summary>
+    public Dzl.Tray.Controls.EnvironmentVm Environment =>
+        _environment ??= new Dzl.Tray.Controls.EnvironmentVm(_configPath, Confirm("Environment"));
+
+    /// <summary>(Re)load the Environment tab from disk. Called when its tab is activated.</summary>
+    public void RefreshEnvironment() => Environment.EnsureLoaded();
+
+    // --- World: Weather tab (cfgweather.xml) -----------------------------------
+    private Dzl.Tray.Controls.WeatherVm? _weather;
+
+    /// <summary>Backs the Weather tab (cfgweather.xml). Created lazily so it shares this VM's config path.</summary>
+    public Dzl.Tray.Controls.WeatherVm Weather =>
+        _weather ??= new Dzl.Tray.Controls.WeatherVm(_configPath, Confirm("Weather"));
+
+    /// <summary>(Re)load the Weather tab from disk. Called when its tab is activated.</summary>
+    public void RefreshWeather() => Weather.EnsureLoaded();
+
+    // --- CE Economy core tab (db/economy.xml) ------------------------------
+    private Dzl.Tray.Controls.EconomyCoreVm? _economyCore;
+
+    /// <summary>Backs the Economy core tab (db/economy.xml — per-group init/load/respawn/save toggles).
+    /// Created lazily so it shares this VM's config path.</summary>
+    public Dzl.Tray.Controls.EconomyCoreVm EconomyCore =>
+        _economyCore ??= new Dzl.Tray.Controls.EconomyCoreVm(_configPath, Confirm("Economy core"));
+
+    /// <summary>(Re)load the Economy core tab from disk. Called when its tab is activated.</summary>
+    public void RefreshEconomyCore() => EconomyCore.EnsureLoaded();
+
+    // --- CE Config tab (cfgeconomycore.xml — routing manifest + defaults + root classes) -------
+    private Dzl.Tray.Controls.CeCoreVm? _ceCore;
+
+    /// <summary>Backs the CE Config tab (cfgeconomycore.xml). Created lazily so it shares this VM's config path.</summary>
+    public Dzl.Tray.Controls.CeCoreVm CeCore =>
+        _ceCore ??= new Dzl.Tray.Controls.CeCoreVm(_configPath, Confirm("CE Config"));
+
+    /// <summary>(Re)load the CE Config tab from disk. Called when its tab is activated.</summary>
+    public void RefreshCeCore() => CeCore.EnsureLoaded();
+
+    // --- Event Spawns tab (cfgeventspawns.xml — per-event spawn positions) ---------------------
+    private Dzl.Tray.Controls.EventSpawnsVm? _eventSpawns;
+
+    /// <summary>Backs the Event Spawns tab (cfgeventspawns.xml). Created lazily so it shares this VM's config path.</summary>
+    public Dzl.Tray.Controls.EventSpawnsVm EventSpawns =>
+        _eventSpawns ??= new Dzl.Tray.Controls.EventSpawnsVm(_configPath, Confirm("Event Spawns"));
+
+    /// <summary>(Re)load the Event Spawns tab from disk. Called when its tab is activated.</summary>
+    public void RefreshEventSpawns() => EventSpawns.EnsureLoaded();
+
+    // --- Event Groups tab (cfgeventgroups.xml — object groups an event spawns together) --------
+    private Dzl.Tray.Controls.EventGroupsVm? _eventGroups;
+
+    /// <summary>Backs the Event Groups tab (cfgeventgroups.xml). Created lazily so it shares this VM's config path.</summary>
+    public Dzl.Tray.Controls.EventGroupsVm EventGroups =>
+        _eventGroups ??= new Dzl.Tray.Controls.EventGroupsVm(_configPath, Confirm("Event Groups"));
+
+    /// <summary>(Re)load the Event Groups tab from disk. Called when its tab is activated.</summary>
+    public void RefreshEventGroups() => EventGroups.EnsureLoaded();
+
+    // --- CE Ignore list tab (cfgignorelist.xml — classnames the CE ignores) --------------------
+    private Dzl.Tray.Controls.IgnoreListVm? _ignoreList;
+
+    /// <summary>Backs the Ignore list tab (cfgignorelist.xml). Created lazily so it shares this VM's config path.</summary>
+    public Dzl.Tray.Controls.IgnoreListVm IgnoreList =>
+        _ignoreList ??= new Dzl.Tray.Controls.IgnoreListVm(_configPath, Confirm("Ignore list"));
+
+    /// <summary>(Re)load the Ignore list tab from disk. Called when its tab is activated.</summary>
+    public void RefreshIgnoreList() => IgnoreList.EnsureLoaded();
+
+    // --- Map files tab (auto-generated terrain data — open-externally shortcuts, no editor) -----
+    private Dzl.Tray.Controls.MapFilesVm? _mapFiles;
+
+    /// <summary>Backs the Map files tab (lists mapgroup*/mapcluster* with open-folder / VS Code / reveal).
+    /// Created lazily so it shares this VM's config path.</summary>
+    public Dzl.Tray.Controls.MapFilesVm MapFiles =>
+        _mapFiles ??= new Dzl.Tray.Controls.MapFilesVm(_configPath);
+
+    /// <summary>Re-scan the mission's map-data files. Called when the tab is activated.</summary>
+    public void RefreshMapFiles() => MapFiles.Reload();
+
     // --- CE Dashboard tab (overview: stats + aggregated validation) --------
     private Dzl.Tray.Controls.CeDashboardVm? _ceDashboard;
 

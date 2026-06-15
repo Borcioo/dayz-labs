@@ -47,9 +47,9 @@ public class TrayCeViewModelTests
         var vm = new PlayerSpawnsVm(cfg, _ => true);
         vm.Reload();
         vm.SelectedCategory = "fresh";
-        vm.SpawnParams.Should().ContainSingle().Which.Name.Should().Be("grid_width");
+        vm.OtherParams.Should().ContainSingle().Which.Name.Should().Be("grid_width");
 
-        var param = vm.SpawnParams.Single();
+        var param = vm.OtherParams.Single();
         param.Name = "grid_height";   // user edits the Name cell …
         param.Commit();               // … and commits (LostFocus / Enter)
 
@@ -57,9 +57,9 @@ public class TrayCeViewModelTests
         reloaded.Reload();
         reloaded.SelectedCategory = "fresh";
 
-        reloaded.SpawnParams.Select(p => p.Name).Should().ContainSingle()
+        reloaded.OtherParams.Select(p => p.Name).Should().ContainSingle()
             .Which.Should().Be("grid_height", "the param must be renamed in place, leaving no grid_width orphan");
-        reloaded.SpawnParams.Single().Value.Should().Be("200", "the value survives the rename");
+        reloaded.OtherParams.Single().Value.Should().Be("200", "the value survives the rename");
     }
 
     // ── BUG C (MED): the spawn-params "Add" form must reject a name already present in the section instead of
@@ -73,36 +73,32 @@ public class TrayCeViewModelTests
         vm.Reload();
         vm.SelectedCategory = "fresh";
 
-        vm.AddParam("spawn_params", "grid_width", "999");
+        vm.AddOtherParam("spawn_params", "grid_width", "999");
         vm.Status.Should().StartWith("✗", "adding an existing param name must be rejected");
 
         var reloaded = new PlayerSpawnsVm(cfg, _ => true);
         reloaded.Reload();
         reloaded.SelectedCategory = "fresh";
-        reloaded.SpawnParams.Single(p => p.Name == "grid_width").Value
+        reloaded.OtherParams.Single(p => p.Name == "grid_width").Value
             .Should().Be("200", "the existing param value must not be clobbered by an Add");
     }
 
-    // ── BUG B (MED): the Globals "Add var" form must reject an existing var name instead of silently
-    //    overwriting its type/value.
+    // ── globals.xml is a CLOSED engine vocabulary: a standard variable is not user data — removing it only
+    //    reverts the engine to its default. The editor must refuse to delete a standard var (reset instead).
     [Fact]
-    public void GlobalsVm_AddVar_rejects_an_existing_name_and_preserves_the_value()
+    public void GlobalsVm_standard_var_is_not_removable_and_keeps_its_value()
     {
         var cfg = Scaffold(globals: GlobalsXml);
 
         var vm = new GlobalsVm(cfg, _ => true);
         vm.Reload();
-
-        vm.NewVarName = "AnimalMaxCount";
-        vm.NewVarType = 1;
-        vm.NewVarValue = "5";
-        vm.AddVar();
-        vm.Status.Should().StartWith("✗", "adding an existing var name must be rejected");
+        vm.SelectedRow = vm.Rows.Single(r => r.Name == "AnimalMaxCount");
+        vm.RemoveSelectedVar();
+        vm.Status.Should().StartWith("✗", "a standard engine variable must not be removable");
 
         var reloaded = new GlobalsVm(cfg, _ => true);
         reloaded.Reload();
-        reloaded.Rows.Count(r => r.Name == "AnimalMaxCount").Should().Be(1);
         reloaded.Rows.Single(r => r.Name == "AnimalMaxCount").Value
-            .Should().Be("100", "the existing var value must not be clobbered by an Add");
+            .Should().Be("100", "the standard var stays put");
     }
 }

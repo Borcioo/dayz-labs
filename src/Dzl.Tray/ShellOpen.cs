@@ -20,6 +20,29 @@ internal static class ShellOpen
         catch { return false; }
     }
 
+    /// <summary>Reveal a file in Explorer (selected). Falls back to opening its containing folder.</summary>
+    public static bool Reveal(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        try
+        {
+            if (File.Exists(path)) { Process.Start("explorer.exe", $"/select,\"{path}\""); return true; }
+            return Folder(Path.GetDirectoryName(path));
+        }
+        catch { return false; }
+    }
+
+    /// <summary>Open a file in an editor — VS Code if its CLI is on PATH, else the OS default app for the type.</summary>
+    public static bool Editor(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return false;
+        // VS Code via its launcher (code.cmd on PATH; ShellExecute resolves it). Fall back to the default app.
+        try { Process.Start(new ProcessStartInfo("code", $"\"{path}\"") { UseShellExecute = true }); return true; }
+        catch { /* VS Code not on PATH — fall through to the default handler */ }
+        try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); return true; }
+        catch { return false; }
+    }
+
     /// <summary>Open a terminal in <paramref name="dir"/> — Windows Terminal, then PowerShell, then cmd.</summary>
     public static bool Terminal(string? dir)
     {

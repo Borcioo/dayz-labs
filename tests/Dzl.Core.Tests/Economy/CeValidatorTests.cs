@@ -108,6 +108,34 @@ public class CeValidatorTests
         new EventsRules().Check(world).Should().Contain(f => f.Code == "event-min-gt-max");
     }
 
+    [Fact]
+    public void Event_with_count_range_children_does_not_flag_weight_sum()
+    {
+        // max>0 → min/max are a literal count range (like vanilla vehicles spawning 3-5 per variant),
+        // not weights; their sum (here 6) is meaningless, so the 100-convention hint must NOT fire.
+        var world = new CeWorld
+        {
+            Events = new[] { Event("Vehicles", 0, 10,
+                new EventChild("Sedan_02", 3, 5, 0, 0),
+                new EventChild("Sedan_02_Red", 3, 5, 0, 0)) },
+        };
+        new EventsRules().Check(world).Should().NotContain(f => f.Code == "event-children-weight-sum");
+    }
+
+    [Fact]
+    public void Event_with_weight_children_not_summing_to_100_is_info()
+    {
+        // max=0 → min is a % spawn-weight; two weights summing to 90 (not 100) earns the Info hint.
+        var world = new CeWorld
+        {
+            Events = new[] { Event("Spawner", 0, 10,
+                new EventChild("Animal_A", 60, 0, 0, 0),
+                new EventChild("Animal_B", 30, 0, 0, 0)) },
+        };
+        new EventsRules().Check(world).Should()
+            .Contain(f => f.Code == "event-children-weight-sum" && f.Severity == LintSeverity.Info);
+    }
+
     // --- Validator dispatch ---
 
     [Fact]
@@ -175,6 +203,57 @@ public class CeValidatorTests
         };
         new DictionariesRules().Check(world)
             .Should().Contain(f => f.Code == "user-list-unknown-member" && f.Message.Contains("Nope"));
+    }
+
+    // --- Types ↔ named combos (cfglimitsdefinitionuser.xml) ---
+
+    [Fact]
+    public void Type_referencing_a_named_combo_value_is_not_flagged_unknown()
+    {
+        // A type may reference a named combo where a value flag is expected; the engine expands the combo to
+        // its member flags. Base valueflags are Tier1–Tier4; the combo "Tier123" bundles three of them, so a
+        // "<value name=\"Tier123\"/>" must validate even though Tier123 is absent from cfglimitsdefinition.
+        var world = new CeWorld
+        {
+            Types = new CeFileSet(new[]
+            {
+                new TypeEntry { Name = "Gun", SourceFile = "types.xml", Value = new[] { "Tier123" } },
+            }),
+            Limits = new LimitsDef(
+                new HashSet<string>(System.StringComparer.OrdinalIgnoreCase),
+                new HashSet<string>(System.StringComparer.OrdinalIgnoreCase) { "Tier1", "Tier2", "Tier3", "Tier4" },
+                new HashSet<string>(), new HashSet<string>()),
+            UserGroups = new[]
+            {
+                new LimitsUserGroup("Tier123", LimitsKind.Value, new[] { "Tier1", "Tier2", "Tier3" }),
+            },
+        };
+
+        new TypesWorldRule().Check(world).Should().NotContain(f => f.Code == "unknown-value");
+    }
+
+    [Fact]
+    public void Type_referencing_an_undefined_value_is_still_flagged_unknown()
+    {
+        // Negative control: a value that is neither a base flag nor a combo is still flagged, so the combo
+        // fold-in above doesn't silently mask the rule.
+        var world = new CeWorld
+        {
+            Types = new CeFileSet(new[]
+            {
+                new TypeEntry { Name = "Gun", SourceFile = "types.xml", Value = new[] { "TierNope" } },
+            }),
+            Limits = new LimitsDef(
+                new HashSet<string>(System.StringComparer.OrdinalIgnoreCase),
+                new HashSet<string>(System.StringComparer.OrdinalIgnoreCase) { "Tier1", "Tier2" },
+                new HashSet<string>(), new HashSet<string>()),
+            UserGroups = new[]
+            {
+                new LimitsUserGroup("Tier123", LimitsKind.Value, new[] { "Tier1" }),
+            },
+        };
+
+        new TypesWorldRule().Check(world).Should().Contain(f => f.Code == "unknown-value" && f.EntryName == "Gun");
     }
 
     [Fact]

@@ -68,10 +68,26 @@ public class TypesServiceMultiFileTests
 </lists>
 """;
 
+    // A named combo whose name matches BadUsageGun's "TotallyNotAUsage" usage reference. With this file present,
+    // that reference resolves to a combo (engine-honoured) and lint must stop flagging it unknown.
+    private const string LimitsUserXmlText = """
+<?xml version="1.0" encoding="UTF-8"?>
+<user_lists>
+    <usageflags>
+        <user name="TotallyNotAUsage">
+            <usage name="Military"/>
+        </user>
+    </usageflags>
+    <valueflags/>
+</user_lists>
+""";
+
     /// <summary>Build a temp mission with a vanilla db/types.xml, a cfgeconomycore.xml referencing a mod
     /// types file, that mod file, and cfglimitsdefinition.xml. Returns (configPath, missionDir).
-    /// Set <paramref name="withEconomyCore"/> false to omit cfgeconomycore.xml.</summary>
-    private static (string configPath, string missionDir) Scaffold(bool withEconomyCore = true, bool withLimits = true)
+    /// Set <paramref name="withEconomyCore"/> false to omit cfgeconomycore.xml; set <paramref name="withCombos"/>
+    /// true to also write cfglimitsdefinitionuser.xml defining a "TotallyNotAUsage" combo.</summary>
+    private static (string configPath, string missionDir) Scaffold(
+        bool withEconomyCore = true, bool withLimits = true, bool withCombos = false)
     {
         var dir = Tmp();
         var configPath = Path.Combine(dir, "config.json");
@@ -97,6 +113,8 @@ public class TypesServiceMultiFileTests
             File.WriteAllText(Path.Combine(missionDir, "cfgeconomycore.xml"), EconomyCoreXml);
         if (withLimits)
             File.WriteAllText(Path.Combine(missionDir, "cfglimitsdefinition.xml"), LimitsXmlText);
+        if (withCombos)
+            File.WriteAllText(Path.Combine(missionDir, "cfglimitsdefinitionuser.xml"), LimitsUserXmlText);
 
         return (configPath, missionDir);
     }
@@ -153,6 +171,16 @@ public class TypesServiceMultiFileTests
         var (configPath, _) = Scaffold();
         new TypesService(configPath).Lint()
             .Should().Contain(f => f.Code == "unknown-usage");
+    }
+
+    [Fact]
+    public void Lint_does_not_flag_a_usage_that_is_a_named_combo()
+    {
+        // Same mission, but cfglimitsdefinitionuser.xml now defines "TotallyNotAUsage" as a combo, so
+        // BadUsageGun's reference to it is valid and must not surface as unknown-usage.
+        var (configPath, _) = Scaffold(withCombos: true);
+        new TypesService(configPath).Lint()
+            .Should().NotContain(f => f.Code == "unknown-usage" && f.EntryName == "BadUsageGun");
     }
 
     [Fact]

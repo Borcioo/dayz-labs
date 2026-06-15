@@ -4,6 +4,7 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:ctl="clr-namespace:Dzl.Tray.Controls"
              xmlns:conv="clr-namespace:Dzl.Tray"
+             xmlns:help="clr-namespace:Dzl.Tray.Help"
              x:Name="Root">
   <!-- DataContext = DictionaryManagerVm. Dashboard master-detail: a left nav rail lists the four base
        dictionaries (cfglimitsdefinition.xml) + the Named-combos section (cfglimitsdefinitionuser.xml); the
@@ -41,11 +42,11 @@
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Bd" Property="Background" Value="#14FFFFFF" />
+                <Setter TargetName="Bd" Property="Background" Value="{StaticResource CeRowHoverBrush}" />
               </Trigger>
               <Trigger Property="IsSelected" Value="True">
-                <Setter TargetName="Bd" Property="Background" Value="#1F2A3A" />
-                <Setter TargetName="Bd" Property="BorderBrush" Value="#4FA3FF" />
+                <Setter TargetName="Bd" Property="Background" Value="{StaticResource CeRowSelectedBrush}" />
+                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource CeAccentBarBrush}" />
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -69,11 +70,11 @@
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Bd" Property="Background" Value="#14FFFFFF" />
+                <Setter TargetName="Bd" Property="Background" Value="{StaticResource CeRowHoverBrush}" />
               </Trigger>
               <DataTrigger Binding="{Binding CombosSelected}" Value="True">
-                <Setter TargetName="Bd" Property="Background" Value="#1F2A3A" />
-                <Setter TargetName="Bd" Property="BorderBrush" Value="#4FA3FF" />
+                <Setter TargetName="Bd" Property="Background" Value="{StaticResource CeRowSelectedBrush}" />
+                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource CeAccentBarBrush}" />
               </DataTrigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -95,10 +96,10 @@
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Bd" Property="Background" Value="#14FFFFFF" />
+                <Setter TargetName="Bd" Property="Background" Value="{StaticResource CeRowHoverBrush}" />
               </Trigger>
               <Trigger Property="IsSelected" Value="True">
-                <Setter TargetName="Bd" Property="Background" Value="#1F2A3A" />
+                <Setter TargetName="Bd" Property="Background" Value="{StaticResource CeRowSelectedBrush}" />
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -163,6 +164,8 @@
                 Background="{DynamicResource ControlFillColorSecondaryBrush}"
                 BorderThickness="0,0,1,0" BorderBrush="{DynamicResource ControlElevationBorderBrush}">
           <StackPanel>
+            <ctl:GlossaryButton Title="Dictionaries" Entries="{x:Static help:Glossary.Dictionaries}"
+                                HorizontalAlignment="Left" Margin="0,0,0,12" />
             <TextBlock Text="Base dictionaries" Style="{StaticResource DictRailCaption}" />
             <ListBox ItemsSource="{Binding Lists}" SelectedItem="{Binding SelectedList, Mode=TwoWay}"
                      ItemContainerStyle="{StaticResource NavItem}"

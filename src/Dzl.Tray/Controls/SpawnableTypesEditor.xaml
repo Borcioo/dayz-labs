@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:ctl="clr-namespace:Dzl.Tray.Controls"
+             xmlns:help="clr-namespace:Dzl.Tray.Help"
              xmlns:conv="clr-namespace:Dzl.Tray"
              x:Name="Root">
   <!-- DataContext = SpawnableTypesVm. Edits cfgspawnabletypes.xml: master list of types (left) + a detail
@@ -79,13 +80,14 @@
                              ToolTip="Probability (0..1) that this block rolls its loot." />
             </StackPanel>
             <DataGrid ItemsSource="{Binding Items}"
+                      Style="{StaticResource DarkDataGrid}" ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeader}"
                       AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                       HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                       IsReadOnly="False" SelectionMode="Single"
                       Background="Transparent" BorderThickness="0"
                       MaxHeight="180"
                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                      RowBackground="Transparent" AlternatingRowBackground="Transparent"
+                      RowStyle="{StaticResource DarkDataGridRow}" CellStyle="{StaticResource DarkDataGridCell}"
                       CellEditEnding="OnItemCellEditEnding" Tag="{Binding}">
               <DataGrid.Columns>
                 <DataGridTextColumn Header="Item name"
@@ -152,6 +154,7 @@
                    TextTrimming="CharacterEllipsis" MaxWidth="640" />
       </StackPanel>
       <StackPanel Grid.Column="1" Orientation="Horizontal">
+        <ctl:GlossaryButton Title="Spawnable Types" Entries="{x:Static help:Glossary.SpawnableTypes}" Margin="0,0,12,0" />
         <ui:Button Content="Reload" Margin="0,0,6,0" Click="OnReloadClick"
                    ToolTip="Re-read cfgspawnabletypes.xml from disk (discards the undo history)" />
         <ui:Button Margin="0,0,6,0" Command="{Binding UndoCommand}" ToolTip="Undo the last edit">
@@ -194,7 +197,8 @@
           <DataGrid Grid.Row="2" x:Name="TypeGrid"
                     ItemsSource="{Binding Types}"
                     SelectedItem="{Binding SelectedType, Mode=TwoWay}"
-                    AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                    Style="{StaticResource DarkDataGrid}" ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeader}"
+                      AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                     HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                     IsReadOnly="True" SelectionMode="Single"
                     Background="Transparent" BorderThickness="0"
@@ -202,7 +206,7 @@
                     VirtualizingPanel.IsVirtualizing="True"
                     VirtualizingPanel.VirtualizationMode="Recycling"
                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                    RowBackground="Transparent" AlternatingRowBackground="Transparent">
+                    RowStyle="{StaticResource DarkDataGridRow}" CellStyle="{StaticResource DarkDataGridCell}">
             <DataGrid.Columns>
               <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
               <DataGridCheckBoxColumn Header="Hoard" Binding="{Binding Hoarder}" Width="Auto" />

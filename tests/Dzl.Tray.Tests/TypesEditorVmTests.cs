@@ -186,4 +186,26 @@ public class TypesEditorVmTests
         vm.CheckedTypeCount.Should().Be(2);
         vm.BatchMode.Should().BeTrue("the batch panel shows once 2+ rows are checked");
     }
+
+    // ── named combos count as known references ───────────────────────────
+    // A combo (cfglimitsdefinitionuser.xml) is a valid usage/value reference in types.xml — the engine
+    // expands it — so the editor must NOT flag it unknown nor offer to add it to the base dictionary.
+    [WpfFact]
+    public void IsUnknownLimit_treats_a_named_combo_as_known_after_loading_limits()
+    {
+        var cfg = CeScaffold.Mission(
+            ("cfglimitsdefinition.xml",
+             "<lists><categories/><tags/><usageflags><usage name=\"Military\"/></usageflags>" +
+             "<valueflags><value name=\"Tier1\"/></valueflags></lists>"),
+            ("cfglimitsdefinitionuser.xml",
+             "<user_lists><usageflags><user name=\"TownVillage\"><usage name=\"Military\"/></user></usageflags>" +
+             "<valueflags><user name=\"Tier123\"><value name=\"Tier1\"/></user></valueflags></user_lists>"));
+        var vm = new TypesEditorVm(cfg);
+        vm.RefreshLimitsFromDisk();   // loads base limits + folds combos into the validation set
+
+        vm.IsUnknownLimit(Dzl.Core.Economy.LimitsKind.Usage, "TownVillage").Should().BeFalse("a usage combo is a known reference");
+        vm.IsUnknownLimit(Dzl.Core.Economy.LimitsKind.Value, "Tier123").Should().BeFalse("a value combo is a known reference");
+        vm.IsUnknownLimit(Dzl.Core.Economy.LimitsKind.Usage, "Military").Should().BeFalse("base flags stay known");
+        vm.IsUnknownLimit(Dzl.Core.Economy.LimitsKind.Usage, "Nope").Should().BeTrue("an undefined flag is still unknown");
+    }
 }

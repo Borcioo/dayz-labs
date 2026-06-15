@@ -32,15 +32,19 @@
         <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
     </Style>
 
+    <!-- The shared CE "active row": selected = muted navy, hover = faint white wash — identical to the
+         Dictionaries ListBox rows (DictListItem). Selected is declared AFTER hover so a hovered-and-selected
+         row keeps the navy fill instead of flipping to the lighter hover wash. Colours come from Colors.xaml
+         (CeRowSelectedBrush / CeRowHoverBrush) so every CE tab stays in sync from one place. -->
     <Style x:Key="DarkDataGridRow" TargetType="DataGridRow">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
         <Style.Triggers>
-            <Trigger Property="IsSelected" Value="True">
-                <Setter Property="Background" Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
-            </Trigger>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                <Setter Property="Background" Value="{StaticResource CeRowHoverBrush}" />
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{StaticResource CeRowSelectedBrush}" />
             </Trigger>
         </Style.Triggers>
     </Style>

@@ -94,8 +94,22 @@ public sealed class TypesService
         catch { return LimitsDef.Empty; }
     }
 
-    /// <summary>Run the CE lint rules over the full multi-file Types set against the mission's limits.</summary>
-    public IReadOnlyList<LintFinding> Lint() => new LintEngine().Run(new CeFileSet(List()), Limits());
+    /// <summary>Named combos from the mission's <c>cfglimitsdefinitionuser.xml</c> (empty when absent).
+    /// A combo name is a valid usage/value reference the engine expands, so it must count as known in lint.</summary>
+    public IReadOnlyList<LimitsUserGroup> Combos()
+    {
+        var mp = Mission();
+        if (mp is null) return System.Array.Empty<LimitsUserGroup>();
+        var path = Path.Combine(mp.MissionDir, "cfglimitsdefinitionuser.xml");
+        if (!File.Exists(path)) return System.Array.Empty<LimitsUserGroup>();
+        try { return LimitsUserXml.Parse(File.ReadAllText(path)); }
+        catch { return System.Array.Empty<LimitsUserGroup>(); }
+    }
+
+    /// <summary>Run the CE lint rules over the full multi-file Types set against the mission's limits, with
+    /// named combos folded in so a combo reference (e.g. <c>usage="TownVillage"</c>) isn't flagged unknown.</summary>
+    public IReadOnlyList<LintFinding> Lint() =>
+        new LintEngine().Run(new CeFileSet(List()), Limits().WithCombos(Combos()));
 
     /// <summary>Sync every resolved Types file to the edited set: entries are grouped by their
     /// <see cref="TypeEntry.SourceFile"/> and each target file is pruned, upserted, snapshotted,

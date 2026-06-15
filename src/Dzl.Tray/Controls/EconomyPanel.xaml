@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:ctl="clr-namespace:Dzl.Tray.Controls"
+             xmlns:help="clr-namespace:Dzl.Tray.Help"
              xmlns:local="clr-namespace:Dzl.Tray">
   <!-- The whole Central Economy editor (Types + the other CE tabs). DataContext = MainViewModel.
        Hosted by EconomyWindow (modeless) so the editor gets a window of its own. -->
@@ -11,9 +12,58 @@
               <KeyBinding Modifiers="Control" Key="Z" Command="{Binding TypesEditor.UndoTypesCommand}" />
               <KeyBinding Modifiers="Control" Key="Y" Command="{Binding TypesEditor.RedoTypesCommand}" />
             </Grid.InputBindings>
-            <!-- CE editor tab shell: one tab per CE file KIND. No page header — the window title
-                 already says Economy. -->
-            <TabControl x:Name="EconomyTabControl" BorderThickness="0" Background="Transparent" Padding="0"
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />  <!-- module rail -->
+              <ColumnDefinition Width="*" />     <!-- selected module's tabs -->
+            </Grid.ColumnDefinitions>
+
+            <!-- MISSION CONFIG module rail: groups the CE files into logical sections (Economy/Events/World/…).
+                 Selecting a module toggles which file tabs are visible (OnModuleChanged) — the files aren't all
+                 "economy", so they're split into modules per the DayZ docs. -->
+            <Border Grid.Column="0" Width="156" Margin="0,0,10,0" Padding="6,4"
+                    BorderThickness="0,0,1,0" BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="MISSION CONFIG" FontSize="11" Margin="6,2,0,8"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                <ListBox x:Name="ModuleRail" Background="Transparent" BorderThickness="0"
+                         SelectionChanged="OnModuleChanged">
+                  <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                      <Setter Property="Padding" Value="10,8" />
+                      <Setter Property="Margin" Value="0,1" />
+                      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                      <Setter Property="Template">
+                        <Setter.Value>
+                          <ControlTemplate TargetType="ListBoxItem">
+                            <Border x:Name="Bd" Background="Transparent" CornerRadius="6"
+                                    BorderThickness="2,0,0,0" BorderBrush="Transparent" Padding="{TemplateBinding Padding}">
+                              <ContentPresenter />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                              <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource CeRowHoverBrush}" />
+                              </Trigger>
+                              <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource CeRowSelectedBrush}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource CeAccentBarBrush}" />
+                              </Trigger>
+                            </ControlTemplate.Triggers>
+                          </ControlTemplate>
+                        </Setter.Value>
+                      </Setter>
+                    </Style>
+                  </ListBox.ItemContainerStyle>
+                  <ListBoxItem Tag="Economy"><TextBlock Text="Economy" FontSize="14" /></ListBoxItem>
+                  <ListBoxItem Tag="Events"><TextBlock Text="Events" FontSize="14" /></ListBoxItem>
+                  <ListBoxItem Tag="World"><TextBlock Text="World" FontSize="14" /></ListBoxItem>
+                  <ListBoxItem Tag="Server"><TextBlock Text="Server" FontSize="14" /></ListBoxItem>
+                  <ListBoxItem Tag="Map files"><TextBlock Text="Map files" FontSize="14" /></ListBoxItem>
+                </ListBox>
+              </DockPanel>
+            </Border>
+
+            <!-- CE editor tab shell: one tab per CE file KIND, filtered to the selected module's tabs. -->
+            <TabControl Grid.Column="1" x:Name="EconomyTabControl" BorderThickness="0" Background="Transparent" Padding="0"
                         SelectionChanged="OnEconomyTabSelectionChanged">
               <TabControl.Resources>
                 <Style TargetType="TabItem">
@@ -94,6 +144,7 @@
                   <TextBlock Text="{Binding FiltersButtonLabel}" VerticalAlignment="Center" />
                 </StackPanel>
               </ToggleButton>
+              <ctl:GlossaryButton Title="Types" Entries="{x:Static help:Glossary.Types}" Margin="0,0,12,4" />
               <ui:Button Icon="{ui:SymbolIcon ArrowUndo24}" ToolTip="Undo (Ctrl+Z)" Margin="0,0,4,4"
                          Command="{Binding UndoTypesCommand}" />
               <ui:Button Icon="{ui:SymbolIcon ArrowRedo24}" ToolTip="Redo (Ctrl+Y)" Margin="0,0,8,4"
@@ -544,6 +595,51 @@
                    bags (spawn/generator/group) + named position-group bubbles. DataContext = MainViewModel.PlayerSpawns. -->
               <TabItem Header="Player Spawns">
                 <ctl:PlayerSpawnsEditor DataContext="{Binding PlayerSpawns}" />
+              </TabItem>
+
+              <!-- db/economy.xml: per-entity-group init/load/respawn/save toggles. DataContext = MainViewModel.EconomyCore. -->
+              <TabItem Header="Economy core">
+                <ctl:EconomyCoreEditor DataContext="{Binding EconomyCore}" />
+              </TabItem>
+
+              <!-- cfgeconomycore.xml: custom-file routing manifest + default knobs + root classes (read-only). -->
+              <TabItem Header="CE Config">
+                <ctl:CeCoreEditor DataContext="{Binding CeCore}" />
+              </TabItem>
+
+              <!-- cfgeventspawns.xml: per dynamic-event spawn positions. -->
+              <TabItem Header="Event Spawns">
+                <ctl:EventSpawnsEditor DataContext="{Binding EventSpawns}" />
+              </TabItem>
+
+              <!-- cfgeventgroups.xml: named groups of objects an event spawns together. -->
+              <TabItem Header="Event Groups">
+                <ctl:EventGroupsEditor DataContext="{Binding EventGroups}" />
+              </TabItem>
+
+              <!-- cfgenvironment.xml: animal/infected territories (World module). -->
+              <TabItem Header="Environment">
+                <ctl:EnvironmentEditor DataContext="{Binding Environment}" />
+              </TabItem>
+
+              <!-- cfgweather.xml: weather channel knobs (World module). -->
+              <TabItem Header="Weather">
+                <ctl:WeatherEditor DataContext="{Binding Weather}" />
+              </TabItem>
+
+              <!-- db/messages.xml: server message scheduler (Server module — not CE). -->
+              <TabItem Header="Messages">
+                <ctl:MessagesEditor DataContext="{Binding Messages}" />
+              </TabItem>
+
+              <!-- cfgignorelist.xml: flat list of item classnames the CE ignores. -->
+              <TabItem Header="Ignore list">
+                <ctl:IgnoreListEditor DataContext="{Binding IgnoreList}" />
+              </TabItem>
+
+              <!-- Auto-generated map data (mapgroup*/mapcluster*): open-externally shortcuts, no in-app editor. -->
+              <TabItem Header="Map files">
+                <ctl:MapFilesEditor DataContext="{Binding MapFiles}" />
               </TabItem>
             </TabControl>
           </Grid>

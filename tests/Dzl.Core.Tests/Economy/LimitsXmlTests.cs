@@ -35,4 +35,28 @@ public class LimitsXmlTests
         var d = LimitsXml.Parse(Xml);
         d.Usage.Contains("military").Should().BeTrue();
     }
+
+    [Fact]
+    public void WithCombos_folds_combo_names_into_the_matching_set_case_insensitively()
+    {
+        var d = LimitsXml.Parse(Xml).WithCombos(new[]
+        {
+            new LimitsUserGroup("TownVillage", LimitsKind.Usage, new[] { "Military", "Police" }),
+            new LimitsUserGroup("Tier123", LimitsKind.Value, new[] { "Tier1" }),
+        });
+
+        d.Usage.Contains("TownVillage").Should().BeTrue();
+        d.Usage.Contains("townvillage").Should().BeTrue("the folded set stays case-insensitive");
+        d.Value.Contains("Tier123").Should().BeTrue();
+        d.Value.Contains("tier123").Should().BeTrue("the folded set stays case-insensitive");
+        d.Usage.Should().Contain("Military", "base flags are preserved");
+        d.Tag.Should().BeEquivalentTo(new[] { "floor" }, "combos never touch tags");
+    }
+
+    [Fact]
+    public void WithCombos_with_no_combos_returns_the_same_instance()
+    {
+        var d = LimitsXml.Parse(Xml);
+        d.WithCombos(System.Array.Empty<LimitsUserGroup>()).Should().BeSameAs(d);
+    }
 }

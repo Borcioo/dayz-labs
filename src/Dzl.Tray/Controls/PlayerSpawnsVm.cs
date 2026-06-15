@@ -8,11 +8,12 @@ namespace Dzl.Tray.Controls;
 
 /// <summary>
 /// Backs the <see cref="PlayerSpawnsEditor"/> control (the Economy "Player Spawns" tab): edits the mission's
-/// hierarchical <c>cfgplayerspawnpoints.xml</c>. A category selector (fresh/hop/travel — only those present)
-/// drives three editable param sections (spawn_params / generator_params / group_params, each a flat Name/Value
-/// bag) and a groups list (across all bubbles containers); selecting a group shows its positions grid (X, Z).
+/// hierarchical <c>cfgplayerspawnpoints.xml</c>. A category nav-rail (<c>fresh</c>/<c>hop</c>/<c>travel</c> —
+/// only those present) drives a dashboard detail: three friendly setting cards built from the documented
+/// fields (spawn scoring, grid generation, group cycling — see the official DayZ Player Spawning Configuration),
+/// any non-canonical keys preserved under "Other", and a groups↔positions master-detail.
 /// All edits route through <see cref="PlayerSpawnsService"/> (never throws; snapshots a backup before each
-/// write). Per-tab undo/redo + the status line come from <see cref="RawXmlEditorVm"/>.
+/// write); per-tab undo/redo + the status line come from <see cref="RawXmlEditorVm"/>.
 /// </summary>
 public sealed partial class PlayerSpawnsVm : RawXmlEditorVm
 {
@@ -29,81 +30,135 @@ public sealed partial class PlayerSpawnsVm : RawXmlEditorVm
     {
         _svc = svc;
         _confirm = confirm;
+        foreach (var f in AllFields) f.Edited += OnFieldEdited;
     }
 
     private List<SpawnCategory>? _model;
-
-    /// <summary>The parsed file, re-read lazily after every write/undo/redo/reload.</summary>
     private List<SpawnCategory> Model => _model ??= _svc.Load();
-
-    /// <inheritdoc/>
     protected override void InvalidateModelCache() => _model = null;
 
-    /// <summary>Names of the categories present in the file (fresh/hop/travel/…), in file order.</summary>
-    public ObservableCollection<string> Categories { get; } = new();
+    // ── category nav-rail ────────────────────────────────────────────────
+    public ObservableCollection<SpawnCategoryVm> CategoryTabs { get; } = new();
 
+    /// <summary>The selected nav-rail tile; mirrors its name into <see cref="SelectedCategory"/>.</summary>
+    [ObservableProperty] private SpawnCategoryVm? _selectedTab;
+
+    /// <summary>Name of the active category (<c>fresh</c>/<c>hop</c>/<c>travel</c>). The single source of
+    /// truth that drives the detail pane — set by the nav-rail (or directly).</summary>
     [ObservableProperty] private string? _selectedCategory;
 
-    /// <summary>spawn_params of the selected category (editable Name/Value rows).</summary>
-    public ObservableCollection<SpawnParamVm> SpawnParams { get; } = new();
-
-    /// <summary>generator_params of the selected category.</summary>
-    public ObservableCollection<SpawnParamVm> GeneratorParams { get; } = new();
-
-    /// <summary>group_params of the selected category.</summary>
-    public ObservableCollection<SpawnParamVm> GroupParams { get; } = new();
-
-    /// <summary>Groups across all bubbles containers of the selected category.</summary>
-    public ObservableCollection<SpawnGroupVm> Groups { get; } = new();
-
-    [ObservableProperty] private SpawnGroupVm? _selectedGroup;
-
-    /// <summary>Positions of the selected group (editable X/Z rows).</summary>
-    public ObservableCollection<SpawnPosVm> Positions { get; } = new();
-
-    // add-group form
-    [ObservableProperty] private string _newGroupName = "";
-
-    /// <summary>The container new groups are added to (defaults to generator_posbubbles).</summary>
-    [ObservableProperty] private string _newGroupContainer = "generator_posbubbles";
-
-    /// <inheritdoc/>
-    protected override void ReloadView() => LoadCategoriesKeepingSelection();
-
-    private void LoadCategoriesKeepingSelection()
+    partial void OnSelectedTabChanged(SpawnCategoryVm? value)
     {
-        var prev = SelectedCategory;
-        Categories.Clear();
-        foreach (var c in Model)
-            if (!string.IsNullOrEmpty(c.Name)) Categories.Add(c.Name);
+        if (value is not null && !string.Equals(value.Name, SelectedCategory, StringComparison.OrdinalIgnoreCase))
+            SelectedCategory = value.Name;
+    }
 
-        SelectedCategory = Categories.FirstOrDefault(c => string.Equals(c, prev, StringComparison.OrdinalIgnoreCase))
-                           ?? Categories.FirstOrDefault();
-        // If selection didn't change reference, force a detail reload anyway.
+    partial void OnSelectedCategoryChanged(string? value)
+    {
+        SelectedTab = CategoryTabs.FirstOrDefault(t => string.Equals(t.Name, value, StringComparison.OrdinalIgnoreCase));
         LoadCategoryDetail();
     }
 
-    partial void OnSelectedCategoryChanged(string? value) => LoadCategoryDetail();
+    // ── friendly setting fields (stable instances; repopulated per category) ──
+    // spawn_params — the runtime scoring distances (min/max metres). Higher distance reads as a better spawn.
+    public SpawnFieldVm ScoreInfectedMin { get; } = new("spawn_params", "min_dist_infected");
+    public SpawnFieldVm ScoreInfectedMax { get; } = new("spawn_params", "max_dist_infected");
+    public SpawnFieldVm ScorePlayerMin { get; } = new("spawn_params", "min_dist_player");
+    public SpawnFieldVm ScorePlayerMax { get; } = new("spawn_params", "max_dist_player");
+    public SpawnFieldVm ScoreStaticMin { get; } = new("spawn_params", "min_dist_static");
+    public SpawnFieldVm ScoreStaticMax { get; } = new("spawn_params", "max_dist_static");
+
+    // generator_params — how candidate points are generated around each <pos>.
+    public SpawnFieldVm GenDensity { get; } = new("generator_params", "grid_density");
+    public SpawnFieldVm GenWidth { get; } = new("generator_params", "grid_width");
+    public SpawnFieldVm GenHeight { get; } = new("generator_params", "grid_height");
+    public SpawnFieldVm GenStaticMin { get; } = new("generator_params", "min_dist_static");
+    public SpawnFieldVm GenStaticMax { get; } = new("generator_params", "max_dist_static");
+    public SpawnFieldVm GenSteepMin { get; } = new("generator_params", "min_steepness");
+    public SpawnFieldVm GenSteepMax { get; } = new("generator_params", "max_steepness");
+
+    // group_params — group cycling.
+    public SpawnFieldVm GrpEnable { get; } = new("group_params", "enablegroups", isBool: true);
+    public SpawnFieldVm GrpAsRegular { get; } = new("group_params", "groups_as_regular", isBool: true);
+    public SpawnFieldVm GrpLifetime { get; } = new("group_params", "lifetime");
+    public SpawnFieldVm GrpCounter { get; } = new("group_params", "counter");
+
+    private IEnumerable<SpawnFieldVm> AllFields => new[]
+    {
+        ScoreInfectedMin, ScoreInfectedMax, ScorePlayerMin, ScorePlayerMax, ScoreStaticMin, ScoreStaticMax,
+        GenDensity, GenWidth, GenHeight, GenStaticMin, GenStaticMax, GenSteepMin, GenSteepMax,
+        GrpEnable, GrpAsRegular, GrpLifetime, GrpCounter,
+    };
+
+    // Canonical keys per section — anything else in a bag is surfaced under "Other params" (never dropped).
+    private static readonly HashSet<string> SpawnKeys = new(StringComparer.OrdinalIgnoreCase)
+        { "min_dist_infected", "max_dist_infected", "min_dist_player", "max_dist_player", "min_dist_static", "max_dist_static" };
+    private static readonly HashSet<string> GenKeys = new(StringComparer.OrdinalIgnoreCase)
+        { "grid_density", "grid_width", "grid_height", "min_dist_static", "max_dist_static", "min_steepness", "max_steepness" };
+    private static readonly HashSet<string> GroupKeys = new(StringComparer.OrdinalIgnoreCase)
+        { "enablegroups", "groups_as_regular", "lifetime", "counter" };
+
+    /// <summary>Non-canonical params present in the file (rare) — kept editable so a mission's custom keys are
+    /// never silently lost. Each carries its section.</summary>
+    public ObservableCollection<SpawnParamVm> OtherParams { get; } = new();
+    public bool HasOtherParams => OtherParams.Count > 0;
+
+    // ── spawn locations ──────────────────────────────────────────────────
+    public ObservableCollection<SpawnGroupVm> Groups { get; } = new();
+    [ObservableProperty] private SpawnGroupVm? _selectedGroup;
+    public ObservableCollection<SpawnPosVm> Positions { get; } = new();
+
+    [ObservableProperty] private string _newGroupName = "";
+    [ObservableProperty] private string _newGroupContainer = "generator_posbubbles";
+
+    // ── load ─────────────────────────────────────────────────────────────
+    protected override void ReloadView()
+    {
+        var prev = SelectedCategory;
+        CategoryTabs.Clear();
+        foreach (var c in Model.Where(c => !string.IsNullOrEmpty(c.Name)))
+        {
+            var groups = c.Bubbles.SelectMany(b => b.Groups).ToList();
+            CategoryTabs.Add(new SpawnCategoryVm(c.Name)
+            {
+                GroupCount = groups.Count,
+                PosCount = groups.Sum(g => g.Positions.Count),
+            });
+        }
+
+        SelectedCategory = CategoryTabs.Select(t => t.Name)
+                               .FirstOrDefault(n => string.Equals(n, prev, StringComparison.OrdinalIgnoreCase))
+                           ?? CategoryTabs.FirstOrDefault()?.Name;
+        LoadCategoryDetail();   // force even when the name reference is unchanged
+    }
 
     private SpawnCategory? FindCategory(string? name) =>
-        name is null ? null
-        : Model.FirstOrDefault(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase));
+        name is null ? null : Model.FirstOrDefault(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase));
 
     private void LoadCategoryDetail()
     {
         _suspendPersist = true;
         try
         {
-            DetachParams(SpawnParams); SpawnParams.Clear();
-            DetachParams(GeneratorParams); GeneratorParams.Clear();
-            DetachParams(GroupParams); GroupParams.Clear();
+            DetachOther(); OtherParams.Clear();
             Groups.Clear();
+            var cat = FindCategory(SelectedCategory);
 
-            if (FindCategory(SelectedCategory) is { } cat)
+            LoadField(ScoreInfectedMin, cat?.SpawnParams); LoadField(ScoreInfectedMax, cat?.SpawnParams);
+            LoadField(ScorePlayerMin, cat?.SpawnParams); LoadField(ScorePlayerMax, cat?.SpawnParams);
+            LoadField(ScoreStaticMin, cat?.SpawnParams); LoadField(ScoreStaticMax, cat?.SpawnParams);
+            LoadField(GenDensity, cat?.GeneratorParams); LoadField(GenWidth, cat?.GeneratorParams);
+            LoadField(GenHeight, cat?.GeneratorParams); LoadField(GenStaticMin, cat?.GeneratorParams);
+            LoadField(GenStaticMax, cat?.GeneratorParams); LoadField(GenSteepMin, cat?.GeneratorParams);
+            LoadField(GenSteepMax, cat?.GeneratorParams);
+            LoadField(GrpEnable, cat?.GroupParams); LoadField(GrpAsRegular, cat?.GroupParams);
+            LoadField(GrpLifetime, cat?.GroupParams); LoadField(GrpCounter, cat?.GroupParams);
+
+            if (cat is not null)
             {
-                FillParams(SpawnParams, "spawn_params", cat.SpawnParams);
-                FillParams(GeneratorParams, "generator_params", cat.GeneratorParams);
-                FillParams(GroupParams, "group_params", cat.GroupParams);
+                FillOther("spawn_params", cat.SpawnParams, SpawnKeys);
+                FillOther("generator_params", cat.GeneratorParams, GenKeys);
+                FillOther("group_params", cat.GroupParams, GroupKeys);
 
                 foreach (var b in cat.Bubbles)
                     foreach (var g in b.Groups)
@@ -113,23 +168,31 @@ public sealed partial class PlayerSpawnsVm : RawXmlEditorVm
         }
         finally { _suspendPersist = false; }
 
+        OnPropertyChanged(nameof(HasOtherParams));
         SelectedGroup = Groups.FirstOrDefault();
         LoadPositionsForSelected();
     }
 
-    private void FillParams(ObservableCollection<SpawnParamVm> dest, string section, IReadOnlyList<SpawnParam> src)
+    private static void LoadField(SpawnFieldVm f, IReadOnlyList<SpawnParam>? bag)
     {
-        foreach (var p in src)
+        var hit = bag?.FirstOrDefault(p => string.Equals(p.Name, f.Key, StringComparison.OrdinalIgnoreCase));
+        if (f.IsBool) f.Flag = hit is not null && IsTrue(hit.Value);
+        else f.Number = hit is not null && TryDouble(hit.Value, out var d) ? d : null;
+    }
+
+    private void FillOther(string section, IReadOnlyList<SpawnParam> bag, HashSet<string> canonical)
+    {
+        foreach (var p in bag.Where(p => !canonical.Contains(p.Name)))
         {
             var vm = new SpawnParamVm(section, p.Name, p.Value);
-            vm.Edited += OnParamEdited;
-            dest.Add(vm);
+            vm.Edited += OnOtherParamEdited;
+            OtherParams.Add(vm);
         }
     }
 
-    private void DetachParams(ObservableCollection<SpawnParamVm> rows)
+    private void DetachOther()
     {
-        foreach (var r in rows) r.Edited -= OnParamEdited;
+        foreach (var p in OtherParams) p.Edited -= OnOtherParamEdited;
     }
 
     partial void OnSelectedGroupChanged(SpawnGroupVm? value) => LoadPositionsForSelected();
@@ -149,58 +212,67 @@ public sealed partial class PlayerSpawnsVm : RawXmlEditorVm
                 var model = bubbles?.Groups.FirstOrDefault(g =>
                     string.Equals(g.Name, grp.Name, StringComparison.OrdinalIgnoreCase));
                 if (model is not null)
-                {
                     for (var i = 0; i < model.Positions.Count; i++)
                     {
                         var pvm = new SpawnPosVm(i, model.Positions[i].X, model.Positions[i].Z);
                         pvm.Edited += OnPosEdited;
                         Positions.Add(pvm);
                     }
-                }
             }
         }
         finally { _suspendPersist = false; }
     }
 
+    // Keep the selected category across undo/redo (the base re-selects by token after a restore).
+    protected override string? CaptureSelectionToken() => SelectedCategory;
+    protected override void RestoreSelectionToken(string? token)
+    {
+        if (token is not null && CategoryTabs.Any(t => string.Equals(t.Name, token, StringComparison.OrdinalIgnoreCase)))
+            SelectedCategory = token;
+    }
+
     private static bool TryDouble(string raw, out double value) =>
         double.TryParse((raw ?? "").Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out value);
 
-    private void OnParamEdited(SpawnParamVm param)
+    private static bool IsTrue(string raw) =>
+        string.Equals((raw ?? "").Trim(), "true", StringComparison.OrdinalIgnoreCase) || raw?.Trim() == "1";
+
+    private static string Format(double value) => value.ToString(CultureInfo.InvariantCulture);
+
+    // ── persistence ──────────────────────────────────────────────────────
+    private void OnFieldEdited(SpawnFieldVm f)
+    {
+        if (_suspendPersist || SelectedCategory is not { } cat) return;
+        string value;
+        if (f.IsBool) value = f.Flag ? "true" : "false";
+        else if (f.Number is { } n) value = Format(n);
+        else return;   // a cleared numeric field leaves the file untouched (no way to express "remove")
+        PushUndo();
+        Report(_svc.SetParam(cat, f.Section, f.Key, value));
+    }
+
+    private void OnOtherParamEdited(SpawnParamVm param)
     {
         if (_suspendPersist || SelectedCategory is not { } cat) return;
         var newName = (param.Name ?? "").Trim();
         if (newName.Length == 0) { Status = "✗ param name must not be empty"; return; }
-        // Player-spawn params are numeric (distances, counts, tries, radii…); reject non-numeric so a typo
-        // isn't written to cfgplayerspawnpoints.xml (there is no lint rule for this file to catch it later).
         if (!TryDouble(param.Value, out _)) { Status = "✗ value must be a number"; LoadCategoryDetail(); return; }
         PushUndo();
-        // A param's key IS its element name, so a rename must move the element (not upsert under the new
-        // name, which would leave the old one orphaned). Route it through RenameParam first, like Globals.
-        if (!string.Equals(newName, param.OriginalName, StringComparison.Ordinal) &&
-            !string.IsNullOrEmpty(param.OriginalName))
-        {
-            if (!Report(_svc.RenameParam(cat, param.Section, param.OriginalName, newName)))
-            { LoadCategoryDetail(); return; }
-        }
+        // The key IS the element name, so a rename must move the element (not upsert under the new name and
+        // orphan the old). Route a rename first, then set the value — same as Globals.
+        if (!string.Equals(newName, param.OriginalName, StringComparison.Ordinal) && !string.IsNullOrEmpty(param.OriginalName))
+            if (!Report(_svc.RenameParam(cat, param.Section, param.OriginalName, newName))) { LoadCategoryDetail(); return; }
         if (Report(_svc.SetParam(cat, param.Section, newName, param.Value ?? ""))) param.CommitName();
     }
 
-    private ObservableCollection<SpawnParamVm> SectionRows(string section) => section switch
-    {
-        "generator_params" => GeneratorParams,
-        "group_params"     => GroupParams,
-        _                  => SpawnParams,
-    };
-
-    /// <summary>Add a new param row (key + value) to a section of the selected category and persist it.</summary>
-    public void AddParam(string section, string name, string value)
+    /// <summary>Add a non-canonical param (key + numeric value) to a section of the selected category.</summary>
+    public void AddOtherParam(string section, string name, string value)
     {
         if (SelectedCategory is not { } cat) { Status = "✗ select a category first"; return; }
         name = (name ?? "").Trim();
         if (name.Length == 0) { Status = "✗ param name must not be empty"; return; }
-        // SetParam is an upsert; guard here so the "Add" affordance reports a duplicate instead of silently
-        // overwriting an existing param's value (consistent with AddPreset/AddGroup rejecting duplicates).
-        if (SectionRows(section).Any(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
+        if (OtherParams.Any(p => string.Equals(p.Section, section, StringComparison.OrdinalIgnoreCase) &&
+                                 string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
         { Status = $"✗ param \"{name}\" already exists in {section}"; return; }
         if (!TryDouble(value, out _)) { Status = "✗ value must be a number"; return; }
         PushUndo();
@@ -286,7 +358,58 @@ public sealed partial class PlayerSpawnsVm : RawXmlEditorVm
     }
 }
 
-/// <summary>One editable param row (Name + Value) inside a param section. <see cref="Section"/> names which
+/// <summary>One nav-rail tile: a spawn category (<c>fresh</c>/<c>hop</c>/<c>travel</c>) with a friendly title,
+/// subtitle and live counts. <c>fresh</c> is required; <c>hop</c>/<c>travel</c> apply only to official servers
+/// (per the DayZ Player Spawning Configuration docs) and are flagged accordingly.</summary>
+public sealed partial class SpawnCategoryVm : ObservableObject
+{
+    public SpawnCategoryVm(string name)
+    {
+        Name = name;
+        (Display, Subtitle, IsOfficial) = name.ToLowerInvariant() switch
+        {
+            "fresh" => ("Fresh", "new characters · required", false),
+            "hop" => ("Hop", "same-map hop · official", true),
+            "travel" => ("Travel", "cross-map travel · official", true),
+            _ => (char.ToUpperInvariant(name.FirstOrDefault()) + name[(name.Length > 0 ? 1 : 0)..], "", false),
+        };
+    }
+
+    public string Name { get; }
+    public string Display { get; }
+    public string Subtitle { get; }
+    public bool IsOfficial { get; }
+
+    [ObservableProperty] private int _groupCount;
+    [ObservableProperty] private int _posCount;
+}
+
+/// <summary>One documented setting field. Numeric fields bind <see cref="Number"/> (nullable = absent in the
+/// file); boolean fields (<c>enablegroups</c>, <c>groups_as_regular</c>) bind <see cref="Flag"/>. <see cref="Section"/>
+/// + <see cref="Key"/> locate the element for persistence.</summary>
+public sealed partial class SpawnFieldVm : ObservableObject
+{
+    public SpawnFieldVm(string section, string key, bool isBool = false)
+    {
+        Section = section;
+        Key = key;
+        IsBool = isBool;
+    }
+
+    public string Section { get; }
+    public string Key { get; }
+    public bool IsBool { get; }
+
+    public event Action<SpawnFieldVm>? Edited;
+
+    [ObservableProperty] private double? _number;
+    [ObservableProperty] private bool _flag;
+
+    partial void OnNumberChanged(double? value) { if (!IsBool) Edited?.Invoke(this); }
+    partial void OnFlagChanged(bool value) { if (IsBool) Edited?.Invoke(this); }
+}
+
+/// <summary>One editable non-canonical param row (Name + Value) under "Other". <see cref="Section"/> names the
 /// bag it belongs to (spawn_params|generator_params|group_params).</summary>
 public sealed partial class SpawnParamVm : ObservableObject
 {
@@ -299,25 +422,17 @@ public sealed partial class SpawnParamVm : ObservableObject
     }
 
     public string Section { get; }
-
-    /// <summary>The param name as last persisted — used to locate the element when the Name cell is
-    /// renamed. Adopted as the new baseline via <see cref="CommitName"/> only after a successful save.</summary>
     public string OriginalName { get; private set; }
-
     public event Action<SpawnParamVm>? Edited;
 
     [ObservableProperty] private string _name;
     [ObservableProperty] private string _value;
 
-    /// <summary>Raise the edit so the VM persists (rename + value). Must NOT touch <see cref="OriginalName"/>
-    /// here — the VM needs the pre-edit name to locate the element; it calls <see cref="CommitName"/> on success.</summary>
     public void Commit() => Edited?.Invoke(this);
-
-    /// <summary>Adopt the current Name as the persisted baseline after a successful save.</summary>
     public void CommitName() => OriginalName = Name;
 }
 
-/// <summary>One groups-list row: a named position group plus the bubbles container it lives in and its count.</summary>
+/// <summary>One groups-list row: a named position group, the bubbles container it lives in, and its count.</summary>
 public sealed partial class SpawnGroupVm : ObservableObject
 {
     public SpawnGroupVm(string container, string name, int posCount)

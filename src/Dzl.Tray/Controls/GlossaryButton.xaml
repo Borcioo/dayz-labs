@@ -1,0 +1,43 @@
+<UserControl x:Class="Dzl.Tray.Controls.GlossaryButton"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             x:Name="Root">
+  <!-- A UserControl does NOT inherit the host window's resources at realize time, so only
+       DynamicResource theme brushes (resolved late) are referenced here — no StaticResource keys. -->
+  <Grid>
+    <ui:Button x:Name="OpenBtn" Click="OnOpen"
+               Appearance="Secondary" FontSize="12"
+               Icon="{ui:SymbolIcon Book24}" Content="Glossary"
+               ToolTip="Plain-English explanations for this tab's fields" />
+
+    <ui:Flyout x:Name="Flyout" Placement="Bottom">
+      <Border Width="440" Padding="6">
+        <StackPanel>
+          <StackPanel Orientation="Horizontal" Margin="4,2,4,10">
+            <ui:SymbolIcon Symbol="Book24" FontSize="16" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            <TextBlock Margin="8,0,0,0" FontSize="14" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                       Text="{Binding Title, ElementName=Root, StringFormat='{}{0} — field glossary'}" />
+          </StackPanel>
+
+          <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Entries, ElementName=Root}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <StackPanel Margin="4,0,8,11">
+                    <TextBlock Text="{Binding Term}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    <TextBlock Text="{Binding Definition}" FontSize="12" TextWrapping="Wrap" Margin="0,1,0,0"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </StackPanel>
+      </Border>
+    </ui:Flyout>
+  </Grid>
+</UserControl>

@@ -250,8 +250,15 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
     private readonly Dictionary<string, CeOrigin> _originByFile = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>CE limits loaded on <see cref="LoadTypes"/>; cached so <see cref="RefreshTypesLint"/> can
-    /// re-run in-memory without re-reading cfglimitsdefinition.xml on every keystroke.</summary>
+    /// re-run in-memory without re-reading cfglimitsdefinition.xml on every keystroke. This is the BASE
+    /// dictionary (cfglimitsdefinition.xml) — used as the target of "add to dictionary" writes.</summary>
     private Dzl.Core.Economy.LimitsDef _limits = Dzl.Core.Economy.LimitsDef.Empty;
+
+    /// <summary>The base limits folded with named combos (cfglimitsdefinitionuser.xml) — the set used for
+    /// validation: lint (<see cref="RefreshTypesLint"/>) and the "is this flag known?" check
+    /// (<see cref="IsUnknownLimit"/>). A combo name is a valid usage/value reference, so it must count as
+    /// known here even though it is absent from <see cref="_limits"/>. Rebuilt by <see cref="AppendComboSuggestions"/>.</summary>
+    private Dzl.Core.Economy.LimitsDef _limitsForLint = Dzl.Core.Economy.LimitsDef.Empty;
 
     /// <summary>Distinct source files in the loaded set (file name → absolute path) for the Add-type target picker.
     /// The primary/vanilla file is always index 0 so the dialog defaults to it; row source files follow.</summary>
@@ -449,12 +456,30 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
         FillSet(LimitsValue, _limits.Value);
         FillSet(LimitsCategory, _limits.Category);
         FillSet(LimitsTag, _limits.Tag);
+        AppendComboSuggestions();
 
         static void FillSet(ObservableCollection<string> target, IReadOnlySet<string> src)
         {
             target.Clear();
             foreach (var v in src.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)) target.Add(v);
         }
+    }
+
+    /// <summary>Named combos (cfglimitsdefinitionuser.xml) are valid usage/value references in types.xml, so
+    /// surface them in the Usage / Value autocomplete alongside the base flags. (The validator accepts them
+    /// too — see TypesWorldRule.) Usage combos → Usage pool, value combos → Value pool.</summary>
+    private void AppendComboSuggestions()
+    {
+        var combos = new DictionaryService(_configPath).LoadGroups();
+        foreach (var g in combos)
+        {
+            var target = g.Kind == LimitsKind.Value ? LimitsValue
+                       : g.Kind == LimitsKind.Usage ? LimitsUsage : null;
+            if (target is not null && !target.Contains(g.Name)) target.Add(g.Name);
+        }
+        // The validation set must accept combo names too — otherwise a chip referencing a combo is flagged
+        // unknown and prompted "add to dictionary" even though the engine honours it.
+        _limitsForLint = _limits.WithCombos(combos);
     }
 
     /// <summary>Re-read cfglimitsdefinition.xml and refresh the suggestion lists + re-lint.
@@ -472,6 +497,7 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
         Fill(LimitsValue, _limits.Value);
         Fill(LimitsCategory, _limits.Category);
         Fill(LimitsTag, _limits.Tag);
+        AppendComboSuggestions();
         RefreshTypesLint();
     }
 
@@ -508,12 +534,14 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
     public bool IsUnknownLimit(Dzl.Core.Economy.LimitsKind kind, string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return false;
+        // Validate against the combo-folded set: a combo name is a known usage/value reference, so it must not
+        // trigger the "add to dictionary" prompt even though it lives in cfglimitsdefinitionuser.xml, not the base.
         var set = kind switch
         {
-            Dzl.Core.Economy.LimitsKind.Usage => _limits.Usage,
-            Dzl.Core.Economy.LimitsKind.Value => _limits.Value,
-            Dzl.Core.Economy.LimitsKind.Tag => _limits.Tag,
-            Dzl.Core.Economy.LimitsKind.Category => _limits.Category,
+            Dzl.Core.Economy.LimitsKind.Usage => _limitsForLint.Usage,
+            Dzl.Core.Economy.LimitsKind.Value => _limitsForLint.Value,
+            Dzl.Core.Economy.LimitsKind.Tag => _limitsForLint.Tag,
+            Dzl.Core.Economy.LimitsKind.Category => _limitsForLint.Category,
             _ => (IReadOnlySet<string>)new HashSet<string>(),
         };
         return !set.Contains(name.Trim());
@@ -548,7 +576,7 @@ public sealed partial class TypesEditorVm : ObservableObject, IDisposable
         {
             var entries = Types.Select(t => t.ToEntry());
             findings = new Dzl.Core.Economy.Lint.LintEngine().Run(
-                new Dzl.Core.Economy.CeFileSet(entries), _limits);
+                new Dzl.Core.Economy.CeFileSet(entries), _limitsForLint);
         }
         catch { findings = Array.Empty<Dzl.Core.Economy.Lint.LintFinding>(); }
 

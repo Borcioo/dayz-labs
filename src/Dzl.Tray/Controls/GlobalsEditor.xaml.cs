@@ -19,21 +19,23 @@ public partial class GlobalsEditor : UserControl
 
     private void OnReloadClick(object sender, RoutedEventArgs e) => Vm?.Reload();
 
-    private void OnAddVarClick(object sender, RoutedEventArgs e) => Vm?.AddVar();
+    // Add only a known-but-missing engine global (globals.xml is a closed vocabulary).
+    private void OnAddKnownClick(object sender, RoutedEventArgs e) => Vm?.AddKnown();
 
-    private void OnAddVarKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter) { Vm?.AddVar(); e.Handled = true; }
-    }
-
+    // Per-row trash — only shown for custom (non-standard) vars; standard ones aren't removable.
     private void OnRemoveRowClick(object sender, RoutedEventArgs e)
     {
-        if ((sender as FrameworkElement)?.Tag is GlobalVarRowVm row && Vm is { } vm)
-        {
-            vm.SelectedRow = row;
-            vm.RemoveSelectedVar();
-        }
+        if ((sender as FrameworkElement)?.Tag is GlobalVarRowVm row) Vm?.RemoveVar(row);
     }
+
+    // Per-row reset — shown for standard vars: revert to the engine default instead of deleting.
+    private void OnResetRowClick(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is GlobalVarRowVm row) Vm?.ResetToDefault(row);
+    }
+
+    // Detail-pane reset: revert the currently selected standard var to its engine default.
+    private void OnResetClick(object sender, RoutedEventArgs e) => Vm?.ResetToDefault(null);
 
     // Inline rename (detail pane): Enter or the Rename button commits RenameText.
     private void OnRenameClick(object sender, RoutedEventArgs e) => Vm?.CommitRename();

@@ -14,4 +14,11 @@
     <SolidColorBrush x:Key="FlagMutedBrush" Color="#555B63" />    <!-- CE flag glyph: inactive -->
     <SolidColorBrush x:Key="StatusDownBrush" Color="#6E6E6E" />   <!-- status dot: down / offline -->
 
+    <!-- CE "active row" highlight — the single source of truth for the selected/hover look shared by the
+         Dictionaries ListBox rows AND every Central-Economy DataGrid row, so the active row is identical on
+         every CE tab. Change the colour here, not per-tab. -->
+    <SolidColorBrush x:Key="CeRowSelectedBrush" Color="#1F2A3A" />   <!-- selected: muted navy -->
+    <SolidColorBrush x:Key="CeRowHoverBrush" Color="#14FFFFFF" />    <!-- hover: faint white wash (~8% white) -->
+    <SolidColorBrush x:Key="CeAccentBarBrush" Color="#4FA3FF" />     <!-- left accent bar on the nav-rail selection -->
+
 </ResourceDictionary>

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Dzl.Core.App;
+using Dzl.Core.Economy;
 
 namespace Dzl.Tray.Controls;
 
@@ -41,16 +42,27 @@ public sealed partial class GlobalsVm : RawXmlEditorVm
 
     partial void OnFilterChanged(string value) => ApplyFilter();
 
-    // new-var form
-    [ObservableProperty] private string _newVarName = "";
-    [ObservableProperty] private string _newVarValue = "";
-    [ObservableProperty] private int _newVarType = 0;
+    /// <summary>Engine globals not yet present in the file — the only names the "Add" affordance offers
+    /// (globals.xml is a closed engine vocabulary, so you can't invent variables, only surface a missing one).</summary>
+    public ObservableCollection<string> MissingKnown { get; } = new();
+
+    /// <summary>The known-missing variable picked in the Add dropdown.</summary>
+    [ObservableProperty] private string? _selectedMissing;
+
+    public bool HasMissingKnown => MissingKnown.Count > 0;
 
     // Detail pane (right column) — editing moved off the grid, matching the other CE tabs.
     private bool _suspendDetailSync;
 
     /// <summary>True when a var is selected — gates the detail pane's rename box + value card.</summary>
     public bool HasSelection => SelectedRow is not null;
+
+    /// <summary>True when the selected var is a standard engine global — its name + type are fixed (the name
+    /// IS the engine key) and it can't be removed, only reset to default.</summary>
+    public bool SelectedIsKnown => SelectedRow?.IsKnown ?? false;
+
+    /// <summary>Name/type are editable only for a non-standard (custom) selected var.</summary>
+    public bool CanEditIdentity => SelectedRow is { IsKnown: false };
 
     /// <summary>Editable name of the selected var (detail pane inline-rename box; Enter / button commits).</summary>
     [ObservableProperty] private string _renameText = "";
@@ -62,6 +74,8 @@ public sealed partial class GlobalsVm : RawXmlEditorVm
     partial void OnSelectedRowChanged(GlobalVarRowVm? value)
     {
         OnPropertyChanged(nameof(HasSelection));
+        OnPropertyChanged(nameof(SelectedIsKnown));
+        OnPropertyChanged(nameof(CanEditIdentity));
         _suspendDetailSync = true;
         RenameText  = value?.Name ?? "";
         DetailType  = value?.Type ?? 0;
@@ -73,6 +87,7 @@ public sealed partial class GlobalsVm : RawXmlEditorVm
     public void CommitRename()
     {
         if (SelectedRow is not { } row) { Status = "✗ select a var to rename"; return; }
+        if (row.IsKnown) { Status = $"✗ \"{row.Name}\" is a standard engine variable — its name is fixed"; return; }
         var newName = (RenameText ?? "").Trim();
         if (newName.Length == 0) { Status = "✗ name must not be empty"; return; }
         if (string.Equals(newName, row.Name, StringComparison.Ordinal)) return;
@@ -89,12 +104,32 @@ public sealed partial class GlobalsVm : RawXmlEditorVm
     public void SaveDetail()
     {
         if (_suspendDetailSync || SelectedRow is not { } row) return;
-        if (!IsValidValue(DetailValue, DetailType)) { Status = ValueError(DetailType); return; }
+        // A standard global's type is engine-fixed (docs: "types of existing variables should never be
+        // modified") — persist with the catalog type regardless of the (disabled) detail combo.
+        var type = row.IsKnown ? (GlobalsCatalog.Find(row.Name)?.Type ?? DetailType) : DetailType;
+        if (!IsValidValue(DetailValue, type)) { Status = ValueError(type); return; }
         PushUndo();
-        if (Report(_svc.SetVar(row.Name, DetailType, DetailValue ?? "")))
+        if (Report(_svc.SetVar(row.Name, type, DetailValue ?? "")))
         {
-            row.Type = DetailType;
+            row.Type = type;
             row.Value = DetailValue ?? "";
+        }
+    }
+
+    /// <summary>Reset a standard global back to its engine default value (the non-destructive alternative to
+    /// removing it — a missing/absent global already falls back to this default).</summary>
+    public void ResetToDefault(GlobalVarRowVm? row)
+    {
+        row ??= SelectedRow;
+        if (row is null) { Status = "✗ select a var to reset"; return; }
+        if (GlobalsCatalog.Find(row.Name) is not { } def)
+        { Status = $"✗ \"{row.Name}\" is not a standard variable — it has no engine default"; return; }
+        PushUndo();
+        if (Report(_svc.SetVar(def.Name, def.Type, def.Default)))
+        {
+            LoadKeepingSelection();
+            SelectedRow = Rows.FirstOrDefault(r => string.Equals(r.Name, def.Name, StringComparison.OrdinalIgnoreCase));
+            Status = $"✓ {def.Name} reset to default ({def.Default})";
         }
     }
 
@@ -123,9 +158,21 @@ public sealed partial class GlobalsVm : RawXmlEditorVm
         foreach (var v in _svc.Load())
             _allRows.Add(new GlobalVarRowVm(v.Name, v.Type, v.Value));
 
+        RefreshMissingKnown();
         ApplyFilter();
 
         SelectedRow = Rows.FirstOrDefault(r => r.Name == prevName) ?? Rows.FirstOrDefault();
+    }
+
+    /// <summary>Recompute the engine globals not yet present in the file (the Add dropdown's source).</summary>
+    private void RefreshMissingKnown()
+    {
+        var present = new HashSet<string>(_allRows.Select(r => r.Name), StringComparer.OrdinalIgnoreCase);
+        MissingKnown.Clear();
+        foreach (var d in GlobalsCatalog.All)
+            if (!present.Contains(d.Name)) MissingKnown.Add(d.Name);
+        SelectedMissing = MissingKnown.FirstOrDefault();
+        OnPropertyChanged(nameof(HasMissingKnown));
     }
 
     private void ApplyFilter()
@@ -149,38 +196,42 @@ public sealed partial class GlobalsVm : RawXmlEditorVm
         SelectedRow = Rows.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
     }
 
-    /// <summary>Add a new var from the new-var form.</summary>
-    public void AddVar()
+    /// <summary>Add the known-but-missing variable picked in the Add dropdown, seeded with its engine default
+    /// + fixed type. globals.xml is a closed engine vocabulary, so only documented names can be added.</summary>
+    public void AddKnown()
     {
-        var name = (NewVarName ?? "").Trim();
-        if (name.Length == 0) { Status = "✗ var name must not be empty"; return; }
-        // SetVar is an upsert; guard here so "Add" reports a duplicate instead of silently overwriting an
-        // existing var's type/value (consistent with the other CE Add commands rejecting duplicates).
-        if (_svc.Load().Any(v => string.Equals(v.Name, name, StringComparison.OrdinalIgnoreCase)))
-        { Status = $"✗ var \"{name}\" already exists"; return; }
-        if (!IsValidValue(NewVarValue, NewVarType)) { Status = ValueError(NewVarType); return; }
+        var name = (SelectedMissing ?? "").Trim();
+        if (name.Length == 0) { Status = "✗ pick a standard variable to add"; return; }
+        if (GlobalsCatalog.Find(name) is not { } def)
+        { Status = $"✗ \"{name}\" is not a known engine variable"; return; }
+        if (_allRows.Any(r => string.Equals(r.Name, def.Name, StringComparison.OrdinalIgnoreCase)))
+        { Status = $"✗ \"{def.Name}\" is already present"; return; }
 
         PushUndo();
-        if (Report(_svc.SetVar(name, NewVarType, NewVarValue ?? "")))
+        if (Report(_svc.SetVar(def.Name, def.Type, def.Default)))
         {
-            NewVarName = "";
-            NewVarValue = "";
-            NewVarType = 0;
             LoadKeepingSelection();
-            SelectedRow = Rows.FirstOrDefault(r => r.Name == name);
+            SelectedRow = Rows.FirstOrDefault(r => string.Equals(r.Name, def.Name, StringComparison.OrdinalIgnoreCase));
+            Status = $"✓ added {def.Name} ({def.Default})";
         }
     }
 
-    /// <summary>Remove the currently selected var.</summary>
-    public void RemoveSelectedVar()
+    /// <summary>Remove a variable. Standard engine globals are NOT removable (removal only reverts them to the
+    /// engine default — use <see cref="ResetToDefault"/>); only a custom/non-standard key can be deleted.</summary>
+    public void RemoveVar(GlobalVarRowVm? row)
     {
-        if (SelectedRow is not { } row) { Status = "✗ select a var to remove"; return; }
-        if (!_confirm($"Remove the global var \"{row.Name}\"?")) return;
+        row ??= SelectedRow;
+        if (row is null) { Status = "✗ select a var to remove"; return; }
+        if (row.IsKnown)
+        { Status = $"✗ \"{row.Name}\" is a standard engine variable — reset it to default instead of removing it"; return; }
+        if (!_confirm($"Remove the custom variable \"{row.Name}\"?")) return;
 
         PushUndo();
         if (Report(_svc.RemoveVar(row.Name))) LoadKeepingSelection();
     }
 
+    /// <summary>Remove the currently selected var (kept for the detail-pane action; delegates to <see cref="RemoveVar"/>).</summary>
+    public void RemoveSelectedVar() => RemoveVar(SelectedRow);
 }
 
 /// <summary>One editable DataGrid row for a global var.</summary>
@@ -192,7 +243,26 @@ public sealed partial class GlobalVarRowVm : ObservableObject
         OriginalName = name;
         _type = type;
         _value = value;
+        var def = GlobalsCatalog.Find(name);
+        IsKnown = def is not null;
+        DefaultValue = def?.Default ?? "";
+        Description = def?.Description ?? "Custom (non-standard) variable — not part of the engine vocabulary.";
     }
+
+    /// <summary>True when this is an engine-defined global (has a fixed type + default); false for a custom key.</summary>
+    public bool IsKnown { get; }
+
+    /// <summary>Custom (non-standard) var: the only kind that may be renamed or removed.</summary>
+    public bool IsCustom => !IsKnown;
+
+    /// <summary>The engine default value (empty for a custom var).</summary>
+    public string DefaultValue { get; }
+
+    /// <summary>Short description for the row tooltip (from the catalog, or a custom-var note).</summary>
+    public string Description { get; }
+
+    /// <summary>Row tooltip: description + engine default for known vars.</summary>
+    public string Tooltip => IsKnown ? $"{Description}\nEngine default: {DefaultValue}" : Description;
 
     /// <summary>The name as last persisted (used to locate the element when renaming).</summary>
     public string OriginalName { get; private set; }

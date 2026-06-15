@@ -9,5 +9,5 @@ public sealed class TypesWorldRule : ICeWorldRule
     public RuleScope Scope => new(CrossFile: false, CeKind.Types);
 
     public IEnumerable<LintFinding> Check(CeWorld world) =>
-        new TypesRules().Check(world.Types, world.Limits);
+        new TypesRules().Check(world.Types, world.Limits.WithCombos(world.UserGroups));
 }

@@ -1,7 +1,7 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
 
 namespace Dzl.Tray.Controls;
 
@@ -20,44 +20,7 @@ public partial class PlayerSpawnsEditor : UserControl
 
     private void OnReloadClick(object sender, RoutedEventArgs e) => Vm?.Reload();
 
-    private void OnParamCellEditEnding(object? sender, DataGridCellEditEndingEventArgs e)
-    {
-        if (e.EditAction != DataGridEditAction.Commit) return;
-        if (e.Row.Item is not SpawnParamVm param) return;
-        // Binding commits on LostFocus; defer so the edited value is written back first.
-        Dispatcher.BeginInvoke(new System.Action(param.Commit),
-            System.Windows.Threading.DispatcherPriority.Background);
-    }
-
-    private void OnAddParamClick(object sender, RoutedEventArgs e)
-    {
-        if ((sender as FrameworkElement)?.Tag is string section)
-            AddParamFromRow(sender as DependencyObject, section);
-    }
-
-    private void OnAddParamKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key != Key.Enter) return;
-        if ((sender as FrameworkElement)?.Tag is string section)
-        {
-            AddParamFromRow(sender as DependencyObject, section);
-            e.Handled = true;
-        }
-    }
-
-    /// <summary>Read the name/value TextBoxes sharing the clicked control's parent Grid and add the param.</summary>
-    private void AddParamFromRow(DependencyObject? near, string section)
-    {
-        var grid = FindAncestor<Grid>(near);
-        if (grid is null) return;
-        var boxes = grid.Children.OfType<Wpf.Ui.Controls.TextBox>().ToList();
-        var name = boxes.ElementAtOrDefault(0)?.Text ?? "";
-        var value = boxes.ElementAtOrDefault(1)?.Text ?? "";
-        Vm?.AddParam(section, name, value);
-        if (boxes.Count > 0) boxes[0].Text = "";
-        if (boxes.Count > 1) boxes[1].Text = "";
-    }
-
+    // ── groups ───────────────────────────────────────────────────────────
     private void OnAddGroupClick(object sender, RoutedEventArgs e) => Vm?.AddGroup();
 
     private void OnAddGroupKeyDown(object sender, KeyEventArgs e)
@@ -89,10 +52,12 @@ public partial class PlayerSpawnsEditor : UserControl
         vm.RenameSelectedGroup(next.Trim());
     }
 
+    // ── positions ────────────────────────────────────────────────────────
     private void OnPosCellEditEnding(object? sender, DataGridCellEditEndingEventArgs e)
     {
         if (e.EditAction != DataGridEditAction.Commit) return;
         if (e.Row.Item is not SpawnPosVm pos) return;
+        // Binding commits on LostFocus; defer so the edited value is written back first.
         Dispatcher.BeginInvoke(new System.Action(pos.Commit),
             System.Windows.Threading.DispatcherPriority.Background);
     }
@@ -102,28 +67,22 @@ public partial class PlayerSpawnsEditor : UserControl
         if ((sender as FrameworkElement)?.Tag is SpawnPosVm pos) Vm?.RemovePos(pos);
     }
 
-    private void OnAddPosClick(object sender, RoutedEventArgs e) => AddPos();
-
-    private void OnAddPosKeyDown(object sender, KeyEventArgs e)
+    private void OnAddPosClick(object sender, RoutedEventArgs e)
     {
-        if (e.Key == Key.Enter) { AddPos(); e.Handled = true; }
+        Vm?.AddPos(Num(NewPosX), Num(NewPosZ));
+        NewPosX.Value = null;
+        NewPosZ.Value = null;
     }
 
-    private void AddPos()
-    {
-        Vm?.AddPos(NewPosX.Text ?? "", NewPosZ.Text ?? "");
-        NewPosX.Text = "";
-        NewPosZ.Text = "";
-    }
+    private static string Num(Wpf.Ui.Controls.NumberBox box) =>
+        box.Value is { } v ? v.ToString(CultureInfo.InvariantCulture) : "";
 
-    private static T? FindAncestor<T>(DependencyObject? start) where T : DependencyObject
+    // ── "Other" param rows (non-canonical keys) ──────────────────────────
+    private void OnParamCellEditEnding(object? sender, DataGridCellEditEndingEventArgs e)
     {
-        var cur = start;
-        while (cur is not null)
-        {
-            if (cur is T t) return t;
-            cur = VisualTreeHelper.GetParent(cur);
-        }
-        return null;
+        if (e.EditAction != DataGridEditAction.Commit) return;
+        if (e.Row.Item is not SpawnParamVm param) return;
+        Dispatcher.BeginInvoke(new System.Action(param.Commit),
+            System.Windows.Threading.DispatcherPriority.Background);
     }
 }

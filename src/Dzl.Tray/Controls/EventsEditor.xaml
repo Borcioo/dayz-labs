@@ -4,6 +4,7 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:conv="clr-namespace:Dzl.Tray"
              xmlns:ctl="clr-namespace:Dzl.Tray.Controls"
+             xmlns:help="clr-namespace:Dzl.Tray.Help"
              x:Name="Root">
   <!-- DataContext = EventsVm. Edits db/events.xml: master list of CE events (left) + scalar/flag/
        string/children detail of the selected event (right). Every edit routes through the VM →
@@ -81,6 +82,7 @@
                    TextTrimming="CharacterEllipsis" MaxWidth="640" />
       </StackPanel>
       <StackPanel Grid.Column="1" Orientation="Horizontal">
+        <ctl:GlossaryButton Title="Events" Entries="{x:Static help:Glossary.Events}" Margin="0,0,12,0" />
         <ui:Button Content="Reload" Margin="0,0,6,0" Click="OnReloadClick"
                    ToolTip="Re-read db/events.xml from disk (discards the undo history)" />
         <ui:Button Margin="0,0,6,0" Command="{Binding UndoCommand}" ToolTip="Undo the last edit">
@@ -121,12 +123,13 @@
           <DataGrid Grid.Row="2" x:Name="EventGrid"
                     ItemsSource="{Binding Events}"
                     SelectedItem="{Binding SelectedEvent, Mode=TwoWay}"
+                    Style="{StaticResource DarkDataGrid}" ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeader}"
                     AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                     HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                     IsReadOnly="True" SelectionMode="Single"
                     Background="Transparent" BorderThickness="0"
                     EnableRowVirtualization="True"
-                    RowBackground="Transparent" AlternatingRowBackground="Transparent">
+                    RowStyle="{StaticResource DarkDataGridRow}" CellStyle="{StaticResource DarkDataGridCell}">
             <DataGrid.Columns>
               <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
               <DataGridTextColumn Header="Nominal" Binding="{Binding Nominal}" Width="60" />
@@ -207,7 +210,7 @@
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                   <TextBlock Text="Spawn amounts" Style="{StaticResource EvSectionHeader}" VerticalAlignment="Center" />
                   <ui:SymbolIcon Style="{StaticResource EvInfo}"
-                                 ToolTip="How many of this event are alive at once. Nominal = target count; Min/Max bound it as loot is used and restocked." />
+                                 ToolTip="Nominal = how many map LOCATIONS can host this event (the pool of spawn points), not a count of entities. Min/Max = active-spawn bounds: drops to Min → spawn more, hits Max → stop. So Nominal can exceed Max — they count different things." />
                 </StackPanel>
                 <Border Style="{StaticResource EvCard}">
                   <UniformGrid Columns="3">
@@ -234,7 +237,7 @@
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                   <TextBlock Text="Timing" Style="{StaticResource EvSectionHeader}" VerticalAlignment="Center" />
                   <ui:SymbolIcon Style="{StaticResource EvInfo}"
-                                 ToolTip="Seconds. Lifetime = how long a spawned instance lives before cleanup; Restock = delay before used-up slots refill." />
+                                 ToolTip="Seconds. Lifetime = how long a spawn lives before despawning when no player is near; Restock = delay between individual respawns while refilling toward Nominal/Max." />
                 </StackPanel>
                 <Border Style="{StaticResource EvCard}">
                   <UniformGrid Columns="2">
@@ -258,7 +261,7 @@
               <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                 <TextBlock Text="Spacing radii" Style="{StaticResource EvSectionHeader}" VerticalAlignment="Center" />
                 <ui:SymbolIcon Style="{StaticResource EvInfo}"
-                               ToolTip="Distances in metres. Safe = clear space required to spawn; Distance = minimum gap between two of these events; Cleanup = removed when a player gets this close." />
+                               ToolTip="Metres. SafeRadius = won't spawn this close to a player (0 = may spawn on top of one); DistanceRadius = minimum gap between two of these events; CleanupRadius = how far every player must move before the despawn (Lifetime) timer starts." />
               </StackPanel>
               <Border Style="{StaticResource EvCard}">
                 <UniformGrid Columns="3">
@@ -287,7 +290,7 @@
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                   <TextBlock Text="Placement" Style="{StaticResource EvSectionHeader}" VerticalAlignment="Center" />
                   <ui:SymbolIcon Style="{StaticResource EvInfo}"
-                                 ToolTip="Position = where it spawns (fixed coordinates, or near a player). Limit = how the nominal count is applied (per child, parent, or mixed)." />
+                                 ToolTip="Position = where it spawns: fixed (coordinates from cfgeventspawns.xml) or player (near players). Limit = which Min/Max governs the count: child (child entries' min/max), parent (the event's own), custom (animal-territories file), or mixed." />
                 </StackPanel>
                 <Border Style="{StaticResource EvCard}">
                   <UniformGrid Columns="2">
@@ -346,7 +349,7 @@
             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
               <TextBlock Text="Children" Style="{StaticResource EvSectionHeader}" VerticalAlignment="Center" />
               <ui:SymbolIcon Style="{StaticResource EvInfo}"
-                             ToolTip="The classnames this event spawns. Min/Max = spawn WEIGHT for this child (the convention is the children's min weights sum to 100), not a literal count. Loot min/max = loot slots filled on each spawn." />
+                             ToolTip="The classnames this event spawns. Child Min/Max has two meanings: if Max=0, Min is a spawn WEIGHT (% split between children — convention: weights sum to 100); if Max&gt;0, Min/Max are a literal COUNT range spawned per child (e.g. vehicles 3-5). Loot min/max = loot slots filled on each spawn." />
               <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" Style="{StaticResource EvHint}"
                          Text="{Binding Children.Count, StringFormat='· {0} added'}" />
             </StackPanel>
@@ -357,13 +360,14 @@
 
                 <DataGrid x:Name="ChildGrid" MaxHeight="240"
                           ItemsSource="{Binding Children}"
-                          AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                          Style="{StaticResource DarkDataGrid}" ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeader}"
+                    AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                           HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                           IsReadOnly="False" SelectionMode="Single"
                           Background="Transparent" BorderThickness="0"
                           EnableRowVirtualization="True"
                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                          RowBackground="Transparent" AlternatingRowBackground="Transparent"
+                          RowStyle="{StaticResource DarkDataGridRow}" CellStyle="{StaticResource DarkDataGridCell}"
                           CellEditEnding="OnChildCellEditEnding">
                   <!-- Numeric cells get an editing TextBox restricted to digits (the Type cell stays free text). -->
                   <DataGrid.Resources>
