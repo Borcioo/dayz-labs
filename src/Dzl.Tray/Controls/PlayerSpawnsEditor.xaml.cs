@@ -65,7 +65,15 @@ public partial class PlayerSpawnsEditor : UserControl
         if (e.Key == Key.Enter) { Vm?.AddGroup(); e.Handled = true; }
     }
 
-    private void OnRemoveGroupClick(object sender, RoutedEventArgs e) => Vm?.RemoveSelectedGroup();
+    // Per-row remove: select that group, then reuse the confirm+remove flow.
+    private void OnRowRemoveGroupClick(object sender, RoutedEventArgs e)
+    {
+        if (Vm is { } vm && sender is FrameworkElement { DataContext: SpawnGroupVm grp })
+        {
+            vm.SelectedGroup = grp;
+            vm.RemoveSelectedGroup();
+        }
+    }
 
     private void OnRenameGroupClick(object sender, RoutedEventArgs e)
     {

@@ -48,6 +48,14 @@ public sealed partial class EventsVm : RawXmlEditorVm
 
     [ObservableProperty] private EventRowVm? _selectedEvent;
 
+    /// <summary>True when an event is selected — gates the detail pane's inline-rename box + button.</summary>
+    public bool HasSelection => SelectedEvent is not null;
+
+    /// <summary>Editable name of the selected event (the detail pane's inline-rename box binds here; Enter or
+    /// the Rename button commits via <see cref="CommitRename"/>). Synced to the selection, not persisted on
+    /// keystroke.</summary>
+    [ObservableProperty] private string _renameText = "";
+
     [ObservableProperty] private string _filter = "";
 
     // new-event form
@@ -94,7 +102,8 @@ public sealed partial class EventsVm : RawXmlEditorVm
 
         _all.Clear();
         foreach (var ev in Model)
-            _all.Add(new EventRowVm(ev.Name, ev.Nominal, ev.Min, ev.Max, ev.Lifetime, ev.Active, ev.Children.Count));
+            _all.Add(new EventRowVm(ev.Name, ev.Nominal, ev.Min, ev.Max, ev.Lifetime, ev.Active, ev.Children.Count,
+                ev.Deletable, ev.InitRandom, ev.RemoveDamaged));
 
         ApplyFilter();
 
@@ -123,7 +132,11 @@ public sealed partial class EventsVm : RawXmlEditorVm
         SelectedEvent = Events.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
     }
 
-    partial void OnSelectedEventChanged(EventRowVm? value) => LoadDetailForSelected();
+    partial void OnSelectedEventChanged(EventRowVm? value)
+    {
+        OnPropertyChanged(nameof(HasSelection));
+        LoadDetailForSelected();
+    }
 
     private void LoadDetailForSelected()
     {
@@ -141,6 +154,7 @@ public sealed partial class EventsVm : RawXmlEditorVm
                 .FirstOrDefault(e => string.Equals(e.Name, row.Name, StringComparison.OrdinalIgnoreCase));
             if (ev is null) { ClearDetail(); return; }
 
+            RenameText           = ev.Name;
             DetailNominal        = ev.Nominal.ToString();
             DetailMin            = ev.Min.ToString();
             DetailMax            = ev.Max.ToString();
@@ -164,6 +178,7 @@ public sealed partial class EventsVm : RawXmlEditorVm
 
     private void ClearDetail()
     {
+        RenameText = "";
         DetailNominal = DetailMin = DetailMax = DetailLifetime = DetailRestock =
             DetailSafeRadius = DetailDistanceRadius = DetailCleanupRadius = "0";
         DetailDeletable = DetailInitRandom = DetailRemoveDamaged = false;
@@ -205,6 +220,16 @@ public sealed partial class EventsVm : RawXmlEditorVm
         }
     }
 
+    /// <summary>Commit the detail pane's inline-rename box: rename the selected event to <see cref="RenameText"/>.
+    /// No-op when nothing changed; the empty-name guard lives in <see cref="RenameSelectedEvent"/>.</summary>
+    public void CommitRename()
+    {
+        if (SelectedEvent is not { } row) { Status = "✗ select an event to rename"; return; }
+        var newName = (RenameText ?? "").Trim();
+        if (string.Equals(newName, row.Name, StringComparison.Ordinal)) return;
+        RenameSelectedEvent(newName);
+    }
+
     private static bool TryInt(string? raw, out int value) =>
         int.TryParse((raw ?? "").Trim(), out value) && value >= 0;
 
@@ -219,7 +244,22 @@ public sealed partial class EventsVm : RawXmlEditorVm
         {
             // Update the master-row summary column too (for nominal, active).
             RefreshMasterRow(row.Name);
+            WarnIfMinGtMax();
         }
+    }
+
+    // Non-blocking: the Core lint flags min>max later; surface it live so the user isn't surprised.
+    private void WarnIfMinGtMax()
+    {
+        if (TryInt(DetailMin, out var min) && TryInt(DetailMax, out var max) && min > max)
+            Status = $"⚠ min ({min}) > max ({max}) — the validator flags this";
+    }
+
+    private void WarnUnknownEnum(string? value, string field, params string[] known)
+    {
+        var v = (value ?? "").Trim();
+        if (v.Length > 0 && !known.Contains(v, StringComparer.OrdinalIgnoreCase))
+            Status = $"⚠ unknown {field} \"{v}\" — expected one of: {string.Join(", ", known)}";
     }
 
     public void SaveFlag(string flag, bool value)
@@ -233,14 +273,16 @@ public sealed partial class EventsVm : RawXmlEditorVm
     {
         if (_suspendDetailPersist || SelectedEvent is not { } row) return;
         PushUndo();
-        Report(_svc.SetPosition(row.Name, position ?? ""));
+        if (Report(_svc.SetPosition(row.Name, position ?? "")))
+            WarnUnknownEnum(position, "position", "fixed", "player");
     }
 
     public void SaveLimit(string limit)
     {
         if (_suspendDetailPersist || SelectedEvent is not { } row) return;
         PushUndo();
-        Report(_svc.SetLimit(row.Name, limit ?? ""));
+        if (Report(_svc.SetLimit(row.Name, limit ?? "")))
+            WarnUnknownEnum(limit, "limit", "custom", "child", "parent", "mixed");
     }
 
     public void SaveActive(bool active)
@@ -263,6 +305,9 @@ public sealed partial class EventsVm : RawXmlEditorVm
         row.Lifetime      = ev.Lifetime;
         row.Active        = ev.Active;
         row.ChildrenCount = ev.Children.Count;
+        row.Deletable     = ev.Deletable;
+        row.InitRandom    = ev.InitRandom;
+        row.RemoveDamaged = ev.RemoveDamaged;
     }
 
     public void AddChild()
@@ -319,10 +364,12 @@ public sealed partial class EventsVm : RawXmlEditorVm
     }
 }
 
-/// <summary>One master-list row: an event with summary columns.</summary>
+/// <summary>One master-list row: an event with summary columns + its boolean flags (shown as a compact
+/// letter strip like the Types grid: A D I R).</summary>
 public sealed partial class EventRowVm : ObservableObject
 {
-    public EventRowVm(string name, int nominal, int min, int max, int lifetime, bool active, int childrenCount)
+    public EventRowVm(string name, int nominal, int min, int max, int lifetime, bool active, int childrenCount,
+                      bool deletable, bool initRandom, bool removeDamaged)
     {
         Name = name;
         _nominal = nominal;
@@ -331,6 +378,9 @@ public sealed partial class EventRowVm : ObservableObject
         _lifetime = lifetime;
         _active = active;
         _childrenCount = childrenCount;
+        _deletable = deletable;
+        _initRandom = initRandom;
+        _removeDamaged = removeDamaged;
     }
 
     public string Name { get; }
@@ -341,6 +391,9 @@ public sealed partial class EventRowVm : ObservableObject
     [ObservableProperty] private int _lifetime;
     [ObservableProperty] private bool _active;
     [ObservableProperty] private int _childrenCount;
+    [ObservableProperty] private bool _deletable;
+    [ObservableProperty] private bool _initRandom;
+    [ObservableProperty] private bool _removeDamaged;
 }
 
 /// <summary>One editable child row in the children DataGrid.</summary>

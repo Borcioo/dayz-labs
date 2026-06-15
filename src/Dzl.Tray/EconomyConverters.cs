@@ -43,6 +43,22 @@ public sealed class WidthToColumnsConverter : IValueConverter
         => throw new NotSupportedException();
 }
 
+/// <summary>Maps a container's <c>ActualWidth</c> to a 4 / 2 / 1 responsive column count for the four CE
+/// base-dictionary cards: 4 across on a wide window, 2x2 when medium, single column when narrow.</summary>
+public sealed class WidthToColumns4Converter : IValueConverter
+{
+    /// <summary>At/above this width → 4 columns.</summary>
+    public double Wide { get; set; } = 1000;
+    /// <summary>At/above this width (but below <see cref="Wide"/>) → 2 columns; below → 1.</summary>
+    public double Medium { get; set; } = 520;
+
+    public object Convert(object value, Type targetType, object? parameter, CultureInfo culture)
+        => value is double w ? (w >= Wide ? 4 : w >= Medium ? 2 : 1) : 4;
+
+    public object ConvertBack(object value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
 /// <summary>Visibility = Visible when the bound count is 0 (drives an empty-state hint), else Collapsed.</summary>
 public sealed class ZeroCountToVisibilityConverter : IValueConverter
 {

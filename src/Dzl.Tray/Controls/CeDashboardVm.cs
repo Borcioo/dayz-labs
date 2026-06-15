@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Dzl.Core.App;
@@ -30,15 +31,14 @@ public sealed record CeFindingRow(LintSeverity Severity, string Message, string 
 public partial class CeDashboardVm : ObservableObject
 {
     private readonly string _configPath;
-    private readonly RandomPresetsService _presets;
-    private readonly Func<string, bool> _confirm;
     private CeWorld? _world;
 
+    // confirm is accepted for ctor consistency with the other CE tab VMs; the dashboard no longer prompts —
+    // the "disable unused presets" action moved to the Random Presets tab.
     public CeDashboardVm(string configPath, Func<string, bool> confirm)
     {
         _configPath = configPath;
-        _confirm = confirm;
-        _presets = new RandomPresetsService(configPath);
+        _ = confirm;
     }
 
     /// <summary>Raised when a tile or finding is clicked — the host panel selects that file's tab and,
@@ -70,6 +70,32 @@ public partial class CeDashboardVm : ObservableObject
         HasMission = _world.HasMission;
         BuildStats(_world, _lastFindings);
     }
+
+    /// <summary>Refresh the cheap tiles, then auto-run the full cross-file validation when the mission's CE
+    /// files have changed since the last run (or were never validated this session). Switching back to the
+    /// tab with nothing changed is a no-op — no re-run, no progress-bar flash, no cost on large missions.
+    /// The panel fires this and forgets it (UI boundary); tests await it.</summary>
+    public async Task RefreshAndValidateAsync()
+    {
+        Refresh();
+        if (_world is { HasMission: true } && !IsValidating && FileSignature(_world) != _validatedSignature)
+            await RunFullValidation();
+    }
+
+    /// <summary>A cheap change-token for the mission's CE files: each file's path + last-write time. Two
+    /// loads with no on-disk edit produce the same token, so an unchanged re-validation can be skipped.</summary>
+    public static string FileSignature(CeWorld world) =>
+        string.Join("|", world.Files
+            .OrderBy(f => f.Path, StringComparer.OrdinalIgnoreCase)
+            .Select(f => $"{f.Path}={(f.Exists && File.Exists(f.Path) ? File.GetLastWriteTimeUtc(f.Path).Ticks : 0)}"));
+
+    /// <summary>The CE-file signature the last full validation ran against; auto-validation skips while it's
+    /// unchanged. Null until the first validation.</summary>
+    private string? _validatedSignature;
+
+    /// <summary>How many full validations have run this session — a test seam for the staleness guard, and
+    /// harmless diagnostics otherwise.</summary>
+    public int ValidationRunCount { get; private set; }
 
     private IReadOnlyList<LintFinding> _lastFindings = Array.Empty<LintFinding>();
 
@@ -134,6 +160,8 @@ public partial class CeDashboardVm : ObservableObject
                 : $"{ErrorCount} error(s) · {WarningCount} warning(s) · {InfoCount} info";
 
             BuildStats(world, findings);   // re-stamp the tiles with per-file issue badges
+            _validatedSignature = FileSignature(world);   // mark this file state validated (gates auto-rerun)
+            ValidationRunCount++;
         }
         finally
         {
@@ -159,41 +187,4 @@ public partial class CeDashboardVm : ObservableObject
         if (HasMission) ShellOpen.Folder(MissionDir);
     }
 
-    /// <summary>Comment out (not delete) every random preset that no spawnabletype references, so dead
-    /// presets stop loading without being lost. Confirms first, then re-validates to refresh the report.</summary>
-    [RelayCommand]
-    private void DisableUnusedPresets()
-    {
-        var world = _world ??= new CeWorldLoader(_configPath).Load();
-        var unused = FindUnusedPresets(world);
-        if (unused.Count == 0) { Summary = "✓ No unused presets to disable."; return; }
-
-        if (!_confirm($"Disable (comment out) {unused.Count} unused preset(s)? They stay in the file and can " +
-                      "be re-enabled per-row on the Random Presets tab.")) return;
-
-        var done = 0;
-        foreach (var (kind, name) in unused)
-            if (_presets.DisablePreset(kind, name).ok) done++;
-
-        _world = null; // file changed — drop the cached world so the next pass re-reads it
-        Refresh();
-        Summary = $"Disabled {done} unused preset(s). Run a full validation to refresh the report.";
-    }
-
-    /// <summary>The (kind, name) of every active preset referenced by no spawnabletype of its kind.</summary>
-    private static List<(PresetKind Kind, string Name)> FindUnusedPresets(CeWorld world)
-    {
-        var refdCargo = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var refdAttach = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var t in world.SpawnableTypes)
-            foreach (var b in t.Cargo.Concat(t.Attachments))
-                if (b.IsPreset && b.Preset is { } pr)
-                    (b.IsAttachments ? refdAttach : refdCargo).Add(pr);
-
-        return world.RandomPresets
-            .Where(p => !p.Disabled)
-            .Where(p => !(p.Kind == PresetKind.Attachments ? refdAttach : refdCargo).Contains(p.Name))
-            .Select(p => (p.Kind, p.Name))
-            .ToList();
-    }
 }

@@ -225,6 +225,25 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
         SelectedPreset = Presets.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
     }
 
+    // Track the selection across undo/redo by kind+name, so a rename-undo reselects the preset under its
+    // restored name instead of falling back to the first row (| separator can't occur in a classname).
+    /// <inheritdoc/>
+    protected override string? CaptureSelectionToken() =>
+        SelectedPreset is { } p ? $"{(int)p.Kind}|{p.Name}" : null;
+
+    /// <inheritdoc/>
+    protected override void RestoreSelectionToken(string? token)
+    {
+        if (string.IsNullOrEmpty(token)) return;
+        var sep = token.IndexOf('|');
+        if (sep < 0 || !int.TryParse(token[..sep], out var kindNum)) return;
+        var kind = (PresetKind)kindNum;
+        var name = token[(sep + 1)..];
+        var row = Presets.FirstOrDefault(r => r.Kind == kind &&
+            string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (row is not null) SelectedPreset = row;
+    }
+
     partial void OnSelectedPresetChanged(PresetRowVm? value)
     {
         // Sync the edit card to the new selection without echoing back as a rename/kind change.
@@ -351,6 +370,42 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
         if (Report(result)) LoadPresetsKeepingSelection();
     }
 
+    /// <summary>Comment out (not delete) every active preset that no spawnabletype references, so dead presets
+    /// stop loading without being lost. Confirms first; one undo step for the whole batch. (Moved here from the
+    /// dashboard — presets live on this tab.)</summary>
+    public void DisableUnusedPresets()
+    {
+        var unused = FindUnusedPresets();
+        if (unused.Count == 0) { Status = "✓ no unused presets to disable"; return; }
+        if (!_confirm($"Disable (comment out) {unused.Count} unused preset(s)? They stay in the file and can " +
+                      "be re-enabled per row."))
+            return;
+
+        PushUndo();
+        var done = 0;
+        foreach (var (kind, name) in unused)
+            if (_svc.DisablePreset(kind, name).ok) done++;
+        LoadPresetsKeepingSelection();
+        Status = $"✓ disabled {done} unused preset(s)";
+    }
+
+    /// <summary>The (kind, name) of every active preset referenced by no spawnabletype of its kind.</summary>
+    private List<(PresetKind Kind, string Name)> FindUnusedPresets()
+    {
+        var refdCargo = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var refdAttach = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var t in SpawnTypes)
+            foreach (var b in t.Cargo.Concat(t.Attachments))
+                if (b.IsPreset && b.Preset is { } pr)
+                    (b.IsAttachments ? refdAttach : refdCargo).Add(pr);
+
+        return Model
+            .Where(p => !p.Disabled)
+            .Where(p => !(p.Kind == PresetKind.Attachments ? refdAttach : refdCargo).Contains(p.Name))
+            .Select(p => (p.Kind, p.Name))
+            .ToList();
+    }
+
     public void AddItem()
     {
         if (SelectedPreset is not { } row) { Status = "✗ select a preset first"; return; }
@@ -382,7 +437,9 @@ public sealed partial class RandomPresetsVm : RawXmlEditorVm
     private void OnItemEdited(PresetItemVm item)
     {
         if (_suspendItemPersist || SelectedPreset is not { } row) return;
-        if (string.IsNullOrWhiteSpace(item.Name)) { Status = "✗ item name must not be empty"; return; }
+        // Empty/whitespace name: reject AND restore the cell to the persisted classname (otherwise the grid
+        // keeps showing the blank edit while the file still holds the old name — a confusing divergence).
+        if (string.IsNullOrWhiteSpace(item.Name)) { Status = "✗ item name must not be empty"; LoadItemsForSelected(); return; }
         var chance = Math.Clamp(item.Chance, 0, 1);
 
         PushUndo();

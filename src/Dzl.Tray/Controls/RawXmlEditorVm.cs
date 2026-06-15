@@ -74,7 +74,9 @@ public abstract partial class RawXmlEditorVm : ObservableObject
 
         _loaded = true;
         _undo.Clear();
+        _undoSel.Clear();
         _redo.Clear();
+        _redoSel.Clear();
         NotifyHistory();
         InvalidateModelCache();
         ReloadView();
@@ -107,10 +109,21 @@ public abstract partial class RawXmlEditorVm : ObservableObject
 
     private const int UndoCap = 50;
     private readonly List<string> _undo = new();
+    private readonly List<string?> _undoSel = new();   // selection token captured alongside each undo snapshot
     private readonly List<string> _redo = new();
+    private readonly List<string?> _redoSel = new();
 
     public bool CanUndo => _undo.Count > 0;
     public bool CanRedo => _redo.Count > 0;
+
+    /// <summary>Capture a stable identifier for the current selection (e.g. the selected row's name) so
+    /// undo/redo can restore it across a re-sort/rename. Default null = no selection tracking; override in a
+    /// subclass that has a master list.</summary>
+    protected virtual string? CaptureSelectionToken() => null;
+
+    /// <summary>Re-select the row identified by a token captured at undo/redo time, after <see cref="ReloadView"/>.
+    /// Default no-op; override to honor it (e.g. after a rename-undo where the prior name no longer exists).</summary>
+    protected virtual void RestoreSelectionToken(string? token) { }
 
     private void NotifyHistory()
     {
@@ -120,16 +133,18 @@ public abstract partial class RawXmlEditorVm : ObservableObject
         RedoCommand.NotifyCanExecuteChanged();
     }
 
-    /// <summary>Snapshot the current file before a mutation so it can be undone. Call right before
-    /// every service write. Also invalidates the parsed-model cache for the write that follows.</summary>
+    /// <summary>Snapshot the current file (and the current selection) before a mutation so it can be undone.
+    /// Call right before every service write. Also invalidates the parsed-model cache for the write that follows.</summary>
     protected void PushUndo()
     {
         InvalidateModelCache();
         var raw = _readRaw();
         if (raw is null) return;
         _undo.Add(raw);
-        if (_undo.Count > UndoCap) _undo.RemoveAt(0);
+        _undoSel.Add(CaptureSelectionToken());
+        if (_undo.Count > UndoCap) { _undo.RemoveAt(0); _undoSel.RemoveAt(0); }
         _redo.Clear();
+        _redoSel.Clear();
         NotifyHistory();
     }
 
@@ -139,11 +154,13 @@ public abstract partial class RawXmlEditorVm : ObservableObject
         if (_undo.Count == 0) return;
         var cur = _readRaw();
         var prev = _undo[^1]; _undo.RemoveAt(_undo.Count - 1);
-        if (cur is not null) _redo.Add(cur);
+        var prevSel = _undoSel[^1]; _undoSel.RemoveAt(_undoSel.Count - 1);
+        if (cur is not null) { _redo.Add(cur); _redoSel.Add(CaptureSelectionToken()); }
         var (ok, msg) = _writeRaw(prev);
         Status = ok ? "↶ undo" : "✗ " + msg;
         InvalidateModelCache();
         ReloadView();
+        RestoreSelectionToken(prevSel);   // reselect what was selected before the undone action
         NotifyHistory();
     }
 
@@ -153,11 +170,13 @@ public abstract partial class RawXmlEditorVm : ObservableObject
         if (_redo.Count == 0) return;
         var cur = _readRaw();
         var next = _redo[^1]; _redo.RemoveAt(_redo.Count - 1);
-        if (cur is not null) _undo.Add(cur);
+        var nextSel = _redoSel[^1]; _redoSel.RemoveAt(_redoSel.Count - 1);
+        if (cur is not null) { _undo.Add(cur); _undoSel.Add(CaptureSelectionToken()); }
         var (ok, msg) = _writeRaw(next);
         Status = ok ? "↷ redo" : "✗ " + msg;
         InvalidateModelCache();
         ReloadView();
+        RestoreSelectionToken(nextSel);
         NotifyHistory();
     }
 

@@ -3,160 +3,409 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:ctl="clr-namespace:Dzl.Tray.Controls"
+             xmlns:conv="clr-namespace:Dzl.Tray"
              x:Name="Root">
-  <!-- DataContext = DictionaryManagerVm. Edits the game-honored dictionaries: the four base lists come
-       from cfglimitsdefinition.xml; the Combos section edits cfglimitsdefinitionuser.xml. Every edit routes
-       through the VM → DictionaryService → refreshes the Types editor suggestions + re-lints.
-       A UserControl does NOT inherit the host window's resources at realize time — declare local styles
-       here; only DynamicResource theme brushes (resolved late) are safe to reference. -->
+  <!-- DataContext = DictionaryManagerVm. Dashboard master-detail: a left nav rail lists the four base
+       dictionaries (cfglimitsdefinition.xml) + the Named-combos section (cfglimitsdefinitionuser.xml); the
+       right pane edits the selected one full-width. Every edit routes through the VM → DictionaryService →
+       refreshes the Types editor + re-lints. A UserControl does NOT inherit host-window resources at realize
+       time — declare styles locally; only DynamicResource theme brushes are safe. -->
   <UserControl.Resources>
-    <Style x:Key="DictColHeader" TargetType="TextBlock">
-      <Setter Property="FontSize" Value="13" />
+    <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
+    <conv:NotNullToVisibilityConverter x:Key="NotNullToVis" />
+
+    <Style x:Key="DictTitle" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="18" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
     </Style>
-    <Style x:Key="DictColCount" TargetType="TextBlock">
+    <Style x:Key="DictRailCaption" TargetType="TextBlock">
       <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="8,0,0,4" />
       <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
-      <Setter Property="Margin" Value="0,0,0,6" />
     </Style>
 
-    <!-- One reusable editable-list column (DataContext = a DictionaryListVm). -->
-    <DataTemplate x:Key="DictColumnTemplate">
-      <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
-              BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
-              CornerRadius="8" Padding="10" Margin="0,0,8,0">
-        <Grid>
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />  <!-- title -->
-            <RowDefinition Height="Auto" />  <!-- count -->
-            <RowDefinition Height="*" />     <!-- list -->
-            <RowDefinition Height="Auto" />  <!-- add row -->
-            <RowDefinition Height="Auto" />  <!-- actions -->
-          </Grid.RowDefinitions>
+    <!-- Nav-rail item (the four base dictionaries) — left accent bar + accent fill when active. -->
+    <Style x:Key="NavItem" TargetType="ListBoxItem">
+      <Setter Property="Padding" Value="10,8" />
+      <Setter Property="Margin" Value="0,1" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Border x:Name="Bd" Background="Transparent" CornerRadius="6"
+                    BorderThickness="2,0,0,0" BorderBrush="Transparent" Padding="{TemplateBinding Padding}">
+              <ContentPresenter />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="#14FFFFFF" />
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="#1F2A3A" />
+                <Setter TargetName="Bd" Property="BorderBrush" Value="#4FA3FF" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
 
-          <TextBlock Grid.Row="0" Text="{Binding Title}" Style="{StaticResource DictColHeader}" />
-          <TextBlock Grid.Row="1" Text="{Binding CountLabel}" Style="{StaticResource DictColCount}" />
+    <!-- The combos nav row is a Button (it switches a bool, not a list selection); highlight it the same way. -->
+    <Style x:Key="NavButton" TargetType="Button">
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Padding" Value="10,8" />
+      <Setter Property="Margin" Value="0,1" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Bd" Background="Transparent" CornerRadius="6"
+                    BorderThickness="2,0,0,0" BorderBrush="Transparent" Padding="{TemplateBinding Padding}">
+              <ContentPresenter />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="#14FFFFFF" />
+              </Trigger>
+              <DataTrigger Binding="{Binding CombosSelected}" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="#1F2A3A" />
+                <Setter TargetName="Bd" Property="BorderBrush" Value="#4FA3FF" />
+              </DataTrigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
 
-          <ListBox Grid.Row="2" MinHeight="160"
-                   ItemsSource="{Binding Names}"
-                   SelectedItem="{Binding Selected, Mode=TwoWay}"
-                   Background="Transparent" BorderThickness="0"
-                   ScrollViewer.VerticalScrollBarVisibility="Auto">
-            <ListBox.ItemTemplate>
-              <DataTemplate>
-                <TextBlock Text="{Binding}" FontSize="12" Padding="0,1"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
+    <!-- Detail-list row: rounded app-accent hover/selected highlight (not the WPF gray bar, not sharp corners). -->
+    <Style x:Key="DictListItem" TargetType="ListBoxItem">
+      <Setter Property="Padding" Value="4,0" />
+      <Setter Property="Margin" Value="0,1" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <EventSetter Event="MouseDoubleClick" Handler="OnEntryEdit" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="{TemplateBinding Padding}">
+              <ContentPresenter />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="#14FFFFFF" />
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="#1F2A3A" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
 
-          <Grid Grid.Row="3" Margin="0,8,0,0">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <ui:TextBox Grid.Column="0" Margin="0,0,4,0" FontSize="12"
-                        PlaceholderText="{Binding Hint}"
-                        Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}"
-                        KeyDown="OnAddKeyDown" Tag="{Binding}" />
-            <ui:Button Grid.Column="1" Content="Add" Click="OnAddClick" Tag="{Binding}"
-                       ToolTip="Add to the dictionary (cfglimitsdefinition.xml)" />
-          </Grid>
-
-          <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,6,0,0">
-            <ui:Button Content="Rename" Margin="0,0,4,0" FontSize="12" Click="OnRenameClick" Tag="{Binding}"
-                       ToolTip="Rename the selected entry" />
-            <ui:Button Content="Remove" FontSize="12" Click="OnRemoveClick" Tag="{Binding}"
-                       ToolTip="Remove the selected entry (warns if any loaded type uses it)" />
-          </StackPanel>
-        </Grid>
-      </Border>
-    </DataTemplate>
+    <!-- Quiet per-row icon button: a muted glyph (color set on the SymbolIcon via the parent). The edit/delete
+         variants differ only in the hover color, set by the style trigger on Foreground. -->
+    <Style x:Key="RowIconBase" TargetType="Button">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Padding" Value="5,3" />
+      <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="RowEditButton" TargetType="Button" BasedOn="{StaticResource RowIconBase}">
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="#4FA3FF" /></Trigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="RowDeleteButton" TargetType="Button" BasedOn="{StaticResource RowIconBase}">
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="#E0584F" /></Trigger>
+      </Style.Triggers>
+    </Style>
+    <!-- Accept (✓) during inline edit: green, brighter on hover. -->
+    <Style x:Key="RowAcceptButton" TargetType="Button" BasedOn="{StaticResource RowIconBase}">
+      <Setter Property="Foreground" Value="#3FB950" />
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="#56D364" /></Trigger>
+      </Style.Triggers>
+    </Style>
   </UserControl.Resources>
 
   <Grid>
     <Grid.RowDefinitions>
-      <RowDefinition Height="*" />     <!-- four base lists -->
-      <RowDefinition Height="Auto" />  <!-- combos -->
+      <RowDefinition Height="*" />     <!-- nav rail + detail -->
       <RowDefinition Height="Auto" />  <!-- status -->
     </Grid.RowDefinitions>
 
-    <!-- Four editable base lists side by side -->
-    <Grid Grid.Row="0">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
-        <ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
-      </Grid.ColumnDefinitions>
-      <ContentControl Grid.Column="0" Content="{Binding Categories}" ContentTemplate="{StaticResource DictColumnTemplate}" />
-      <ContentControl Grid.Column="1" Content="{Binding Tags}"       ContentTemplate="{StaticResource DictColumnTemplate}" />
-      <ContentControl Grid.Column="2" Content="{Binding Usage}"      ContentTemplate="{StaticResource DictColumnTemplate}" />
-      <ContentControl Grid.Column="3" Content="{Binding Value}"      ContentTemplate="{StaticResource DictColumnTemplate}" />
-    </Grid>
-
-    <!-- Combos (cfglimitsdefinitionuser.xml) — secondary, compact -->
-    <Border Grid.Row="1" Margin="0,10,8,0" Padding="10" CornerRadius="8"
-            Background="{DynamicResource ControlFillColorDefaultBrush}"
-            BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
+    <Border Grid.Row="0" CornerRadius="8" BorderThickness="1"
+            BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+            Background="{DynamicResource ControlFillColorDefaultBrush}">
       <Grid>
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="300" /><ColumnDefinition Width="*" />
+          <ColumnDefinition Width="210" />
+          <ColumnDefinition Width="*" MinWidth="320" />
         </Grid.ColumnDefinitions>
 
-        <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,8"
-                   Text="Named combos (cfglimitsdefinitionuser.xml)"
-                   Style="{StaticResource DictColHeader}" />
+        <!-- ===== Nav rail ===== -->
+        <Border Grid.Column="0" CornerRadius="8,0,0,8" Padding="8,12"
+                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                BorderThickness="0,0,1,0" BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+          <StackPanel>
+            <TextBlock Text="Base dictionaries" Style="{StaticResource DictRailCaption}" />
+            <ListBox ItemsSource="{Binding Lists}" SelectedItem="{Binding SelectedList, Mode=TwoWay}"
+                     ItemContainerStyle="{StaticResource NavItem}"
+                     Background="Transparent" BorderThickness="0">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="13" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    <Border Grid.Column="1" CornerRadius="9" Padding="6,1" VerticalAlignment="Center"
+                            Background="{DynamicResource ControlFillColorDefaultBrush}">
+                      <TextBlock Text="{Binding Names.Count}" FontSize="11"
+                                 Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    </Border>
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
 
-        <!-- Left: combo list + add/remove -->
-        <Grid Grid.Row="1" Grid.Column="0" Margin="0,0,12,0">
+            <Border Height="1" Margin="6,10" Background="{DynamicResource ControlElevationBorderBrush}" />
+            <TextBlock Text="Combinations" Style="{StaticResource DictRailCaption}" />
+            <Button Style="{StaticResource NavButton}" Command="{Binding ShowCombosCommand}">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Named combos" FontSize="13" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                <Border Grid.Column="1" CornerRadius="9" Padding="6,1" VerticalAlignment="Center"
+                        Background="{DynamicResource ControlFillColorDefaultBrush}">
+                  <TextBlock Text="{Binding Combos.Count}" FontSize="11"
+                             Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                </Border>
+              </Grid>
+            </Button>
+          </StackPanel>
+        </Border>
+
+        <!-- ===== Detail: base-list editor (one dictionary, full width) ===== -->
+        <Grid Grid.Column="1" Margin="18,16" DataContext="{Binding SelectedList}"
+              Visibility="{Binding DataContext.SelectedList, ElementName=Root, Converter={StaticResource NotNullToVis}}">
           <Grid.RowDefinitions>
-            <RowDefinition Height="140" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />  <!-- header -->
+            <RowDefinition Height="Auto" />  <!-- search -->
+            <RowDefinition Height="*" />     <!-- entries (double-click / pencil = rename in place) -->
+            <RowDefinition Height="Auto" />  <!-- add -->
           </Grid.RowDefinitions>
-          <ListBox Grid.Row="0" ItemsSource="{Binding Combos}"
-                   SelectedItem="{Binding SelectedCombo, Mode=TwoWay}"
-                   DisplayMemberPath="Display"
-                   Background="Transparent" BorderThickness="0"
-                   ScrollViewer.VerticalScrollBarVisibility="Auto" />
-          <Grid Grid.Row="1" Margin="0,6,0,0">
+
+          <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+              <TextBlock Text="{Binding Title}" Style="{StaticResource DictTitle}" />
+              <TextBlock Text="{Binding Help}" FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap"
+                         Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+            </StackPanel>
+            <TextBlock Grid.Column="1" Text="{Binding CountLabel}" FontSize="12" VerticalAlignment="Top"
+                       Margin="12,2,0,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+          </Grid>
+
+          <ui:TextBox Grid.Row="1" Margin="0,14,0,10" FontSize="13" Icon="{ui:SymbolIcon Search24}"
+                      PlaceholderText="Search…"
+                      Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" />
+
+          <Border Grid.Row="2" CornerRadius="6" BorderThickness="1"
+                  BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                  Background="{DynamicResource ControlFillColorSecondaryBrush}">
+            <ListBox ItemsSource="{Binding View}" SelectedItem="{Binding Selected, Mode=TwoWay}"
+                     ItemContainerStyle="{StaticResource DictListItem}"
+                     Background="Transparent" BorderThickness="0" Padding="0"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <!-- DataContext = DictEntryVm. Display label ↔ inline-edit box swap on IsEditing; pencil + trash
+                       are muted glyphs (accent/red only on hover). Double-click the row also starts a rename. -->
+                  <Grid MinHeight="34">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="13" VerticalAlignment="Center" Padding="8,0"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                               Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVis}}" />
+                    <ui:TextBox Grid.Column="0" Margin="6,2" FontSize="13" ClearButtonEnabled="False"
+                                Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"
+                                IsVisibleChanged="OnEditBoxVisible" KeyDown="OnEditBoxKeyDown" LostFocus="OnEditBoxCommit" />
+                    <!-- View mode: rename + delete. -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,4,0"
+                                Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVis}}">
+                      <Button Style="{StaticResource RowEditButton}" Click="OnEntryEdit" ToolTip="Rename in place">
+                        <ui:SymbolIcon Symbol="Edit24" FontSize="15"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                      </Button>
+                      <Button Style="{StaticResource RowDeleteButton}" Click="OnRowRemoveItemClick"
+                              ToolTip="Remove this entry (warns if any loaded type uses it)">
+                        <ui:SymbolIcon Symbol="Delete24" FontSize="15"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                      </Button>
+                    </StackPanel>
+                    <!-- Edit mode: accept (✓) / cancel (✗) — plus Enter/Esc on the box. -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,4,0"
+                                Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
+                      <Button Style="{StaticResource RowAcceptButton}" Click="OnEditBoxCommit" ToolTip="Accept (Enter)">
+                        <ui:SymbolIcon Symbol="Checkmark24" FontSize="15"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                      </Button>
+                      <Button Style="{StaticResource RowDeleteButton}" PreviewMouseLeftButtonDown="OnEditCancel" ToolTip="Cancel (Esc)">
+                        <ui:SymbolIcon Symbol="Dismiss24" FontSize="15"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                      </Button>
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Border>
+
+          <Grid Grid.Row="3" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ui:TextBox Grid.Column="0" Margin="0,0,6,0" FontSize="13" PlaceholderText="{Binding Hint}"
+                        Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}"
+                        KeyDown="OnAddKeyDown" Tag="{Binding}" />
+            <ui:Button Grid.Column="1" Content="Add" Icon="{ui:SymbolIcon Add24}" Click="OnAddClick" Tag="{Binding}"
+                       ToolTip="Add to the dictionary (cfglimitsdefinition.xml)" />
+          </Grid>
+        </Grid>
+
+        <!-- ===== Detail: Named combos editor (single column: add · list · members) ===== -->
+        <Grid Grid.Column="1" Margin="18,16"
+              Visibility="{Binding CombosSelected, Converter={StaticResource BoolToVis}}">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />  <!-- header -->
+            <RowDefinition Height="Auto" />  <!-- add toolbar -->
+            <RowDefinition Height="Auto" />  <!-- combo list (capped) -->
+            <RowDefinition Height="Auto" />  <!-- members header -->
+            <RowDefinition Height="*" />     <!-- members (fills) -->
+          </Grid.RowDefinitions>
+
+          <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="Named combos" Style="{StaticResource DictTitle}" />
+            <TextBlock Text="cfglimitsdefinitionuser.xml — reusable groups of usage / value flags, referenced by name in types.xml"
+                       FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+          </StackPanel>
+
+          <Grid Grid.Row="1" Margin="0,0,0,10">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <ui:TextBox Grid.Column="0" MinWidth="150" Margin="0,0,4,0" FontSize="12" PlaceholderText="new combo name"
+            <ui:TextBox Grid.Column="0" Margin="0,0,6,0" FontSize="13" PlaceholderText="new combo name"
                         Text="{Binding NewComboName, UpdateSourceTrigger=PropertyChanged}" />
-            <ComboBox Grid.Column="1" MinWidth="90" Margin="0,0,4,0" VerticalAlignment="Center"
+            <ComboBox Grid.Column="1" MinWidth="90" Margin="0,0,6,0" VerticalAlignment="Center"
                       SelectedValuePath="Tag" SelectedValue="{Binding NewComboIsUsage, Mode=TwoWay, Converter={x:Static ctl:DictionaryManager.UsageBoolConv}}"
-                      ToolTip="combo kind">
+                      ToolTip="usage combo = groups usage flags (Town/Military…); value combo = groups loot tiers (Tier1–Tier4). Members must exist in the matching base list.">
               <ComboBoxItem Content="usage" Tag="usage" />
               <ComboBoxItem Content="value" Tag="value" />
             </ComboBox>
-            <ui:Button Grid.Column="2" Content="Add" Click="OnAddComboClick" />
+            <ui:Button Grid.Column="2" Content="Add" Icon="{ui:SymbolIcon Add24}" Click="OnAddComboClick" />
           </Grid>
-          <ui:Button Grid.Row="2" Content="Remove combo" Margin="0,6,0,0" FontSize="12"
-                     Click="OnRemoveComboClick" HorizontalAlignment="Left" />
-        </Grid>
 
-        <!-- Right: member editor for the selected combo -->
-        <StackPanel Grid.Row="1" Grid.Column="1">
-          <TextBlock FontSize="11" Margin="0,0,0,4"
+          <Border Grid.Row="2" CornerRadius="6" Padding="4" BorderThickness="1" MaxHeight="280"
+                  Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                  BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+            <ListBox ItemsSource="{Binding Combos}" SelectedItem="{Binding SelectedCombo, Mode=TwoWay}"
+                     ItemContainerStyle="{StaticResource DictListItem}"
+                     Background="Transparent" BorderThickness="0"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <!-- DataContext = ComboVm. Same inline-edit pattern as the base-dictionary entry rows:
+                       Display ↔ name edit box on IsEditing; pencil/trash (view) ↔ ✓/✗ (edit). -->
+                  <Grid MinHeight="32">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="{Binding Display}" FontSize="13" VerticalAlignment="Center" Padding="8,0"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                               Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVis}}" />
+                    <ui:TextBox Grid.Column="0" Margin="6,2" FontSize="13" ClearButtonEnabled="False"
+                                Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"
+                                IsVisibleChanged="OnEditBoxVisible" KeyDown="OnEditBoxKeyDown" LostFocus="OnEditBoxCommit" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,4,0"
+                                Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVis}}">
+                      <Button Style="{StaticResource RowEditButton}" Click="OnEntryEdit" ToolTip="Rename in place">
+                        <ui:SymbolIcon Symbol="Edit24" FontSize="15"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                      </Button>
+                      <Button Style="{StaticResource RowDeleteButton}" Click="OnRemoveComboRow" ToolTip="Remove this combo">
+                        <ui:SymbolIcon Symbol="Delete24" FontSize="15"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                      </Button>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,4,0"
+                                Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
+                      <Button Style="{StaticResource RowAcceptButton}" Click="OnEditBoxCommit" ToolTip="Accept (Enter)">
+                        <ui:SymbolIcon Symbol="Checkmark24" FontSize="15"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                      </Button>
+                      <Button Style="{StaticResource RowDeleteButton}" PreviewMouseLeftButtonDown="OnEditCancel" ToolTip="Cancel (Esc)">
+                        <ui:SymbolIcon Symbol="Dismiss24" FontSize="15"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                      </Button>
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Border>
+
+          <TextBlock Grid.Row="3" Margin="2,14,0,4" FontSize="12"
                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                     Text="Members of the selected combo (sourced from the base dictionary):" />
-          <ctl:ChipMultiSelect x:Name="MemberChips"
-                               Items="{Binding SelectedCombo.Members, Mode=OneWay}"
-                               Suggestions="{Binding SelectedComboMemberSource}"
-                               AddHint="add member…"
-                               Changed="OnComboMembersChanged" />
-          <TextBlock FontSize="11" Margin="0,4,0,0"
-                     Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                     Text="Select a combo on the left to edit its members."
-                     Visibility="{Binding SelectedCombo, Converter={x:Static ctl:DictionaryManager.NullToVisConv}}" />
-        </StackPanel>
+                     Text="{Binding SelectedCombo.Display, StringFormat='Members of {0} — must exist in the base dictionary', FallbackValue='Select a combo above to edit its members'}" />
+
+          <Border Grid.Row="4" CornerRadius="6" Padding="8" BorderThickness="1"
+                  Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                  BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+            <Grid>
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ctl:ChipMultiSelect x:Name="MemberChips" VerticalAlignment="Top"
+                                     Items="{Binding SelectedCombo.Members, Mode=OneWay}"
+                                     Suggestions="{Binding SelectedComboMemberSource}"
+                                     AddHint="add member…"
+                                     Changed="OnComboMembersChanged" />
+              </ScrollViewer>
+              <TextBlock FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Center"
+                         Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                         Text="Select a combo above to edit its members."
+                         Visibility="{Binding SelectedCombo, Converter={x:Static ctl:DictionaryManager.NullToVisConv}}" />
+            </Grid>
+          </Border>
+        </Grid>
       </Grid>
     </Border>
 
     <!-- Status -->
-    <TextBlock Grid.Row="2" Margin="0,8,0,0" FontSize="12"
+    <TextBlock Grid.Row="1" Margin="0,8,0,0" FontSize="12"
                Text="{Binding Status}"
                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
   </Grid>

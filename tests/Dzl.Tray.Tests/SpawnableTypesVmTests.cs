@@ -126,6 +126,17 @@ public class SpawnableTypesVmTests
     }
 
     [Fact]
+    public void AddType_rejects_a_classname_with_spaces()
+    {
+        var vm = Load(out _);
+        vm.NewTypeName = "Foo Bar";
+        vm.AddType();
+
+        vm.Status.Should().StartWith("✗", "a DayZ classname cannot contain spaces");
+        vm.Types.Select(t => t.Name).Should().NotContain("Foo Bar");
+    }
+
+    [Fact]
     public void CommitRename_renames_the_selected_type_via_the_inline_box()
     {
         var vm = Load(out var cfg);

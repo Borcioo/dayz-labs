@@ -123,7 +123,7 @@ public static class EventsXml
                 new XAttribute("deletable", "0"),
                 new XAttribute("init_random", "0"),
                 new XAttribute("remove_damaged", "0")),
-            new XElement("position", "random"),
+            new XElement("position", "fixed"),
             new XElement("limit", "mixed"),
             new XElement("active", "1"),
             new XElement("children")));

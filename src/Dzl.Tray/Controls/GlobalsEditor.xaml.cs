@@ -35,12 +35,21 @@ public partial class GlobalsEditor : UserControl
         }
     }
 
-    private void OnCellEditEnding(object? sender, DataGridCellEditEndingEventArgs e)
+    // Inline rename (detail pane): Enter or the Rename button commits RenameText.
+    private void OnRenameClick(object sender, RoutedEventArgs e) => Vm?.CommitRename();
+
+    private void OnRenameKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.EditAction != DataGridEditAction.Commit) return;
-        if (e.Row.Item is not GlobalVarRowVm row) return;
-        // Defer so the binding writes back the edited value before we persist.
-        Dispatcher.BeginInvoke(new System.Action(() => Vm?.CommitRowEdit(row)),
-            System.Windows.Threading.DispatcherPriority.Background);
+        if (e.Key == Key.Enter) { Vm?.CommitRename(); e.Handled = true; }
+    }
+
+    // Detail Type combo / Value box commit → persist onto the selected var.
+    private void OnDetailTypeChanged(object sender, SelectionChangedEventArgs e) => Vm?.SaveDetail();
+
+    private void OnDetailValueLostFocus(object sender, RoutedEventArgs e) => Vm?.SaveDetail();
+
+    private void OnDetailValueKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter) { Vm?.SaveDetail(); e.Handled = true; }
     }
 }

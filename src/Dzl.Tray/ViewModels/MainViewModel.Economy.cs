@@ -97,8 +97,10 @@ public partial class MainViewModel
     public Dzl.Tray.Controls.CeDashboardVm CeDashboard =>
         _ceDashboard ??= new Dzl.Tray.Controls.CeDashboardVm(_configPath, Confirm("Economy"));
 
-    /// <summary>(Re)load the dashboard stats from disk. Called when the dashboard tab is shown.</summary>
-    public void RefreshCeDashboard() => CeDashboard.Refresh();
+    /// <summary>(Re)load the dashboard stats from disk and auto-run the full validation if the CE files
+    /// changed since the last run. Called when the dashboard tab is shown; fired-and-forgotten — the cheap
+    /// tile refresh is synchronous inside, the heavy cross-file pass runs off-thread.</summary>
+    public void RefreshCeDashboard() => _ = CeDashboard.RefreshAndValidateAsync();
 
     /// <summary>A yes/no confirmation prompt titled for the tab that raises it, so the dialog header matches
     /// where the user actually is — each CE editor passes its own title rather than a shared generic one.</summary>

@@ -73,10 +73,24 @@ public sealed class DictionaryService
         catch (Exception ex) { return (false, ex.Message); }
     }
 
+    // CE usage/value/tag/category names are bare identifiers matched literally by the engine and written
+    // as an XML attribute value — whitespace or XML-reserved chars produce a name that never resolves
+    // against a flag reference in types.xml. Reject them at the source instead of silently persisting.
+    private const string InvalidNameMsg = "name may not contain spaces or the characters < > & \" '";
+
+    private static bool IsValidName(string name)
+    {
+        foreach (var c in name)
+            if (char.IsWhiteSpace(c) || c is '<' or '>' or '&' or '"' or '\'') return false;
+        return true;
+    }
+
     /// <summary>Add a name to the given kind's list. No-op (returns false) if already present.</summary>
     public (bool ok, string msg) AddName(LimitsKind kind, string name)
     {
-        if (string.IsNullOrWhiteSpace(name)) return (false, "name must not be empty");
+        name = (name ?? "").Trim();
+        if (name.Length == 0) return (false, "name must not be empty");
+        if (!IsValidName(name)) return (false, InvalidNameMsg);
         return EditLimits(
             doc => LimitsXml.AddName(doc, kind, name),
             $"added {kind} name '{name}'",
@@ -97,7 +111,9 @@ public sealed class DictionaryService
     public (bool ok, string msg) RenameName(LimitsKind kind, string oldName, string newName)
     {
         if (string.IsNullOrWhiteSpace(oldName)) return (false, "old name must not be empty");
-        if (string.IsNullOrWhiteSpace(newName)) return (false, "new name must not be empty");
+        newName = (newName ?? "").Trim();
+        if (newName.Length == 0) return (false, "new name must not be empty");
+        if (!IsValidName(newName)) return (false, InvalidNameMsg);
         return EditLimits(
             doc => LimitsXml.RenameName(doc, kind, oldName, newName),
             $"renamed {kind} name '{oldName}' → '{newName}'",
@@ -157,6 +173,19 @@ public sealed class DictionaryService
             doc => LimitsUserXml.RemoveGroup(doc, kind, name),
             $"removed {kind} group '{name}'",
             $"{kind} group '{name}' not found");
+    }
+
+    /// <summary>Rename a user group in place (preserves members). Rejects whitespace/XML-unsafe names.</summary>
+    public (bool ok, string msg) RenameGroup(LimitsKind kind, string oldName, string newName)
+    {
+        if (string.IsNullOrWhiteSpace(oldName)) return (false, "group name must not be empty");
+        newName = (newName ?? "").Trim();
+        if (newName.Length == 0) return (false, "new name must not be empty");
+        if (!IsValidName(newName)) return (false, InvalidNameMsg);
+        return EditLimitsUser(
+            doc => LimitsUserXml.RenameGroup(doc, kind, oldName, newName),
+            $"renamed {kind} combo '{oldName}' → '{newName}'",
+            $"rename failed: '{oldName}' not found or '{newName}' already exists");
     }
 
     /// <summary>Set (replace) the member list of an existing group, or create it if absent.</summary>

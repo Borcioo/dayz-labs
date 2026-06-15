@@ -42,6 +42,9 @@
                    TextTrimming="CharacterEllipsis" MaxWidth="640" />
       </StackPanel>
       <StackPanel Grid.Column="1" Orientation="Horizontal">
+        <ui:Button Content="Disable unused" Icon="{ui:SymbolIcon Broom24}" Margin="0,0,6,0"
+                   Click="OnDisableUnusedClick"
+                   ToolTip="Comment out every preset no spawnabletype references (kept, re-enableable per row)" />
         <ui:Button Content="Reload" Margin="0,0,6,0" Click="OnReloadClick"
                    ToolTip="Re-read cfgrandompresets.xml from disk (discards the undo history)" />
         <ui:Button Margin="0,0,6,0" Command="{Binding UndoCommand}" ToolTip="Undo the last edit">
@@ -97,6 +100,7 @@
           <DataGrid Grid.Row="2" x:Name="PresetGrid"
                     ItemsSource="{Binding Presets}"
                     SelectedItem="{Binding SelectedPreset, Mode=TwoWay}"
+                    SelectionChanged="OnPresetSelectionChanged"
                     AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                     HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                     IsReadOnly="False" SelectionMode="Single"
@@ -175,10 +179,12 @@
             <ui:TextBox Grid.Column="0" Margin="0,0,4,0" FontSize="12" PlaceholderText="new preset name"
                         Text="{Binding NewPresetName, UpdateSourceTrigger=PropertyChanged}" />
             <ctl:ChanceField Grid.Column="1" Margin="0,0,4,0" VerticalAlignment="Stretch" MinHeight="32"
+                             ToolTip="Probability (0..1) this whole preset is rolled for a spawn."
                              Value="{Binding NewPresetChanceValue, Mode=TwoWay}" />
             <ComboBox Grid.Column="2" MinWidth="110" Margin="0,0,4,0" VerticalAlignment="Center"
                       SelectedIndex="0"
-                      SelectionChanged="OnNewKindChanged" ToolTip="preset kind"
+                      SelectionChanged="OnNewKindChanged"
+                      ToolTip="cargo = items placed inside the container; attachments = items slotted onto the item"
                       x:Name="NewKindCombo">
               <ComboBoxItem Content="cargo" />
               <ComboBoxItem Content="attachments" />
@@ -220,9 +226,11 @@
                             Text="{Binding EditName, UpdateSourceTrigger=PropertyChanged}"
                             KeyDown="OnEditNameKeyDown" />
                 <ctl:ChanceField Grid.Column="1" Margin="0,0,4,0" VerticalAlignment="Stretch" MinHeight="32"
+                                 ToolTip="Probability (0..1) this whole preset is rolled for a spawn."
                                  Value="{Binding EditChanceValue, Mode=TwoWay}" />
                 <ComboBox Grid.Column="2" MinWidth="120" Margin="0,0,4,0" VerticalAlignment="Center"
-                          SelectedIndex="{Binding EditKindIndex}" ToolTip="preset kind (cargo / attachments)">
+                          SelectedIndex="{Binding EditKindIndex}"
+                          ToolTip="cargo = items placed inside the container; attachments = items slotted onto the item">
                   <ComboBoxItem Content="cargo" />
                   <ComboBoxItem Content="attachments" />
                 </ComboBox>
@@ -284,6 +292,7 @@
                                 Placeholder="search item classname (e.g. TunaCan)"
                                 Submitted="OnItemSubmitted" />
             <ctl:ChanceField Grid.Column="1" Margin="0,0,4,0" VerticalAlignment="Stretch" MinHeight="32"
+                             ToolTip="Probability (0..1) this item is included when the preset is rolled."
                              Value="{Binding NewItemChanceValue, Mode=TwoWay}" />
             <ui:Button Grid.Column="2" Content="Add item" Click="OnAddItemClick" />
           </Grid>

@@ -25,20 +25,22 @@ public partial class EventsEditor : UserControl
         if (e.Key == Key.Enter) { Vm?.AddEvent(); e.Handled = true; }
     }
 
-    private void OnRemoveEventClick(object sender, RoutedEventArgs e) => Vm?.RemoveSelectedEvent();
-
-    private void OnRenameEventClick(object sender, RoutedEventArgs e)
+    // Per-row remove: select that row, then reuse the confirm+remove flow.
+    private void OnRowRemoveClick(object sender, RoutedEventArgs e)
     {
-        if (Vm is not { } vm || vm.SelectedEvent is not { } row)
+        if (Vm is { } vm && sender is FrameworkElement { DataContext: EventRowVm row })
         {
-            if (Vm is { } v) v.Status = "✗ select an event to rename";
-            return;
+            vm.SelectedEvent = row;
+            vm.RemoveSelectedEvent();
         }
-        var owner = Window.GetWindow(this);
-        if (owner is null) return;
-        var next = PromptDialog.Show(owner, "Rename event", $"Rename \"{row.Name}\" to:", row.Name);
-        if (string.IsNullOrWhiteSpace(next)) return;
-        vm.RenameSelectedEvent(next.Trim());
+    }
+
+    // Inline rename (detail pane): Enter or the Rename button commits RenameText.
+    private void OnRenameClick(object sender, RoutedEventArgs e) => Vm?.CommitRename();
+
+    private void OnRenameKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter) { Vm?.CommitRename(); e.Handled = true; }
     }
 
     // Scalar fields persist on LostFocus, keyed by the field name stored in each control's Tag.

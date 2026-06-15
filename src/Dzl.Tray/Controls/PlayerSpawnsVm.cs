@@ -170,6 +170,9 @@ public sealed partial class PlayerSpawnsVm : RawXmlEditorVm
         if (_suspendPersist || SelectedCategory is not { } cat) return;
         var newName = (param.Name ?? "").Trim();
         if (newName.Length == 0) { Status = "✗ param name must not be empty"; return; }
+        // Player-spawn params are numeric (distances, counts, tries, radii…); reject non-numeric so a typo
+        // isn't written to cfgplayerspawnpoints.xml (there is no lint rule for this file to catch it later).
+        if (!TryDouble(param.Value, out _)) { Status = "✗ value must be a number"; LoadCategoryDetail(); return; }
         PushUndo();
         // A param's key IS its element name, so a rename must move the element (not upsert under the new
         // name, which would leave the old one orphaned). Route it through RenameParam first, like Globals.
@@ -199,6 +202,7 @@ public sealed partial class PlayerSpawnsVm : RawXmlEditorVm
         // overwriting an existing param's value (consistent with AddPreset/AddGroup rejecting duplicates).
         if (SectionRows(section).Any(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
         { Status = $"✗ param \"{name}\" already exists in {section}"; return; }
+        if (!TryDouble(value, out _)) { Status = "✗ value must be a number"; return; }
         PushUndo();
         if (Report(_svc.SetParam(cat, section, name, value ?? ""))) LoadCategoryDetail();
     }

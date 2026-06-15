@@ -85,7 +85,8 @@
           <!-- Numeric fields: Slider + validated TextBox pairs.
                Soft-capped sliders (0-100) for nominal/min/cost; the TextBox accepts higher values.
                lifetime/restock are large → wide slider with a high cap + free TextBox. -->
-          <TextBlock Text="Nominal" Style="{StaticResource DetailLabel}" />
+          <TextBlock Text="Nominal" Style="{StaticResource DetailLabel}"
+                     ToolTip="Target number of this item the economy keeps spawned in the world." />
           <Grid Margin="0,0,0,10">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <Slider Grid.Column="0" Minimum="0" Maximum="100" VerticalAlignment="Center" Margin="0,0,8,0"
@@ -93,7 +94,7 @@
                     Value="{Binding Nominal, Mode=TwoWay}"
                     PreviewMouseLeftButtonDown="OnSliderPreviewMouse"
                     Thumb.DragCompleted="OnSliderCommit" LostMouseCapture="OnSliderCommit" />
-            <TextBox Grid.Column="1" Style="{StaticResource NumBox}"
+            <TextBox Grid.Column="1" Style="{StaticResource NumBox}" ctl:NumericBehavior.IntegerOnly="True"
                      GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit">
               <TextBox.Text>
                 <Binding Path="Nominal" UpdateSourceTrigger="LostFocus">
@@ -103,7 +104,8 @@
             </TextBox>
           </Grid>
 
-          <TextBlock Text="Min" Style="{StaticResource DetailLabel}" />
+          <TextBlock Text="Min" Style="{StaticResource DetailLabel}"
+                     ToolTip="Restock floor — when the live count drops to this, the economy refills back toward Nominal. Must be ≤ Nominal." />
           <Grid Margin="0,0,0,10">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <Slider Grid.Column="0" Minimum="0" Maximum="100" VerticalAlignment="Center" Margin="0,0,8,0"
@@ -111,7 +113,7 @@
                     Value="{Binding Min, Mode=TwoWay}"
                     PreviewMouseLeftButtonDown="OnSliderPreviewMouse"
                     Thumb.DragCompleted="OnSliderCommit" LostMouseCapture="OnSliderCommit" />
-            <TextBox Grid.Column="1" Style="{StaticResource NumBox}"
+            <TextBox Grid.Column="1" Style="{StaticResource NumBox}" ctl:NumericBehavior.IntegerOnly="True"
                      GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit">
               <TextBox.Text>
                 <Binding Path="Min" UpdateSourceTrigger="LostFocus">
@@ -124,7 +126,8 @@
           <!-- QuantMin / QuantMax: -1 means "not set" → allow negative; numeric TextBox (+ slider 0-100). -->
           <UniformGrid Columns="2">
             <StackPanel Margin="0,0,6,10">
-              <TextBlock Text="QuantMin" Style="{StaticResource DetailLabel}" />
+              <TextBlock Text="QuantMin" Style="{StaticResource DetailLabel}"
+                         ToolTip="Per-spawn quantity floor (e.g. ammo in a found magazine). -1 = not set (item spawns at full quantity)." />
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                 <Slider Grid.Column="0" Minimum="-1" Maximum="100" VerticalAlignment="Center" Margin="0,0,6,0"
@@ -143,7 +146,8 @@
               </Grid>
             </StackPanel>
             <StackPanel Margin="0,0,0,10">
-              <TextBlock Text="QuantMax" Style="{StaticResource DetailLabel}" />
+              <TextBlock Text="QuantMax" Style="{StaticResource DetailLabel}"
+                         ToolTip="Per-spawn quantity ceiling. -1 = not set (item spawns at full quantity)." />
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                 <Slider Grid.Column="0" Minimum="-1" Maximum="100" VerticalAlignment="Center" Margin="0,0,6,0"
@@ -164,7 +168,8 @@
           </UniformGrid>
 
           <!-- Cost: 0-100 soft-cap slider + TextBox -->
-          <TextBlock Text="Cost" Style="{StaticResource DetailLabel}" />
+          <TextBlock Text="Cost" Style="{StaticResource DetailLabel}"
+                     ToolTip="Relative spawn-priority weight, conventionally 0–100 (default 100). It is a weight, NOT an absolute count." />
           <Grid Margin="0,0,0,10">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <Slider Grid.Column="0" Minimum="0" Maximum="100" VerticalAlignment="Center" Margin="0,0,8,0"
@@ -172,7 +177,7 @@
                     Value="{Binding Cost, Mode=TwoWay}"
                     PreviewMouseLeftButtonDown="OnSliderPreviewMouse"
                     Thumb.DragCompleted="OnSliderCommit" LostMouseCapture="OnSliderCommit" />
-            <TextBox Grid.Column="1" Style="{StaticResource NumBox}"
+            <TextBox Grid.Column="1" Style="{StaticResource NumBox}" ctl:NumericBehavior.IntegerOnly="True"
                      GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit">
               <TextBox.Text>
                 <Binding Path="Cost" UpdateSourceTrigger="LostFocus">
@@ -191,7 +196,7 @@
                     Value="{Binding Lifetime, Mode=TwoWay}"
                     PreviewMouseLeftButtonDown="OnSliderPreviewMouse"
                     Thumb.DragCompleted="OnSliderCommit" LostMouseCapture="OnSliderCommit" />
-            <TextBox Grid.Column="1" Style="{StaticResource NumBox}" Width="90"
+            <TextBox Grid.Column="1" Style="{StaticResource NumBox}" Width="90" ctl:NumericBehavior.IntegerOnly="True"
                      GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit">
               <TextBox.Text>
                 <Binding Path="Lifetime" UpdateSourceTrigger="LostFocus">
@@ -209,7 +214,7 @@
                     Value="{Binding Restock, Mode=TwoWay}"
                     PreviewMouseLeftButtonDown="OnSliderPreviewMouse"
                     Thumb.DragCompleted="OnSliderCommit" LostMouseCapture="OnSliderCommit" />
-            <TextBox Grid.Column="1" Style="{StaticResource NumBox}" Width="90"
+            <TextBox Grid.Column="1" Style="{StaticResource NumBox}" Width="90" ctl:NumericBehavior.IntegerOnly="True"
                      GotKeyboardFocus="OnFieldFocus" LostFocus="OnFieldCommit">
               <TextBox.Text>
                 <Binding Path="Restock" UpdateSourceTrigger="LostFocus">

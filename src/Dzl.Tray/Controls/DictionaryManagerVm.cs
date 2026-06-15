@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Dzl.Core.App;
 using Dzl.Core.Economy;
 
@@ -43,6 +44,7 @@ public sealed partial class DictionaryManagerVm : ObservableObject
         Usage = MakeList(LimitsKind.Usage, "Usage flags", "add usage…");
         Value = MakeList(LimitsKind.Value, "Value (tiers)", "add tier…");
         Lists = new[] { Categories, Tags, Usage, Value };
+        _selectedList = Categories;   // dashboard master-detail: one section active at a time
     }
 
     public DictionaryListVm Categories { get; }
@@ -50,6 +52,23 @@ public sealed partial class DictionaryManagerVm : ObservableObject
     public DictionaryListVm Usage { get; }
     public DictionaryListVm Value { get; }
     public IReadOnlyList<DictionaryListVm> Lists { get; }
+
+    // Nav-rail selection: either one base list is active (SelectedList) OR the combos section (CombosSelected).
+    [ObservableProperty] private DictionaryListVm? _selectedList;
+    [ObservableProperty] private bool _combosSelected;
+
+    partial void OnSelectedListChanged(DictionaryListVm? value)
+    {
+        if (value is not null) CombosSelected = false;   // picking a base list leaves the combos view
+    }
+
+    /// <summary>Switch the detail pane to the Named-combos editor (deselects the base-list rail).</summary>
+    [RelayCommand]
+    private void ShowCombos()
+    {
+        CombosSelected = true;
+        SelectedList = null;
+    }
 
     private DictionaryListVm MakeList(LimitsKind kind, string title, string hint)
     {
@@ -159,6 +178,10 @@ public sealed partial class DictionaryManagerVm : ObservableObject
         var name = (NewComboName ?? "").Trim();
         if (name.Length == 0) { Status = "✗ combo name must not be empty"; return; }
         var kind = NewComboIsUsage ? LimitsKind.Usage : LimitsKind.Value;
+        // AddGroup silently REPLACES a same-name group of the same kind (wiping its members); reject the
+        // collision here so an accidental re-add doesn't blow away an existing combo's contents.
+        if (Combos.Any(c => c.Kind == kind && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)))
+        { Status = $"✗ a {kind} combo named \"{name}\" already exists"; return; }
         var (ok, msg) = _svc.AddGroup(kind, name, Array.Empty<string>());
         Status = (ok ? "✓ " : "✗ ") + msg;
         if (ok)
@@ -185,23 +208,70 @@ public sealed partial class DictionaryManagerVm : ObservableObject
         if (SelectedCombo is not { } c) return;
         var (ok, msg) = _svc.SetGroupMembers(c.Kind, c.Name, c.Members.ToList());
         Status = (ok ? "✓ " : "✗ ") + msg;
-        if (ok) _onDictionaryChanged();
+        if (!ok) return;
+        _onDictionaryChanged();
+        // Warn (don't block) when a member isn't in the base list — the lint rule that catches this is
+        // skipped entirely when the base file is empty, so this is the only feedback in that case.
+        var src = SelectedComboMemberSource;
+        if (src.Count == 0) return;
+        var unknown = c.Members.Where(m => !src.Contains(m, StringComparer.OrdinalIgnoreCase)).ToList();
+        if (unknown.Count > 0)
+            Status = $"⚠ saved — {string.Join(", ", unknown)} not in the base {c.Kind} list; the game can't resolve them";
+    }
+
+    /// <summary>Enter in-place rename on a combo (pencil / double-click).</summary>
+    public void BeginEditCombo(ComboVm c)
+    {
+        SelectedCombo = c;
+        c.IsEditing = true;
+    }
+
+    /// <summary>Commit an in-place combo rename: revert on empty/unchanged, else rename the group + reload.</summary>
+    public void CommitComboEdit(ComboVm c)
+    {
+        if (!c.IsEditing) return;
+        c.IsEditing = false;
+        var newName = (c.Name ?? "").Trim();
+        if (newName.Length == 0 || string.Equals(newName, c.OriginalName, StringComparison.Ordinal))
+        {
+            c.Name = c.OriginalName;
+            return;
+        }
+        var (ok, msg) = _svc.RenameGroup(c.Kind, c.OriginalName, newName);
+        Status = (ok ? "✓ " : "✗ ") + msg;
+        if (ok) { ReloadCombos(); _onDictionaryChanged(); }
+        else c.Name = c.OriginalName;
+    }
+
+    /// <summary>Abandon an in-place combo rename (Esc / ✗) — restore the persisted name.</summary>
+    public void CancelComboEdit(ComboVm c)
+    {
+        c.Name = c.OriginalName;
+        c.IsEditing = false;
     }
 }
 
-/// <summary>One named combo (cfglimitsdefinitionuser.xml group) with an editable member list.</summary>
-public sealed class ComboVm
+/// <summary>One named combo (cfglimitsdefinitionuser.xml group) with an editable member list + an in-place
+/// rename state (<see cref="IsEditing"/>), matching the base-dictionary entry rows.</summary>
+public sealed partial class ComboVm : ObservableObject
 {
     public ComboVm(LimitsKind kind, string name, System.Collections.Generic.IReadOnlyList<string> members)
     {
         Kind = kind;
-        Name = name;
+        _name = name;
+        OriginalName = name;
         foreach (var m in members) Members.Add(m);
     }
 
     public LimitsKind Kind { get; }
-    public string Name { get; }
+    /// <summary>The name as last persisted (the rename source key).</summary>
+    public string OriginalName { get; }
     public string KindLabel => Kind == LimitsKind.Value ? "value" : "usage";
     public ObservableCollection<string> Members { get; } = new();
+
+    [ObservableProperty] private string _name;
+    [ObservableProperty] private bool _isEditing;
+
     public string Display => $"{Name}  ({KindLabel})";
+    partial void OnNameChanged(string value) => OnPropertyChanged(nameof(Display));
 }

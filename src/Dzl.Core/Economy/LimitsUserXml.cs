@@ -147,6 +147,22 @@ public static class LimitsUserXml
         return true;
     }
 
+    /// <summary>Rename a user group in place (preserves its members + position). Returns false if the group
+    /// doesn't exist, or a group with the new name already exists in the same section.</summary>
+    public static bool RenameGroup(XDocument doc, LimitsKind kind, string oldName, string newName)
+    {
+        var (containerName, _, _) = SectionFor(kind);
+        var userLists = FindUserLists(doc);
+        var section = userLists?.Element(containerName);
+        if (section is null) return false;
+        var el = section.Elements("user").ByName(oldName);
+        if (el is null) return false;
+        if (!string.Equals(oldName, newName, StringComparison.OrdinalIgnoreCase)
+            && section.Elements("user").ByName(newName) is not null) return false;
+        el.SetAttributeValue("name", newName.Trim());
+        return true;
+    }
+
     /// <summary>Replace the member list of an existing group in place (preserves position / comments).
     /// If the group does not exist it is created. Returns true if the group already existed (update),
     /// false if it was newly created.</summary>

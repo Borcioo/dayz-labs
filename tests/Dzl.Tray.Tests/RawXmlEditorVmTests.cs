@@ -35,6 +35,11 @@ public class RawXmlEditorVmTests
         public void Edit(string newRaw) { PushUndo(); _store.Raw = newRaw; }
 
         protected override void ReloadView() => ReloadViewCount++;
+
+        /// <summary>Stand-in for "the selected row" so the selection-token hooks can be exercised.</summary>
+        public string? Selected { get; set; }
+        protected override string? CaptureSelectionToken() => Selected;
+        protected override void RestoreSelectionToken(string? token) => Selected = token;
     }
 
     [Fact]
@@ -54,6 +59,20 @@ public class RawXmlEditorVmTests
         e.RedoCommand.Execute(null);
         e.Current.Should().Be("v1");
         e.CanRedo.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Undo_and_redo_restore_the_selection_captured_around_the_edit()
+    {
+        var e = new FakeEditor("v0") { Selected = "rowA" };
+        e.Edit("v1");            // PushUndo captures Selected = "rowA"
+        e.Selected = "rowB";     // the action moved the selection (e.g. a rename re-sorted the list)
+
+        e.UndoCommand.Execute(null);
+        e.Selected.Should().Be("rowA", "undo reselects what was selected before the edited action");
+
+        e.RedoCommand.Execute(null);
+        e.Selected.Should().Be("rowB", "redo restores the post-edit selection");
     }
 
     [Fact]

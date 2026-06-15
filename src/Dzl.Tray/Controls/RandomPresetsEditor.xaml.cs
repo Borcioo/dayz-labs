@@ -19,6 +19,8 @@ public partial class RandomPresetsEditor : UserControl
 
     private void OnReloadClick(object sender, RoutedEventArgs e) => Vm?.Reload();
 
+    private void OnDisableUnusedClick(object sender, RoutedEventArgs e) => Vm?.DisableUnusedPresets();
+
     private void OnNewKindChanged(object sender, SelectionChangedEventArgs e)
     {
         // Index 0 = cargo, 1 = attachments.
@@ -62,6 +64,16 @@ public partial class RandomPresetsEditor : UserControl
 
     // The reusable AutoSuggestBox raised Submitted (Enter) — add the item.
     private void OnItemSubmitted(object? sender, System.EventArgs e) => Vm?.AddItem();
+
+    // Keep the selected preset scrolled into view: after a rename re-sorts the list the row can jump far
+    // (e.g. to the end), and a DataGrid does not auto-scroll to a programmatically-set SelectedItem. Defer so
+    // the scroll runs after the collection rebuild + layout settle.
+    private void OnPresetSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (PresetGrid.SelectedItem is not { } item) return;
+        Dispatcher.BeginInvoke(new System.Action(() => PresetGrid.ScrollIntoView(item)),
+            System.Windows.Threading.DispatcherPriority.Background);
+    }
 
     private void OnRemoveItemClick(object sender, RoutedEventArgs e)
     {

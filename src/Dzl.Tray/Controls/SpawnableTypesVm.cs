@@ -281,6 +281,7 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
     {
         var name = (NewTypeName ?? "").Trim();
         if (name.Length == 0) { Status = "✗ type name must not be empty"; return; }
+        if (name.Any(char.IsWhiteSpace)) { Status = "✗ classname cannot contain spaces"; return; }
 
         PushUndo();
         if (Report(_svc.AddType(name)))
@@ -350,7 +351,19 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
         if (preset.Length == 0) { Status = "✗ pick a preset"; return; }
         PushUndo();
         if (Report(_svc.AddBlock(row.Name, isAttachments, preset: preset, chance: null)))
+        {
             AfterBlockChange(row, isAttachments);
+            WarnIfUnknownPreset(isAttachments, preset);
+        }
+    }
+
+    // Non-blocking: warn when a preset name isn't (yet) defined in cfgrandompresets. Free text is allowed
+    // (the block is still written), but a dangling reference spawns nothing until the preset exists.
+    private void WarnIfUnknownPreset(bool isAttachments, string preset)
+    {
+        var pool = isAttachments ? AttachmentsPresetNames : CargoPresetNames;
+        if (pool.Count > 0 && !pool.Contains(preset, StringComparer.OrdinalIgnoreCase))
+            Status = $"⚠ preset \"{preset}\" not found in cfgrandompresets — the block will spawn nothing until it exists";
     }
 
     public void RemoveBlock(SpawnBlockVm? block)
@@ -369,7 +382,10 @@ public sealed partial class SpawnableTypesVm : RawXmlEditorVm
         if (preset.Length == 0) { Status = "✗ pick a preset"; return; }
         PushUndo();
         if (Report(_svc.SetBlockPreset(row.Name, block.IsAttachments, block.Index, preset)))
+        {
             AfterBlockChange(row, block.IsAttachments);
+            WarnIfUnknownPreset(block.IsAttachments, preset);
+        }
     }
 
     /// <summary>Switch a block to chance-based with the given chance.</summary>

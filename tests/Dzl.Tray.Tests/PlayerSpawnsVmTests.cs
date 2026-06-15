@@ -72,6 +72,26 @@ public class PlayerSpawnsVmTests
     }
 
     [Fact]
+    public void AddParam_rejects_a_non_numeric_value()
+    {
+        var vm = Load(out var cfg);
+        vm.AddParam("spawn_params", "tries", "abc");
+
+        vm.Status.Should().StartWith("✗", "player-spawn param values are numeric");
+        Reloaded(cfg).SpawnParams.Select(p => p.Name).Should().NotContain("tries");
+    }
+
+    [Fact]
+    public void AddParam_accepts_a_numeric_value()
+    {
+        var vm = Load(out var cfg);
+        vm.AddParam("spawn_params", "tries", "3");
+
+        var reloaded = Reloaded(cfg);
+        reloaded.SpawnParams.Select(p => p.Name).Should().Contain("tries");
+    }
+
+    [Fact]
     public void AddPos_appends_a_position_to_the_selected_group()
     {
         var vm = Load(out var cfg);

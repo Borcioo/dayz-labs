@@ -222,6 +222,13 @@
                         SelectionChanged="OnTypesSelectionChanged"
                         GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                         BeginningEdit="OnTypesBeginEdit" CellEditEnding="OnTypesCellEditEnding">
+                <DataGrid.Resources>
+                  <!-- In-place editor for the non-negative integer columns: block non-digit keystrokes so a
+                       typo doesn't silently revert the cell (the detail panel guards the same fields). -->
+                  <Style x:Key="IntCellEdit" TargetType="TextBox">
+                    <Setter Property="ctl:NumericBehavior.IntegerOnly" Value="True" />
+                  </Style>
+                </DataGrid.Resources>
                 <DataGrid.Columns>
                   <!-- Checkbox selection (batch target) + header select-all over the filtered set.
                        Fixed width with the cell padding zeroed for this column so the (centered) checkbox is
@@ -306,13 +313,13 @@
                     </DataGridTemplateColumn.CellTemplate>
                   </DataGridTemplateColumn>
                   <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="Auto" IsReadOnly="True" />
-                  <DataGridTextColumn Header="Nominal" Binding="{Binding Nominal}" Width="Auto" />
-                  <DataGridTextColumn Header="Min" Binding="{Binding Min}" Width="Auto" />
+                  <DataGridTextColumn Header="Nominal" Binding="{Binding Nominal}" Width="Auto" EditingElementStyle="{StaticResource IntCellEdit}" />
+                  <DataGridTextColumn Header="Min" Binding="{Binding Min}" Width="Auto" EditingElementStyle="{StaticResource IntCellEdit}" />
                   <DataGridTextColumn Header="QMin" Binding="{Binding QuantMin}" Width="Auto" />
                   <DataGridTextColumn Header="QMax" Binding="{Binding QuantMax}" Width="Auto" />
-                  <DataGridTextColumn Header="Lifetime" Binding="{Binding Lifetime}" Width="Auto" />
-                  <DataGridTextColumn Header="Restock" Binding="{Binding Restock}" Width="Auto" />
-                  <DataGridTextColumn Header="Cost" Binding="{Binding Cost}" Width="Auto" />
+                  <DataGridTextColumn Header="Lifetime" Binding="{Binding Lifetime}" Width="Auto" EditingElementStyle="{StaticResource IntCellEdit}" />
+                  <DataGridTextColumn Header="Restock" Binding="{Binding Restock}" Width="Auto" EditingElementStyle="{StaticResource IntCellEdit}" />
+                  <DataGridTextColumn Header="Cost" Binding="{Binding Cost}" Width="Auto" EditingElementStyle="{StaticResource IntCellEdit}" />
                   <!-- Compact flags: active letters highlighted (C H M P · Cr De) -->
                   <DataGridTemplateColumn Header="Flags" Width="Auto" MinWidth="96" IsReadOnly="True" CanUserSort="False">
                     <DataGridTemplateColumn.CellTemplate>

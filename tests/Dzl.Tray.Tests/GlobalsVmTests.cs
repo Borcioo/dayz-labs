@@ -2,7 +2,8 @@ using Dzl.Tray.Controls;
 using FluentAssertions;
 
 /// <summary>Tests for <see cref="GlobalsVm"/> (Economy "Globals" tab) beyond the AddVar duplicate guard
-/// (in TrayCeViewModelTests): load/filter, inline rename via CommitRowEdit, value edit, and remove.</summary>
+/// (in TrayCeViewModelTests): load/filter, detail-pane rename (CommitRename) + value/type edit (SaveDetail),
+/// and remove.</summary>
 public class GlobalsVmTests
 {
     private const string Fixture = """
@@ -38,28 +39,70 @@ public class GlobalsVmTests
     }
 
     [Fact]
-    public void CommitRowEdit_renames_in_place()
+    public void CommitRename_renames_the_selected_var_via_the_detail_box()
     {
         var vm = Load(out var cfg);
-        var row = vm.Rows.Single(r => r.Name == "AnimalMaxCount");
+        vm.SelectedRow = vm.Rows.Single(r => r.Name == "AnimalMaxCount");
 
-        row.Name = "AnimalCountMax";   // inline rename in the grid
-        vm.CommitRowEdit(row);
+        vm.RenameText = "AnimalCountMax";   // detail-pane rename box
+        vm.CommitRename();
 
         var reloaded = Reloaded(cfg);
         reloaded.Rows.Select(r => r.Name).Should().Contain("AnimalCountMax").And.NotContain("AnimalMaxCount");
     }
 
     [Fact]
-    public void CommitRowEdit_persists_a_value_change()
+    public void SaveDetail_persists_a_value_and_type_change()
     {
         var vm = Load(out var cfg);
-        var row = vm.Rows.Single(r => r.Name == "ZombieMaxCount");
+        vm.SelectedRow = vm.Rows.Single(r => r.Name == "ZombieMaxCount");
 
-        row.Value = "500";
-        vm.CommitRowEdit(row);
+        vm.DetailValue = "500";
+        vm.DetailType = 1;     // float
+        vm.SaveDetail();
 
-        Reloaded(cfg).Rows.Single(r => r.Name == "ZombieMaxCount").Value.Should().Be("500");
+        var saved = Reloaded(cfg).Rows.Single(r => r.Name == "ZombieMaxCount");
+        saved.Value.Should().Be("500");
+        saved.Type.Should().Be(1);
+    }
+
+    [Fact]
+    public void SaveDetail_rejects_a_non_numeric_value()
+    {
+        var vm = Load(out var cfg);
+        vm.SelectedRow = vm.Rows.Single(r => r.Name == "AnimalMaxCount");
+
+        vm.DetailValue = "potato";
+        vm.SaveDetail();
+
+        vm.Status.Should().StartWith("✗");
+        Reloaded(cfg).Rows.Single(r => r.Name == "AnimalMaxCount").Value
+            .Should().Be("100", "the non-numeric value must not be persisted");
+    }
+
+    [Fact]
+    public void SaveDetail_rejects_a_decimal_for_an_int_typed_var()
+    {
+        var vm = Load(out _);
+        vm.SelectedRow = vm.Rows.Single(r => r.Name == "AnimalMaxCount");   // type 0 = int
+
+        vm.DetailValue = "1.5";
+        vm.SaveDetail();
+
+        vm.Status.Should().StartWith("✗", "a decimal is invalid for an int-typed global");
+    }
+
+    [Fact]
+    public void AddVar_rejects_a_non_numeric_value()
+    {
+        var vm = Load(out var cfg);
+        vm.NewVarName = "NewVar";
+        vm.NewVarType = 1;          // float
+        vm.NewVarValue = "abc";
+        vm.AddVar();
+
+        vm.Status.Should().StartWith("✗");
+        Reloaded(cfg).Rows.Select(r => r.Name).Should().NotContain("NewVar");
     }
 
     [Fact]

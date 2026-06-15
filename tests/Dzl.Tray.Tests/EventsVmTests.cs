@@ -101,4 +101,81 @@ public class EventsVmTests
         reloaded.SelectedEvent = reloaded.Events.Single(e => e.Name == "AmbientA");
         reloaded.Children.Select(c => c.Type).Should().Contain("Animal_Wolf");
     }
+
+    [Fact]
+    public void SaveScalar_warns_when_min_exceeds_max()
+    {
+        var vm = Load(out _);
+        vm.SelectedEvent = vm.Events.Single(e => e.Name == "AmbientA");
+
+        vm.DetailMax = "2"; vm.SaveScalar("max", "2");
+        vm.DetailMin = "9"; vm.SaveScalar("min", "9");
+
+        vm.Status.Should().StartWith("⚠", "min > max is surfaced live, matching the validator");
+    }
+
+    [Fact]
+    public void Selecting_syncs_the_inline_rename_box_and_HasSelection()
+    {
+        var vm = Load(out _);
+        vm.SelectedEvent = vm.Events.Single(e => e.Name == "AmbientA");
+        vm.HasSelection.Should().BeTrue();
+        vm.RenameText.Should().Be("AmbientA", "the inline-rename box mirrors the selected event's name");
+    }
+
+    [Fact]
+    public void CommitRename_renames_via_the_inline_box_and_keeps_the_selection()
+    {
+        var vm = Load(out var cfg);
+        vm.SelectedEvent = vm.Events.Single(e => e.Name == "AmbientA");
+
+        vm.RenameText = "AmbientA_renamed";
+        vm.CommitRename();
+
+        Reloaded(cfg).Events.Select(e => e.Name).Should().Contain("AmbientA_renamed").And.NotContain("AmbientA");
+        vm.SelectedEvent!.Name.Should().Be("AmbientA_renamed");
+    }
+
+    [Fact]
+    public void CommitRename_is_a_noop_when_the_name_is_unchanged()
+    {
+        var vm = Load(out var cfg);
+        vm.SelectedEvent = vm.Events.Single(e => e.Name == "AmbientB");
+
+        vm.CommitRename();   // RenameText still "AmbientB" — nothing to do
+
+        Reloaded(cfg).Events.Select(e => e.Name).Should().BeEquivalentTo("AmbientA", "AmbientB");
+    }
+
+    [Fact]
+    public void AddEvent_seeds_a_position_that_matches_the_editor_combo()
+    {
+        var vm = Load(out _);
+        vm.NewEventName = "NewEv";
+        vm.AddEvent();
+
+        vm.SelectedEvent!.Name.Should().Be("NewEv");
+        // The Position combo offers only fixed/player; the seeded default must be one of them (was "random").
+        vm.DetailPosition.Should().BeOneOf("fixed", "player");
+    }
+
+    [Fact]
+    public void Master_row_exposes_every_flag_for_the_compact_flag_column()
+    {
+        const string xml = """
+            <events>
+              <event name="WithFlags"><nominal>1</nominal><active>1</active>
+                <flags deletable="1" init_random="0" remove_damaged="1" /></event>
+            </events>
+            """;
+        var cfg = CeScaffold.Mission(("db/events.xml", xml));
+        var vm = new EventsVm(cfg, _ => true);
+        vm.Reload();
+
+        var row = vm.Events.Single(e => e.Name == "WithFlags");
+        row.Active.Should().BeTrue();
+        row.Deletable.Should().BeTrue();
+        row.InitRandom.Should().BeFalse();
+        row.RemoveDamaged.Should().BeTrue();
+    }
 }

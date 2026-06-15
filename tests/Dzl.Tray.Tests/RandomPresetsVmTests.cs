@@ -144,6 +144,21 @@ public class RandomPresetsVmTests
     }
 
     [Fact]
+    public void Undo_of_a_rename_reselects_the_preset_not_the_first_row()
+    {
+        var vm = Load(out _);   // foodHermit (cargo), optics (attachments)
+        vm.SelectedPreset = vm.Presets.Single(p => p.Name == "optics");
+
+        vm.EditName = "zzzOptics";   // would re-sort to the end of the list
+        vm.ApplyEdits();
+        vm.SelectedPreset!.Name.Should().Be("zzzOptics");
+
+        vm.UndoCommand.Execute(null);
+        vm.SelectedPreset!.Name.Should().Be("optics",
+            "undo reselects the renamed-back preset via its selection token, not the first row");
+    }
+
+    [Fact]
     public void TypeNames_pool_is_loaded_for_classname_autocomplete()
     {
         // The VM exposes the full classname pool; the reusable AutoSuggestBox does the filtering (covered by
@@ -163,5 +178,36 @@ public class RandomPresetsVmTests
 
         vm.Filter.Should().BeEmpty("SelectByEntry unfilters so the target row is visible");
         vm.SelectedPreset!.Name.Should().Be("optics");
+    }
+
+    [Fact]
+    public void DisableUnusedPresets_disables_only_presets_no_spawnabletype_references()
+    {
+        const string presets = """
+            <randompresets>
+              <cargo chance="0.1" name="usedCargo"><item name="A" chance="1"/></cargo>
+              <cargo chance="0.1" name="deadCargo"><item name="B" chance="1"/></cargo>
+              <attachments chance="0.1" name="usedAtt"><item name="C" chance="1"/></attachments>
+              <attachments chance="0.1" name="deadAtt"><item name="D" chance="1"/></attachments>
+            </randompresets>
+            """;
+        // A type that references usedCargo (cargo) + usedAtt (attachments). The "dead" presets of each kind
+        // are referenced by nothing.
+        const string spawn = """
+            <spawnabletypes>
+              <type name="X"><cargo preset="usedCargo"/><attachments preset="usedAtt"/></type>
+            </spawnabletypes>
+            """;
+        var cfg = CeScaffold.Mission(("cfgrandompresets.xml", presets), ("cfgspawnabletypes.xml", spawn));
+        var vm = new RandomPresetsVm(cfg, _ => true);   // confirm => yes
+        vm.Reload();
+
+        vm.DisableUnusedPresets();
+
+        var reloaded = Reloaded(cfg);
+        reloaded.Presets.Single(p => p.Name == "deadCargo").IsDisabled.Should().BeTrue("no type references it");
+        reloaded.Presets.Single(p => p.Name == "deadAtt").IsDisabled.Should().BeTrue("no type references it");
+        reloaded.Presets.Single(p => p.Name == "usedCargo").IsDisabled.Should().BeFalse("a cargo block references it");
+        reloaded.Presets.Single(p => p.Name == "usedAtt").IsDisabled.Should().BeFalse("an attachments block references it");
     }
 }

@@ -272,7 +272,7 @@
                   <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                     <CheckBox Content="Hoarder" IsChecked="{Binding SelectedHoarder, Mode=TwoWay}"
                               Click="OnHoarderClick" VerticalAlignment="Center" />
-                    <TextBlock Text="count_in_hoarder" FontFamily="Consolas" VerticalAlignment="Center"
+                    <TextBlock Text="&lt;hoarder&gt; flag" FontFamily="Consolas" VerticalAlignment="Center"
                                Margin="6,0,0,0" Style="{StaticResource StHint}" />
                     <ui:SymbolIcon Symbol="Info24" FontSize="15" Margin="6,0,0,0" VerticalAlignment="Center"
                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
@@ -282,12 +282,14 @@
                     <TextBlock Text="Damage" VerticalAlignment="Center" Margin="0,0,8,0"
                                Style="{StaticResource StBlockLabel}" />
                     <ui:TextBox Width="70" Margin="0,0,4,0" FontSize="12" PlaceholderText="min"
-                                ToolTip="0..1, empty to clear"
+                                ctl:NumericBehavior.FloatOnly="True"
+                                ToolTip="0..1 spawn-health. Leave BOTH min and max empty to remove the damage range."
                                 Text="{Binding DamageMin, UpdateSourceTrigger=PropertyChanged}"
                                 LostFocus="OnDamageLostFocus" KeyDown="OnDamageKeyDown" />
                     <TextBlock Text="–" VerticalAlignment="Center" Margin="0,0,4,0" />
                     <ui:TextBox Width="70" Margin="0,0,4,0" FontSize="12" PlaceholderText="max"
-                                ToolTip="0..1, empty to clear"
+                                ctl:NumericBehavior.FloatOnly="True"
+                                ToolTip="0..1 spawn-health. Leave BOTH min and max empty to remove the damage range."
                                 Text="{Binding DamageMax, UpdateSourceTrigger=PropertyChanged}"
                                 LostFocus="OnDamageLostFocus" KeyDown="OnDamageKeyDown" />
                     <ui:SymbolIcon Symbol="Info24" FontSize="15" Margin="2,0,0,0" VerticalAlignment="Center"

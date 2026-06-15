@@ -39,30 +39,70 @@ public partial class DictionaryManager : UserControl
         }
     }
 
-    private void OnRemoveClick(object sender, RoutedEventArgs e)
+    // Per-row remove: the button's DataContext is the entry; the active list is the VM's SelectedList.
+    private void OnRowRemoveItemClick(object sender, RoutedEventArgs e)
     {
-        if (ListOf(sender) is { } list)
+        if (sender is FrameworkElement { DataContext: DictEntryVm entry } && Vm?.SelectedList is { } list)
+            list.RequestRemove(entry.Name);
+    }
+
+    // Inline rename (pencil click or double-click). Unified for base-dictionary entries (DictEntryVm) and
+    // named combos (ComboVm) so both lists share the same edit affordances.
+    private void OnEntryEdit(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement fe || Vm is not { } vm) return;
+        if (fe.DataContext is DictEntryVm entry && vm.SelectedList is { } list) list.BeginEdit(entry);
+        else if (fe.DataContext is ComboVm combo) vm.BeginEditCombo(combo);
+    }
+
+    // Focus + select-all the edit box the moment it appears.
+    private void OnEditBoxVisible(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is true && sender is Wpf.Ui.Controls.TextBox tb)
         {
-            if (string.IsNullOrEmpty(list.Selected)) { if (Vm is { } vm) vm.Status = "✗ select an entry to remove"; return; }
-            list.RequestRemove(list.Selected);
+            tb.Focus();
+            tb.SelectAll();
         }
     }
 
-    private void OnRenameClick(object sender, RoutedEventArgs e)
+    private void OnEditBoxKeyDown(object sender, KeyEventArgs e)
     {
-        if (ListOf(sender) is not { } list) return;
-        var current = list.Selected;
-        if (string.IsNullOrEmpty(current)) { if (Vm is { } vm) vm.Status = "✗ select an entry to rename"; return; }
-        var owner = Window.GetWindow(this);
-        if (owner is null) return;
-        var next = PromptDialog.Show(owner, $"Rename {list.Kind}", $"Rename \"{current}\" to:", current);
-        if (string.IsNullOrWhiteSpace(next)) return;
-        list.RequestRename(current, next.Trim());
+        if (e.Key == Key.Enter) { CommitEntry(sender); e.Handled = true; }
+        else if (e.Key == Key.Escape) { CancelEntry(sender); e.Handled = true; }
+    }
+
+    private void OnEditBoxCommit(object sender, RoutedEventArgs e) => CommitEntry(sender);
+
+    // Cancel via PreviewMouseDown so it runs BEFORE the edit box loses focus — CancelEdit flips IsEditing off,
+    // so the box's LostFocus commit then no-ops (CommitEdit guards on IsEditing).
+    private void OnEditCancel(object sender, MouseButtonEventArgs e) => CancelEntry(sender);
+
+    private void CommitEntry(object sender)
+    {
+        if (sender is not FrameworkElement fe || Vm is not { } vm) return;
+        if (fe.DataContext is DictEntryVm entry && vm.SelectedList is { } list) list.CommitEdit(entry);
+        else if (fe.DataContext is ComboVm combo) vm.CommitComboEdit(combo);
+    }
+
+    private void CancelEntry(object sender)
+    {
+        if (sender is not FrameworkElement fe || Vm is not { } vm) return;
+        if (fe.DataContext is DictEntryVm entry && vm.SelectedList is { } list) list.CancelEdit(entry);
+        else if (fe.DataContext is ComboVm combo) vm.CancelComboEdit(combo);
     }
 
     private void OnAddComboClick(object sender, RoutedEventArgs e) => Vm?.AddCombo();
-    private void OnRemoveComboClick(object sender, RoutedEventArgs e) => Vm?.RemoveSelectedCombo();
     private void OnComboMembersChanged(object? sender, EventArgs e) => Vm?.SaveSelectedComboMembers();
+
+    // Per-row combo remove: select that combo, then reuse the confirm+remove flow.
+    private void OnRemoveComboRow(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: ComboVm combo } && Vm is { } vm)
+        {
+            vm.SelectedCombo = combo;
+            vm.RemoveSelectedCombo();
+        }
+    }
 
     private sealed class UsageBoolConverter : IValueConverter
     {

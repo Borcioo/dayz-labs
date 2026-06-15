@@ -1,13 +1,15 @@
 using System.Collections.ObjectModel;
+using System.Linq;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Dzl.Core.Economy;
 
 namespace Dzl.Tray.Controls;
 
-/// <summary>One editable dictionary list (Categories / Tags / Usage / Value) shown as a column in the
-/// <see cref="DictionaryManager"/>. Holds the live names for one <see cref="LimitsKind"/> plus the typed
-/// "add" buffer. Edits route back to the host through events so the host can call the
+/// <summary>One editable dictionary (Categories / Tags / Usage / Value) in the <see cref="DictionaryManager"/>
+/// dashboard. Holds its entries as editable row VMs (<see cref="DictEntryVm"/>) — renamed in place — plus the
+/// add buffer and a search filter. Edits route back to the host through events so it can call the
 /// <c>DictionaryService</c>, refresh the Types editor suggestions, and re-lint.</summary>
-public sealed class DictionaryListVm : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
+public sealed partial class DictionaryListVm : ObservableObject
 {
     public DictionaryListVm(LimitsKind kind, string title, string hint)
     {
@@ -20,8 +22,34 @@ public sealed class DictionaryListVm : CommunityToolkit.Mvvm.ComponentModel.Obse
     public string Title { get; }
     public string Hint { get; }
 
-    /// <summary>Live dictionary names for this kind (sorted, case-insensitive).</summary>
-    public ObservableCollection<string> Names { get; } = new();
+    /// <summary>One-line CE meaning of this dictionary, shown under the detail header.</summary>
+    public string Help => Kind switch
+    {
+        LimitsKind.Usage => "Usage = where an item can spawn (Town, Military, Police, Coast, …).",
+        LimitsKind.Value => "Value = the loot tier an item belongs to (Tier1–Tier4, Unique).",
+        LimitsKind.Tag => "Tag = secondary placement filter (floor, shelves, ground).",
+        LimitsKind.Category => "Category = high-level item group (weapons, food, clothes, …).",
+        _ => "",
+    };
+
+    /// <summary>All entries for this kind.</summary>
+    public ObservableCollection<DictEntryVm> Names { get; } = new();
+
+    /// <summary>The search-filtered slice of <see cref="Names"/> shown in the detail list.</summary>
+    public ObservableCollection<DictEntryVm> View { get; } = new();
+
+    private string _filter = "";
+    /// <summary>Substring search over the entries (case-insensitive). Rebuilds <see cref="View"/>.</summary>
+    public string Filter { get => _filter; set { if (SetProperty(ref _filter, value)) RebuildView(); } }
+
+    private void RebuildView()
+    {
+        View.Clear();
+        var f = (_filter ?? "").Trim();
+        foreach (var e in Names)
+            if (f.Length == 0 || e.Name.Contains(f, StringComparison.OrdinalIgnoreCase))
+                View.Add(e);
+    }
 
     /// <summary>"N entries" header summary.</summary>
     public string CountLabel => $"{Names.Count} {(Names.Count == 1 ? "entry" : "entries")}";
@@ -29,24 +57,25 @@ public sealed class DictionaryListVm : CommunityToolkit.Mvvm.ComponentModel.Obse
     private string _newName = "";
     public string NewName { get => _newName; set => SetProperty(ref _newName, value); }
 
-    private string? _selected;
-    public string? Selected { get => _selected; set => SetProperty(ref _selected, value); }
+    [ObservableProperty] private DictEntryVm? _selected;
 
-    /// <summary>Repopulate from a source set (called by the host after every reload/edit).</summary>
+    /// <summary>Repopulate from a source set (called by the host after every reload/edit). Re-wraps each name
+    /// in a fresh row VM (so any in-progress edit state is dropped).</summary>
     public void Fill(System.Collections.Generic.IEnumerable<string> src)
     {
-        var sel = Selected;
+        var selName = Selected?.Name;
         Names.Clear();
-        foreach (var v in src) Names.Add(v);
+        foreach (var v in src) Names.Add(new DictEntryVm(v));
+        RebuildView();
         OnPropertyChanged(nameof(CountLabel));
-        if (sel is not null && Names.Contains(sel)) Selected = sel;
+        if (selName is not null) Selected = Names.FirstOrDefault(e => e.Name == selName);
     }
 
     /// <summary>Raised when the user requests Add (carries the typed name).</summary>
     public event Action<DictionaryListVm, string>? AddRequested;
     /// <summary>Raised when the user requests Remove (carries the target name).</summary>
     public event Action<DictionaryListVm, string>? RemoveRequested;
-    /// <summary>Raised when the user requests Rename (carries old + new name).</summary>
+    /// <summary>Raised when an in-place rename commits (carries old + new name).</summary>
     public event Action<DictionaryListVm, string, string>? RenameRequested;
 
     public void RequestAdd()
@@ -58,16 +87,53 @@ public sealed class DictionaryListVm : CommunityToolkit.Mvvm.ComponentModel.Obse
 
     public void RequestRemove(string? name)
     {
-        var n = (name ?? Selected ?? "").Trim();
+        var n = (name ?? "").Trim();
         if (n.Length == 0) return;
         RemoveRequested?.Invoke(this, n);
     }
 
-    public void RequestRename(string oldName, string newName)
+    /// <summary>Enter in-place edit on an entry (double-click / pencil).</summary>
+    public void BeginEdit(DictEntryVm e)
     {
-        oldName = (oldName ?? "").Trim();
-        newName = (newName ?? "").Trim();
-        if (oldName.Length == 0 || newName.Length == 0 || oldName == newName) return;
-        RenameRequested?.Invoke(this, oldName, newName);
+        Selected = e;
+        e.IsEditing = true;
     }
+
+    /// <summary>Commit an in-place rename: revert on empty/unchanged, else ask the host to rename (which
+    /// reloads + re-wraps the entries).</summary>
+    public void CommitEdit(DictEntryVm e)
+    {
+        if (!e.IsEditing) return;
+        e.IsEditing = false;
+        var newName = (e.Name ?? "").Trim();
+        if (newName.Length == 0 || string.Equals(newName, e.OriginalName, StringComparison.Ordinal))
+        {
+            e.Name = e.OriginalName;
+            return;
+        }
+        RenameRequested?.Invoke(this, e.OriginalName, newName);
+    }
+
+    /// <summary>Abandon an in-place edit (Esc) — restore the persisted name.</summary>
+    public void CancelEdit(DictEntryVm e)
+    {
+        e.Name = e.OriginalName;
+        e.IsEditing = false;
+    }
+}
+
+/// <summary>One editable entry row: its name + whether it's currently in inline-edit mode.</summary>
+public sealed partial class DictEntryVm : ObservableObject
+{
+    public DictEntryVm(string name)
+    {
+        _name = name;
+        OriginalName = name;
+    }
+
+    /// <summary>The name as last persisted (the rename source key).</summary>
+    public string OriginalName { get; }
+
+    [ObservableProperty] private string _name;
+    [ObservableProperty] private bool _isEditing;
 }
