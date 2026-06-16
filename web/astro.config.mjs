@@ -23,6 +23,7 @@ export default defineConfig({
             { label: 'The big idea', slug: 'overview/the-big-idea' },
           ],
         },
+        { label: 'Features', autogenerate: { directory: 'features' } },
         { label: 'Guides', autogenerate: { directory: 'guides' } },
       ],
     }),
