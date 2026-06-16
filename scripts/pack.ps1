@@ -19,16 +19,16 @@ dotnet publish (Join-Path $root 'src\Dzl.Cli')  @common
 dotnet publish (Join-Path $root 'src\Dzl.Mcp')  @common
 dotnet publish (Join-Path $root 'src\Dzl.Tray') @common
 
-# Friendly apphost names (renaming a published apphost .exe is safe — it locates its managed
+# Friendly apphost names (renaming a published apphost .exe is safe - it locates its managed
 # .dll by an embedded name, independent of the .exe filename).
 Rename-Item (Join-Path $publish 'Dzl.Cli.exe')  'dzl.exe'      -Force
 Rename-Item (Join-Path $publish 'Dzl.Tray.exe') 'dzl-tray.exe' -Force
 Rename-Item (Join-Path $publish 'Dzl.Mcp.exe')  'dzl-mcp.exe'  -Force
 
-# Smoke test: the CLI is a console self-contained app sharing the merged runtime — if it runs,
-# the merge is sound. (If this fails, fall back to per-frontend subfolders — see plan note.)
+# Smoke test: the CLI is a console self-contained app sharing the merged runtime - if it runs,
+# the merge is sound. (If this fails, fall back to per-frontend subfolders - see plan note.)
 & (Join-Path $publish 'dzl.exe') '--help' | Out-Null
-if ($LASTEXITCODE -ne 0) { throw "dzl.exe --help failed (exit $LASTEXITCODE) — merged publish is broken" }
+if ($LASTEXITCODE -ne 0) { throw "dzl.exe --help failed (exit $LASTEXITCODE) - merged publish is broken" }
 foreach ($exe in 'dzl.exe','dzl-tray.exe','dzl-mcp.exe') {
   if (-not (Test-Path (Join-Path $publish $exe))) { throw "missing $exe in publish output" }
 }
