@@ -15,6 +15,14 @@ export default defineConfig({
       ],
       customCss: ['./src/styles/theme.css'],
       sidebar: [
+        {
+          label: 'Overview',
+          items: [
+            { label: 'What is dzl', slug: 'overview/what-is-dzl' },
+            { label: "Who it's for", slug: 'overview/who-its-for' },
+            { label: 'The big idea', slug: 'overview/the-big-idea' },
+          ],
+        },
         { label: 'Guides', autogenerate: { directory: 'guides' } },
       ],
     }),

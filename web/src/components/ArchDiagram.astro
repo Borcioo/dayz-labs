@@ -1,0 +1,36 @@
+---
+// Public architecture map: three frontends -> Dzl.Core -> feature modules.
+// Mirrors the README diagram; contains no internal symbol names.
+---
+<svg viewBox="0 0 720 360" role="img" aria-label="dzl architecture: CLI, MCP, and Tray frontends over a shared Dzl.Core engine that drives nine feature modules." xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;font-family:var(--sl-font-mono)">
+  <style>
+    .box{fill:#1c1f16;stroke:#2c3022}
+    .core{fill:#2e3417;stroke:#8a9a4f}
+    .mod{fill:#181b12;stroke:#2c3022}
+    .t{fill:#e6e4da;font-size:14px}
+    .ts{fill:#aebd6e;font-size:13px}
+    .tm{fill:#c2c2b6;font-size:12px}
+    .ln{stroke:#5f6152;stroke-width:1.2;fill:none}
+  </style>
+  <!-- frontends -->
+  <g>
+    <rect class="box" x="60"  y="20" width="160" height="46" rx="8"/><text class="ts" x="140" y="48" text-anchor="middle">CLI</text>
+    <rect class="box" x="280" y="20" width="160" height="46" rx="8"/><text class="ts" x="360" y="48" text-anchor="middle">MCP server</text>
+    <rect class="box" x="500" y="20" width="160" height="46" rx="8"/><text class="ts" x="580" y="48" text-anchor="middle">Tray app</text>
+  </g>
+  <path class="ln" d="M140 66 L360 120"/><path class="ln" d="M360 66 L360 120"/><path class="ln" d="M580 66 L360 120"/>
+  <!-- core -->
+  <rect class="core" x="250" y="120" width="220" height="50" rx="9"/><text class="t" x="360" y="151" text-anchor="middle">Dzl.Core engine</text>
+  <!-- modules -->
+  <g>
+    <rect class="mod" x="30"  y="220" width="150" height="40" rx="7"/><text class="tm" x="105" y="245" text-anchor="middle">Server lifecycle</text>
+    <rect class="mod" x="200" y="220" width="150" height="40" rx="7"/><text class="tm" x="275" y="245" text-anchor="middle">Mods &amp; presets</text>
+    <rect class="mod" x="370" y="220" width="150" height="40" rx="7"/><text class="tm" x="445" y="245" text-anchor="middle">Logs &amp; diagnosis</text>
+    <rect class="mod" x="540" y="220" width="150" height="40" rx="7"/><text class="tm" x="615" y="245" text-anchor="middle">DayZ Tools / P:</text>
+    <rect class="mod" x="30"  y="280" width="150" height="40" rx="7"/><text class="tm" x="105" y="305" text-anchor="middle">Build pipeline</text>
+    <rect class="mod" x="200" y="280" width="150" height="40" rx="7"/><text class="tm" x="275" y="305" text-anchor="middle">Central Economy</text>
+    <rect class="mod" x="370" y="280" width="150" height="40" rx="7"/><text class="tm" x="445" y="305" text-anchor="middle">Steam Workshop</text>
+    <rect class="mod" x="540" y="280" width="150" height="40" rx="7"/><text class="tm" x="615" y="305" text-anchor="middle">Git / GitHub</text>
+  </g>
+  <path class="ln" d="M360 170 L360 200 M105 200 L615 200 M105 200 L105 220 M275 200 L275 220 M445 200 L445 220 M615 200 L615 220 M105 260 L105 280 M275 260 L275 280 M445 260 L445 280 M615 260 L615 280"/>
+</svg>
