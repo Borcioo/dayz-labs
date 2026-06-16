@@ -21,6 +21,7 @@ export default defineConfig({
             { label: 'What is dzl', slug: 'overview/what-is-dzl' },
             { label: "Who it's for", slug: 'overview/who-its-for' },
             { label: 'The big idea', slug: 'overview/the-big-idea' },
+            { label: 'Codebase map', slug: 'overview/codebase-map' },
           ],
         },
         { label: 'Features', autogenerate: { directory: 'features' } },
