@@ -1,0 +1,51 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to build (e.g. 0.1.0), for dry runs
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout (full history for Velopack deltas)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Derive version
+        id: ver
+        shell: pwsh
+        run: |
+          $v = if ($env:GITHUB_REF -like 'refs/tags/v*') { $env:GITHUB_REF -replace '^refs/tags/v','' }
+               else { '${{ github.event.inputs.version }}' }
+          "value=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Install vpk
+        run: dotnet tool install -g vpk
+
+      - name: Publish, smoke, pack
+        shell: pwsh
+        run: ./scripts/pack.ps1 -Version ${{ steps.ver.outputs.value }}
+
+      - name: Upload to GitHub Release
+        run: >
+          vpk upload github
+          --repoUrl https://github.com/Borcioo/dayz-labs
+          --token ${{ secrets.GITHUB_TOKEN }}
+          --publish
+          --releaseName "dzl ${{ steps.ver.outputs.value }}"
+          --tag v${{ steps.ver.outputs.value }}
+          -o artifacts/release
