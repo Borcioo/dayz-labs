@@ -25,6 +25,7 @@ public sealed class TrayIcon : IDisposable
     private readonly TaskbarIcon _icon;
     private readonly DispatcherTimer _timer;
     private readonly UpdateService _updates = new();
+    private bool _checkingUpdates;
 
     private static readonly Color UpColor = Color.FromArgb(76, 175, 80);     // green
     private static readonly Color DownColor = Color.FromArgb(120, 120, 120); // grey
@@ -185,35 +186,49 @@ public sealed class TrayIcon : IDisposable
     /// update exists; when false (menu) it always reports the outcome.</summary>
     public async Task CheckForUpdatesAsync(bool silentIfCurrent)
     {
-        if (!_updates.CanUpdate)
+        // UI-thread reentrancy guard (mirrors _polling): the startup check and a menu click
+        // can overlap — don't run two checks / show two prompts at once.
+        if (_checkingUpdates) return;
+        _checkingUpdates = true;
+        try
         {
-            if (!silentIfCurrent) _icon.ShowNotification("dzl", "Updates are available only in the installed app.");
-            return;
+            if (!_updates.CanUpdate)
+            {
+                if (!silentIfCurrent) _icon.ShowNotification("dzl", "Updates are available only in the installed app.");
+                return;
+            }
+
+            UpdateInfo? info;
+            try { info = await _updates.CheckAsync(); }
+            catch (Exception ex)
+            {
+                if (!silentIfCurrent) _icon.ShowNotification("dzl", "Update check failed: " + ex.Message);
+                return;
+            }
+
+            if (info is null)
+            {
+                if (!silentIfCurrent) _icon.ShowNotification("dzl", "You're on the latest version.");
+                return;
+            }
+
+            var version = info.TargetFullRelease.Version;
+            var choice = MessageBox.Show(
+                $"Version {version} is available. Update now? The app will restart.",
+                "DayZ Labs — update available",
+                MessageBoxButton.YesNo, MessageBoxImage.Information);
+            if (choice != MessageBoxResult.Yes) return;
+
+            try
+            {
+                await _updates.DownloadAndApplyAsync(info);
+                // WaitExitThenApplyUpdates waits (max 60s) for THIS process to exit, then applies +
+                // restarts. The tray never exits on its own, so shut down now to hand off in time.
+                Application.Current.Shutdown();
+            }
+            catch (Exception ex) { _icon.ShowNotification("dzl", "Update failed: " + ex.Message); }
         }
-
-        UpdateInfo? info;
-        try { info = await _updates.CheckAsync(); }
-        catch (Exception ex)
-        {
-            if (!silentIfCurrent) _icon.ShowNotification("dzl", "Update check failed: " + ex.Message);
-            return;
-        }
-
-        if (info is null)
-        {
-            if (!silentIfCurrent) _icon.ShowNotification("dzl", "You're on the latest version.");
-            return;
-        }
-
-        var version = info.TargetFullRelease.Version;
-        var choice = MessageBox.Show(
-            $"Version {version} is available. Update now? The app will restart.",
-            "DayZ Labs — update available",
-            MessageBoxButton.YesNo, MessageBoxImage.Information);
-        if (choice != MessageBoxResult.Yes) return;
-
-        try { await _updates.DownloadAndApplyAsync(info); }
-        catch (Exception ex) { _icon.ShowNotification("dzl", "Update failed: " + ex.Message); }
+        finally { _checkingUpdates = false; }
     }
 
     private void OpenConfigFolder(object sender, RoutedEventArgs e)
