@@ -51,8 +51,16 @@ public partial class App : Application
     private static void Main(string[] args)
     {
         VelopackApp.Build()
-            .OnAfterInstallFastCallback(_ => TryUpdatePath(PathEnv.AddDirToUserPath))
-            .OnBeforeUninstallFastCallback(_ => TryUpdatePath(PathEnv.RemoveDirFromUserPath))
+            .OnAfterInstallFastCallback(_ =>
+            {
+                Safe(() => PathEnv.AddDirToUserPath(InstallDir));   // put `dzl` (CLI) on PATH
+                Safe(UninstallShortcut.Create);                    // discoverable Start-menu uninstaller
+            })
+            .OnBeforeUninstallFastCallback(_ =>
+            {
+                Safe(() => PathEnv.RemoveDirFromUserPath(InstallDir));
+                Safe(UninstallShortcut.Remove);
+            })
             .Run();
 
         var app = new App();
@@ -60,13 +68,15 @@ public partial class App : Application
         app.Run();
     }
 
-    // PATH convenience is best-effort: a registry write can throw (locked-down HKCU ACL, or the
-    // User PATH exceeding its length cap). Velopack does not catch hook exceptions, and a throw
-    // here would fault the install / leave a half-removed uninstall — so swallow it.
-    private static void TryUpdatePath(Action<string> op)
+    // The install bin dir (Velopack's stable "current" folder) during a hook invocation.
+    private static string InstallDir => AppContext.BaseDirectory.TrimEnd('\\');
+
+    // Install/uninstall hooks must never throw: a PATH / registry / shortcut tweak failing must not
+    // fault the install or leave a half-removed uninstall (Velopack does not catch hook exceptions).
+    private static void Safe(Action op)
     {
-        try { op(AppContext.BaseDirectory.TrimEnd('\\')); }
-        catch { /* never fail install/uninstall over a PATH tweak */ }
+        try { op(); }
+        catch { /* best-effort side effect */ }
     }
 
     protected override void OnStartup(StartupEventArgs e)
