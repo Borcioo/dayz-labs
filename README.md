@@ -128,4 +128,6 @@ User guides live in [`docs/guides/`](docs/guides/):
 
 ## License
 
-TODO — the project owner needs to choose a license before publishing.
+dzl is licensed under the **GNU General Public License v3.0** — see [LICENSE](LICENSE).
+
+Copyright © 2026 Borcioo (DayZ Labs).
