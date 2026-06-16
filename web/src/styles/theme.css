@@ -1,0 +1,36 @@
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
+
+:root {
+  --sl-font: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --sl-font-mono: 'JetBrains Mono Variable', ui-monospace, 'Courier New', monospace;
+}
+
+/* Dark is the primary, designed theme. */
+:root[data-theme='dark'] {
+  /* Accent — military olive */
+  --sl-color-accent-low: #2e3417;
+  --sl-color-accent: #8a9a4f;
+  --sl-color-accent-high: #cdd9a0;
+
+  /* Text + gray scale tuned to a near-black olive surface */
+  --sl-color-white: #f1efe7;
+  --sl-color-gray-1: #e6e4da;
+  --sl-color-gray-2: #c2c2b6;
+  --sl-color-gray-3: #9a9b8c;
+  --sl-color-gray-4: #5f6152;
+  --sl-color-gray-5: #2c3022;
+  --sl-color-gray-6: #1c1f16;
+  --sl-color-black: #13150f;
+
+  --sl-color-bg-nav: #161a12;
+  --sl-color-bg-sidebar: #15170f;
+  --sl-color-hairline: #2c3022;
+}
+
+/* Light theme: leave Starlight defaults, just nudge the accent to olive. */
+:root[data-theme='light'] {
+  --sl-color-accent-low: #e7ebcf;
+  --sl-color-accent: #5f6e2a;
+  --sl-color-accent-high: #2e3417;
+}
