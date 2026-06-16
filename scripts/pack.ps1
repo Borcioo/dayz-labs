@@ -34,7 +34,7 @@ foreach ($exe in 'dzl.exe','dzl-tray.exe','dzl-mcp.exe') {
 }
 
 # Pack into a single per-user Setup.exe + the update feed.
-if (-not (Get-Command vpk -ErrorAction SilentlyContinue)) { dotnet tool install -g vpk }
+if (-not (Get-Command vpk -ErrorAction SilentlyContinue)) { dotnet tool install -g vpk --version 1.2.0 }
 vpk pack --packId dzl --packVersion $Version --packDir $publish --mainExe dzl-tray.exe `
          --packTitle 'dzl' --packAuthors 'DayZ Labs' -o $release
 Write-Host "Built: $(Join-Path $release 'dzl-win-Setup.exe')"

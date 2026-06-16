@@ -34,7 +34,12 @@ jobs:
           "value=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - name: Install vpk
-        run: dotnet tool install -g vpk
+        shell: pwsh
+        run: |
+          # Pin vpk to the Velopack library version the app references (1.2.0).
+          dotnet tool install -g vpk --version 1.2.0
+          # Ensure the global-tools dir is on PATH for the pack + upload steps below.
+          "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
 
       - name: Publish, smoke, pack
         shell: pwsh
