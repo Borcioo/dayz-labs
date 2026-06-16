@@ -51,13 +51,22 @@ public partial class App : Application
     private static void Main(string[] args)
     {
         VelopackApp.Build()
-            .OnAfterInstallFastCallback(_ => PathEnv.AddDirToUserPath(AppContext.BaseDirectory.TrimEnd('\\')))
-            .OnBeforeUninstallFastCallback(_ => PathEnv.RemoveDirFromUserPath(AppContext.BaseDirectory.TrimEnd('\\')))
+            .OnAfterInstallFastCallback(_ => TryUpdatePath(PathEnv.AddDirToUserPath))
+            .OnBeforeUninstallFastCallback(_ => TryUpdatePath(PathEnv.RemoveDirFromUserPath))
             .Run();
 
         var app = new App();
         app.InitializeComponent();
         app.Run();
+    }
+
+    // PATH convenience is best-effort: a registry write can throw (locked-down HKCU ACL, or the
+    // User PATH exceeding its length cap). Velopack does not catch hook exceptions, and a throw
+    // here would fault the install / leave a half-removed uninstall — so swallow it.
+    private static void TryUpdatePath(Action<string> op)
+    {
+        try { op(AppContext.BaseDirectory.TrimEnd('\\')); }
+        catch { /* never fail install/uninstall over a PATH tweak */ }
     }
 
     protected override void OnStartup(StartupEventArgs e)
