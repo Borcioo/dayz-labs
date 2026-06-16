@@ -14,31 +14,38 @@ New-Item -ItemType Directory -Force -Path $publish | Out-Null
 # there, so a stale prior run (or an old packId) would abort this pack.
 if (Test-Path $release) { Remove-Item $release -Recurse -Force }
 
-# Publish all three self-contained into ONE folder. Tray LAST so its WindowsDesktop runtime
-# (a superset) wins on any shared file. Identical runtime files collapse to one copy.
+# Tray + CLI publish into the root (both are clean net8; identical runtime files collapse to one
+# copy). Mcp publishes into a SEPARATE 'mcp' subfolder: ModelContextProtocol / Microsoft.Extensions
+# pull .NET 10 BCL assemblies (System.IO.Pipelines / System.Text.Json 10.x) which, if merged into the
+# root, poison the net8 Tray at runtime (an assembly-load crash). Isolating Mcp keeps the Tray pure.
 $common = @('-c', 'Release', '-r', 'win-x64', '--self-contained', 'true',
-            '-p:PublishSingleFile=false', "-p:Version=$Version", '-o', $publish)
-dotnet publish (Join-Path $root 'src\Dzl.Cli')  @common
-dotnet publish (Join-Path $root 'src\Dzl.Mcp')  @common
-dotnet publish (Join-Path $root 'src\Dzl.Tray') @common
+            '-p:PublishSingleFile=false', "-p:Version=$Version")
+$mcpDir = Join-Path $publish 'mcp'
+dotnet publish (Join-Path $root 'src\Dzl.Cli')  @common -o $publish
+dotnet publish (Join-Path $root 'src\Dzl.Tray') @common -o $publish
+dotnet publish (Join-Path $root 'src\Dzl.Mcp')  @common -o $mcpDir
 
 # Friendly apphost names (renaming a published apphost .exe is safe - it locates its managed
 # .dll by an embedded name, independent of the .exe filename).
 Rename-Item (Join-Path $publish 'Dzl.Cli.exe')  'dzl.exe'      -Force
 Rename-Item (Join-Path $publish 'Dzl.Tray.exe') 'dzl-tray.exe' -Force
-Rename-Item (Join-Path $publish 'Dzl.Mcp.exe')  'dzl-mcp.exe'  -Force
+Rename-Item (Join-Path $mcpDir  'Dzl.Mcp.exe')  'dzl-mcp.exe'  -Force
 
-# Smoke test: the CLI is a console self-contained app sharing the merged runtime - if it runs,
-# the merge is sound. (If this fails, fall back to per-frontend subfolders - see plan note.)
+# Smoke: the CLI runs from the Tray+CLI root (proves that bundle is sound).
 & (Join-Path $publish 'dzl.exe') '--help' | Out-Null
-if ($LASTEXITCODE -ne 0) { throw "dzl.exe --help failed (exit $LASTEXITCODE) - merged publish is broken" }
-foreach ($exe in 'dzl.exe','dzl-tray.exe','dzl-mcp.exe') {
-  if (-not (Test-Path (Join-Path $publish $exe))) { throw "missing $exe in publish output" }
+if ($LASTEXITCODE -ne 0) { throw "dzl.exe --help failed (exit $LASTEXITCODE)" }
+foreach ($exe in @((Join-Path $publish 'dzl.exe'), (Join-Path $publish 'dzl-tray.exe'), (Join-Path $mcpDir 'dzl-mcp.exe'))) {
+  if (-not (Test-Path $exe)) { throw "missing $exe in publish output" }
+}
+# Regression guard: the Tray root must NOT contain a .NET 10 System.IO.Pipelines (the bug this fixes).
+$stray = Join-Path $publish 'System.IO.Pipelines.dll'
+if ((Test-Path $stray) -and ([version](Get-Item $stray).VersionInfo.FileVersion).Major -ge 9) {
+  throw "Tray root contains a .NET 10 System.IO.Pipelines - Mcp isolation failed"
 }
 
 # Pack into a single per-user Setup.exe + the update feed.
 # packId 'DayZLabs' (install dir %LocalAppData%\DayZLabs) is deliberately NOT 'dzl': the app stores
-# its config at %LocalAppData%\dzl, and Velopack's uninstall wipes the whole install dir — sharing
+# its config at %LocalAppData%\dzl, and Velopack's uninstall wipes the whole install dir - sharing
 # it with the config dir would delete the user's settings on uninstall. packTitle stays 'dzl' so the
 # Start-menu shortcut / Apps-list entry read 'dzl' (the tool name).
 if (-not (Get-Command vpk -ErrorAction SilentlyContinue)) { dotnet tool install -g vpk --version 1.2.0 }
