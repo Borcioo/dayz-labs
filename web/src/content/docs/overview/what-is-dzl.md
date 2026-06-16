@@ -22,4 +22,4 @@ they all do the same thing.
 - Editors for the mission's Central Economy (loot, events, spawns) with linting and backups.
 - Steam Workshop search + download, and git/GitHub actions per mod project.
 
-Ready to try it? Head to [Getting started](/dzl/guides/getting-started/).
+Ready to try it? Head to [Getting started](/dayz-labs/guides/getting-started/).

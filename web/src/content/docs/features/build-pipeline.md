@@ -31,4 +31,4 @@ dzl preflight MyMod
 dzl build MyMod --sign
 ```
 
-[Go deeper →](/dzl/guides/building-mods/)
+[Go deeper →](/dayz-labs/guides/building-mods/)

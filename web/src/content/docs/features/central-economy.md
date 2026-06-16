@@ -31,4 +31,4 @@ dzl types lint
 dzl types set <Class>
 ```
 
-[Go deeper →](/dzl/guides/central-economy/)
+[Go deeper →](/dayz-labs/guides/central-economy/)

@@ -28,4 +28,4 @@ dzl workshop search "trader"
 dzl workshop add <id>
 ```
 
-[Go deeper →](/dzl/guides/workshop/)
+[Go deeper →](/dayz-labs/guides/workshop/)

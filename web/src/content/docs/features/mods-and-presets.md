@@ -27,4 +27,4 @@ Switch the active preset from the CLI:
 dzl preset load hardcore
 ```
 
-[Go deeper →](/dzl/guides/server-instances/)
+[Go deeper →](/dayz-labs/guides/server-instances/)

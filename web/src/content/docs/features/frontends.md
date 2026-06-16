@@ -24,4 +24,4 @@ the server, reading and diagnosing logs, building mods, editing the economy, and
 
 The MCP server speaks over stdio, so any MCP client can connect to it.
 
-[Go deeper →](/dzl/guides/mcp/)
+[Go deeper →](/dayz-labs/guides/mcp/)

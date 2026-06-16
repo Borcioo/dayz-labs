@@ -64,4 +64,4 @@ dotnet run --project src/Dzl.Cli -- types restore <file>  # restore a backup ove
 
 The MCP server exposes `types_list`, `types_lint`, `types_set`, `types_remove`,
 `types_backups`, and `types_restore` — the same operations, so an agent like Claude can read,
-lint, edit, and roll back the active mission's economy. See [MCP](/dzl/guides/mcp/).
+lint, edit, and roll back the active mission's economy. See [MCP](/dayz-labs/guides/mcp/).

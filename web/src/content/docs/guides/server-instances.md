@@ -64,4 +64,4 @@ restart.
 ## From an AI agent (MCP)
 
 The MCP server exposes `new_server`, `list_servers`, and `use_server` (plus `list_presets` /
-`set_preset`), so an agent can scaffold and switch instances. See [MCP](/dzl/guides/mcp/).
+`set_preset`), so an agent can scaffold and switch instances. See [MCP](/dayz-labs/guides/mcp/).

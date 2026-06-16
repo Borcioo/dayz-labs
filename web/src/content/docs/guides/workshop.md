@@ -50,4 +50,4 @@ visible login console.
 
 The MCP server exposes `workshop_search`, `workshop_add`, and `workshop_update` — the same
 operations. Note that `workshop_add` still opens the steamcmd console for the interactive
-login/Guard step, so a human needs to complete sign-in the first time. See [MCP](/dzl/guides/mcp/).
+login/Guard step, so a human needs to complete sign-in the first time. See [MCP](/dayz-labs/guides/mcp/).

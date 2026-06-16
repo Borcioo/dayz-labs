@@ -101,5 +101,5 @@ when it shouldn't. Use `--force` to rebuild regardless.
 Addon Builder is a black box — it can fail late, log noisily, and even exit `0` while the log
 says "Build failed". dzl treats a fresh PBO appearing as the real success gate, summarizes the
 tool output (error / warning / missing-reference counts), and runs the log diagnoser to turn
-known patterns into cause → fix entries. See [Central Economy](/dzl/guides/central-economy/) and
-[MCP](/dzl/guides/mcp/) for the related editors and the agent-driven workflow.
+known patterns into cause → fix entries. See [Central Economy](/dayz-labs/guides/central-economy/) and
+[MCP](/dayz-labs/guides/mcp/) for the related editors and the agent-driven workflow.

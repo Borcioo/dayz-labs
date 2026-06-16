@@ -8,7 +8,7 @@ communities and how they connect. It's a development aid, refreshed periodically
 a snapshot, not live state.
 
 <iframe
-  src="/dzl/codebase-map.html"
+  src="/dayz-labs/codebase-map.html"
   title="dzl codebase map"
   style="width:100%;height:70vh;border:1px solid var(--sl-color-hairline);border-radius:8px"
   loading="lazy"

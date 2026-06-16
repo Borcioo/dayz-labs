@@ -32,7 +32,7 @@ Set `DZL_CONFIG` to an absolute path to point the agent at a specific config.
     "dzl": {
       "command": "dotnet",
       "args": ["run", "--project", "D:/path/to/dzl-dotnet/src/Dzl.Mcp"],
-      "env": { "DZL_CONFIG": "%LOCALAPPDATA%/dzl/config.json" }
+      "env": { "DZL_CONFIG": "%LOCALAPPDATA%/dayz-labs/config.json" }
     }
   }
 }

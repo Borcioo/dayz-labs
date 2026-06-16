@@ -108,8 +108,8 @@ above).
 
 ## Next steps
 
-- [Building mods](/dzl/guides/building-mods/)
-- [Central Economy](/dzl/guides/central-economy/)
-- [Server instances](/dzl/guides/server-instances/)
-- [Steam Workshop](/dzl/guides/workshop/)
-- [MCP server](/dzl/guides/mcp/)
+- [Building mods](/dayz-labs/guides/building-mods/)
+- [Central Economy](/dayz-labs/guides/central-economy/)
+- [Server instances](/dayz-labs/guides/server-instances/)
+- [Steam Workshop](/dayz-labs/guides/workshop/)
+- [MCP server](/dayz-labs/guides/mcp/)
