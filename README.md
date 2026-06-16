@@ -126,8 +126,6 @@ User guides live in [`docs/guides/`](docs/guides/):
 - [Server instances](docs/guides/server-instances.md)
 - [MCP server](docs/guides/mcp.md)
 
-Internal design notes for past and upcoming phases live in [`docs/plans/`](docs/plans/).
-
 ## License
 
 TODO — the project owner needs to choose a license before publishing.
