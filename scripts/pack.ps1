@@ -10,6 +10,9 @@ $release = Join-Path $root 'artifacts\release'
 
 if (Test-Path $publish) { Remove-Item $publish -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $publish | Out-Null
+# Clean the release dir too: vpk refuses to pack a version equal/older than one already present
+# there, so a stale prior run (or an old packId) would abort this pack.
+if (Test-Path $release) { Remove-Item $release -Recurse -Force }
 
 # Publish all three self-contained into ONE folder. Tray LAST so its WindowsDesktop runtime
 # (a superset) wins on any shared file. Identical runtime files collapse to one copy.
@@ -34,7 +37,13 @@ foreach ($exe in 'dzl.exe','dzl-tray.exe','dzl-mcp.exe') {
 }
 
 # Pack into a single per-user Setup.exe + the update feed.
+# packId 'DayZLabs' (install dir %LocalAppData%\DayZLabs) is deliberately NOT 'dzl': the app stores
+# its config at %LocalAppData%\dzl, and Velopack's uninstall wipes the whole install dir — sharing
+# it with the config dir would delete the user's settings on uninstall. packTitle stays 'dzl' so the
+# Start-menu shortcut / Apps-list entry read 'dzl' (the tool name).
 if (-not (Get-Command vpk -ErrorAction SilentlyContinue)) { dotnet tool install -g vpk --version 1.2.0 }
-vpk pack --packId dzl --packVersion $Version --packDir $publish --mainExe dzl-tray.exe `
+vpk pack --packId DayZLabs --packVersion $Version --packDir $publish --mainExe dzl-tray.exe `
          --packTitle 'dzl' --packAuthors 'DayZ Labs' -o $release
-Write-Host "Built: $(Join-Path $release 'dzl-win-Setup.exe')"
+# $ErrorActionPreference='Stop' does NOT catch native-exe failures, so check vpk's exit explicitly.
+if ($LASTEXITCODE -ne 0) { throw "vpk pack failed (exit $LASTEXITCODE)" }
+Write-Host "Built: $(Join-Path $release 'DayZLabs-win-Setup.exe')"
