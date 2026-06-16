@@ -25,5 +25,6 @@ symptom — each paired with what to do about it.
 From the CLI:
 
 ```powershell
-dzl logs script --lines 100
+dzl logs script --lines 100      # tail the last 100 lines
+dzl logs script --diagnose       # run the diagnoser over the tail
 ```

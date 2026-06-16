@@ -22,7 +22,7 @@ duplicate names, and structural problems before they reach the game.
 - Lint entries against the mission's `cfglimitsdefinition` vocabulary to catch typos and bad
   values.
 - Roll back safely — every edit snapshots the file first and keeps the most recent backups.
-- Read, edit, lint, and restore `types.xml` from the CLI or an AI agent too.
+- List, edit, lint, and restore `types.xml` from the CLI or an AI agent too.
 
 From the CLI:
 
