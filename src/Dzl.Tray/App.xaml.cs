@@ -3,6 +3,7 @@ using System.Windows;
 using Dzl.Core.App;
 using Dzl.Core.Config;
 using Dzl.Core.Ipc;
+using Velopack;
 using Wpf.Ui.Appearance;
 
 namespace Dzl.Tray;
@@ -36,6 +37,27 @@ public partial class App : Application
         if (!string.IsNullOrWhiteSpace(env)) return env;
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         return Path.Combine(local, "dzl", "config.json");
+    }
+
+    /// <summary>
+    /// Explicit entry point (App.xaml is a Page, not ApplicationDefinition, so WPF does not
+    /// generate one). VelopackApp.Build().Run() MUST run first: it intercepts the install /
+    /// update / uninstall hook invocations (Velopack re-runs this exe with special args) and
+    /// exits before any WPF startup. The hooks add/remove the install dir on the user PATH so
+    /// the bundled CLI (dzl.exe) is callable from a terminal. AppContext.BaseDirectory is the
+    /// install bin dir (Velopack's stable "current" folder) during the hook.
+    /// </summary>
+    [STAThread]
+    private static void Main(string[] args)
+    {
+        VelopackApp.Build()
+            .OnAfterInstallFastCallback(_ => PathEnv.AddDirToUserPath(AppContext.BaseDirectory.TrimEnd('\\')))
+            .OnBeforeUninstallFastCallback(_ => PathEnv.RemoveDirFromUserPath(AppContext.BaseDirectory.TrimEnd('\\')))
+            .Run();
+
+        var app = new App();
+        app.InitializeComponent();
+        app.Run();
     }
 
     protected override void OnStartup(StartupEventArgs e)
