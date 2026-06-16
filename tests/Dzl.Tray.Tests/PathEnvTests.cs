@@ -36,4 +36,17 @@ public class PathEnvTests
     {
         PathEnv.Remove(@"C:\a;C:\b", @"C:\app").Should().Be(@"C:\a;C:\b");
     }
+
+    [Fact]
+    public void EnsurePresent_does_not_double_the_separator_when_current_ends_in_semicolon()
+    {
+        PathEnv.EnsurePresent(@"C:\a;", @"C:\app").Should().Be(@"C:\a;C:\app");
+    }
+
+    [Fact]
+    public void EnsurePresent_and_Remove_tolerate_whitespace_padded_entries()
+    {
+        PathEnv.EnsurePresent(@"C:\a; C:\app ", @"C:\app").Should().Be(@"C:\a; C:\app ");
+        PathEnv.Remove(@"C:\a; C:\app ;C:\b", @"C:\app").Should().Be(@"C:\a;C:\b");
+    }
 }
