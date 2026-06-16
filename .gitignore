@@ -8,3 +8,8 @@ artifacts/
 .dzl-procs.json
 config.json
 presets/
+
+# Astro docs site (web/)
+web/node_modules/
+web/dist/
+web/.astro/
