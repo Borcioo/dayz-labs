@@ -3,6 +3,7 @@ obj/
 *.user
 .vs/
 [Tt]est[Rr]esults/
+# Installer build output (Velopack)
 artifacts/
 *.nupkg
 .dzl-procs.json
