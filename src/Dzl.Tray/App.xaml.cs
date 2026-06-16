@@ -119,6 +119,9 @@ public partial class App : Application
 
         _tray = new TrayIcon(configPath);
 
+        // Quietly check for an update in the background; no-op in a dev build, silent if current.
+        _ = _tray.CheckForUpdatesAsync(silentIfCurrent: true);
+
         // Auto-mount the P: work drive on launch when opted in (background; idempotent — no-op if
         // already mounted). De-elevated, in this user session, so P: is visible to the tray + game.
         if (cfg.AutomountWorkDrive)

@@ -9,6 +9,7 @@ using Dzl.Core.Ipc;
 using Dzl.Core.Launch;
 using Dzl.Core.Tools;
 using H.NotifyIcon;
+using Velopack;
 
 namespace Dzl.Tray;
 
@@ -23,6 +24,7 @@ public sealed class TrayIcon : IDisposable
     private readonly string _configDir;
     private readonly TaskbarIcon _icon;
     private readonly DispatcherTimer _timer;
+    private readonly UpdateService _updates = new();
 
     private static readonly Color UpColor = Color.FromArgb(76, 175, 80);     // green
     private static readonly Color DownColor = Color.FromArgb(120, 120, 120); // grey
@@ -75,6 +77,8 @@ public sealed class TrayIcon : IDisposable
         menu.Items.Add(new Separator());
         menu.Items.Add(MenuItem("Open main window", OpenMainWindow));
         menu.Items.Add(MenuItem("Open config folder", OpenConfigFolder));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(MenuItem("Check for updates…", (_, _) => _ = CheckForUpdatesAsync(silentIfCurrent: false)));
         menu.Items.Add(new Separator());
         menu.Items.Add(MenuItem("Quit", Quit));
 
@@ -174,6 +178,42 @@ public sealed class TrayIcon : IDisposable
         if (_window.WindowState == WindowState.Minimized)
             _window.WindowState = WindowState.Normal;
         _window.Activate();
+    }
+
+    /// <summary>Check GitHub for a newer release and, if found, offer to update. When
+    /// <paramref name="silentIfCurrent"/> is true (startup check) it shows nothing unless an
+    /// update exists; when false (menu) it always reports the outcome.</summary>
+    public async Task CheckForUpdatesAsync(bool silentIfCurrent)
+    {
+        if (!_updates.CanUpdate)
+        {
+            if (!silentIfCurrent) _icon.ShowNotification("dzl", "Updates are available only in the installed app.");
+            return;
+        }
+
+        UpdateInfo? info;
+        try { info = await _updates.CheckAsync(); }
+        catch (Exception ex)
+        {
+            if (!silentIfCurrent) _icon.ShowNotification("dzl", "Update check failed: " + ex.Message);
+            return;
+        }
+
+        if (info is null)
+        {
+            if (!silentIfCurrent) _icon.ShowNotification("dzl", "You're on the latest version.");
+            return;
+        }
+
+        var version = info.TargetFullRelease.Version;
+        var choice = MessageBox.Show(
+            $"Version {version} is available. Update now? The app will restart.",
+            "DayZ Labs — update available",
+            MessageBoxButton.YesNo, MessageBoxImage.Information);
+        if (choice != MessageBoxResult.Yes) return;
+
+        try { await _updates.DownloadAndApplyAsync(info); }
+        catch (Exception ex) { _icon.ShowNotification("dzl", "Update failed: " + ex.Message); }
     }
 
     private void OpenConfigFolder(object sender, RoutedEventArgs e)
