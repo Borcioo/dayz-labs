@@ -132,12 +132,24 @@ public partial class MainWindow : FluentWindow
         if (_economyWin is { } w)
         {
             if (w.WindowState == WindowState.Minimized) w.WindowState = WindowState.Normal;
-            w.Activate();
+            BringToFront(w);
             return;
         }
         _economyWin = new EconomyWindow(_vm);
         _economyWin.Closed += (_, _) => _economyWin = null;
         _economyWin.Show();
+        BringToFront(_economyWin);
+    }
+
+    /// <summary>Force an ownerless modeless window above the main window on open/focus. A fresh
+    /// FluentWindow can otherwise come up behind the (larger) main window, so the click looks like
+    /// nothing happened. The brief Topmost flip pulls it to the front, then releases it so it does
+    /// not stay pinned over everything.</summary>
+    private static void BringToFront(Window w)
+    {
+        w.Topmost = true;
+        w.Activate();
+        w.Topmost = false;
     }
 
     // --- Top action bar handlers ------------------------------------------
