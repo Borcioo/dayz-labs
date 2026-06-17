@@ -197,6 +197,17 @@ public partial class App : Application
                 Shutdown(0);
             }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
+        else if (string.Equals(smoke, "main", StringComparison.OrdinalIgnoreCase))
+        {
+            // The main window is already shown by startup above (run without --tray); just let the
+            // dashboard settle, capture it, and exit. Used for README / marketing screenshots.
+            Dispatcher.BeginInvoke(async () =>
+            {
+                await System.Threading.Tasks.Task.Delay(1800);
+                try { AppScreenshot.Capture(configPath); } catch { /* capture is best-effort */ }
+                Shutdown(0);
+            }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        }
     }
 
     private static void LogCrash(Exception ex)
