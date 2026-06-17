@@ -208,6 +208,47 @@ public partial class App : Application
                 Shutdown(0);
             }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
+        else if (smoke?.StartsWith("screen:", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            // Navigate the main window to a nav tag (dashboard/mods/.../about) and capture it — for
+            // the docs/marketing screenshots of each screen.
+            var tag = smoke["screen:".Length..];
+            Dispatcher.BeginInvoke(async () =>
+            {
+                var main = Windows.OfType<MainWindow>().FirstOrDefault();
+                main?.NavigateTo(tag);
+                await System.Threading.Tasks.Task.Delay(700);
+                // "economy" opens its own window — hide the main window so the capture is just the editor.
+                if (string.Equals(tag, "economy", StringComparison.OrdinalIgnoreCase)) main?.Hide();
+                // Force whatever's visible above anything else (e.g. a game) so CopyFromScreen is clean.
+                foreach (var w in Windows.OfType<Window>())
+                    if (w.IsVisible) { w.WindowState = WindowState.Normal; w.Topmost = true; w.Activate(); }
+                await System.Threading.Tasks.Task.Delay(1300);
+                try { AppScreenshot.Capture(configPath); } catch { /* capture is best-effort */ }
+                Shutdown(0);
+            }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        }
+        else if (string.Equals(smoke, "screens", StringComparison.OrdinalIgnoreCase))
+        {
+            // Capture every screen in one run (docs). Economy opens its own window, so it goes last.
+            var tags = new[] { "dashboard", "mods", "mymods", "tools", "servers", "logs", "settings", "about" };
+            Dispatcher.BeginInvoke(async () =>
+            {
+                var main = Windows.OfType<MainWindow>().FirstOrDefault();
+                // CopyFromScreen grabs whatever is on screen at our window's rect, so force our window
+                // above anything else (e.g. a game) for the duration of the capture run.
+                if (main is not null) { main.WindowState = WindowState.Normal; main.Topmost = true; main.Activate(); }
+                foreach (var t in tags)
+                {
+                    main?.NavigateTo(t);
+                    main?.Activate();
+                    await System.Threading.Tasks.Task.Delay(1500);
+                    try { AppScreenshot.Capture(configPath); } catch { /* best-effort */ }
+                }
+                if (main is not null) main.Topmost = false;
+                Shutdown(0);
+            }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        }
     }
 
     private static void LogCrash(Exception ex)

@@ -110,6 +110,7 @@ public partial class MainWindow : FluentWindow
         PageTools.Visibility = tag == "tools" ? Visibility.Visible : Visibility.Collapsed;
         PageMcp.Visibility = tag == "mcp" ? Visibility.Visible : Visibility.Collapsed;
         PageSettings.Visibility = tag == "settings" ? Visibility.Visible : Visibility.Collapsed;
+        PageAbout.Visibility = tag == "about" ? Visibility.Visible : Visibility.Collapsed;
 
         // Refresh page-local state on show.
         if (tag == "tools") PageTools.RefreshToolsPage();
@@ -177,6 +178,19 @@ public partial class MainWindow : FluentWindow
     /// <summary>Re-read the global Settings page from the live config. Called by the Mods / My Mods
     /// views after the per-module settings modal closes, so the Settings page mirrors any config
     /// the module edited (the pages are never visible at once, but this keeps state consistent).</summary>
+    /// <summary>Programmatically navigate to a nav tag (used by the screenshot smoke) — selects the
+    /// rail item so the normal OnNavChanged flow runs (shows the page, or opens Economy/Setup).</summary>
+    public void NavigateTo(string tag)
+    {
+        foreach (var rail in NavRails)
+            foreach (var obj in rail.Items)
+                if (obj is ListBoxItem { Tag: string t } item && t == tag)
+                {
+                    rail.SelectedItem = item;
+                    return;
+                }
+    }
+
     internal void SyncSettingsPage() => PageSettings.Reload();
 
     // (The Servers / My Mods / Settings pages now live in Views/ServersView, MyModsView and

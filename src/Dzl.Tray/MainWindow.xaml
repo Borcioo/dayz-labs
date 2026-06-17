@@ -166,6 +166,12 @@
                 <TextBlock Text="Settings" VerticalAlignment="Center" />
               </StackPanel>
             </ListBoxItem>
+            <ListBoxItem Tag="about">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:SymbolIcon Symbol="Info24" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                <TextBlock Text="About" VerticalAlignment="Center" />
+              </StackPanel>
+            </ListBoxItem>
           </ListBox>
 
           <!-- Grouped sections: GENERAL (modding) vs SERVER (a server instance's content). -->
@@ -270,6 +276,9 @@
                Setup guide for wiring Claude Code to the dzl stdio MCP server. Only reachable
                when the automation server is running (the nav item binds ShowMcpTab). -->
           <views:McpView x:Name="PageMcp" Visibility="Collapsed" />
+
+          <!-- ===== ABOUT ===== -->
+          <views:AboutView x:Name="PageAbout" Visibility="Collapsed" />
 
       </Grid>
     </Grid>
