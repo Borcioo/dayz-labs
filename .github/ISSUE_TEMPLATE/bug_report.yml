@@ -1,0 +1,66 @@
+name: Bug report
+description: Something in dzl isn't working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please fill in the details below so we can reproduce it.
+  - type: input
+    id: version
+    attributes:
+      label: dzl version
+      description: Find it in the tray's **About** tab (or `dzl --version`).
+      placeholder: e.g. 0.1.6
+    validations:
+      required: true
+  - type: dropdown
+    id: frontend
+    attributes:
+      label: Which frontend?
+      options:
+        - Tray app
+        - CLI
+        - MCP server
+        - More than one / not sure
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: e.g. Windows 11 23H2
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: >
+        Paste anything relevant — the tray's `crash.log`, the DayZ `script.log` / RPT,
+        or CLI/MCP stderr output.
+      render: text
+  - type: checkboxes
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - label: DayZ is installed (via Steam)
+        - label: DayZ Tools is installed (via Steam)

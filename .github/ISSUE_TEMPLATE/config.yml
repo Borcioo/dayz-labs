@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://borcioo.github.io/dayz-labs/
+    about: Guides and the full feature tour — check here before filing an issue.
+  - name: Questions & ideas (Discussions)
+    url: https://github.com/Borcioo/dayz-labs/discussions
+    about: For usage questions and open-ended ideas, start a discussion instead.
