@@ -1,9 +1,11 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using Dzl.Core.App;
 using Dzl.Core.Config;
 using Dzl.Core.Env;
 using Dzl.Core.Mods;
+using Dzl.Core.Projects;
 using Dzl.Core.Tools;
 using Microsoft.Win32;
 using Wpf.Ui.Controls;
@@ -23,9 +25,16 @@ namespace Dzl.Tray;
 /// </summary>
 public partial class SetupWizardWindow : FluentWindow
 {
-    private const int LastStep = 7;
-    // Step 1 (0-based) is the Environment check inserted between Welcome (0) and Paths (2).
+    // 0-based step indices (array order). A "Project folder" step sits between Paths and Work drive.
     private const int CheckStep = 1;
+    private const int PathsStep = 2;
+    private const int ProjStep = 3;
+    private const int WorkDriveStep = 4;
+    private const int GameDataStep = 5;
+    private const int ServerStep = 6;
+    private const int ModsStep = 7;
+    private const int FinishStep = 8;
+    private const int LastStep = FinishStep;
     private readonly string _configPath;
     private int _step;
 
@@ -38,8 +47,8 @@ public partial class SetupWizardWindow : FluentWindow
         _configPath = configPath;
 
         // Order matters: the array index IS the step number. Check sits at index 1.
-        _stepRows = new[] { StepRow0, StepRowCheck, StepRow1, StepRow2, StepRow3, StepRow4, StepRow6, StepRow7 };
-        _pages = new UIElement[] { Page0, PageCheck, Page1, Page2, Page3, Page4, Page6, Page7 };
+        _stepRows = new[] { StepRow0, StepRowCheck, StepRow1, StepRowProj, StepRow2, StepRow3, StepRow4, StepRow6, StepRow7 };
+        _pages = new UIElement[] { Page0, PageCheck, Page1, PageProj, Page2, Page3, Page4, Page6, Page7 };
 
         Loaded += (_, _) => ShowStep(0);
     }
@@ -68,6 +77,9 @@ public partial class SetupWizardWindow : FluentWindow
         UpdateNextEnabled();
     }
 
+    /// <summary>Jump to a step — used by the headless wizard smoke; normal flow uses Back/Next.</summary>
+    public void GoToStep(int step) => ShowStep(step);
+
     /// <summary>Per-step entry logic (detection, prefill, status refresh).</summary>
     private void OnEnterStep(int step)
     {
@@ -77,7 +89,7 @@ public partial class SetupWizardWindow : FluentWindow
                 RunEnvCheck();
                 break;
 
-            case 2: // Paths — detect + prefill (only if still blank, so re-entry keeps edits)
+            case PathsStep: // detect + prefill (only if still blank, so re-entry keeps edits)
                 if (string.IsNullOrWhiteSpace(DayzPathBox.Text)
                     && string.IsNullOrWhiteSpace(ToolsPathBox.Text)
                     && string.IsNullOrWhiteSpace(ServerPathBox.Text))
@@ -91,29 +103,34 @@ public partial class SetupWizardWindow : FluentWindow
                 SteamCmdBox.Text = SteamCmd.DownloadServerScript(ServerDirForSteamCmd());  // advanced expander
                 break;
 
-            case 3: // Work drive — prefill the work folder (becomes P:)
+            case ProjStep: // Main project folder — prefill (config root, else default) + validate
+                if (string.IsNullOrWhiteSpace(ProjectsRootBox.Text))
+                    ProjectsRootBox.Text = ProjectPaths.Root(CurrentWizardConfig());
+                RefreshProjectsRootStatus();
+                break;
+
+            case WorkDriveStep: // prefill the work folder (becomes P:)
                 if (string.IsNullOrWhiteSpace(WorkFolderBox.Text))
                     WorkFolderBox.Text = DefaultWorkFolder();
                 RefreshWorkDrive();
                 break;
 
-            case 4: // Game data
+            case GameDataStep:
                 GameDataNote.Text = string.IsNullOrWhiteSpace(ToolsPathBox.Text)
                     ? "DayZ Tools path not set (Paths step) — set it to open the tools from here."
                     : "Vanilla data extracts to P:\\ (mount it on the Work drive step first).";
                 break;
 
-            case 5: // Server instance — default instance dir = DayZ path
-                if (string.IsNullOrWhiteSpace(InstanceDirBox.Text))
-                    InstanceDirBox.Text = DayzPathBox.Text;
+            case ServerStep: // Server instance — show the target dir under the project folder
+                UpdateServerTarget();
                 break;
 
-            case 6: // Mods — prefill scan roots
+            case ModsStep: // prefill scan roots
                 if (string.IsNullOrWhiteSpace(ScanRootsBox.Text))
                     ScanRootsBox.Text = string.Join("\r\n", DefaultScanRoots());
                 break;
 
-            case 7: // Finish — summary
+            case FinishStep: // summary
                 SummaryBox.Text = BuildSummary();
                 break;
         }
@@ -186,8 +203,6 @@ public partial class SetupWizardWindow : FluentWindow
     private void OnBack(object sender, RoutedEventArgs e) => ShowStep(_step - 1);
     private void OnNext(object sender, RoutedEventArgs e) => ShowStep(_step + 1);
     private void OnCancel(object sender, RoutedEventArgs e) { DialogResult = false; Close(); }
-
-    private const int PathsStep = 2;
 
     /// <summary>Next is gated only on the Paths step: DayZ install must be a real directory.
     /// Every later step is skippable, so Next stays enabled there.</summary>
@@ -535,27 +550,82 @@ public partial class SetupWizardWindow : FluentWindow
             : "Couldn't reach Steam — is it installed and running?";
     }
 
-    // ---- Step 5: Server instance ----------------------------------------
+    // ---- Step (Project folder) ------------------------------------------
 
-    private void OnScaffold(object sender, RoutedEventArgs e)
+    private void OnProjectsRootChanged(object sender, TextChangedEventArgs e)
     {
-        var dayz = DayzPathBox.Text?.Trim() ?? "";
-        var instance = InstanceDirBox.Text?.Trim() ?? "";
-        if (instance.Length == 0)
-        {
-            ScaffoldReportBox.Text = "Set an instance directory first.";
-            return;
-        }
-        var r = ServerScaffold.Scaffold(dayz, instance);
-        ScaffoldReportBox.Text =
-            $"serverDZ.cfg created : {Yn(r.CfgCreated)}\r\n" +
-            $"profiles created     : {Yn(r.ProfilesCreated)}\r\n" +
-            $"profiles_client made : {Yn(r.ClientProfilesCreated)}\r\n" +
-            $"mission copied       : {Yn(r.MissionCopied)}\r\n" +
-            (string.IsNullOrEmpty(r.Notes) ? "" : $"\r\nnotes: {r.Notes}");
+        if (ProjectsRootStatus is null) return; // pre-template
+        RefreshProjectsRootStatus();
     }
 
-    private static string Yn(bool b) => b ? "yes" : "no";
+    /// <summary>Validate the chosen ProjectsRoot: an existing dzl tree (show mod/server counts),
+    /// an existing plain folder (subfolders will be made), or a new folder (created on Finish).</summary>
+    private void RefreshProjectsRootStatus()
+    {
+        var root = ProjectsRootBox.Text?.Trim() ?? "";
+        if (root.Length == 0) { ProjectsRootStatus.Text = ""; return; }
+
+        if (!Directory.Exists(root))
+        {
+            ProjectsRootStatus.Text = "• new — created on Finish (mods\\, build\\, servers\\, keys\\, workshop\\).";
+            ProjectsRootStatus.Foreground = System.Windows.Media.Brushes.Goldenrod;
+            return;
+        }
+
+        bool hasTree = Directory.Exists(ProjectPaths.ModsDir(root))
+                    || Directory.Exists(ProjectPaths.ServersDir(root))
+                    || Directory.Exists(ProjectPaths.BuildRoot(root))
+                    || Directory.Exists(ProjectPaths.KeysDir(root, null));
+        if (hasTree)
+        {
+            int mods = CountDirs(ProjectPaths.ModsDir(root));
+            int servers = CountDirs(ProjectPaths.ServersDir(root));
+            ProjectsRootStatus.Text = $"✓ existing dzl project folder — {mods} mod(s), {servers} server(s).";
+        }
+        else
+        {
+            ProjectsRootStatus.Text = "✓ existing folder — the dzl subfolders will be created on Finish.";
+        }
+        ProjectsRootStatus.Foreground = System.Windows.Media.Brushes.MediumSeaGreen;
+    }
+
+    private static int CountDirs(string path)
+    {
+        try { return Directory.Exists(path) ? Directory.EnumerateDirectories(path).Count() : 0; }
+        catch { return 0; }
+    }
+
+    // ---- Step (Server instance) -----------------------------------------
+
+    private void OnInstanceNameChanged(object sender, TextChangedEventArgs e)
+    {
+        if (ServerTargetNote is null) return; // pre-template
+        UpdateServerTarget();
+    }
+
+    private string SelectedMap() =>
+        (MapBox?.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "chernarus";
+
+    /// <summary>The project root the wizard will use: the typed value, else config/default.</summary>
+    private string WizardProjectsRoot()
+    {
+        var root = ProjectsRootBox?.Text?.Trim();
+        return string.IsNullOrWhiteSpace(root) ? ProjectPaths.Root(CurrentWizardConfig()) : root!;
+    }
+
+    /// <summary>Show where the instance lands (under the project folder) and flag an invalid name.</summary>
+    private void UpdateServerTarget()
+    {
+        var name = InstanceNameBox.Text?.Trim() ?? "";
+        bool valid = ProjectPaths.IsValidName(name);
+        ServerTargetNote.Text = valid
+            ? $"Created at:  {ProjectPaths.ServerDir(WizardProjectsRoot(), name)}"
+            : "Created under your project folder's servers\\ folder.";
+        ServerNameStatus.Text = (valid || name.Length == 0)
+            ? ""
+            : "✗ invalid name — letters, digits, underscores; must start with a letter.";
+        ServerNameStatus.Foreground = System.Windows.Media.Brushes.IndianRed;
+    }
 
     // ---- Step 6: Server files (steamcmd) --------------------------------
 
@@ -598,15 +668,18 @@ public partial class SetupWizardWindow : FluentWindow
 
     private string BuildSummary()
     {
-        var instance = InstanceDirBox.Text?.Trim() ?? "";
+        var root = WizardProjectsRoot();
+        var name = InstanceNameBox.Text?.Trim() ?? "";
         var roots = ScanRootLines();
+        var server = ProjectPaths.IsValidName(name)
+            ? $"{name} ({SelectedMap()})  →  {ProjectPaths.ServerDir(root, name)}"
+            : "(none)";
         return
             $"DayZ install   : {Show(DayzPathBox.Text)}\r\n" +
             $"DayZ Tools     : {Show(ToolsPathBox.Text)}\r\n" +
             $"DayZ Server    : {Show(ServerPathBox.Text)}\r\n" +
-            $"Instance dir   : {Show(instance)}\r\n" +
-            $"Profiles       : {(instance.Length > 0 ? Path.Combine(instance, "profiles") : "(default)")}\r\n" +
-            $"Client profiles: {(instance.Length > 0 ? Path.Combine(instance, "profiles_client") : "(default)")}\r\n" +
+            $"Project folder : {root}\r\n" +
+            $"Server instance: {server}\r\n" +
             $"P: mounted     : {(WorkDrive.IsMounted() ? "yes" : "no")}\r\n" +
             $"Scan roots     :\r\n" +
             (roots.Count > 0 ? string.Join("\r\n", roots.Select(r => "  " + r)) : "  (none)");
@@ -619,22 +692,40 @@ public partial class SetupWizardWindow : FluentWindow
         var defaults = DzlConfig.Default();
         var dayz = Show(DayzPathBox.Text) == "(not set)" ? defaults.DayzPath : DayzPathBox.Text.Trim();
         var tools = Show(ToolsPathBox.Text) == "(not set)" ? defaults.DayzToolsPath : ToolsPathBox.Text.Trim();
-        var instance = InstanceDirBox.Text?.Trim() ?? "";
+        var root = ProjectsRootBox.Text?.Trim() ?? "";
         var roots = ScanRootLines();
 
         var cfg = defaults with
         {
             DayzPath = dayz,
             DayzToolsPath = tools,
-            ProfilesPath = instance.Length > 0 ? Path.Combine(instance, "profiles") : defaults.ProfilesPath,
-            ClientProfilesPath = instance.Length > 0 ? Path.Combine(instance, "profiles_client") : defaults.ClientProfilesPath,
+            ProjectsRoot = root,   // "" → ProjectPaths.Root resolves to %USERPROFILE%\DayZProjects
             ScanRoots = roots.Count > 0 ? roots : defaults.ScanRoots,
         };
 
-        // Two-tier persist: globals → config.json, per-server slice → the "default" instance (active).
+        // Persist the global config first so ServerService below reads the chosen ProjectsRoot.
         GlobalStore.Save(cfg.GlobalPart("default"), _configPath);
-        Profiles.Save(cfg, "default", _configPath);
-        Profiles.SetActive("default", _configPath);
+
+        // Create the standard project tree under the resolved root.
+        var resolvedRoot = ProjectPaths.Root(cfg);
+        foreach (var sub in new[] { "mods", "build", "servers", "keys", "workshop" })
+        {
+            try { Directory.CreateDirectory(Path.Combine(resolvedRoot, sub)); } catch { /* best-effort */ }
+        }
+
+        // Create the chosen server instance the modern way (scaffold + preset + activate). If the name
+        // was blanked/invalid, just seed + activate a default preset so a usable config still exists.
+        var name = InstanceNameBox.Text?.Trim() ?? "";
+        if (ProjectPaths.IsValidName(name))
+        {
+            try { new ServerService(_configPath).Create(name, SelectedMap(), activate: true); }
+            catch { /* best-effort; the user can create a server from the Servers tab later */ }
+        }
+        else
+        {
+            Profiles.EnsureDefault(_configPath);
+            Profiles.SetActive("default", _configPath);
+        }
 
         DialogResult = true;
         Close();

@@ -183,6 +183,20 @@ public partial class App : Application
                 Shutdown(0);
             }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
+        else if (smoke?.StartsWith("wizard:", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            int wstep = int.TryParse(smoke["wizard:".Length..], out var n) ? n : 0;
+            Dispatcher.BeginInvoke(async () =>
+            {
+                var wiz = new SetupWizardWindow(configPath);
+                wiz.Show();
+                await System.Threading.Tasks.Task.Delay(300);  // let Loaded run ShowStep(0)
+                wiz.GoToStep(wstep);
+                await System.Threading.Tasks.Task.Delay(1000);
+                try { AppScreenshot.Capture(configPath); } catch { /* capture is best-effort */ }
+                Shutdown(0);
+            }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        }
     }
 
     private static void LogCrash(Exception ex)

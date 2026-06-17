@@ -89,20 +89,23 @@
           <Border x:Name="StepRow1" CornerRadius="6" Padding="12,8" Margin="0,1">
             <TextBlock Style="{StaticResource StepLabel}" Text="3  Paths" />
           </Border>
+          <Border x:Name="StepRowProj" CornerRadius="6" Padding="12,8" Margin="0,1">
+            <TextBlock Style="{StaticResource StepLabel}" Text="4  Project folder" />
+          </Border>
           <Border x:Name="StepRow2" CornerRadius="6" Padding="12,8" Margin="0,1">
-            <TextBlock Style="{StaticResource StepLabel}" Text="4  Work drive (P:)" />
+            <TextBlock Style="{StaticResource StepLabel}" Text="5  Work drive (P:)" />
           </Border>
           <Border x:Name="StepRow3" CornerRadius="6" Padding="12,8" Margin="0,1">
-            <TextBlock Style="{StaticResource StepLabel}" Text="5  Game data" />
+            <TextBlock Style="{StaticResource StepLabel}" Text="6  Game data" />
           </Border>
           <Border x:Name="StepRow4" CornerRadius="6" Padding="12,8" Margin="0,1">
-            <TextBlock Style="{StaticResource StepLabel}" Text="6  Server instance" />
+            <TextBlock Style="{StaticResource StepLabel}" Text="7  Server instance" />
           </Border>
           <Border x:Name="StepRow6" CornerRadius="6" Padding="12,8" Margin="0,1">
-            <TextBlock Style="{StaticResource StepLabel}" Text="7  Mods" />
+            <TextBlock Style="{StaticResource StepLabel}" Text="8  Mods" />
           </Border>
           <Border x:Name="StepRow7" CornerRadius="6" Padding="12,8" Margin="0,1">
-            <TextBlock Style="{StaticResource StepLabel}" Text="8  Finish" />
+            <TextBlock Style="{StaticResource StepLabel}" Text="9  Finish" />
           </Border>
         </StackPanel>
       </Border>
@@ -246,6 +249,25 @@
           </StackPanel>
         </ScrollViewer>
 
+        <!-- 4: PROJECT FOLDER -->
+        <ScrollViewer x:Name="PageProj" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock Text="Main project folder" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock Style="{StaticResource Blurb}"
+                       Text="One folder holds everything you make with dzl — your mod sources, builds, server instances, signing keys, and Workshop downloads. Keep it outside the game install (it's git-friendly); the launcher surfaces what the toolchain needs on the P: drive via junctions." />
+            <TextBlock Text="Project folder" Style="{StaticResource FieldLabel}" />
+            <Grid Margin="0,0,0,4">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <ui:TextBox x:Name="ProjectsRootBox" Grid.Column="0" TextChanged="OnProjectsRootChanged" />
+              <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="ProjectsRootBox" Click="OnBrowseFolder" />
+            </Grid>
+            <TextBlock x:Name="ProjectsRootStatus" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,8" />
+            <TextBlock FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                       Text="Pick an existing dzl project folder to keep using it, or a new/empty one — Finish creates the mods\, build\, servers\, keys\ and workshop\ subfolders. Default: %USERPROFILE%\DayZProjects." />
+          </StackPanel>
+        </ScrollViewer>
+
         <!-- 3: WORK DRIVE -->
         <ScrollViewer x:Name="Page2" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
           <StackPanel>
@@ -329,16 +351,24 @@
               <local:InfoTip Text="{x:Static local:HelpText.Scaffold}" />
             </StackPanel>
             <TextBlock Style="{StaticResource Blurb}"
-                       Text="Scaffold a dev serverDZ.cfg, profiles + profiles_client folders, and copy the vanilla mission. Optional but encouraged." />
-            <TextBlock Text="Instance directory" Style="{StaticResource FieldLabel}" />
+                       Text="dzl creates a ready-to-run dev server instance under your project folder — serverDZ.cfg, profiles, and the vanilla mission. Pick a name and map; it's created when you Finish. Add more instances later from the Servers tab." />
             <Grid Margin="0,0,0,12">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-              <ui:TextBox x:Name="InstanceDirBox" Grid.Column="0" />
-              <ui:Button Grid.Column="1" Content="📁" Margin="8,0,0,0" Tag="InstanceDirBox" Click="OnBrowseFolder" />
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="16" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0">
+                <TextBlock Text="Instance name" Style="{StaticResource FieldLabel}" />
+                <ui:TextBox x:Name="InstanceNameBox" Text="default" TextChanged="OnInstanceNameChanged" />
+              </StackPanel>
+              <StackPanel Grid.Column="2">
+                <TextBlock Text="Map" Style="{StaticResource FieldLabel}" />
+                <ComboBox x:Name="MapBox" SelectedIndex="0">
+                  <ComboBoxItem Content="chernarus" />
+                  <ComboBoxItem Content="livonia" />
+                </ComboBox>
+              </StackPanel>
             </Grid>
-            <ui:Button x:Name="ScaffoldBtn" Content="Scaffold" Icon="{ui:SymbolIcon WrenchScrewdriver24}"
-                       Click="OnScaffold" HorizontalAlignment="Left" Margin="0,0,0,12" />
-            <TextBox x:Name="ScaffoldReportBox" Height="120" Style="{StaticResource MonoBox}" />
+            <TextBlock x:Name="ServerTargetNote" FontSize="13" TextWrapping="Wrap" Margin="0,0,0,4"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            <TextBlock x:Name="ServerNameStatus" FontSize="12" Margin="0,0,0,0" />
           </StackPanel>
         </ScrollViewer>
 
