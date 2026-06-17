@@ -14,6 +14,9 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+    # secrets can't be used in `if:` directly — surface presence as an env flag (VT is optional).
+    env:
+      HAS_VT_KEY: ${{ secrets.VT_API_KEY != '' }}
     steps:
       - name: Checkout (full history for Velopack deltas)
         uses: actions/checkout@v4
@@ -54,3 +57,30 @@ jobs:
           --releaseName "dzl ${{ steps.ver.outputs.value }}"
           --tag v${{ steps.ver.outputs.value }}
           -o artifacts/release
+
+      # Optional: scan the unsigned Setup.exe on VirusTotal so users can verify it's clean.
+      # Enabled by the VT_API_KEY repo secret (free key). The action is a Node action, so it runs
+      # on this windows-latest job; it handles the >32 MB upload flow for the ~80 MB installer.
+      - name: VirusTotal scan
+        id: vt
+        if: env.HAS_VT_KEY == 'true'
+        uses: crazy-max/ghaction-virustotal@v4
+        with:
+          vt_api_key: ${{ secrets.VT_API_KEY }}
+          files: artifacts/release/DayZLabs-win-Setup.exe
+
+      # The action's update_release_body only fires on `release` events; we trigger on tag push,
+      # so append the VirusTotal link to the release notes ourselves.
+      - name: Append VirusTotal link to the release notes
+        if: env.HAS_VT_KEY == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANALYSIS: ${{ steps.vt.outputs.analysis }}
+        run: |
+          tag="v${{ steps.ver.outputs.value }}"
+          url="${ANALYSIS#*=}"
+          {
+            gh release view "$tag" -R "$GITHUB_REPOSITORY" --json body --jq .body
+            printf '\n**VirusTotal scan:** %s\n' "$url"
+          } | gh release edit "$tag" -R "$GITHUB_REPOSITORY" --notes-file -
