@@ -46,7 +46,8 @@ public partial class SetupWizardWindow : FluentWindow
         InitializeComponent();
         _configPath = configPath;
 
-        // Order matters: the array index IS the step number. Check sits at index 1.
+        // Order matters: the array INDEX is the authoritative step number (the Page*/StepRow* x:Name
+        // suffixes are historical and no longer match the displayed numbers). Check sits at index 1.
         _stepRows = new[] { StepRow0, StepRowCheck, StepRow1, StepRowProj, StepRow2, StepRow3, StepRow4, StepRow6, StepRow7 };
         _pages = new UIElement[] { Page0, PageCheck, Page1, PageProj, Page2, Page3, Page4, Page6, Page7 };
 
