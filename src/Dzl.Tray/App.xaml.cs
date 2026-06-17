@@ -173,6 +173,16 @@ public partial class App : Application
                 Shutdown(0);
             }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
+        else if (string.Equals(smoke, "uninstall", StringComparison.OrdinalIgnoreCase))
+        {
+            Dispatcher.BeginInvoke(async () =>
+            {
+                new Dialogs.UninstallWindow().Show();
+                await System.Threading.Tasks.Task.Delay(1200);
+                try { AppScreenshot.Capture(configPath); } catch { /* capture is best-effort */ }
+                Shutdown(0);
+            }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        }
     }
 
     private static void LogCrash(Exception ex)

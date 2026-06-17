@@ -80,10 +80,20 @@ public sealed class TrayIcon : IDisposable
         menu.Items.Add(MenuItem("Open config folder", OpenConfigFolder));
         menu.Items.Add(new Separator());
         menu.Items.Add(MenuItem("Check for updates…", (_, _) => _ = CheckForUpdatesAsync(silentIfCurrent: false)));
+        if (Uninstaller.CanUninstall)
+            menu.Items.Add(MenuItem("Uninstall dzl…", (_, _) => ShowUninstallDialog()));
         menu.Items.Add(new Separator());
         menu.Items.Add(MenuItem("Quit", Quit));
 
         return menu;
+    }
+
+    private static void ShowUninstallDialog()
+    {
+        // Modeless owner avoided on purpose (a WPF-UI owned window hides its owner on close).
+        var dlg = new Dialogs.UninstallWindow();
+        dlg.ShowDialog();
+        if (dlg.Confirmed) Uninstaller.Run(dlg.RemoveUserData);
     }
 
     private static MenuItem MenuItem(string header, RoutedEventHandler onClick)
