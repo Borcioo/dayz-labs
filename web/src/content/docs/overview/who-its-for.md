@@ -17,6 +17,9 @@ people running several mods and server variants at once.
 
 - **Windows.**
 - **DayZ** and **DayZ Tools**, both installed via Steam.
-- The **.NET 8 SDK** to build and run dzl.
+- That's it — **no .NET install**. The [installer](https://github.com/Borcioo/dayz-labs/releases/latest/download/DayZLabs-win-Setup.exe)
+  is self-contained, runs per-user (no admin), and updates itself.
 - Optional, per feature: **steamcmd** (Workshop downloads), the **GitHub CLI** (`gh`), and a
   **Steam Web API key** (Workshop search).
+
+Ready? Head to [Getting started](/dayz-labs/guides/getting-started/).

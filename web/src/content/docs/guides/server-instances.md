@@ -1,67 +1,81 @@
 ---
 title: Server instances
-description: Self-contained server configurations saved as named presets you can switch between.
+description: Create and switch between named DayZ servers — each with its own config, port, and mods — from the Servers page.
 sidebar:
   order: 4
 ---
 
-A **server instance** is a self-contained server configuration (its own `serverDZ.cfg`,
-profile folders, mission, port, and mod run-list). dzl stores each instance as a named
-**preset** — a full config snapshot — and the active preset is the one that launches.
+A **server instance** is one complete local DayZ server: its own `serverDZ.cfg`, profile
+folders, mission, network port, and list of mods. You can keep as many as you like side by
+side — one per map, or a hardcore and a casual version of the same map — and switch which one
+is live with a single click. Whichever instance is active is the one the Dashboard launches
+and the one the Logs follow.
 
-## Presets
+You manage all of them on the **Servers** page, under **Server** in the left navigation.
 
-A preset is a complete config snapshot saved in `presets/*.json` next to your config. The base
-config's `active_preset` field names the live one. Switching presets switches everything: which
-server instance, which mods, which params.
+## The Servers page
 
-```powershell
-dotnet run --project src/Dzl.Cli -- preset save <name>   # save current config as a preset and activate it
-dotnet run --project src/Dzl.Cli -- preset load <name>   # make a preset active
-dotnet run --project src/Dzl.Cli -- preset rm <name>     # delete a preset
-```
+![The Servers page — manage server instances](../../../assets/screens/servers.png)
 
-## Creating and switching instances
+*The Servers page lists every server instance you've created. The active one is marked; the rest are one click away.*
 
-```powershell
-dotnet run --project src/Dzl.Cli -- server new <name>    # scaffold a new server instance
-dotnet run --project src/Dzl.Cli -- server ls            # list instances
-dotnet run --project src/Dzl.Cli -- server use <name>    # activate an instance (switches the active preset)
-dotnet run --project src/Dzl.Cli -- server rm <name>     # remove an instance (keeps its files unless --purge)
-```
+Each row is one server instance. From here you can create a new one, switch which one is
+active, and remove ones you no longer need.
 
-`server new` scaffolds the instance and saves it as a preset; `server use` activates it by
-switching the active preset. Creating an instance lets you pick the map (e.g. `chernarus`,
-`livonia`) and a UDP port (auto-assigned if you don't pick one).
+## Create a server
 
-## Maps and multi-server
+1. Open **Server → Servers**.
+2. Click **New server**.
+3. Give it a **name** (for example `chernarus-test` or `livonia-hardcore`).
+4. Pick a **map** (such as Chernarus or Livonia).
+5. Pick a **port**, or leave it for dzl to assign a free one.
 
-Because each instance is its own preset, you can keep several side by side — for example one
-per map, or hardcore vs. casual variants of the same map — and switch between them with
-`server use` (or `preset load`). Each carries its own mods, params, and port, so they don't
-collide.
+dzl scaffolds everything that server needs — a fresh `serverDZ.cfg`, profile folders, and a
+copy of the mission — and adds it to the list. It does not start running; it just exists,
+ready to be made active.
+
+## Switch the active server
+
+Click **Use** on any instance to make it the active one. That's the switch that matters:
+everything else in the app follows the active server.
+
+When you switch:
+
+- The **Dashboard** now starts, stops, and previews the launch command for that server.
+- The **Logs** page tails that server's script / RPT / ADM logs.
+- The mods, launch params, map, and port that belong to that instance come along with it —
+  they don't bleed into your other servers.
+
+So you can flip from a test build of one map to a clean copy of another in one click, run it,
+read its logs, and switch back, without re-editing any config by hand.
+
+## Why keep several
+
+Because each instance is fully self-contained, there's no reason to overwrite one to try
+something. Common setups:
+
+- **One server per map** — Chernarus, Livonia, a custom terrain — each ready to go.
+- **Variants of the same map** — a heavily-modded build next to a near-vanilla one for
+  comparison.
+- **A throwaway** — a scratch server you spin up to reproduce a bug, then delete.
+
+They each carry their own mods, params, and port, so two of them can't collide.
 
 ## Bases (templates)
 
-A **base** is a template that new instances can be created from — so you don't re-create the
-same `serverDZ.cfg` / mission setup every time.
+A **base** is a starter template a new instance can be built from, so you don't rebuild the
+same `serverDZ.cfg` and mission setup every time. dzl can build a base from your DayZ install
+or start you from a blank one. You'll find these under **Server → Bases**.
 
-```powershell
-dotnet run --project src/Dzl.Cli -- base ls              # list bases
-dotnet run --project src/Dzl.Cli -- base new <name>      # create a base (from the DayZ install by default, or --empty)
-dotnet run --project src/Dzl.Cli -- base rm <name>       # delete a base
-```
+## Power users and automation
 
-`base new` builds the template from your DayZ install by default; pass `--empty` for a blank
-one.
+If you script your workflow or drive dzl from an AI agent, the bundled command-line and MCP
+tools cover the same operations — creating instances, listing them, and switching the active
+one — so you can scaffold and flip servers without opening the window. See the
+[MCP server](/dayz-labs/guides/mcp/) guide for details.
 
-## From the tray
+## Next steps
 
-The tray surfaces all of this under **Server → Servers** (instances) and **Server → Bases**
-(templates). The Dashboard shows the active profile, mode, and port, with start / stop /
-restart.
-
-## From an AI agent (MCP)
-
-The MCP server exposes `new_server`, `list_servers`, and `use_server` (plus `list_presets` /
-`set_preset`), so an agent can scaffold and switch instances. See [MCP](/dayz-labs/guides/mcp/).
+- [Building mods](/dayz-labs/guides/building-mods/)
+- [Central Economy](/dayz-labs/guides/central-economy/)
+- [Steam Workshop](/dayz-labs/guides/workshop/)

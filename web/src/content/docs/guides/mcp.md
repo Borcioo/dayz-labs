@@ -1,46 +1,68 @@
 ---
 title: MCP server
-description: Drive dzl from an AI agent — Dzl.Mcp exposes the launcher's operations as Model Context Protocol tools.
+description: Let an AI agent like Claude drive your installed DayZ Labs launcher — the bundled MCP server exposes dzl's operations as Model Context Protocol tools.
 sidebar:
   order: 6
 ---
 
-`Dzl.Mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server. It exposes
-dzl's operations as MCP tools so an AI agent — for example Claude — can drive the launcher:
-check status, start/stop the server, read and diagnose logs, build and preflight mods, edit
-the Central Economy, download Workshop items, and run git operations.
+DayZ Labs ships with a **Model Context Protocol (MCP)** server. It lets an AI agent —
+for example Claude — drive the launcher for you: check status, start and stop the server,
+read and diagnose logs, build and preflight mods, edit the Central Economy, download
+Workshop items, and run git operations.
 
-## Transport and config
+This is a power-user feature. You do not need it to use DayZ Labs day to day — the tray app
+already does everything through clicks. But if you work with an AI assistant, pointing it at
+the MCP server lets it do those same things on your behalf.
 
-The server speaks over **stdio**. Because **stdout is the protocol stream**, all of the
-server's own logging goes to **stderr** — don't pipe stdout anywhere but the MCP client.
+## What you need
 
-It operates on the config named by the `DZL_CONFIG` environment variable, falling back to the
-default location:
+You don't build anything. When you install DayZ Labs, the MCP server is installed alongside it.
+The **MCP** entry in the app's left navigation shows its details and confirms it's present.
+
+The bundled server executable lives at:
 
 ```
-%LOCALAPPDATA%\dzl\config.json
+%LOCALAPPDATA%\DayZLabs\current\mcp\dzl-mcp.exe
 ```
 
-Set `DZL_CONFIG` to an absolute path to point the agent at a specific config.
+That's the path you give your MCP client.
 
-## Setup snippet
+## Point your AI agent at it
+
+Add the server to your MCP client's config. For most clients (including Claude) that means a
+small JSON entry. Use the full path to the bundled exe:
 
 ```json
 {
   "mcpServers": {
     "dzl": {
-      "command": "dotnet",
-      "args": ["run", "--project", "D:/path/to/dzl-dotnet/src/Dzl.Mcp"],
-      "env": { "DZL_CONFIG": "%LOCALAPPDATA%/dayz-labs/config.json" }
+      "command": "%LOCALAPPDATA%\\DayZLabs\\current\\mcp\\dzl-mcp.exe"
     }
   }
 }
 ```
 
-You can also point `command` at a built `Dzl.Mcp` executable instead of `dotnet run`.
+That's it — no `dotnet`, no build step. The server reads the same config the tray app uses, so
+the agent sees your real mods, presets, servers, and paths.
 
-## Tool catalog
+By default it operates on your config at:
+
+```
+%LOCALAPPDATA%\dzl\config.json
+```
+
+If you keep more than one config and want the agent to use a specific one, set the `DZL_CONFIG`
+environment variable to that file's absolute path in the same JSON entry under an `"env"` block.
+
+:::note
+The server talks to your client over **stdio**, and stdout carries the protocol. The server's
+own logging goes to stderr, so don't pipe its stdout anywhere but the MCP client.
+:::
+
+## What the agent can do
+
+Once connected, the agent has these tools. They map one-to-one onto the same actions you'd take
+in the tray app.
 
 ### Lifecycle and status
 
@@ -58,7 +80,7 @@ You can also point `command` at a built `Dzl.Mcp` executable instead of `dotnet 
 | `list_mods` | The enabled mods (path + side) of the active profile. |
 | `list_presets` | List profiles/presets; the active one is flagged. |
 | `set_preset` | Switch the active profile by name. |
-| `list_mod_projects` | Mod source projects under ProjectsRoot with their P: link state. |
+| `list_mod_projects` | Mod source projects under your Projects root with their P: link state. |
 | `new_mod` / `import_mod` / `link_mod` | Scaffold / import / link a mod source project. |
 
 ### Logs and diagnosis
@@ -119,11 +141,13 @@ You can also point `command` at a built `Dzl.Mcp` executable instead of `dotnet 
 | `create_repo` | Init git + create & push a GitHub repo for the mod. |
 | `release` | Cut a GitHub release at HEAD (creates + pushes the tag). |
 
-## Notes for agents
+## Good to know
 
-- `workshop_add` opens the steamcmd console for an interactive login + Steam Guard the first
-  time — a human needs to complete sign-in.
-- Central Economy writes always snapshot the file first; use `types_backups` / `types_restore`
-  to roll back.
-- If a tray is running with its automation pipe enabled, routed operations go through that
-  live process so it stays the single source of truth.
+- `workshop_add` opens the steamcmd console for an interactive login plus Steam Guard the first
+  time — you'll need to complete sign-in yourself.
+- Central Economy writes always snapshot the file first, so an agent can't lose your work. Use
+  `types_backups` / `types_restore` to roll back.
+- If the tray app is open with its optional automation server turned on (it hosts a named pipe,
+  `dzl-ipc-v1`), the agent's actions route through that running app so it stays the single source
+  of truth — what the agent does, you see live in the tray. This is off by default; turn it on in
+  the app only if you want the agent and the tray to share one live session.

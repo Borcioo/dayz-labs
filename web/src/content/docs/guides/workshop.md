@@ -1,53 +1,67 @@
 ---
 title: Steam Workshop
-description: Search the Steam Workshop and download or update DayZ mods through steamcmd.
+description: Find DayZ mods, subscribe or download them, and enable them per server — all from the Mods page.
 sidebar:
   order: 5
 ---
 
-dzl can search the Steam Workshop and download/update DayZ mods through **steamcmd**.
+DayZ Labs keeps every mod it can find on your machine in one place — the **Mods** page —
+and lets you pull in new ones from the Steam Workshop without leaving the app.
 
-## What you need
+Open it from the left navigation, under **General → Mods**.
 
-- **Search** needs a **Steam Web API key** in your config.
-- **Download / update** needs **steamcmd** configured.
+![The Mods page — your mod library and Steam Workshop](../../../assets/screens/mods.png)
 
-## Search
+*The Mods page lists every mod DayZ Labs has discovered on this machine, with an Open Workshop button in the corner.*
 
-```powershell
-dotnet run --project src/Dzl.Cli -- workshop search "<query>"
-```
+## Your mod library
 
-Search uses the Steam Web API and returns matching items (id + title). Without a Web API key,
-search is unavailable — download still works.
+The Mods page shows your **mod library**: every mod DayZ Labs has scanned and discovered
+on this PC, whether it came from the Workshop, was installed by hand, or is one of your own
+builds. This is the pool you pick from when you decide what a server should load.
 
-## Download and update
+You don't enable mods here. To choose which mods a server actually runs, go to the
+**Dashboard**, open the Server card, and use **Edit mods** — the active list lives with each
+server. See [Getting started](/dayz-labs/guides/getting-started/) for the Dashboard tour.
 
-```powershell
-dotnet run --project src/Dzl.Cli -- workshop add <id>        # download a Workshop item by published-file id
-dotnet run --project src/Dzl.Cli -- workshop update <id>     # re-download an item to update it
-dotnet run --project src/Dzl.Cli -- workshop update          # update all downloaded items
-```
+## Getting mods from the Steam Workshop
 
-### The visible login console
+In the top corner of the Mods page is an **Open Workshop** button. Click it to open the
+Workshop window, where you can:
 
-`workshop add` / `workshop update` shell out to **steamcmd**, which **opens a console window
-for the Steam login**. This is intentional and necessary: steamcmd handles your Steam
-username/password and **Steam Guard** prompt interactively in that console. Watch the console,
-enter your credentials, and approve the Steam Guard challenge there — the download proceeds
-once you're authenticated. steamcmd caches the session, so subsequent downloads usually don't
-prompt again.
+1. **Search** the Steam Workshop by name to find DayZ mods.
+2. **Subscribe** to an item through Steam — the same as clicking Subscribe on the website,
+   so the mod downloads through your regular Steam client.
+3. **Download** an item through **steamcmd** instead, which fetches the files directly into
+   your library.
 
-## A note on the two Steam paths
+Either way, once a mod finishes downloading it appears back on the **Mods** page in your
+library, ready to be enabled for a server.
 
-dzl has a second, separate Steam integration used by the tray to **subscribe** to Workshop
-items via SteamKit2 (the "Sign in to Steam" window, with a Steam Guard mobile approval). That
-is distinct from the **steamcmd download** path described above. For command-line and
-agent-driven downloads, the steamcmd flow is the one in play — and that's the one with the
-visible login console.
+### Signing in to Steam
 
-## From an AI agent (MCP)
+Both subscribing and downloading need you signed in to Steam. You do that once in
+**Settings → Accounts**, where there's a Steam login alongside GitHub. After you sign in
+(and approve the **Steam Guard** prompt on your phone if asked), DayZ Labs remembers the
+session, so you normally won't be asked again.
 
-The MCP server exposes `workshop_search`, `workshop_add`, and `workshop_update` — the same
-operations. Note that `workshop_add` still opens the steamcmd console for the interactive
-login/Guard step, so a human needs to complete sign-in the first time. See [MCP](/dayz-labs/guides/mcp/).
+If a download asks you to confirm your login or a Steam Guard challenge, complete that prompt
+and the download continues on its own.
+
+## Enabling a downloaded mod
+
+Downloaded mods are now part of your library, but a server only loads the mods you give it:
+
+1. Go to the **Dashboard**.
+2. On the **Server** card, click **Edit mods**.
+3. Add the mod to the run list and set its order.
+
+The Server card shows a live preview of the exact launch command, so you can confirm the mod
+is included before you press **Start**.
+
+## Power users: automation
+
+If you script your workflow or drive DayZ Labs from an AI assistant, the bundled MCP server
+exposes the same Workshop operations (`workshop_search`, `workshop_add`, `workshop_update`),
+and there's an equivalent CLI. A steamcmd download may still pop a console window for the
+first interactive Steam login. See [MCP](/dayz-labs/guides/mcp/) for details.

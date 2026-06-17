@@ -1,67 +1,93 @@
 ---
 title: Central Economy
-description: Edit the mission's Central Economy — types, events, spawns — with linting and versioned backups.
+description: Edit your server's Central Economy — types, events, spawns — in DayZ Labs' built-in editor, with linting and versioned backups.
 sidebar:
   order: 3
 ---
 
-dzl edits the **Central Economy (CE)** of the active server mission — the XML that controls
-loot spawning, events, and player spawns. It works across all the CE files the mission's
-`cfgeconomycore.xml` references, tagging each entry with where it came from
-(`vanilla` / `mod` / `custom`).
+The Central Economy (CE) is the set of XML files that control how DayZ spawns loot,
+runs events, and places players on your server. DayZ Labs ships a full visual editor
+for it, so you can change spawn numbers, lifetimes, events and more without hand-editing
+XML.
 
-The tray exposes the editors under **Server → Economy**; the CLI and MCP cover the
-`types.xml` workflow.
+Every change is checked (linted) and backed up automatically, so it's safe to experiment.
 
-## Editors
+## Opening the editor
 
-The Economy window has a tab per CE file:
+In the tray app's left navigation, under **SERVER**, click **Economy**. The editor opens
+in its own window so you can keep it side by side with the game or your logs.
 
-- **Types** — `types.xml`: per-class spawn economy (nominal, min, lifetime, restock, cost,
-  quantity min/max, category, usage, value/tiers, tags, flags). Full editing with undo/redo.
-- **Dictionaries** — the `cfglimitsdefinition` usage / value / tag / category vocabulary that
-  Types is linted against.
-- **Random Presets** — `cfgrandompresets.xml`.
-- **Spawnable Types** — `cfgspawnabletypes.xml`.
-- **Globals** — `globals.xml`.
-- **Events** — `events.xml`.
-- **Player Spawns** — `cfgplayerspawnpoints.xml`: fresh / hop / travel categories, their
-  parameter bags (spawn / generator / group), and named position-group bubbles.
+It works on the Central Economy of your **active server instance** — the one marked as in
+use under [Servers](/dayz-labs/guides/server-instances/). Switch servers there first if you want to
+edit a different one.
 
-## Linting
+![The Central Economy editor](../../../assets/screens/economy.png)
 
-The Types editor lints each entry against the dictionary vocabulary and flags structural
-problems — unknown `usage` / `value` / `tag` / `category`, duplicate type names, and other
-issues. Rows with findings show a warning marker; the panel summarizes the total. From the
-CLI:
+*The Economy editor opens in its own window, with a left rail of file groups and a tab per CE file.*
 
-```powershell
-dotnet run --project src/Dzl.Cli -- types lint
-```
+## The Dashboard tab
 
-## Versioned backups
+The editor opens on the **Dashboard**. It gives you an at-a-glance overview of the whole
+Central Economy:
 
-Every CE edit snapshots the file **before** writing. Backups land in a
-`.dzl-<stem>-backups\` folder next to the file (e.g. `.dzl-types-backups\` next to
-`types.xml`), named `<stem>.<timestamp-id><ext>`. dzl keeps the newest 20 and prunes older
-ones. Restoring a backup snapshots the current file first, so a restore is itself undoable.
+- **Counts** — how many Types, Events, Globals, Spawnable Types, Random Presets, Player
+  Spawns, and Dictionaries your mission has.
+- **A validation list** — any problems found in your files, grouped as errors, warnings,
+  and info.
+- **A Run full validation button** — re-scans every CE file and refreshes the list. Run
+  this whenever you want to double-check your work, especially before launching the server.
 
-## CLI: editing types.xml
+If the validation list is empty (or shows only info notes), your economy is in good shape.
 
-```powershell
-dotnet run --project src/Dzl.Cli -- types ls            # list types (name, nominal, min, lifetime, category, origin, file)
-dotnet run --project src/Dzl.Cli -- types lint          # run CE lint rules
-dotnet run --project src/Dzl.Cli -- types set <Class>   # set/insert a type (only the given fields change)
-dotnet run --project src/Dzl.Cli -- types rm <Class>    # remove a type
-dotnet run --project src/Dzl.Cli -- types backups       # list backups (newest first)
-dotnet run --project src/Dzl.Cli -- types restore <file>  # restore a backup over the live file
-```
+## Working through the tabs
 
-`types set` only changes the fields you pass and backs up the file first; `types rm` and
-`types restore` back up first too.
+Along the top of the window is a tab for each kind of CE file. A left rail groups them as
+**Economy / Events / World / Server / Map files** so related files stay together.
 
-## From an AI agent (MCP)
+- **Types** — the big one. This is your per-item spawn economy: how many of each item exist
+  (nominal), the minimum kept in the world, how long it survives (lifetime), how fast it
+  restocks, its category, where it can spawn (usage), and its tier/value. This is where you
+  go to make an item rarer, more common, or spawn in different places.
+- **Spawnable Types** — what gets attached to items and how they're filled when they spawn
+  (e.g. a jacket spawning with random contents, a vehicle spawning with parts).
+- **Random Presets** — reusable random groupings (cargo and attachment sets) that Spawnable
+  Types and events draw from.
+- **Globals** — server-wide economy switches and numbers (cleanup timers, loot caps, and
+  similar global settings).
+- **Economy core** and **CE Config** — the lower-level wiring that tells the game which CE
+  files to load and how the economy is assembled.
+- **Dictionaries** — the master vocabulary of valid usage / value / tag / category names.
+  Your Types entries are checked against this list, so it's what keeps "unknown usage" style
+  mistakes from slipping through.
+- **Ignore list** — entries the economy is told to skip.
 
-The MCP server exposes `types_list`, `types_lint`, `types_set`, `types_remove`,
-`types_backups`, and `types_restore` — the same operations, so an agent like Claude can read,
-lint, edit, and roll back the active mission's economy. See [MCP](/dayz-labs/guides/mcp/).
+Events (the dynamic spawns like vehicles, infected hordes, and helicopter crashes) live
+under the **Events** group in the left rail.
+
+## Everything is linted
+
+As you edit, DayZ Labs checks your entries against the Dictionaries vocabulary and flags
+structural problems — an unknown usage or category, a duplicate type name, and similar
+issues. Flagged rows are marked, and the count rolls up into the Dashboard's validation
+list. Press **Run full validation** on the Dashboard any time to re-check the whole economy.
+
+This is meant to catch the small mistakes that otherwise only show up as a broken loot
+economy (or a server that won't start) once you're in-game.
+
+## Every change is backed up
+
+Before any edit is written, DayZ Labs snapshots the file first. Those backups are kept
+next to the original file, and the app keeps a rolling history of recent versions and
+prunes the oldest automatically.
+
+Because of that, you can undo a bad change by restoring an earlier backup — and restoring
+itself snapshots the current file first, so even a restore is reversible. Edit freely; you
+can always roll back.
+
+## Power users and automation
+
+The CLI and the bundled [MCP server](/dayz-labs/guides/mcp/) can also read, lint, edit, and
+roll back `types.xml` for the active mission, so an AI assistant like Claude can adjust your
+economy on request. The MCP server is the way to let Claude do this — see the
+[MCP guide](/dayz-labs/guides/mcp/) for setup. For everyday editing, the Economy window above
+is the place to be.
