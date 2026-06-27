@@ -4,6 +4,18 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.8] - 2026-06-27
+
+### Added
+- **Search box on the mod-selection lists.** The server editor's Mods tab now has a filter
+  (shared with the main Mods page), and the My Mods projects list filters by name / path.
+
+### Fixed
+- **The "claude mcp add" command on the MCP page pointed at a missing path on the installed
+  app.** The MCP server ships isolated in an `mcp\` subfolder as a self-contained
+  `dzl-mcp.exe` (its .NET 10 deps would poison the net8 Tray if merged into the root). The
+  command now resolves `mcp\dzl-mcp.exe` instead of a non-existent `Dzl.Mcp.dll` in the root.
+
 ## [0.1.7] - 2026-06-27
 
 ### Fixed
@@ -29,4 +41,5 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.8]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.8
 [0.1.7]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.7
