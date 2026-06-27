@@ -77,22 +77,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         "convert_paa", "pack_pbo", "unbinarize", "work_drive_action",
     };
 
-    /// <summary>Resolve how to invoke the Dzl.Mcp stdio server, best-effort: a sibling
-    /// <c>Dzl.Mcp.exe</c> (run directly), else a sibling <c>Dzl.Mcp.dll</c> (via <c>dotnet</c>),
-    /// else a clearly-marked placeholder dll path (dev/unbuilt — must be built or published).</summary>
-    private static string ResolveMcpCommand()
-    {
-        var baseDir = AppContext.BaseDirectory;
-        var exe = Path.Combine(baseDir, "Dzl.Mcp.exe");
-        if (File.Exists(exe)) return Quote(exe);
-        var dll = Path.Combine(baseDir, "Dzl.Mcp.dll");
-        if (File.Exists(dll)) return $"dotnet {Quote(dll)}";
-        // Dev / unbuilt: point at where the dll would live; it must be built or published first.
-        return $"dotnet {Quote(dll)}";
-    }
-
-    private static string Quote(string s) => s.Contains(' ') ? $"\"{s}\"" : s;
-
     /// <summary>True when <see cref="Mode"/> is "normal" (drives the mode ToggleSwitch).</summary>
     public bool IsNormalMode => Mode == "normal";
 
@@ -114,7 +98,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _svc = new LauncherService(configPath);
         AutomationOn = App.AutomationServerRunning;
         McpRegisterCommand =
-            $"claude mcp add dzl --env DZL_CONFIG=\"{configPath}\" -- {ResolveMcpCommand()}";
+            $"claude mcp add dzl --env DZL_CONFIG=\"{configPath}\" -- {McpLauncher.Resolve(AppContext.BaseDirectory, File.Exists)}";
 
         Profiles.EnsureDefault(configPath);
         var (cfg, savePath, active) = Profiles.ResolveActive(configPath);
