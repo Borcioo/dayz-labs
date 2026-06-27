@@ -4,6 +4,19 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.12] - 2026-06-27
+
+### Changed
+- **New build engine (no AddonBuilder).** Mod and pack builds now run a direct DayZ-Tools pipeline —
+  `binarize.exe` → `CfgConvert` (config.cpp→config.bin) → `FileBank.exe` (pack) → `DSSignFile` (sign) —
+  giving per-file control AddonBuilder didn't expose.
+
+### Fixed
+- **Already-binarized (ODOL) p3d no longer crash the build.** Such models are excluded from Binarize and
+  shipped unchanged (verified byte-identical in the output PBO), while the rest of the mod still binarizes
+  normally — so a mod/pack containing pre-binarized models builds instead of dying with an access
+  violation (0xC0000005). AddonBuilder's `-include` cannot do this (confirmed by testing).
+
 ## [0.1.11] - 2026-06-27
 
 ### Fixed
@@ -75,6 +88,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.12]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.12
 [0.1.11]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.11
 [0.1.10]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.10
 [0.1.9]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.9
