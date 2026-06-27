@@ -99,11 +99,18 @@ public static class PathResolver
         // "MyMod\data\x.paa" (or "<prefix-first-segment>\...") → strip the first segment, map into the mod dir.
         var parts = r.Split('\\', StringSplitOptions.RemoveEmptyEntries);
         var folderName = Path.GetFileName(modDir);
-        var prefixFirst = prefix.Split('\\', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+        var prefixParts = prefix.Split('\\', StringSplitOptions.RemoveEmptyEntries);
+        var prefixFirst = prefixParts.FirstOrDefault() ?? "";
         if (parts.Length > 1 &&
             (parts[0].Equals(folderName, StringComparison.OrdinalIgnoreCase) ||
              (prefixFirst.Length > 0 && parts[0].Equals(prefixFirst, StringComparison.OrdinalIgnoreCase))))
             candidates.Add(Path.Combine(modDir, Path.Combine(parts[1..])));
+
+        // Multi-segment prefix (e.g. $PBOPREFIX$ "DemoPack\Core"): a reference that opens with the WHOLE
+        // prefix maps to the mod dir after the full prefix, not just the first segment.
+        if (prefixParts.Length > 1 && parts.Length > prefixParts.Length &&
+            parts.Take(prefixParts.Length).SequenceEqual(prefixParts, StringComparer.OrdinalIgnoreCase))
+            candidates.Add(Path.Combine(modDir, Path.Combine(parts[prefixParts.Length..])));
 
         if (!string.IsNullOrEmpty(workDriveRoot))
             candidates.Add(Path.Combine(workDriveRoot, refOs));
