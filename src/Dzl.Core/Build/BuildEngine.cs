@@ -4,19 +4,25 @@ namespace Dzl.Core.Build;
 
 public sealed record EngineResult(bool Ok, string Pbo, string Output);
 
-/// <summary>Direct build pipeline (DayZ Tools binaries, no AddonBuilder): stage → Binarize (models) →
-/// CfgConvert (config.cpp→config.bin) → FileBank (pack) → DSSignFile (sign). Already-binarized (ODOL) p3d
-/// are excluded from Binarize and shipped unchanged, so they never crash the binarizer. Never throws.</summary>
+/// <summary>Direct build pipeline (no AddonBuilder, no FileBank): stage → Binarize (MLOD models only) →
+/// CfgConvert (config.cpp→config.bin) → <see cref="PboWriter"/> (pack) → DSSignFile (sign). Already-binarized
+/// (ODOL) p3d are excluded from Binarize and shipped unchanged, so they never crash the binarizer; a mod with no
+/// MLOD models skips Binarize entirely. Binarize is given the project-drive context (<c>-binpath</c>/<c>-addon</c>,
+/// cwd = <paramref name="binPath"/>) so it resolves vanilla + the mod's own materials and runs fast — the staging
+/// itself can live off the project drive. Packing is done in-process, so no DayZ FileServer is involved. Never throws.</summary>
 public static class BuildEngine
 {
+    /// <param name="binPath">The mounted project-drive root (<c>P:\</c>) passed to binarize as
+    /// <c>-binpath</c>/<c>-addon</c> and used as its working directory, so it can resolve references.</param>
+    /// <param name="addonFolders">Extra <c>-addon</c> scan folders for binarize (e.g. extracted vanilla packs).
+    /// When null/empty, <paramref name="binPath"/> alone is scanned.</param>
     public static EngineResult Run(string toolsDir, string sourceDir, string prefix, string pboName,
-        string workDir, string outAddonsDir, bool binarize, string? signPrivateKey, Action<string>? onLine)
+        string workDir, string outAddonsDir, bool binarize, string? signPrivateKey, Action<string>? onLine,
+        string binPath = @"P:\", IReadOnlyList<string>? addonFolders = null)
     {
         EngineResult Fail(string msg, string output = "") =>
             new(false, "", string.IsNullOrEmpty(output) ? msg : msg + "\n" + output);
 
-        var fbExe = ToolCatalog.Find(toolsDir, "filebank");
-        if (fbExe is null || !fbExe.Exists) return Fail("FileBank.exe not found — check the DayZ Tools path");
         var binExe = ToolCatalog.Find(toolsDir, "binarize");
         if (binarize && (binExe is null || !binExe.Exists)) return Fail("binarize.exe not found — check the DayZ Tools path");
 
@@ -26,28 +32,43 @@ public static class BuildEngine
         }
         catch { /* leftover work dir — best effort */ }
 
-        var final = Path.Combine(workDir, pboName);   // FileBank names the .pbo after this folder leaf
+        var final = Path.Combine(workDir, pboName);
         Directory.CreateDirectory(final);
 
         var odol = BuildAssets.BinarizedP3ds(sourceDir)
             .Select(Path.GetFullPath).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        // 1. Full copy of the source (configs, ODOL p3d as-is, $PBOPREFIX$, everything) → the pack folder.
+        // 1. Full copy of the source (configs, ODOL p3d as-is, $PBOPREFIX$, everything) → the pack folder. This
+        //    already guarantees every model ships; Binarize output is overlaid on top, ODOL p3d are left untouched.
         CopyTree(sourceDir, final, exclude: null);
 
         if (binarize)
         {
-            // 2. Binarize input = the source WITHOUT the ODOL p3d (so Binarize never chokes on them).
-            var stageBin = Path.Combine(workDir, "_bin_in");
-            CopyTree(sourceDir, stageBin, exclude: odol);
-            var binOut = Path.Combine(workDir, "_bin_out");
-            Directory.CreateDirectory(binOut);
-            onLine?.Invoke($"binarize: {pboName}" + (odol.Count > 0 ? $"  ({odol.Count} ODOL p3d copied as-is)" : ""));
-            var (bok, bout) = Binarize.Run(binExe!.ExePath, stageBin, binOut, onLine);
-            if (!bok) return Fail($"binarize failed for {pboName}", bout);
+            // 2. Binarize the MLOD models only. ODOL p3d are excluded (they'd crash the binarizer); a mod with no
+            //    MLOD models at all (script/config-only, or ODOL-only) skips Binarize entirely.
+            var hasModels = BuildAssets.P3ds(sourceDir).Select(Path.GetFullPath).Any(p => !odol.Contains(p));
+            if (hasModels)
+            {
+                var stageBin = Path.Combine(workDir, "_bin_in");
+                CopyTree(sourceDir, stageBin, exclude: odol);
+                var binOut = Path.Combine(workDir, "_bin_out");
+                var binTex = Path.Combine(workDir, "_bin_tex");
+                Directory.CreateDirectory(binOut);
+                Directory.CreateDirectory(binTex);
+                var addons = addonFolders is { Count: > 0 } ? addonFolders : new[] { binPath };
+                onLine?.Invoke($"binarize: {pboName}" + (odol.Count > 0 ? $"  ({odol.Count} ODOL p3d copied as-is)" : ""));
+                var (bok, bout) = Binarize.Run(binExe!.ExePath, stageBin, binOut, binPath, addons,
+                    binTex, Environment.ProcessorCount, onLine);
+                if (!bok) return Fail($"binarize failed for {pboName}", bout);
 
-            // 3. Overlay the binarized models onto the pack folder (replaces the MLOD source models).
-            CopyTree(binOut, final, exclude: null);
+                // 3. Overlay the binarized models onto the pack folder (replaces the MLOD source models).
+                CopyTree(binOut, final, exclude: null);
+            }
+            else
+            {
+                onLine?.Invoke($"binarize: {pboName} — no MLOD models" +
+                    (odol.Count > 0 ? $" ({odol.Count} ODOL p3d shipped as-is)" : "") + ", config only");
+            }
 
             // 4. config.cpp → config.bin (root + nested); drop the .cpp once converted.
             var cfgExe = ToolCatalog.Find(toolsDir, "cfgconvert");
@@ -61,12 +82,12 @@ public static class BuildEngine
                 }
         }
 
-        // 5. Pack the folder into <pboName>.pbo.
+        // 5. Pack the folder into <pboName>.pbo with the in-process writer (no FileBank / FileServer).
         Directory.CreateDirectory(outAddonsDir);
-        onLine?.Invoke($"pack: {pboName}.pbo");
-        var (pok, pout) = FileBank.Pack(fbExe.ExePath, final, outAddonsDir, prefix, onLine);
         var pbo = Path.Combine(outAddonsDir, pboName + ".pbo");
-        if (!pok || !File.Exists(pbo)) return Fail($"FileBank produced no {pboName}.pbo", pout);
+        onLine?.Invoke($"pack: {pboName}.pbo");
+        var (pok, pout) = PboWriter.Pack(final, pbo, prefix, onLine);
+        if (!pok || !File.Exists(pbo)) return Fail($"packing {pboName}.pbo failed", pout);
 
         // 6. Sign.
         if (!string.IsNullOrWhiteSpace(signPrivateKey))

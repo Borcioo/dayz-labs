@@ -4,8 +4,21 @@ using FluentAssertions;
 public class BuildToolArgsTests
 {
     [Fact]
-    public void Binarize_args_are_source_then_dest()
-        => Binarize.Args(@"P:\Mod", @"D:\out").Should().Equal(@"P:\Mod", @"D:\out");
+    public void Binarize_args_carry_project_context_with_source_and_dest_last()
+    {
+        var a = Binarize.Args(@"D:\stage", @"D:\out", @"P:\", new[] { @"P:\", @"P:\DZ" }, @"D:\tex", 8);
+        a.Should().Equal(
+            "-targetBonesInterval=56", "-maxProcesses=8", "-always", "-silent",
+            @"-addon=P:\", @"-addon=P:\DZ", @"-textures=D:\tex", @"-binpath=P:\",
+            @"D:\stage", @"D:\out");
+    }
+
+    [Fact]
+    public void Binarize_args_normalize_a_bare_drive_addon_and_binpath_to_have_a_trailing_separator()
+    {
+        var a = Binarize.Args(@"D:\stage", @"D:\out", "P:", new[] { "P:" }, @"D:\tex", 1);
+        a.Should().Contain(@"-addon=P:\").And.Contain(@"-binpath=P:\");
+    }
 
     [Fact]
     public void FileBank_args_set_prefix_and_dest_then_source()

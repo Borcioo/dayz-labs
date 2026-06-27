@@ -4,6 +4,28 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.13] - 2026-06-27
+
+### Changed
+- **Builds pack the PBO in-process — no more FileBank/AddonBuilder.** A new built-in PBO writer assembles the
+  `.pbo` directly (stored/uncompressed, with the `$PBOPREFIX$` and a SHA-1 trailer), so a build never depends on
+  an external packer or the DayZ file server for packing. This removes a whole class of hangs and naming quirks
+  and makes packing deterministic.
+
+### Fixed
+- **Binarize now gets the project-drive context it needs — no more hangs, no more "Material not loaded".**
+  `binarize.exe` is invoked with `-binpath`/`-addon` pointed at the mounted `P:\` work drive (plus `-always`,
+  `-silent`, `-maxProcesses`, `-textures`) and run with its working directory set there. With that context it
+  resolves vanilla **and** the mod's own materials (so a vehicle/model mod no longer floods the log with
+  "Material not loaded …rvmat"), runs roughly an order of magnitude faster, and accepts staging that lives off
+  the work drive — which is what made model mods (e.g. a Land Rover) appear to never finish.
+- **Build doesn't run binarize when there's nothing to binarize.** A mod with no MLOD models (config/script-only,
+  or only already-binarized ODOL models) skips Binarize entirely instead of churning for ~35s per mod — so a
+  pack of mostly-config mods builds in seconds and the log stays clean.
+- **Captured process runs can't deadlock on a lingering child.** `binarize.exe` spawns a persistent file-server
+  child that inherits the output pipe; the process runner now waits on the process handle (not the streams' EOF)
+  with a bounded drain, so a build no longer hangs after binarize itself has finished.
+
 ## [0.1.12] - 2026-06-27
 
 ### Changed
@@ -88,6 +110,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.13]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.13
 [0.1.12]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.12
 [0.1.11]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.11
 [0.1.10]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.10

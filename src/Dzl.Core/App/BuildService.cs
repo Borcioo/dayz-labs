@@ -64,14 +64,14 @@ public sealed class BuildService
         var root = ProjectPaths.Root(cfg);
         var projectDir = ProjectPaths.ModDir(root, mod);
         var src = ProjectPaths.WorkDriveLink(mod);
-        var exe = ToolCatalog.Find(cfg.DayzToolsPath, "filebank");
+        var exe = ToolCatalog.Find(cfg.DayzToolsPath, "binarize");
 
         var isProject = Directory.Exists(projectDir) && ModProjects.IsProject(projectDir);
         var haveTool = exe is not null && exe.Exists;
         var pMounted = WorkDrive.IsMounted();
         var ready = isProject && haveTool && pMounted;
         var msg = !isProject ? "not a mod project ($PBOPREFIX$ / config.cpp missing)"
-                : !haveTool ? "FileBank.exe not found — set the DayZ Tools path"
+                : !haveTool ? "binarize.exe not found — set the DayZ Tools path"
                 : !pMounted ? "P: work drive not mounted — mount it to build"
                 : "ready to build";
 
@@ -195,7 +195,7 @@ public sealed class BuildService
         if (junctionFail is not null)
             return junctionFail;
 
-        // Direct engine: Binarize (excluding ODOL p3d, copied as-is) → CfgConvert → FileBank → sign.
+        // Direct engine: Binarize (excluding ODOL p3d, copied as-is) → CfgConvert → PboWriter (in-process) → sign.
         // Output lands in a work Addons, then publishes atomically into the loadable @<Mod>\Addons.
         var workDir = Path.Combine(buildDir, ".work");
         var workAddons = Path.Combine(workDir, "Addons");
@@ -298,9 +298,9 @@ public sealed class BuildService
         if (build.Count == 0)
             return Fail("no inner mods to build (none selected / none found)");
 
-        var fb = ToolCatalog.Find(cfg.DayzToolsPath, "filebank");
-        if (fb is null || !fb.Exists)
-            return Fail("FileBank.exe not found — set the DayZ Tools path");
+        var bin = ToolCatalog.Find(cfg.DayzToolsPath, "binarize");
+        if (bin is null || !bin.Exists)
+            return Fail("binarize.exe not found — set the DayZ Tools path");
         if (!WorkDrive.IsMounted())
             return Fail("P: work drive not mounted — mount it first");
 
@@ -394,9 +394,9 @@ public sealed class BuildService
         if (!Directory.Exists(projectDir) || !ModProjects.IsProject(projectDir))
             return (null, FailResult(modName, null, $"not a mod project: {projectDir} (need $PBOPREFIX$ or config.cpp)"));
 
-        var exe = ToolCatalog.Find(cfg.DayzToolsPath, "filebank");
+        var exe = ToolCatalog.Find(cfg.DayzToolsPath, "binarize");
         if (exe is null || !exe.Exists)
-            return (null, FailResult(modName, null, "FileBank.exe not found — set DayZ Tools path / install DayZ Tools"));
+            return (null, FailResult(modName, null, "binarize.exe not found — set DayZ Tools path / install DayZ Tools"));
 
         if (!WorkDrive.IsMounted())
             return (null, FailResult(modName, null, "P: work drive not mounted — mount it first (binarize resolves vanilla data + includes against P:)"));

@@ -139,7 +139,7 @@ public class ModBuildTests
 
         var r = new BuildService(configPath).Build("Foo");
         r.Ok.Should().BeFalse();
-        r.Message.Should().Contain("FileBank.exe not found");   // engine v2 packs with FileBank, not AddonBuilder
+        r.Message.Should().Contain("binarize.exe not found");   // engine packs in-process (PboWriter); binarize is the required tool
         r.Registered.Should().BeFalse();
     }
 }
