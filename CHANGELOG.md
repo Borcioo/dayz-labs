@@ -4,6 +4,12 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.11] - 2026-06-27
+
+### Fixed
+- **Pack build console — scrollable mod list.** The "Mods to build" list is now height-capped with
+  a scrollbar, so a pack with many mods no longer pushes the options and build log off-screen.
+
 ## [0.1.10] - 2026-06-27
 
 ### Changed
@@ -69,6 +75,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.11]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.11
 [0.1.10]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.10
 [0.1.9]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.9
 [0.1.8]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.8
