@@ -26,7 +26,8 @@ public partial class PackBuildWindow : FluentWindow
         Title = TitleBarCtl.Title = $"Build pack — {pack.Name}";
         IntroText.Text = $"Builds the selected mods into one @{pack.Name} — each inner mod becomes its own PBO " +
                          "under Addons\\, with a shared keys\\. The whole pack output is replaced atomically.";
-        ChildList.ItemsSource = pack.Children.Select(c => new Pick(c.Name)).ToList();
+        ChildList.ItemsSource = pack.Children.Select(c => new Pick(c.Name, c.Path)).ToList();
+        UpdateCount();
         LogBox.Text = _vm.BuildLog;
         _vm.PropertyChanged += OnVmChanged;
         Unloaded += (_, _) => _vm.PropertyChanged -= OnVmChanged;
@@ -61,6 +62,23 @@ public partial class PackBuildWindow : FluentWindow
     private List<string> Selected() =>
         (ChildList.ItemsSource as IEnumerable<Pick>)?.Where(p => p.IsSelected).Select(p => p.Name).ToList()
         ?? new List<string>();
+
+    private void OnSelectAll(object sender, RoutedEventArgs e)
+    {
+        var all = SelectAllChk.IsChecked == true;
+        foreach (var p in (ChildList.ItemsSource as IEnumerable<Pick>) ?? Enumerable.Empty<Pick>())
+            p.IsSelected = all;
+        UpdateCount();
+    }
+
+    private void OnChildToggled(object sender, RoutedEventArgs e) => UpdateCount();
+
+    private void UpdateCount()
+    {
+        var picks = (ChildList.ItemsSource as IEnumerable<Pick>)?.ToList() ?? new List<Pick>();
+        var sel = picks.Count(p => p.IsSelected);
+        CountText.Text = $"· {sel}/{picks.Count} selected";
+    }
 
     private async void OnPreflight(object sender, RoutedEventArgs e)
     {
@@ -129,8 +147,13 @@ public partial class PackBuildWindow : FluentWindow
     private sealed partial class Pick : ObservableObject
     {
         public string Name { get; }
+        public string Marker { get; }
         [ObservableProperty] private bool _isSelected = true;
-        public Pick(string name) => Name = name;
+        public Pick(string name, string dir)
+        {
+            Name = name;
+            Marker = File.Exists(Path.Combine(dir, "config.cpp")) ? "config.cpp" : "$PBOPREFIX$";
+        }
     }
 
     /// <summary>One preflight tab (per inner mod): header, summary and the findings rows.</summary>

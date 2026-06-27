@@ -21,24 +21,59 @@
     <TextBlock Grid.Row="1" x:Name="IntroText" Margin="0,0,0,8" TextWrapping="Wrap"
                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
 
-    <Border Grid.Row="2" CornerRadius="6" BorderThickness="1" Padding="8" Margin="0,0,0,10"
+    <Border Grid.Row="2" CornerRadius="8" BorderThickness="1" Padding="14,12" Margin="0,0,0,10"
             BorderBrush="{DynamicResource ControlElevationBorderBrush}"
             Background="{DynamicResource ControlFillColorDefaultBrush}">
       <StackPanel>
-        <TextBlock Text="Mods to build" FontWeight="SemiBold" Margin="0,0,0,6" />
+        <Grid Margin="0,0,0,8">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+            <TextBlock Text="Mods to build" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <TextBlock x:Name="CountText" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+          </StackPanel>
+          <CheckBox Grid.Column="1" x:Name="SelectAllChk" Content="select all" IsChecked="True"
+                    VerticalAlignment="Center" Click="OnSelectAll" />
+        </Grid>
+
         <ItemsControl x:Name="ChildList">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,2" />
+              <Border Margin="0,0,0,4" Padding="10,7" CornerRadius="6"
+                      Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                      BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected, Mode=TwoWay}" Click="OnChildToggled"
+                            VerticalAlignment="Center" Margin="0,0,8,0" />
+                  <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
+                             VerticalAlignment="Center" />
+                  <Border Grid.Column="2" CornerRadius="9" Padding="7,1" VerticalAlignment="Center"
+                          Background="{DynamicResource ControlFillColorDefaultBrush}">
+                    <TextBlock Text="{Binding Marker}" FontSize="10" FontFamily="Cascadia Mono, Consolas"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                  </Border>
+                </Grid>
+              </Border>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
-        <StackPanel Orientation="Horizontal" Margin="0,8,0,0" VerticalAlignment="Center">
-          <CheckBox x:Name="BinarizeChk" Content="binarize" IsChecked="True" Margin="0,0,12,0"
-                    ToolTip="Off = pack only (-packonly)" />
-          <CheckBox x:Name="SignChk" Content="sign" Margin="0,0,6,0"
+
+        <Border Height="1" Margin="0,8" Background="{DynamicResource ControlElevationBorderBrush}" />
+
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <CheckBox x:Name="BinarizeChk" Content="binarize" IsChecked="True" Margin="0,0,16,0"
+                    VerticalAlignment="Center" ToolTip="Off = pack only (-packonly)" />
+          <CheckBox x:Name="SignChk" Content="sign" Margin="0,0,8,0" VerticalAlignment="Center"
                     ToolTip="Sign each PBO + ship the .bikey in the pack's keys\" />
-          <ComboBox x:Name="KeyCombo" MinWidth="120" FontSize="12"
+          <ComboBox x:Name="KeyCombo" MinWidth="140" FontSize="12" VerticalAlignment="Center"
                     IsEnabled="{Binding IsChecked, ElementName=SignChk}"
                     ToolTip="Signing key (from Settings → Signing)" />
         </StackPanel>
