@@ -4,6 +4,26 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.9] - 2026-06-27
+
+### Added
+- **Mod packs on My Mods.** A folder whose subfolders are each a mod (own `config.cpp` /
+  `$PBOPREFIX$`) is auto-detected as a *pack* and shown as an expandable group (named after the
+  folder, with git at the pack level) instead of being invisible. One level of nesting.
+- **"Build pack…".** Build a pack's inner mods into one `@<pack>` — a PBO per mod under `Addons\`
+  plus a shared `keys\`, published atomically and registered as a single loadable mod. The console
+  lets you pick which inner mods to build (all by default), choose binarize/sign + key, and shows
+  per-mod preflight tabs with the same findings UX as the single-mod build (severity badges,
+  clickable `file:line`).
+
+### Fixed
+- **Wrong PBO prefix when building a pack child.** AddonBuilder derived the prefix from the nested
+  source's leaf folder; the child's own `$PBOPREFIX$` is now passed explicitly (`-prefix=`), so
+  assets resolve at the right root.
+- **Preflight false-positive on multi-segment `$PBOPREFIX$`.** `cfgmods-folder-unreferenced` (and
+  include/path resolution generally) only stripped the first prefix segment, so a mod with a prefix
+  like `Mod\Core` was wrongly flagged. References that open with the whole prefix now resolve.
+
 ## [0.1.8] - 2026-06-27
 
 ### Added
@@ -41,5 +61,6 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.9]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.9
 [0.1.8]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.8
 [0.1.7]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.7
