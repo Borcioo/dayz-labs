@@ -47,10 +47,11 @@ public static class ArgvBuilder
         return c.DayzPath;
     }
 
-    /// <summary>The <c>-config</c> value: just the file name when it's an absolute instance path (the
-    /// server runs from that dir, see <see cref="WorkingDir"/>), else the value as-is (relative to install).</summary>
-    private static string ConfigArg(string configName) =>
-        Path.IsPathRooted(configName) ? Path.GetFileName(configName) : configName;
+    /// <summary>The <c>-config</c> value, passed through as-is. DayZ 1.29 accepts an absolute path (verified
+    /// live) and the engine forces <c>$currentdir</c> to the exe dir regardless of the launcher's working
+    /// directory — so an absolute instance path is the only way its own serverDZ.cfg is honored. A relative
+    /// value still resolves against the install dir (the engine's current dir).</summary>
+    private static string ConfigArg(string configName) => configName;
 
     public static List<string> Build(string mode, string target, DzlConfig c)
     {

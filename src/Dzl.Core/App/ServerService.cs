@@ -66,7 +66,20 @@ public sealed class ServerService
             sourceNote = $"from DayZ install; {report.Notes}".TrimEnd(';', ' ');
         }
 
-        var cfg = ServerPreset.Build(baseCfg, instanceDir, chosenPort);
+        // The new instance's own mission folder (the one just scaffolded/copied), or the expected path if
+        // none landed on disk. Used to repoint BOTH dzl's per-instance Mission and the serverDZ.cfg template.
+        var instMpm = Path.Combine(instanceDir, "mpmissions");
+        var instMission = (Directory.Exists(instMpm) ? Directory.GetDirectories(instMpm).FirstOrDefault() : null)
+                          ?? Path.Combine(instMpm, template);
+
+        // Point the serverDZ.cfg template at this instance's mission (absolute) — DayZ forces $currentdir to
+        // the exe dir, so a bare name (from DefaultServerCfg or a copied base) would load the install's mission.
+        ServerScaffold.EnsureAbsoluteTemplate(Path.Combine(instanceDir, "serverDZ.cfg"), instMission);
+
+        // Repoint Mission at the new instance. ServerPreset.Build can't (it's pure, no disk) — without this
+        // the new instance inherits the active preset's Mission, which may be an absolute path to ANOTHER
+        // instance, so every new server would point at the old one's mpmissions.
+        var cfg = ServerPreset.Build(baseCfg, instanceDir, chosenPort) with { Mission = instMission };
         Profiles.Save(cfg, name, _configPath);
         if (activate) Profiles.SetActive(name, _configPath);
 

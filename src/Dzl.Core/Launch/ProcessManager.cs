@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using Dzl.Core.Config;
+using Dzl.Core.Economy;
+using Dzl.Core.Env;
 using Dzl.Core.Procs;
 
 namespace Dzl.Core.Launch;
@@ -32,6 +34,10 @@ public static class ProcessManager
     public static Process Spawn(string mode, string target, DzlConfig cfg, string source = "cli", string? configPath = null)
     {
         var exe = target == "server" ? ServerExe(cfg, mode) : ClientExe(cfg, mode);
+        // Point the instance's serverDZ.cfg template at its own mission (absolute path) — the engine forces
+        // $currentdir to the exe dir, so a bare template name would load the install's mission instead.
+        if (target == "server" && MissionLocator.Resolve(cfg)?.MissionDir is { } missionDir)
+            ServerScaffold.EnsureAbsoluteTemplate(cfg.ConfigName, missionDir);
         var psi = new ProcessStartInfo
         {
             FileName = Path.Combine(cfg.DayzPath, exe),

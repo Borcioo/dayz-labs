@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Dzl.Core.Env;
 
 public sealed record ScaffoldReport(
@@ -136,6 +138,27 @@ class Missions
             if (IsRuntimeDir(Path.GetFileName(dir))) continue;   // don't copy live persistence
             CopyMission(dir, Path.Combine(dst, Path.GetFileName(dir)));
         }
+    }
+
+    /// <summary>Point the serverDZ.cfg mission <c>template</c> at the instance's own mission folder by its
+    /// absolute path. DayZ forces <c>$currentdir</c> to the exe dir, so a bare template name always loads
+    /// the INSTALL's mpmissions; an absolute path (accepted by DayZ 1.29, verified live) makes the server
+    /// load the instance's mission — the one dzl's CE editor manages. Idempotent (no rewrite when already
+    /// correct), best-effort, never throws.</summary>
+    public static void EnsureAbsoluteTemplate(string cfgPath, string missionDir)
+    {
+        try
+        {
+            if (!File.Exists(cfgPath) || string.IsNullOrWhiteSpace(missionDir)) return;
+            var text = File.ReadAllText(cfgPath);
+            var rx = new Regex("template\\s*=\\s*\"[^\"]*\"");
+            var m = rx.Match(text);
+            if (!m.Success) return;                       // no template line — don't invent one
+            var desired = $"template = \"{missionDir}\"";
+            if (m.Value == desired) return;               // already correct — no mtime churn
+            File.WriteAllText(cfgPath, rx.Replace(text, _ => desired, 1));
+        }
+        catch { /* best-effort */ }
     }
 
     /// <summary>Append <c>allowFilePatching = 1;</c> to a serverDZ.cfg if it's missing (dev clients

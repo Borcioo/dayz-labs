@@ -32,6 +32,37 @@ public class EnvTests
         cfg.Should().NotContain("chernarusplus.chernarusplus");        // regression: no double suffix
     }
 
+    [Fact]
+    public void EnsureAbsoluteTemplate_rewrites_relative_template_to_the_instance_mission_path()
+    {
+        // DayZ forces $currentdir to the exe dir, so a bare template name resolves to the INSTALL's
+        // mpmissions — never the instance's. An absolute template path (verified live) makes the server
+        // load the instance's own mission (where dzl's CE edits live).
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var cfgPath = Path.Combine(dir, "serverDZ.cfg");
+        File.WriteAllText(cfgPath, "class Missions{class DayZ{template = \"dayzOffline.chernarusplus\";};};");
+        var missionDir = Path.Combine(dir, "mpmissions", "dayzOffline.chernarusplus");
+
+        ServerScaffold.EnsureAbsoluteTemplate(cfgPath, missionDir);
+
+        File.ReadAllText(cfgPath).Should().Contain($"template = \"{missionDir}\"")
+            .And.NotContain("template = \"dayzOffline.chernarusplus\"");
+    }
+
+    [Fact]
+    public void EnsureAbsoluteTemplate_is_noop_when_template_already_points_at_the_mission()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var cfgPath = Path.Combine(dir, "serverDZ.cfg");
+        var missionDir = Path.Combine(dir, "mpmissions", "dayzOffline.chernarusplus");
+        File.WriteAllText(cfgPath, $"class Missions{{class DayZ{{template = \"{missionDir}\";}};}};");
+        var before = File.GetLastWriteTimeUtc(cfgPath);
+
+        ServerScaffold.EnsureAbsoluteTemplate(cfgPath, missionDir);
+
+        File.GetLastWriteTimeUtc(cfgPath).Should().Be(before);   // no rewrite, no mtime churn
+    }
+
     [Theory]
     [InlineData("storage_1", true)]
     [InlineData("storage_42", true)]

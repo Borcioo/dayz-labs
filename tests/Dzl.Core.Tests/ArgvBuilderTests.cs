@@ -61,11 +61,12 @@ public class ArgvBuilderTests
             .Should().Contain("-config=serverDZ.cfg");
 
     [Fact]
-    public void Config_absolute_instance_path_reduced_to_filename()
-        // DayZ rejects an absolute -config; the server runs from the instance dir (WorkingDir) so we
-        // pass just the filename.
+    public void Config_absolute_instance_path_kept_absolute()
+        // DayZ 1.29 accepts an absolute -config (verified live), and the engine forces $currentdir to the
+        // exe dir regardless of WorkingDir — so the only way the instance's own serverDZ.cfg is used is to
+        // pass its absolute path.
         => ArgvBuilder.Build("debug", "server", Sides() with { ConfigName = @"D:\DayzProjects\servers\Test\serverDZ.cfg" })
-            .Should().Contain("-config=serverDZ.cfg");
+            .Should().Contain(@"-config=D:\DayzProjects\servers\Test\serverDZ.cfg");
 
     [Fact]
     public void WorkingDir_is_install_for_relative_config_and_for_client()
