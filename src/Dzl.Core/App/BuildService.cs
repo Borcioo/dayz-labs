@@ -215,6 +215,196 @@ public sealed class BuildService
         return new BuildResult(true, modName, buildDir, pbo, registered, note, pack.Output, "", preflight);
     }
 
+    public sealed record PackPreflight(string Child, string Dir, PreflightView View);
+
+    /// <summary>Preflight each (selected) inner mod of a pack — same checks the pack build gates on, so a UI
+    /// can show findings before building. Read-only.</summary>
+    public IReadOnlyList<PackPreflight> PreflightPack(string packName, IReadOnlyList<string>? selected = null)
+    {
+        var results = new List<PackPreflight>();
+        if (!ProjectPaths.IsValidName(packName)) return results;
+        Profiles.EnsureDefault(_configPath);
+        var (cfg, _, _) = Profiles.ResolveActive(_configPath);
+        var root = ProjectPaths.Root(cfg);
+        var pack = ModProjects.Discover(root).FirstOrDefault(p =>
+            p.IsPack && string.Equals(p.Name, packName, StringComparison.OrdinalIgnoreCase));
+        if (pack is null) return results;
+
+        IEnumerable<ModProject> children = pack.Children;
+        if (selected is { Count: > 0 })
+        {
+            var set = new HashSet<string>(selected, StringComparer.OrdinalIgnoreCase);
+            children = children.Where(c => set.Contains(c.Name));
+        }
+
+        var cfgConvert = ToolCatalog.Find(cfg.DayzToolsPath, "cfgconvert");
+        var opts = new PreflightOptions
+        {
+            WorkDriveRoot = WorkDrive.IsMounted() ? @"P:\" : null,
+            CfgConvertExe = cfgConvert?.Exists == true ? cfgConvert.ExePath : null,
+            TempDir = Path.Combine(ConfigDir, "temp"),
+        };
+        foreach (var c in children)
+        {
+            var r = PreflightEngine.Run(c.Path, c.Name, opts);
+            results.Add(new PackPreflight(c.Name, c.Path,
+                new PreflightView(r.Ok, c.Name, r.Errors, r.Warnings, r.Infos, r.Findings, "", "")));
+        }
+        return results;
+    }
+
+    public sealed record PackChildResult(string Name, bool Ok, string Message);
+    public sealed record PackBuildResult(
+        bool Ok, string Pack, string OutputDir, string AddonsDir, bool Registered,
+        IReadOnlyList<PackChildResult> Children, string Message, string Output);
+
+    /// <summary>Build every (selected) inner mod of a PACK into one shared <c>@&lt;pack&gt;\Addons</c> (many
+    /// PBOs) + <c>keys\</c>, then register the pack as a single loadable mod. AddonBuilder reads each child
+    /// via <c>P:\&lt;pack&gt;\&lt;child&gt;</c> (so the PBO is named after the child); all child PBOs are staged
+    /// and published in one atomic swap, so a rebuild replaces the whole pack output. v1: full rebuild of the
+    /// selected children (no skip-unchanged cache yet).</summary>
+    public PackBuildResult BuildPack(string packName, IReadOnlyList<string>? selected = null,
+        bool binarize = true, bool sign = false, Action<string>? onLine = null, string? keyName = null)
+    {
+        PackBuildResult Fail(string msg, string output = "", IReadOnlyList<PackChildResult>? kids = null) =>
+            new(false, packName, "", "", false, kids ?? System.Array.Empty<PackChildResult>(), msg, output);
+
+        if (!ProjectPaths.IsValidName(packName))
+            return Fail($"invalid pack name: {packName}");
+
+        Profiles.EnsureDefault(_configPath);
+        var (cfg, _, active) = Profiles.ResolveActive(_configPath);
+        var root = ProjectPaths.Root(cfg);
+
+        var pack = ModProjects.Discover(root).FirstOrDefault(p =>
+            p.IsPack && string.Equals(p.Name, packName, StringComparison.OrdinalIgnoreCase));
+        if (pack is null)
+            return Fail($"'{packName}' is not a pack (a folder whose subfolders are mods) under mods\\");
+
+        IEnumerable<ModProject> children = pack.Children;
+        if (selected is { Count: > 0 })
+        {
+            var set = new HashSet<string>(selected, StringComparer.OrdinalIgnoreCase);
+            children = children.Where(c => set.Contains(c.Name));
+        }
+        var build = children.ToList();
+        if (build.Count == 0)
+            return Fail("no inner mods to build (none selected / none found)");
+
+        var exe = ToolCatalog.Find(cfg.DayzToolsPath, "addonbuilder");
+        if (exe is null || !exe.Exists)
+            return Fail("AddonBuilder not found — set the DayZ Tools path");
+        if (!WorkDrive.IsMounted())
+            return Fail("P: work drive not mounted — mount it first");
+
+        var (signKey, effectiveKey, keyFail) = ResolveSignKey(packName, cfg, root, sign, keyName, null, onLine);
+        if (keyFail is not null)
+            return Fail(keyFail.Message);
+
+        // Preflight each child up front; one child's errors block the whole pack (mirrors single-mod gating).
+        if (cfg.PreflightBeforeBuild)
+        {
+            var cfgConvert = ToolCatalog.Find(cfg.DayzToolsPath, "cfgconvert");
+            var opts = new PreflightOptions
+            {
+                WorkDriveRoot = @"P:\",
+                CfgConvertExe = cfgConvert?.Exists == true ? cfgConvert.ExePath : null,
+                TempDir = Path.Combine(ConfigDir, "temp"),
+            };
+            foreach (var c in build)
+            {
+                onLine?.Invoke($"preflight: {c.Name} ...");
+                var pf = PreflightEngine.Run(c.Path, c.Name, opts);
+                if (!pf.Ok)
+                    return Fail(
+                        $"preflight failed for '{c.Name}' ({pf.Errors} error(s)) — fix them or set preflight_before_build=false",
+                        string.Join("\n", pf.Findings.Where(f => f.Severity == FindingSeverity.Error)
+                            .Select(f => $"{c.Name}/{f.Rule}: {f.Message}")));
+            }
+        }
+
+        var workDriveSource = EnvDetect.WorkDriveSource(cfg.WorkDriveSource, cfg.DayzToolsPath);
+        var packDir = ProjectPaths.ModDir(root, packName);
+        var srcEns = Junction.Ensure(ProjectPaths.JunctionPath(workDriveSource, packName), packDir);
+        if (!srcEns.Ok) return Fail($"source junction P:\\{packName} → {packDir} failed: {srcEns.Detail}");
+        var buildEns = Junction.Ensure(ProjectPaths.BuildAreaJunction(workDriveSource), ProjectPaths.BuildRoot(root));
+        if (!buildEns.Ok) return Fail($"build junction failed: {buildEns.Detail}");
+
+        var buildDir = ProjectPaths.BuildDir(root, packName);
+        var addonsDir = ProjectPaths.BuildAddonsDir(root, packName);
+        var workRoot = Path.Combine(buildDir, ".work");
+        var staging = Path.Combine(workRoot, "Addons");
+        if (Directory.Exists(workRoot)) try { Directory.Delete(workRoot, recursive: true); } catch { }
+        Directory.CreateDirectory(staging);
+
+        var results = new List<PackChildResult>();
+        var output = new System.Text.StringBuilder();
+
+        foreach (var c in build)
+        {
+            onLine?.Invoke($"=== building {c.Name} ===");
+            var childWork = Path.Combine(workRoot, c.Name);
+            var childAddons = Path.Combine(childWork, "Addons");
+            Directory.CreateDirectory(childAddons);
+            var abTemp = Path.Combine(childWork, "temp");
+            Directory.CreateDirectory(abTemp);   // AddonBuilder fails at "Syncing folders" if -temp= is missing
+            var includeFile = AddonBuilder.WriteIncludeFile(childWork);
+
+            var startUtc = DateTime.UtcNow;
+            var src = Path.Combine(ProjectPaths.WorkDriveLink(packName), c.Name);   // P:\<pack>\<child>
+            // AddonBuilder derives the prefix from the source LEAF for a nested source, so pass the child's
+            // own $PBOPREFIX$ explicitly (-prefix=) or the PBO would resolve assets at the wrong root.
+            var childPrefix = PathResolver.ReadPrefix(c.Path);
+            var pk = AddonBuilder.Pack(exe.ExePath, src, childAddons,
+                clear: false, packOnly: !binarize, prefix: childPrefix.Length > 0 ? childPrefix : null,
+                signKey: signKey, onLine: onLine, tempDir: abTemp, includeFile: includeFile);
+            output.AppendLine(pk.Output);
+            if (!pk.Ok)
+            {
+                results.Add(new PackChildResult(c.Name, false, $"AddonBuilder exited {pk.ExitCode}"));
+                return Fail($"'{c.Name}' failed (AddonBuilder exited {pk.ExitCode})", output.ToString(), results);
+            }
+            if (!ModBuild.HasFreshPbo(childAddons, startUtc))
+            {
+                results.Add(new PackChildResult(c.Name, false, "no fresh .pbo produced"));
+                return Fail($"'{c.Name}': AddonBuilder reported success but produced no .pbo", output.ToString(), results);
+            }
+            var childPbo = ModBuild.NewestPbo(childAddons)!.FullName;
+            var expected = PathResolver.ReadPrefix(c.Path);
+            var hdr = PboHeader.Read(childPbo);
+            if (hdr is not null && expected.Length > 0 && hdr.Prefix.Length > 0 &&
+                !string.Equals(hdr.Prefix, expected, StringComparison.OrdinalIgnoreCase))
+            {
+                results.Add(new PackChildResult(c.Name, false, $"prefix '{hdr.Prefix}' ≠ '{expected}'"));
+                return Fail($"'{c.Name}': packed prefix '{hdr.Prefix}' ≠ $PBOPREFIX$ '{expected}'", output.ToString(), results);
+            }
+            if (sign && PboHeader.FindSignature(childPbo) is null)
+            {
+                results.Add(new PackChildResult(c.Name, false, "no .bisign produced"));
+                return Fail($"'{c.Name}': signing requested but no .bisign produced", output.ToString(), results);
+            }
+            foreach (var f in Directory.EnumerateFiles(childAddons).Where(f =>
+                         f.EndsWith(".pbo", StringComparison.OrdinalIgnoreCase) ||
+                         f.EndsWith(".bisign", StringComparison.OrdinalIgnoreCase)))
+                File.Move(f, Path.Combine(staging, Path.GetFileName(f)), overwrite: true);
+            results.Add(new PackChildResult(c.Name, true, "packed"));
+            onLine?.Invoke($"    {c.Name}: ok");
+        }
+
+        var (pubOk, pubDetail) = ModBuild.PublishAtomically(staging, addonsDir);
+        if (!pubOk)
+            return Fail($"publish failed: {pubDetail}", output.ToString(), results);
+        try { Directory.Delete(workRoot, recursive: true); } catch { /* harmless leftover */ }
+        ModBuild.WriteMarker(ProjectPaths.BuildMarkerPath(root, packName),
+            $"dzl-built pack {DateTime.UtcNow:O} ({results.Count} mod(s))");
+
+        if (sign) ShipPublicKey(cfg, root, packName, effectiveKey);
+
+        var (registered, _) = RegisterInRunList(cfg, active, packName);
+        return new PackBuildResult(true, packName, buildDir, addonsDir, registered, results,
+            $"built {results.Count(r => r.Ok)}/{results.Count} mod(s) into @{packName}", output.ToString());
+    }
+
     private static BuildResult FailResult(string modName, PreflightView? preflight, string msg, string output = "") =>
         new(false, modName, "", "", false, msg, output,
             BuildDiagnostics.Format(BuildDiagnostics.Diagnose(output + "\n" + msg)), preflight);

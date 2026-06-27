@@ -61,6 +61,12 @@ public partial class MyModsView : UserControl
     // log, diagnostics). Signing keys are managed in Settings → Signing.
     private void OnBuildMod(object sender, RoutedEventArgs e) => OnOpenBuildWindow(sender, e);
 
+    private void OnBuildPack(object sender, RoutedEventArgs e)
+    {
+        if (Vm is not null && sender is FrameworkElement { DataContext: ModProjectVm pack } && pack.IsPack)
+            new PackBuildWindow(Vm, pack).Show();
+    }
+
     private void OnQuickJunction(object sender, RoutedEventArgs e)
     {
         if (Vm is not null && sender is FrameworkElement { Tag: string name })

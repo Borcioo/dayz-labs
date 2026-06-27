@@ -14,6 +14,16 @@ public sealed partial class ModProjectVm : ObservableObject
     public string Path { get; }
     public bool Linked { get; }
 
+    /// <summary>A pack = a folder whose subfolders are the actual mods (see <see cref="Children"/>); git and
+    /// identity live at this (pack) level.</summary>
+    public bool IsPack { get; }
+
+    /// <summary>The inner mods of a pack (empty for a standalone mod).</summary>
+    public IReadOnlyList<ModProjectVm> Children { get; }
+
+    /// <summary>Header badge for a pack, e.g. "pack · 3 mods".</summary>
+    public string PackSummary => IsPack ? $"pack · {Children.Count} mods" : "";
+
     /// <summary>Short git summary, e.g. "main • clean", "main • dirty ↑1", "no repo", "main • clean (local)".</summary>
     [ObservableProperty] private string _git = "…";
 
@@ -34,5 +44,7 @@ public sealed partial class ModProjectVm : ObservableObject
         Name = p.Name;
         Path = p.Path;
         Linked = p.Linked;
+        IsPack = p.IsPack;
+        Children = p.Children.Select(c => new ModProjectVm(c)).ToList();
     }
 }

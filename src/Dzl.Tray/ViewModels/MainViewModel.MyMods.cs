@@ -38,8 +38,11 @@ public partial class MainViewModel
     {
         if (string.IsNullOrEmpty(ProjectFilter)) return true;
         if (obj is not ModProjectVm p) return true;
-        return p.Name.Contains(ProjectFilter, StringComparison.OrdinalIgnoreCase)
-            || p.Path.Contains(ProjectFilter, StringComparison.OrdinalIgnoreCase);
+        bool Matches(ModProjectVm x) =>
+            x.Name.Contains(ProjectFilter, StringComparison.OrdinalIgnoreCase)
+            || x.Path.Contains(ProjectFilter, StringComparison.OrdinalIgnoreCase);
+        // A pack stays visible when its name OR any inner mod matches.
+        return Matches(p) || p.Children.Any(Matches);
     }
 
     /// <summary>Resolved ProjectsRoot (configured value or the %USERPROFILE% fallback). Shown on
@@ -298,6 +301,32 @@ public partial class MainViewModel
         Building = false;
         if (result.Ok) { Reload(); RefreshModProjects(); }
         return result;
+    }
+
+    /// <summary>Build a PACK off the UI thread: its selected inner mods are packed into one shared
+    /// <c>@&lt;pack&gt;</c> (Addons with many PBOs + keys) and registered as a single mod. Streams the log;
+    /// null when a build is already running.</summary>
+    public async Task<BuildService.PackBuildResult?> BuildPackAsync(
+        string packName, IReadOnlyList<string> selected, bool binarize = true, bool sign = false, string? keyName = null)
+    {
+        if (Building) return null;
+        Building = true;
+        BuildLog = $"▸ Building pack {packName} ({selected.Count} mod(s), binarize={binarize}, sign={sign}) …\n";
+        var configPath = _configPath;
+        var result = await Task.Run(() =>
+            new BuildService(configPath).BuildPack(packName, selected, binarize: binarize, sign: sign,
+                onLine: line => _dispatcher.BeginInvoke(() => BuildLog += line + "\n"), keyName: keyName));
+        BuildLog += (result.Ok ? "\n✓ " : "\n✗ ") + result.Message + "\n";
+        Building = false;
+        if (result.Ok) { Reload(); RefreshModProjects(); }
+        return result;
+    }
+
+    /// <summary>Preflight a pack's selected inner mods off the UI thread (same checks the build gates on).</summary>
+    public Task<IReadOnlyList<BuildService.PackPreflight>> PreflightPackAsync(string packName, IReadOnlyList<string> selected)
+    {
+        var configPath = _configPath;
+        return Task.Run(() => new BuildService(configPath).PreflightPack(packName, selected));
     }
 
     /// <summary>Preflight a mod project off the UI thread (configs, references, paths, scripts).</summary>

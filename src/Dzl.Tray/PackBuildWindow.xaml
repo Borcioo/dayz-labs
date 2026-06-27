@@ -1,0 +1,170 @@
+<ui:FluentWindow x:Class="Dzl.Tray.PackBuildWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="Build pack" Width="860" Height="760" MinWidth="620" MinHeight="540"
+        WindowBackdropType="Mica" ExtendsContentIntoTitleBar="True"
+        ShowInTaskbar="True" WindowStartupLocation="CenterScreen">
+
+  <Grid Margin="16,8,16,16">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />  <!-- title -->
+      <RowDefinition Height="Auto" />  <!-- intro -->
+      <RowDefinition Height="Auto" />  <!-- mods + options -->
+      <RowDefinition Height="Auto" />  <!-- toolbar -->
+      <RowDefinition Height="*" />     <!-- findings (tabs) + log -->
+      <RowDefinition Height="Auto" />  <!-- footer -->
+    </Grid.RowDefinitions>
+
+    <ui:TitleBar Grid.Row="0" x:Name="TitleBarCtl" Title="Build pack" ShowMaximize="False" ShowMinimize="False" Margin="0,0,0,8" />
+
+    <TextBlock Grid.Row="1" x:Name="IntroText" Margin="0,0,0,8" TextWrapping="Wrap"
+               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+    <Border Grid.Row="2" CornerRadius="6" BorderThickness="1" Padding="8" Margin="0,0,0,10"
+            BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+            Background="{DynamicResource ControlFillColorDefaultBrush}">
+      <StackPanel>
+        <TextBlock Text="Mods to build" FontWeight="SemiBold" Margin="0,0,0,6" />
+        <ItemsControl x:Name="ChildList">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,2" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <StackPanel Orientation="Horizontal" Margin="0,8,0,0" VerticalAlignment="Center">
+          <CheckBox x:Name="BinarizeChk" Content="binarize" IsChecked="True" Margin="0,0,12,0"
+                    ToolTip="Off = pack only (-packonly)" />
+          <CheckBox x:Name="SignChk" Content="sign" Margin="0,0,6,0"
+                    ToolTip="Sign each PBO + ship the .bikey in the pack's keys\" />
+          <ComboBox x:Name="KeyCombo" MinWidth="120" FontSize="12"
+                    IsEnabled="{Binding IsChecked, ElementName=SignChk}"
+                    ToolTip="Signing key (from Settings → Signing)" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <!-- Toolbar -->
+    <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,10">
+      <ui:Button x:Name="PreflightBtn" Content="Preflight" Icon="{ui:SymbolIcon DocumentSearch24}"
+                 ToolTip="Validate every selected mod (configs, references, paths, scripts) without building"
+                 Margin="0,0,8,0" Click="OnPreflight" />
+      <ui:Button x:Name="BuildBtn" Content="Build pack" Appearance="Primary" Icon="{ui:SymbolIcon Box24}"
+                 ToolTip="Preflight gate → build each selected mod → one @pack (Addons + keys)" Click="OnBuild" />
+    </StackPanel>
+
+    <!-- Findings (per-mod tabs) over the build log -->
+    <Grid Grid.Row="4">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="2*" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="3*" />
+      </Grid.RowDefinitions>
+
+      <Grid Grid.Row="0">
+        <TextBlock x:Name="FindingsHint" Text="Run Preflight to validate each mod before building."
+                   Margin="2" FontSize="12" VerticalAlignment="Top"
+                   Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+        <TabControl x:Name="ChildTabs" Background="Transparent">
+          <TabControl.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding Header}" />
+            </DataTemplate>
+          </TabControl.ItemTemplate>
+          <TabControl.ContentTemplate>
+            <DataTemplate>
+              <Grid Margin="0,8,0,0">
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto" />
+                  <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="{Binding Summary}" FontSize="12" Margin="2,0,2,6"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <Border Grid.Row="1" CornerRadius="6" BorderThickness="1"
+                        BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+                  <Grid>
+                    <TextBlock Text="No findings — clean." Margin="12" FontSize="12"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               Visibility="{Binding HasFindings, Converter={StaticResource InverseBoolToVis}}" />
+                    <ListBox ItemsSource="{Binding Findings}" Background="Transparent" BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <Grid Margin="2">
+                            <Grid.ColumnDefinitions>
+                              <ColumnDefinition Width="70" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" CornerRadius="4" Padding="6,1" Margin="0,0,8,0"
+                                    VerticalAlignment="Top" Background="{Binding BadgeBg}">
+                              <TextBlock Text="{Binding Severity}" FontSize="11" FontWeight="SemiBold"
+                                         HorizontalAlignment="Center" Foreground="{Binding BadgeFg}" />
+                            </Border>
+                            <TextBlock Grid.Column="1" TextWrapping="Wrap" VerticalAlignment="Center">
+                              <Run Text="{Binding Rule, Mode=OneWay}" FontWeight="SemiBold" /><Run Text="  " /><Run Text="{Binding Message, Mode=OneWay}" />
+                            </TextBlock>
+                            <TextBlock Grid.Column="2" FontFamily="Consolas" FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0">
+                              <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                  <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Openable}" Value="False">
+                                      <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                  </Style.Triggers>
+                                </Style>
+                              </TextBlock.Style>
+                              <Hyperlink Click="OnOpenFinding" ToolTip="Open in the editor at this line (Settings → editor)"
+                                         Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                                <Run Text="{Binding Location, Mode=OneWay}" />
+                              </Hyperlink>
+                            </TextBlock>
+                            <TextBlock Grid.Column="2" Text="{Binding Location}" FontFamily="Consolas" FontSize="11"
+                                       VerticalAlignment="Center" Margin="8,0,0,0"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                              <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                  <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Openable}" Value="True">
+                                      <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                  </Style.Triggers>
+                                </Style>
+                              </TextBlock.Style>
+                            </TextBlock>
+                          </Grid>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                  </Grid>
+                </Border>
+              </Grid>
+            </DataTemplate>
+          </TabControl.ContentTemplate>
+        </TabControl>
+      </Grid>
+
+      <GridSplitter Grid.Row="1" Height="6" HorizontalAlignment="Stretch" Background="Transparent" />
+
+      <!-- Build log -->
+      <Border Grid.Row="2" CornerRadius="6" BorderThickness="1"
+              BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+              Background="{DynamicResource ControlFillColorDefaultBrush}">
+        <ui:TextBox x:Name="LogBox" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+                    FontFamily="Consolas" FontSize="11" BorderThickness="0"
+                    VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
+      </Border>
+    </Grid>
+
+    <Grid Grid.Row="5" Margin="0,10,0,0">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+      <TextBlock Grid.Column="0" x:Name="StatusText" VerticalAlignment="Center" FontSize="12"
+                 TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+      <StackPanel Grid.Column="1" Orientation="Horizontal">
+        <ui:Button x:Name="FolderBtn" Content="Open output" Icon="{ui:SymbolIcon FolderOpen24}"
+                   IsEnabled="False" Margin="0,0,8,0" Click="OnOpenFolder"
+                   ToolTip="Open the @pack output (Addons + keys)" />
+        <ui:Button Content="Close" Click="OnClose" />
+      </StackPanel>
+    </Grid>
+  </Grid>
+</ui:FluentWindow>

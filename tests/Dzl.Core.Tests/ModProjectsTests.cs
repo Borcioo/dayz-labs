@@ -22,4 +22,58 @@ public class ModProjectsTests
     [Fact]
     public void Discover_on_missing_root_is_empty()
         => ModProjects.Discover(@"X:\nope").Should().BeEmpty();
+
+    [Fact]
+    public void Discover_treats_a_folder_of_child_mods_as_a_pack()
+    {
+        var root = Directory.CreateTempSubdirectory().FullName;
+        var mods = ProjectPaths.ModsDir(root);
+        // standalone
+        var solo = Path.Combine(mods, "Alpha"); Directory.CreateDirectory(solo);
+        File.WriteAllText(Path.Combine(solo, "config.cpp"), "class CfgPatches{};");
+        // a pack: no project marker at its own level, two child mods inside
+        var pack = Path.Combine(mods, "paczka");
+        var scripts = Path.Combine(pack, "scripts"); Directory.CreateDirectory(scripts);
+        File.WriteAllText(Path.Combine(scripts, "config.cpp"), "class CfgPatches{};");
+        var ce = Path.Combine(pack, "ce"); Directory.CreateDirectory(ce);
+        File.WriteAllText(Path.Combine(ce, "$PBOPREFIX$"), "ce");
+        // a child with no marker is not counted
+        Directory.CreateDirectory(Path.Combine(pack, "docs"));
+
+        var found = ModProjects.Discover(root);
+
+        var alpha = found.Single(p => p.Name == "Alpha");
+        alpha.IsPack.Should().BeFalse();
+        alpha.Children.Should().BeEmpty();
+
+        var p = found.Single(x => x.Name == "paczka");
+        p.IsPack.Should().BeTrue();
+        p.Children.Select(c => c.Name).Should().BeEquivalentTo("scripts", "ce");
+        p.Children.Should().OnlyContain(c => !c.IsPack);
+    }
+
+    [Fact]
+    public void Discover_prefers_standalone_when_a_folder_is_itself_a_project_and_has_child_projects()
+    {
+        var root = Directory.CreateTempSubdirectory().FullName;
+        var mods = ProjectPaths.ModsDir(root);
+        var dir = Path.Combine(mods, "Hybrid"); Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "config.cpp"), "class CfgPatches{};");   // own config
+        var inner = Path.Combine(dir, "sub"); Directory.CreateDirectory(inner);
+        File.WriteAllText(Path.Combine(inner, "config.cpp"), "class CfgPatches{};");
+
+        var h = ModProjects.Discover(root).Single(p => p.Name == "Hybrid");
+        h.IsPack.Should().BeFalse("its own config.cpp makes it a single mod, not a pack");
+        h.Children.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Discover_skips_a_folder_with_no_projects_at_any_level()
+    {
+        var root = Directory.CreateTempSubdirectory().FullName;
+        var mods = ProjectPaths.ModsDir(root);
+        var junk = Path.Combine(mods, "junk", "deeper"); Directory.CreateDirectory(junk);
+
+        ModProjects.Discover(root).Should().NotContain(p => p.Name == "junk");
+    }
 }
