@@ -116,7 +116,15 @@ public partial class ToolsView : UserControl
     private void OnBrowseFolderInto(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string which }) return;
-        var dir = PickFolder();
+        var current = which switch
+        {
+            "packsrc" => PackSrcBox.Text,
+            "packdst" => PackDstBox.Text,
+            "paadir" => PaaDirBox.Text,
+            _ => "",
+        };
+        var dir = PickFolder(BrowseStartDir.Resolve(current, isFile: false,
+            new[] { Vm?.ProjectsRoot, Vm?.Cfg.DayzPath }, Directory.Exists));
         if (dir is null) return;
         switch (which)
         {
@@ -128,14 +136,22 @@ public partial class ToolsView : UserControl
 
     private void OnBrowseBinFile(object sender, RoutedEventArgs e)
     {
-        var dlg = new OpenFileDialog { Filter = "Binarized config (*.bin)|*.bin|All files (*.*)|*.*" };
+        var start = BrowseStartDir.Resolve(BinFileBox.Text, isFile: true,
+            new[] { Vm?.ProjectsRoot, Vm?.Cfg.DayzPath }, Directory.Exists);
+        var dlg = new OpenFileDialog
+        {
+            Filter = "Binarized config (*.bin)|*.bin|All files (*.*)|*.*",
+            InitialDirectory = start,
+        };
         if (dlg.ShowDialog(Window.GetWindow(this)) == true) BinFileBox.Text = dlg.FileName;
     }
 
-    /// <summary>Show a folder picker (OpenFolderDialog on .NET 8 WPF); null if cancelled.</summary>
-    private string? PickFolder()
+    /// <summary>Show a folder picker (OpenFolderDialog on .NET 8 WPF) starting at <paramref name="initialDir"/>;
+    /// null if cancelled.</summary>
+    private string? PickFolder(string? initialDir = null)
     {
         var dlg = new OpenFolderDialog();
+        if (!string.IsNullOrEmpty(initialDir)) dlg.InitialDirectory = initialDir;
         return dlg.ShowDialog(Window.GetWindow(this)) == true ? dlg.FolderName : null;
     }
 }

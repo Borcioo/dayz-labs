@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Dzl.Tray.ViewModels;
@@ -95,20 +96,26 @@ public partial class AddModWindow : FluentWindow
         if (sender is not FrameworkElement { Tag: string tag }) return;
         var parts = tag.Split(':', 2);
         if (parts.Length != 2) return;
-        var picked = parts[0] == "file" ? PickFile() : PickFolder();
+        var isFile = parts[0] == "file";
+        var current = FindName(parts[1]) is TextBox cur ? cur.Text : "";
+        var start = BrowseStartDir.Resolve(current, isFile,
+            new[] { _vm.ProjectsRoot, _vm.Cfg.DayzPath }, Directory.Exists);
+        var picked = isFile ? PickFile(start) : PickFolder(start);
         if (picked is null) return;
         if (FindName(parts[1]) is TextBox tb) tb.Text = picked;
     }
 
-    private string? PickFolder()
+    private string? PickFolder(string? initialDir = null)
     {
         var dlg = new OpenFolderDialog();
+        if (!string.IsNullOrEmpty(initialDir)) dlg.InitialDirectory = initialDir;
         return dlg.ShowDialog(this) == true ? dlg.FolderName : null;
     }
 
-    private static string? PickFile()
+    private static string? PickFile(string? initialDir = null)
     {
         var dlg = new OpenFileDialog { Filter = "All files (*.*)|*.*" };
+        if (!string.IsNullOrEmpty(initialDir)) dlg.InitialDirectory = initialDir;
         return dlg.ShowDialog() == true ? dlg.FileName : null;
     }
 }

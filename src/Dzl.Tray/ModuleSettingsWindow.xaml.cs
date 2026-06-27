@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using Dzl.Tray.ViewModels;
 using Microsoft.Win32;
@@ -61,7 +62,18 @@ public partial class ModuleSettingsWindow : FluentWindow
     private void OnBrowse(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string target }) return;
+        var current = target switch
+        {
+            "CfgProjectsRoot" => CfgProjectsRoot.Text,
+            "CfgWorkDriveSource" => CfgWorkDriveSource.Text,
+            "CfgWorkshopDir" => CfgWorkshopDir.Text,
+            "CfgKeysDir" => CfgKeysDir.Text,
+            _ => "",
+        };
         var dlg = new OpenFolderDialog();
+        var start = BrowseStartDir.Resolve(current, isFile: false,
+            new[] { _vm.ProjectsRoot, _vm.Cfg.DayzPath }, Directory.Exists);
+        if (!string.IsNullOrEmpty(start)) dlg.InitialDirectory = start;
         if (dlg.ShowDialog(this) != true) return;
         if (target == "CfgProjectsRoot") CfgProjectsRoot.Text = dlg.FolderName;
         else if (target == "CfgWorkDriveSource") CfgWorkDriveSource.Text = dlg.FolderName;
@@ -90,7 +102,13 @@ public partial class ModuleSettingsWindow : FluentWindow
 
     private void OnBrowseFile(object sender, RoutedEventArgs e)
     {
-        var dlg = new OpenFileDialog { Filter = "steamcmd.exe|steamcmd.exe|Executables|*.exe|All files|*.*" };
+        var start = BrowseStartDir.Resolve(CfgSteamCmdPath.Text, isFile: true,
+            new[] { _vm.Cfg.DayzPath }, Directory.Exists);
+        var dlg = new OpenFileDialog
+        {
+            Filter = "steamcmd.exe|steamcmd.exe|Executables|*.exe|All files|*.*",
+            InitialDirectory = start,
+        };
         if (dlg.ShowDialog(this) == true) CfgSteamCmdPath.Text = dlg.FileName;
     }
 

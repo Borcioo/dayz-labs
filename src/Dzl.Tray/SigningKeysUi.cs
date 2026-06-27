@@ -44,6 +44,8 @@ internal static class SigningKeysUi
         {
             Title = "Import signing key",
             Filter = "DayZ private key (*.biprivatekey)|*.biprivatekey",
+            InitialDirectory = BrowseStartDir.Resolve(vm.ResolvedKeysDir, isFile: false,
+                new[] { vm.ProjectsRoot }, Directory.Exists),
         };
         if (dlg.ShowDialog(owner) != true) return (null, "");
 

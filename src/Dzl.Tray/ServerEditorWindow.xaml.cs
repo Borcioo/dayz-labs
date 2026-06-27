@@ -119,47 +119,39 @@ public partial class ServerEditorWindow : FluentWindow
     private void OnBrowseInto(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string name }) return;
-        var dir = PickFolder();
-        if (dir is null) return;
-        if (FindName(name) is TextBox tb) tb.Text = dir;
+        var current = FindName(name) is TextBox cur ? cur.Text : "";
+        var start = BrowseStartDir.Resolve(current, isFile: false,
+            new[] { _vm.ActiveServerDir, CurrentDayzPath() }, Directory.Exists);
+        var dlg = new OpenFolderDialog();
+        if (!string.IsNullOrEmpty(start)) dlg.InitialDirectory = start;
+        if (dlg.ShowDialog(this) != true) return;
+        if (FindName(name) is TextBox tb) tb.Text = dlg.FolderName;
     }
 
     private void OnBrowseMission(object sender, RoutedEventArgs e)
     {
         var dayz = CurrentDayzPath();
-        var dlg = new OpenFolderDialog { InitialDirectory = SafeInitialDir(Path.Combine(dayz, "mpmissions"), dayz) };
+        var start = BrowseStartDir.Resolve(CfgMission.Text, isFile: false,
+            new[] { Path.Combine(_vm.ActiveServerDir, "mpmissions"), Path.Combine(dayz, "mpmissions"), dayz },
+            Directory.Exists);
+        var dlg = new OpenFolderDialog { InitialDirectory = start };
         if (dlg.ShowDialog(this) == true) CfgMission.Text = RelOrAbs(dlg.FolderName, dayz);
     }
 
     private void OnBrowseConfigName(object sender, RoutedEventArgs e)
     {
         var dayz = CurrentDayzPath();
+        var start = BrowseStartDir.Resolve(CfgConfigName.Text, isFile: true,
+            new[] { _vm.ActiveServerDir, dayz }, Directory.Exists);
         var dlg = new OpenFileDialog
         {
             Filter = "Server config (*.cfg)|*.cfg|All files (*.*)|*.*",
-            InitialDirectory = SafeInitialDir(dayz),
+            InitialDirectory = start,
         };
         if (dlg.ShowDialog(this) == true) CfgConfigName.Text = RelOrAbs(dlg.FileName, dayz);
     }
 
-    private string? PickFolder()
-    {
-        var dlg = new OpenFolderDialog();
-        return dlg.ShowDialog(this) == true ? dlg.FolderName : null;
-    }
-
     private string CurrentDayzPath() => _vm.Cfg.DayzPath;
-
-    private static string SafeInitialDir(params string?[] candidates)
-    {
-        foreach (var c in candidates)
-        {
-            if (string.IsNullOrWhiteSpace(c)) continue;
-            try { var full = Path.GetFullPath(c); if (Directory.Exists(full)) return full; }
-            catch { /* skip */ }
-        }
-        return "";
-    }
 
     private static string RelOrAbs(string fullPath, string dayzPath)
     {

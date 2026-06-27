@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Dzl.Tray.ViewModels;
@@ -223,22 +224,34 @@ public partial class SettingsView : UserControl
         if (sender is not FrameworkElement { Tag: string tag }) return;
         var parts = tag.Split(':', 2);
         if (parts.Length != 2) return;
-        var picked = parts[0] == "file" ? PickFile() : PickFolder();
+        var isFile = parts[0] == "file";
+        var current = FindName(parts[1]) switch
+        {
+            TextBox tb0 => tb0.Text,
+            System.Windows.Controls.ComboBox cb0 => cb0.Text,
+            _ => "",
+        };
+        var start = BrowseStartDir.Resolve(current, isFile,
+            new[] { Vm?.ProjectsRoot, Vm?.Cfg.DayzPath }, Directory.Exists);
+        var picked = isFile ? PickFile(start) : PickFolder(start);
         if (picked is null) return;
         if (FindName(parts[1]) is TextBox tb) tb.Text = picked;
         else if (FindName(parts[1]) is System.Windows.Controls.ComboBox cb) cb.Text = picked;
     }
 
-    /// <summary>Show a folder picker (OpenFolderDialog on .NET 8 WPF); null if cancelled.</summary>
-    private string? PickFolder()
+    /// <summary>Show a folder picker (OpenFolderDialog on .NET 8 WPF) starting at <paramref name="initialDir"/>;
+    /// null if cancelled.</summary>
+    private string? PickFolder(string? initialDir = null)
     {
         var dlg = new OpenFolderDialog();
+        if (!string.IsNullOrEmpty(initialDir)) dlg.InitialDirectory = initialDir;
         return dlg.ShowDialog(Window.GetWindow(this)) == true ? dlg.FolderName : null;
     }
 
-    private static string? PickFile()
+    private static string? PickFile(string? initialDir = null)
     {
         var dlg = new OpenFileDialog { Filter = "Programs (*.exe;*.cmd;*.bat)|*.exe;*.cmd;*.bat|All files (*.*)|*.*" };
+        if (!string.IsNullOrEmpty(initialDir)) dlg.InitialDirectory = initialDir;
         return dlg.ShowDialog() == true ? dlg.FileName : null;
     }
 }
