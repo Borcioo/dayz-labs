@@ -37,6 +37,9 @@ public static class HelpText
     public const string ConfigName =
         "The server config file (serverDZ.cfg): hostname, max players, time settings, signature verification, and which mission to load.";
 
+    public const string MissionSource =
+        "Which mpmissions folder the server will actually load, read from serverDZ.cfg's mission template. DayZ resolves a bare template name against the DayZ install, NOT this instance — so a server with edited CE/types in its own mpmissions would silently run the install's mission. \"Fix\" rewrites the template to this instance's absolute mission path.";
+
     public const string ConnectIp =
         "-connect: the address the client auto-connects to on launch. 127.0.0.1 means the local server you just started.";
 

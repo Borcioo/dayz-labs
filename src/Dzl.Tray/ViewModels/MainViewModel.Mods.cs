@@ -126,6 +126,7 @@ public partial class MainViewModel
         ServerArgv = ProcessManager.ServerExe(_cfg, Mode) + " " + string.Join(" ", ArgvBuilder.Build(Mode, "server", _cfg));
         ClientArgv = ProcessManager.ClientExe(_cfg, Mode) + " " + string.Join(" ", ArgvBuilder.Build(Mode, "client", _cfg));
         RefreshActiveMods();
+        RefreshMissionCheck();
     }
 
     /// <summary>Rebuild the per-target active-mod lists from the live <see cref="Mods"/> rows

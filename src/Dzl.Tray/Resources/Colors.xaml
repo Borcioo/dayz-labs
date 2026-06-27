@@ -14,6 +14,11 @@
     <SolidColorBrush x:Key="FlagMutedBrush" Color="#555B63" />    <!-- CE flag glyph: inactive -->
     <SolidColorBrush x:Key="StatusDownBrush" Color="#6E6E6E" />   <!-- status dot: down / offline -->
 
+    <!-- Mission-source health dot (dashboard "Mission source" card) -->
+    <SolidColorBrush x:Key="MissionOkBrush" Color="#4CAF50" />    <!-- loads the instance's mission -->
+    <SolidColorBrush x:Key="MissionWarnBrush" Color="#E0A030" /> <!-- loads the install's mission -->
+    <SolidColorBrush x:Key="MissionErrorBrush" Color="#E24B4A" /> <!-- mission folder missing -->
+
     <!-- CE "active row" highlight — the single source of truth for the selected/hover look shared by the
          Dictionaries ListBox rows AND every Central-Economy DataGrid row, so the active row is identical on
          every CE tab. Change the colour here, not per-tab. -->

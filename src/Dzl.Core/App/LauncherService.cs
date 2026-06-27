@@ -1,4 +1,6 @@
 using Dzl.Core.Config;
+using Dzl.Core.Economy;
+using Dzl.Core.Env;
 using Dzl.Core.Launch;
 using Dzl.Core.Logs;
 using Dzl.Core.Projects;
@@ -170,6 +172,28 @@ public sealed class LauncherService
                 ProcessManager.Spawn(mode, target, cfg, source, _configPath);
             }
             return $"restarted {target} ({mode})";
+        });
+    }
+
+    /// <summary>Which mpmissions folder the server will actually load (from the active instance's
+    /// serverDZ.cfg template) and whether that's the instance's own mission or the install's.</summary>
+    public MissionCheckResult CheckMission()
+    {
+        var (cfg, _, _) = Resolve();
+        return MissionCheck.Evaluate(cfg);
+    }
+
+    /// <summary>Repoint the active instance's serverDZ.cfg template at its own mission (absolute path) so
+    /// the server loads it instead of the install's.</summary>
+    public OpResult FixMissionTemplate()
+    {
+        var (cfg, _, _) = Resolve();
+        var mission = MissionLocator.Resolve(cfg)?.MissionDir;
+        if (mission is null) return new OpResult(false, "no instance mission to point the template at");
+        return Op(() =>
+        {
+            ServerScaffold.EnsureAbsoluteTemplate(cfg.ConfigName, mission);
+            return "mission template now points at this instance";
         });
     }
 }
