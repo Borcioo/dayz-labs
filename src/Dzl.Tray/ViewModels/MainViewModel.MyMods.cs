@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
+using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Dzl.Core.App;
@@ -16,6 +18,29 @@ public partial class MainViewModel
 
     /// <summary>Mod source projects discovered under the ProjectsRoot (drives the My Mods page).</summary>
     public ObservableCollection<ModProjectVm> ModProjects { get; } = new();
+
+    private ICollectionView? _modProjectsView;
+    /// <summary>Filtered view over <see cref="ModProjects"/> (bound by the My Mods list), driven by
+    /// <see cref="ProjectFilter"/>. Built lazily on first bind (UI thread).</summary>
+    public ICollectionView ModProjectsView =>
+        _modProjectsView ??= BuildView(CollectionViewSource.GetDefaultView(ModProjects), FilterModProject);
+
+    private static ICollectionView BuildView(ICollectionView view, Predicate<object> filter)
+    {
+        view.Filter = filter;
+        return view;
+    }
+
+    [ObservableProperty] private string _projectFilter = "";
+    partial void OnProjectFilterChanged(string value) => ModProjectsView.Refresh();
+
+    private bool FilterModProject(object obj)
+    {
+        if (string.IsNullOrEmpty(ProjectFilter)) return true;
+        if (obj is not ModProjectVm p) return true;
+        return p.Name.Contains(ProjectFilter, StringComparison.OrdinalIgnoreCase)
+            || p.Path.Contains(ProjectFilter, StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>Resolved ProjectsRoot (configured value or the %USERPROFILE% fallback). Shown on
     /// the My Mods / Servers pages so the user knows where dzl creates things.</summary>

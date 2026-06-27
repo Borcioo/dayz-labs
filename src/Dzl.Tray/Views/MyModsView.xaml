@@ -69,6 +69,9 @@
               </Grid.ColumnDefinitions>
               <TextBlock Grid.Column="0" Text="Projects" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
               <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <ui:TextBox Width="200" VerticalAlignment="Center" Margin="0,0,8,0"
+                            PlaceholderText="filter projects…" Icon="{ui:SymbolIcon Search24}"
+                            Text="{Binding ProjectFilter, UpdateSourceTrigger=PropertyChanged}" />
                 <ui:Button Content="Add" Icon="{ui:SymbolIcon Add24}" Appearance="Primary"
                            ToolTip="Add a mod — new, import a folder, or clone from GitHub"
                            Margin="0,0,8,0" Click="OnAddMod" />
@@ -78,7 +81,7 @@
             <TextBlock x:Name="RowStatus" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"
                        Visibility="Collapsed"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-            <ItemsControl ItemsSource="{Binding ModProjects}">
+            <ItemsControl ItemsSource="{Binding ModProjectsView}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
                   <Border Margin="0,0,0,8" Padding="12" CornerRadius="6"

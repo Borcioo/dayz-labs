@@ -217,8 +217,17 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
           </Grid.RowDefinitions>
-          <TextBlock Grid.Row="0" Text="{Binding ModsSummary}" FontSize="12" Margin="0,0,0,8"
-                     Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+          <Grid Grid.Row="0" Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="{Binding ModsSummary}" FontSize="12" VerticalAlignment="Center"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            <ui:TextBox Grid.Column="1" Width="220" VerticalAlignment="Center"
+                        PlaceholderText="filter mods…" Icon="{ui:SymbolIcon Search24}"
+                        Text="{Binding ModFilter, UpdateSourceTrigger=PropertyChanged}" />
+          </Grid>
           <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
             <ui:Button Content="Rescan" Icon="{ui:SymbolIcon ArrowSync24}" Margin="0,0,8,0" Command="{Binding RescanCommand}" />
             <Border Width="1" Margin="4,2,12,2" Background="{DynamicResource ControlElevationBorderBrush}" />
