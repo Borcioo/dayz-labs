@@ -130,7 +130,7 @@ public class ModBuildTests
     }
 
     [Fact]
-    public void Build_fails_when_addonbuilder_missing_even_for_a_valid_project()
+    public void Build_fails_when_the_build_tool_is_missing_even_for_a_valid_project()
     {
         var (configPath, root) = TmpConfig();
         var proj = ProjectPaths.ModDir(root, "Foo");   // <root>\mods\Foo
@@ -139,7 +139,7 @@ public class ModBuildTests
 
         var r = new BuildService(configPath).Build("Foo");
         r.Ok.Should().BeFalse();
-        r.Message.Should().Contain("AddonBuilder not found");
+        r.Message.Should().Contain("FileBank.exe not found");   // engine v2 packs with FileBank, not AddonBuilder
         r.Registered.Should().BeFalse();
     }
 }

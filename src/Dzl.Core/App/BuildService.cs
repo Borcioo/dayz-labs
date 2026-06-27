@@ -64,14 +64,14 @@ public sealed class BuildService
         var root = ProjectPaths.Root(cfg);
         var projectDir = ProjectPaths.ModDir(root, mod);
         var src = ProjectPaths.WorkDriveLink(mod);
-        var exe = ToolCatalog.Find(cfg.DayzToolsPath, "addonbuilder");
+        var exe = ToolCatalog.Find(cfg.DayzToolsPath, "filebank");
 
         var isProject = Directory.Exists(projectDir) && ModProjects.IsProject(projectDir);
         var haveTool = exe is not null && exe.Exists;
         var pMounted = WorkDrive.IsMounted();
         var ready = isProject && haveTool && pMounted;
         var msg = !isProject ? "not a mod project ($PBOPREFIX$ / config.cpp missing)"
-                : !haveTool ? "AddonBuilder not found — set the DayZ Tools path"
+                : !haveTool ? "FileBank.exe not found — set the DayZ Tools path"
                 : !pMounted ? "P: work drive not mounted — mount it to build"
                 : "ready to build";
 
@@ -195,16 +195,23 @@ public sealed class BuildService
         if (junctionFail is not null)
             return junctionFail;
 
-        var (pack, workDir, workAddons, startUtc) = PackToWorkDir(exe.ExePath, modName, buildDir, clean, binarize, signKey, onLine);
-        if (!pack.Ok)
-            return FailResult(modName, preflight, $"AddonBuilder exited {pack.ExitCode}", pack.Output);
-
-        var (workPbo, verifyFail) = VerifyPackedOutput(modName, projectDir, workAddons, startUtc, sign, pack.Output, preflight, onLine);
-        if (verifyFail is not null)
-            return verifyFail;
+        // Direct engine: Binarize (excluding ODOL p3d, copied as-is) → CfgConvert → FileBank → sign.
+        // Output lands in a work Addons, then publishes atomically into the loadable @<Mod>\Addons.
+        var workDir = Path.Combine(buildDir, ".work");
+        var workAddons = Path.Combine(workDir, "Addons");
+        try { if (Directory.Exists(workDir)) Directory.Delete(workDir, recursive: true); } catch { }
+        Directory.CreateDirectory(workAddons);
+        var prefix = PathResolver.ReadPrefix(projectDir);
+        var startUtc = DateTime.UtcNow;
+        var eng = BuildEngine.Run(cfg.DayzToolsPath, ProjectPaths.WorkDriveLink(modName),
+            prefix: prefix.Length > 0 ? prefix : modName, pboName: modName,
+            workDir: Path.Combine(workDir, "engine"), outAddonsDir: workAddons,
+            binarize: binarize, signPrivateKey: signKey, onLine: onLine);
+        if (!eng.Ok || !File.Exists(eng.Pbo))
+            return FailResult(modName, preflight, $"build failed: {eng.Output}", eng.Output);
 
         var (pbo, publishFail) = PublishAndRecord(modName, root, projectDir, workDir, workAddons, addonsDir,
-            workPbo!, startUtc, stateHash, cache, pack.Output, preflight);
+            eng.Pbo, startUtc, stateHash, cache, eng.Output, preflight);
         if (publishFail is not null)
             return publishFail;
 
@@ -212,7 +219,7 @@ public sealed class BuildService
             ShipPublicKey(cfg, root, modName, effectiveKey);
 
         var (registered, note) = RegisterInRunList(cfg, active, modName);
-        return new BuildResult(true, modName, buildDir, pbo, registered, note, pack.Output, "", preflight);
+        return new BuildResult(true, modName, buildDir, pbo, registered, note, eng.Output, "", preflight);
     }
 
     public sealed record PackPreflight(string Child, string Dir, PreflightView View);
@@ -291,9 +298,9 @@ public sealed class BuildService
         if (build.Count == 0)
             return Fail("no inner mods to build (none selected / none found)");
 
-        var exe = ToolCatalog.Find(cfg.DayzToolsPath, "addonbuilder");
-        if (exe is null || !exe.Exists)
-            return Fail("AddonBuilder not found — set the DayZ Tools path");
+        var fb = ToolCatalog.Find(cfg.DayzToolsPath, "filebank");
+        if (fb is null || !fb.Exists)
+            return Fail("FileBank.exe not found — set the DayZ Tools path");
         if (!WorkDrive.IsMounted())
             return Fail("P: work drive not mounted — mount it first");
 
@@ -343,47 +350,20 @@ public sealed class BuildService
         foreach (var c in build)
         {
             onLine?.Invoke($"=== building {c.Name} ===");
-            var childWork = Path.Combine(workRoot, c.Name);
-            var childAddons = Path.Combine(childWork, "Addons");
-            Directory.CreateDirectory(childAddons);
-            var abTemp = Path.Combine(childWork, "temp");
-            Directory.CreateDirectory(abTemp);   // AddonBuilder fails at "Syncing folders" if -temp= is missing
-            var includeFile = AddonBuilder.WriteIncludeFile(childWork);
-
-            var startUtc = DateTime.UtcNow;
-            var src = Path.Combine(ProjectPaths.WorkDriveLink(packName), c.Name);   // P:\<pack>\<child>
-            // AddonBuilder derives the prefix from the source LEAF for a nested source, so pass the child's
-            // own $PBOPREFIX$ explicitly (-prefix=) or the PBO would resolve assets at the wrong root.
+            var childWork = Path.Combine(workRoot, c.Name + "_work");
+            var childOut = Path.Combine(workRoot, c.Name + "_out");
             var childPrefix = PathResolver.ReadPrefix(c.Path);
-            var pk = AddonBuilder.Pack(exe.ExePath, src, childAddons,
-                clear: false, packOnly: !binarize, prefix: childPrefix.Length > 0 ? childPrefix : null,
-                signKey: signKey, onLine: onLine, tempDir: abTemp, includeFile: includeFile);
-            output.AppendLine(pk.Output);
-            if (!pk.Ok)
+            var eng = BuildEngine.Run(cfg.DayzToolsPath, c.Path,
+                prefix: childPrefix.Length > 0 ? childPrefix : c.Name, pboName: c.Name,
+                workDir: childWork, outAddonsDir: childOut, binarize: binarize, signPrivateKey: signKey, onLine: onLine);
+            output.AppendLine(eng.Output);
+            if (!eng.Ok || !File.Exists(eng.Pbo))
             {
-                results.Add(new PackChildResult(c.Name, false, $"AddonBuilder exited {pk.ExitCode}"));
-                return Fail($"'{c.Name}' failed (AddonBuilder exited {pk.ExitCode})", output.ToString(), results);
+                results.Add(new PackChildResult(c.Name, false, eng.Output));
+                return Fail($"'{c.Name}' build failed: {eng.Output}", output.ToString(), results);
             }
-            if (!ModBuild.HasFreshPbo(childAddons, startUtc))
-            {
-                results.Add(new PackChildResult(c.Name, false, "no fresh .pbo produced"));
-                return Fail($"'{c.Name}': AddonBuilder reported success but produced no .pbo", output.ToString(), results);
-            }
-            var childPbo = ModBuild.NewestPbo(childAddons)!.FullName;
-            var expected = PathResolver.ReadPrefix(c.Path);
-            var hdr = PboHeader.Read(childPbo);
-            if (hdr is not null && expected.Length > 0 && hdr.Prefix.Length > 0 &&
-                !string.Equals(hdr.Prefix, expected, StringComparison.OrdinalIgnoreCase))
-            {
-                results.Add(new PackChildResult(c.Name, false, $"prefix '{hdr.Prefix}' ≠ '{expected}'"));
-                return Fail($"'{c.Name}': packed prefix '{hdr.Prefix}' ≠ $PBOPREFIX$ '{expected}'", output.ToString(), results);
-            }
-            if (sign && PboHeader.FindSignature(childPbo) is null)
-            {
-                results.Add(new PackChildResult(c.Name, false, "no .bisign produced"));
-                return Fail($"'{c.Name}': signing requested but no .bisign produced", output.ToString(), results);
-            }
-            foreach (var f in Directory.EnumerateFiles(childAddons).Where(f =>
+            // Collect this child's PBO (+ .bisign) into the shared staging Addons.
+            foreach (var f in Directory.EnumerateFiles(childOut).Where(f =>
                          f.EndsWith(".pbo", StringComparison.OrdinalIgnoreCase) ||
                          f.EndsWith(".bisign", StringComparison.OrdinalIgnoreCase)))
                 File.Move(f, Path.Combine(staging, Path.GetFileName(f)), overwrite: true);
@@ -414,9 +394,9 @@ public sealed class BuildService
         if (!Directory.Exists(projectDir) || !ModProjects.IsProject(projectDir))
             return (null, FailResult(modName, null, $"not a mod project: {projectDir} (need $PBOPREFIX$ or config.cpp)"));
 
-        var exe = ToolCatalog.Find(cfg.DayzToolsPath, "addonbuilder");
+        var exe = ToolCatalog.Find(cfg.DayzToolsPath, "filebank");
         if (exe is null || !exe.Exists)
-            return (null, FailResult(modName, null, "AddonBuilder not found — set DayZ Tools path / install Addon Builder"));
+            return (null, FailResult(modName, null, "FileBank.exe not found — set DayZ Tools path / install DayZ Tools"));
 
         if (!WorkDrive.IsMounted())
             return (null, FailResult(modName, null, "P: work drive not mounted — mount it first (binarize resolves vanilla data + includes against P:)"));
@@ -505,54 +485,6 @@ public sealed class BuildService
             return FailResult(modName, preflight, $"build junction {buildArea} → {ProjectPaths.BuildRoot(root)} failed: {buildEns.Detail}");
 
         return null;
-    }
-
-    // AddonBuilder writes into a work dir; the loadable Addons\ is only touched after the output
-    // verifies, and then atomically (backup → swap → rollback on failure).
-    private static (PackResult pack, string workDir, string workAddons, DateTime startUtc) PackToWorkDir(
-        string exePath, string modName, string buildDir, bool clean, bool binarize, string? signKey, Action<string>? onLine)
-    {
-        var workDir = Path.Combine(buildDir, ".work");
-        var workAddons = Path.Combine(workDir, "Addons");
-        if (Directory.Exists(workAddons)) try { Directory.Delete(workAddons, recursive: true); } catch { }
-        Directory.CreateDirectory(workAddons);
-        var abTemp = Path.Combine(workDir, "temp");
-        Directory.CreateDirectory(abTemp);   // AddonBuilder fails at "Syncing folders" when -temp= doesn't exist
-        var includeFile = AddonBuilder.WriteIncludeFile(workDir);
-
-        var startUtc = DateTime.UtcNow;
-        var pack = AddonBuilder.Pack(exePath, ProjectPaths.WorkDriveLink(modName), workAddons,
-            clear: clean, packOnly: !binarize, prefix: null, signKey: signKey, onLine: onLine,
-            tempDir: abTemp, includeFile: includeFile);
-        return (pack, workDir, workAddons, startUtc);
-    }
-
-    // A fresh .pbo must exist (AddonBuilder can no-op and still report success), the packed prefix
-    // must match $PBOPREFIX$ (a mismatch breaks every asset path), and a signed build must actually
-    // carry a signature (AddonBuilder -sign can silently not sign).
-    private static (string? workPbo, BuildResult? fail) VerifyPackedOutput(
-        string modName, string projectDir, string workAddons, DateTime startUtc, bool sign,
-        string packOutput, PreflightView? preflight, Action<string>? onLine)
-    {
-        if (!ModBuild.HasFreshPbo(workAddons, startUtc))
-            return (null, FailResult(modName, preflight,
-                "AddonBuilder reported success but no fresh .pbo appeared — check the log above for the real error",
-                packOutput));
-
-        var workPbo = ModBuild.NewestPbo(workAddons)!.FullName;
-
-        var expectedPrefix = PathResolver.ReadPrefix(projectDir);
-        var info = PboHeader.Read(workPbo);
-        if (info is null)
-            onLine?.Invoke("verify: could not parse the produced PBO header (skipping prefix check)");
-        else if (expectedPrefix.Length > 0 && info.Prefix.Length > 0 &&
-                 !string.Equals(info.Prefix, expectedPrefix, StringComparison.OrdinalIgnoreCase))
-            return (workPbo, FailResult(modName, preflight, $"packed PBO prefix '{info.Prefix}' does not match $PBOPREFIX$ '{expectedPrefix}' — assets would resolve to the wrong paths", packOutput));
-
-        if (sign && PboHeader.FindSignature(workPbo) is null)
-            return (workPbo, FailResult(modName, preflight, "signing was requested but no .bisign was produced next to the PBO", packOutput));
-
-        return (workPbo, null);
     }
 
     private (string pbo, BuildResult? fail) PublishAndRecord(

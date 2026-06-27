@@ -27,4 +27,20 @@ public static class DsTools
             return new KeyResult(false, priv, pub, ex.Message);
         }
     }
+
+    public static List<string> SignArgs(string privateKey, string pbo) => new() { privateKey, pbo };
+
+    /// <summary>Sign a PBO: <c>DSSignFile &lt;key.biprivatekey&gt; &lt;file.pbo&gt;</c> writes
+    /// <c>&lt;file.pbo&gt;.&lt;key&gt;.bisign</c> next to it. Run with the working dir at the PBO's folder so
+    /// the signature lands there. Never throws.</summary>
+    public static (bool ok, string output) Sign(string exePath, string privateKey, string pbo)
+    {
+        try
+        {
+            var r = ProcRunner.Run(exePath, SignArgs(privateKey, pbo),
+                new RunOpts(TimeoutMs: 120_000, WorkingDir: Path.GetDirectoryName(pbo)));
+            return (r.Ok, r.AllOutput);
+        }
+        catch (Exception ex) { return (false, ex.Message); }
+    }
 }
