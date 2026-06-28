@@ -135,21 +135,29 @@
               <ui:Button Grid.Column="1" Content="Browse" Icon="{ui:SymbolIcon FolderOpen24}"
                          Margin="8,0,0,0" Tag="packdst" Click="OnBrowseFolderInto" />
             </Grid>
-            <Grid Margin="0,0,0,8">
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-              </Grid.ColumnDefinitions>
-              <ui:TextBox x:Name="PackPrefixBox" Grid.Column="0" Margin="0,0,4,0" PlaceholderText="prefix (optional)" />
-              <ui:TextBox x:Name="PackSignBox" Grid.Column="1" Margin="4,0,0,0" PlaceholderText="sign key path (optional)" />
-            </Grid>
+            <ui:TextBox x:Name="PackPrefixBox" Margin="0,0,0,8" PlaceholderText="prefix (optional — defaults to $PBOPREFIX$ / folder name)" />
+            <!-- Same options as a My Mods build: binarize, sign with a configured key, build-anyway. -->
             <StackPanel Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Center">
+              <CheckBox x:Name="PackBinarizeChk" Content="binarize" IsChecked="True" VerticalAlignment="Center" Margin="0,0,16,0"
+                        ToolTip="On: full build — binarize models + config.cpp→config.bin (needs P: mounted).&#10;Off: pack the folder as-is into a PBO." />
+              <CheckBox x:Name="PackSignChk" Content="sign" VerticalAlignment="Center" Margin="0,0,8,0"
+                        ToolTip="Sign the PBO with a configured key (Settings → Signing)." />
+              <ComboBox x:Name="PackKeyCombo" MinWidth="150" FontSize="12" VerticalAlignment="Center" Margin="0,0,16,0"
+                        IsEnabled="{Binding IsChecked, ElementName=PackSignChk}"
+                        ToolTip="Signing key (from Settings → Signing)." />
+              <CheckBox x:Name="PackBuildAnywayChk" Content="build anyway" VerticalAlignment="Center"
+                        ToolTip="Run preflight but don't let its errors block packing (e.g. references to vanilla assets not on P:)." />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Center">
+              <ui:Button x:Name="PreflightPackButton" Content="Preflight" Icon="{ui:SymbolIcon DocumentSearch24}"
+                         Click="OnPreflightPack" Margin="0,0,8,0"
+                         ToolTip="Check the folder for missing references / config issues before packing" />
               <ui:Button x:Name="PackButton" Content="Pack" Appearance="Primary"
                          Icon="{ui:SymbolIcon Box24}" Click="OnPackPbo" Margin="0,0,12,0" />
-              <CheckBox x:Name="PackBinarizeChk" Content="binarize" VerticalAlignment="Center"
-                        ToolTip="Off: pack the folder as-is into a PBO (in-process, no extra tools).&#10;On: full build — binarize models + config.cpp→config.bin — needs the P: work drive mounted." />
+              <TextBlock x:Name="PackStatus" VerticalAlignment="Center" Opacity="0.85"
+                         Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             </StackPanel>
-            <TextBox x:Name="PackOutput" Height="110" Style="{StaticResource ToolOutputBox}" />
+            <TextBox x:Name="PackOutput" Height="140" Style="{StaticResource ToolOutputBox}" />
           </StackPanel>
         </ui:Card>
 

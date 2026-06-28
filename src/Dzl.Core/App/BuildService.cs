@@ -150,6 +150,89 @@ public sealed class BuildService
             report.Findings, txt, json);
     }
 
+    public sealed record PackFolderResult(bool Ok, string Pbo, string Message, PreflightView? Preflight);
+
+    /// <summary>Preflight an ARBITRARY source folder (the Tools packer) — the same checks a project build runs,
+    /// but on a folder that isn't a managed mod project. Read-only.</summary>
+    public PreflightView PreflightFolder(string sourceDir)
+    {
+        var name = Path.GetFileName(Path.TrimEndingDirectorySeparator(sourceDir));
+        if (string.IsNullOrWhiteSpace(sourceDir) || !Directory.Exists(sourceDir))
+        {
+            var bad = new PreflightReport();
+            bad.Error("source", $"source folder not found: {sourceDir}");
+            return new PreflightView(false, name, 1, 0, 0, bad.Findings, "", "");
+        }
+        Profiles.EnsureDefault(_configPath);
+        var (cfg, _, _) = Profiles.ResolveActive(_configPath);
+        var cfgConvert = ToolCatalog.Find(cfg.DayzToolsPath, "cfgconvert");
+        var opts = new PreflightOptions
+        {
+            WorkDriveRoot = WorkDrive.IsMounted() ? @"P:\" : null,
+            CfgConvertExe = cfgConvert?.Exists == true ? cfgConvert.ExePath : null,
+            TempDir = Path.Combine(ConfigDir, "temp"),
+        };
+        var report = PreflightEngine.Run(Path.GetFullPath(sourceDir), name, opts);
+        return new PreflightView(report.Ok, name, report.Errors, report.Warnings, report.Infos, report.Findings, "", "");
+    }
+
+    /// <summary>Pack an arbitrary folder into a PBO with the full project-build pipeline (preflight gate →
+    /// Binarize → CfgConvert → in-process pack → sign) — the Tools-page equivalent of a My Mods build, but on a
+    /// user-picked source/output instead of a managed project. The sign key is one of the configured keys (by
+    /// name); the prefix falls back to the folder's <c>$PBOPREFIX$</c> then its name.</summary>
+    public PackFolderResult PackFolder(string sourceDir, string outputDir, string? prefix, bool binarize,
+        bool sign, string? keyName, bool ignorePreflightErrors, Action<string>? onLine)
+    {
+        if (string.IsNullOrWhiteSpace(sourceDir) || !Directory.Exists(sourceDir))
+            return new PackFolderResult(false, "", $"source folder not found: {sourceDir}", null);
+        if (string.IsNullOrWhiteSpace(outputDir))
+            return new PackFolderResult(false, "", "pick an output folder", null);
+
+        Profiles.EnsureDefault(_configPath);
+        var (cfg, _, _) = Profiles.ResolveActive(_configPath);
+        var root = ProjectPaths.Root(cfg);
+        var src = Path.GetFullPath(sourceDir);
+        var pboName = Path.GetFileName(Path.TrimEndingDirectorySeparator(src));
+        var pfx = !string.IsNullOrWhiteSpace(prefix) ? prefix!.Trim()
+                : PathResolver.ReadPrefix(src) is { Length: > 0 } p ? p : pboName;
+
+        // Preflight (respects the global gate; "build anyway" bypasses error-severity findings).
+        PreflightView? preflight = null;
+        if (cfg.PreflightBeforeBuild)
+        {
+            onLine?.Invoke("preflight: checking folder ...");
+            preflight = PreflightFolder(src);
+            foreach (var f in preflight.Findings.Where(f => f.Severity == FindingSeverity.Error))
+                onLine?.Invoke($"preflight ✗ {f.Rule}: {f.Message}");
+            if (!preflight.Ok && !ignorePreflightErrors)
+                return new PackFolderResult(false, "",
+                    $"preflight failed with {preflight.Errors} error(s) — fix them or tick \"build anyway\"", preflight);
+            onLine?.Invoke(preflight.Ok ? $"preflight: ok ({preflight.Warnings} warning(s))"
+                                        : $"preflight: {preflight.Errors} error(s) — packing anyway");
+        }
+
+        string? signKey = null;
+        if (sign)
+        {
+            var key = !string.IsNullOrWhiteSpace(keyName) ? keyName!.Trim() : KeyName(cfg);
+            if (key.Length == 0)
+                return new PackFolderResult(false, "", "sign requested but no key — pick one or set it in Settings → Signing", preflight);
+            signKey = ProjectPaths.PrivateKey(root, cfg.KeysDir, key);
+            if (!File.Exists(signKey))
+                return new PackFolderResult(false, "", $"signing key '{key}' not found at {signKey}", preflight);
+            onLine?.Invoke($"signing with key: {key}");
+        }
+
+        if (binarize && !WorkDrive.IsMounted())
+            return new PackFolderResult(false, "", "binarize needs the P: work drive mounted — mount it, or uncheck binarize", preflight);
+
+        var workDir = Path.Combine(ConfigDir, "temp", "pack", $"{pboName}_{Guid.NewGuid():N}");
+        var eng = BuildEngine.Run(cfg.DayzToolsPath, src, pfx, pboName, workDir, Path.GetFullPath(outputDir),
+            binarize, signKey, onLine, binPath: @"P:\");
+        return new PackFolderResult(eng.Ok && File.Exists(eng.Pbo), eng.Pbo,
+            eng.Ok ? $"packed {pboName}.pbo → {eng.Pbo}" : eng.Output, preflight);
+    }
+
     /// <summary>Build <paramref name="modName"/> and (on success) add it to the active run-list.</summary>
     /// <param name="clean">Pass <c>-clear</c> to AddonBuilder (wipe the temp/output first).</param>
     /// <param name="binarize">Binarize configs/models (AddonBuilder default). <c>false</c> = <c>-packonly</c>.</param>

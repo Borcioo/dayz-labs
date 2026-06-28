@@ -142,4 +142,47 @@ public class ModBuildTests
         r.Message.Should().Contain("binarize.exe not found");   // engine packs in-process (PboWriter); binarize is the required tool
         r.Registered.Should().BeFalse();
     }
+
+    // --- Tools packer: pack an arbitrary folder (pack-only needs no DayZ Tools / P:) ---
+
+    [Fact]
+    public void PackFolder_pack_only_writes_a_pbo_with_no_external_tools()
+    {
+        var (configPath, _) = TmpConfig();   // empty tools dir, P: not mounted
+        var src = Tmp();
+        File.WriteAllText(Path.Combine(src, "config.cpp"), "class CfgPatches{};");
+        File.WriteAllText(Path.Combine(src, "$PBOPREFIX$"), "MyTool\\Thing");
+        var outDir = Tmp();
+
+        var r = new BuildService(configPath).PackFolder(src, outDir, prefix: null, binarize: false,
+            sign: false, keyName: null, ignorePreflightErrors: true, onLine: null);
+
+        r.Ok.Should().BeTrue(r.Message);
+        File.Exists(r.Pbo).Should().BeTrue();
+        Dzl.Core.Build.PboWriter.ReadPrefix(r.Pbo).Should().Be("MyTool\\Thing");   // prefix from $PBOPREFIX$
+    }
+
+    [Fact]
+    public void PackFolder_binarize_without_P_is_a_clean_failure_not_a_hang()
+    {
+        var (configPath, _) = TmpConfig();
+        var src = Tmp();
+        File.WriteAllText(Path.Combine(src, "config.cpp"), "class CfgPatches{};");
+        var r = new BuildService(configPath).PackFolder(src, Tmp(), null, binarize: true,
+            sign: false, keyName: null, ignorePreflightErrors: true, onLine: null);
+        // Clean failure (returns, doesn't hang): either P: isn't mounted or binarize.exe is absent —
+        // both are reported, never a hang.
+        r.Ok.Should().BeFalse();
+        r.Message.Should().Match(m => m.Contains("P:") || m.Contains("binarize"));
+    }
+
+    [Fact]
+    public void PreflightFolder_runs_on_an_arbitrary_folder_without_throwing()
+    {
+        var (configPath, _) = TmpConfig();
+        var src = Tmp();
+        File.WriteAllText(Path.Combine(src, "config.cpp"), "class CfgPatches{};");
+        var v = new BuildService(configPath).PreflightFolder(src);
+        v.Findings.Should().NotBeNull();   // produced a view rather than throwing
+    }
 }

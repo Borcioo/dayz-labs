@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Dzl.Core.App;
 using Dzl.Core.Build;
 using Dzl.Core.Build.Preflight;
 using Dzl.Core.Env;
@@ -105,22 +107,37 @@ public partial class MainViewModel
     /// <summary>Resolve a CLI-wrappable tool exe path by key, or null if not present.</summary>
     public string? ToolExe(string key) => ToolCatalog.Find(_cfg.DayzToolsPath, key) is { Exists: true } t ? t.ExePath : null;
 
-    /// <summary>Pack an arbitrary folder into a PBO with the in-process engine (the same one My Mods builds use):
-    /// pack-as-is via <see cref="PboWriter"/> by default, or full Binarize → CfgConvert → pack when
-    /// <paramref name="binarize"/> is on; sign when <paramref name="signKey"/> is given. The prefix falls back to
-    /// the folder's <c>$PBOPREFIX$</c>, then its name. Streams the log; runs off the UI thread.</summary>
-    public Task<EngineResult> PackFolderAsync(string source, string output, string? prefix, bool binarize,
-        string? signKey, IProgress<string>? log)
+    /// <summary>Pack an arbitrary folder with the full project-build pipeline (preflight gate → Binarize →
+    /// CfgConvert → in-process pack → sign) — the Tools-page equivalent of a My Mods build, on a user-picked
+    /// source/output. Streams the log; runs off the UI thread.</summary>
+    public Task<BuildService.PackFolderResult> PackFolderAsync(string source, string output, string? prefix,
+        bool binarize, bool sign, string? keyName, bool ignorePreflight, IProgress<string>? log)
     {
-        var toolsDir = _cfg.DayzToolsPath;
-        var src = Path.GetFullPath(source);
-        var pboName = Path.GetFileName(Path.TrimEndingDirectorySeparator(src));
-        var pfx = !string.IsNullOrWhiteSpace(prefix) ? prefix.Trim()
-                : PathResolver.ReadPrefix(src) is { Length: > 0 } p ? p : pboName;
-        var key = string.IsNullOrWhiteSpace(signKey) ? null : signKey.Trim();
-        var workDir = Path.Combine(Path.GetTempPath(), "dzl-pack", $"{pboName}_{Guid.NewGuid():N}");
-        return Task.Run(() => BuildEngine.Run(toolsDir, src, pfx, pboName, workDir, output,
-            binarize, key, line => log?.Report(line), binPath: @"P:\"));
+        var configPath = _configPath;
+        return Task.Run(() => new BuildService(configPath).PackFolder(source, output, prefix, binarize, sign,
+            keyName, ignorePreflight, line => log?.Report(line)));
+    }
+
+    /// <summary>Preflight an arbitrary source folder (Tools packer) off the UI thread.</summary>
+    public Task<PreflightView> PreflightFolderAsync(string source)
+    {
+        var configPath = _configPath;
+        return Task.Run(() => new BuildService(configPath).PreflightFolder(source));
+    }
+
+    /// <summary>Configured signing keys (names) + the default to preselect (the configured signing key, else first).</summary>
+    public (IReadOnlyList<string> Names, string? Default) SigningKeys()
+    {
+        try
+        {
+            var names = new BuildService(_configPath).ListKeys().Select(k => k.Name).ToList();
+            var def = !string.IsNullOrWhiteSpace(_cfg.SigningKey) &&
+                      names.Any(n => n.Equals(_cfg.SigningKey, System.StringComparison.OrdinalIgnoreCase))
+                ? names.First(n => n.Equals(_cfg.SigningKey, System.StringComparison.OrdinalIgnoreCase))
+                : names.FirstOrDefault();
+            return (names, def);
+        }
+        catch { return (System.Array.Empty<string>(), null); }
     }
 
     /// <summary>Plan a batch PAA conversion (suffix warnings) without running the exe.</summary>

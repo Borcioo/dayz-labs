@@ -1,6 +1,8 @@
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using Dzl.Core.Build.Preflight;
 using Dzl.Core.Tools;
 using Dzl.Tray.ViewModels;
 using Microsoft.Win32;
@@ -23,6 +25,11 @@ public partial class ToolsView : UserControl
         if (Vm is null) return;
         Vm.RefreshTools();
         // Pack uses the in-process engine (PboWriter) — no external packer needed, so it's always available.
+        var (keyNames, defKey) = Vm.SigningKeys();
+        PackKeyCombo.ItemsSource = keyNames;
+        PackKeyCombo.SelectedItem = defKey;
+        PackSignChk.IsEnabled = keyNames.Count > 0;
+        if (keyNames.Count == 0) { PackSignChk.IsChecked = false; PackSignChk.ToolTip = "No signing keys — create one in Settings → Signing."; }
         PaaToolMissing.Visibility = Vm.ToolExe("imagetopaa") is null ? Visibility.Visible : Visibility.Collapsed;
         PaaButton.IsEnabled = Vm.ToolExe("imagetopaa") is not null;
         UnbinToolMissing.Visibility = Vm.ToolExe("cfgconvert") is null ? Visibility.Visible : Visibility.Collapsed;
@@ -31,30 +38,59 @@ public partial class ToolsView : UserControl
 
     private void OnRefreshTools(object sender, RoutedEventArgs e) => RefreshToolsPage();
 
+    private static string Sev(FindingSeverity s) => s switch
+    {
+        FindingSeverity.Error => "✗",
+        FindingSeverity.Warning => "⚠",
+        _ => "ℹ",
+    };
+
+    private async void OnPreflightPack(object sender, RoutedEventArgs e)
+    {
+        if (Vm is null) return;
+        var src = PackSrcBox.Text.Trim();
+        if (src.Length == 0 || !Directory.Exists(src)) { PackStatus.Text = "pick a source folder"; return; }
+        PreflightPackButton.IsEnabled = false;
+        PackStatus.Text = "preflight running…";
+        PackOutput.Text = "preflight: checking folder…\n";
+        try
+        {
+            var pf = await Vm.PreflightFolderAsync(src);
+            foreach (var f in pf.Findings.OrderByDescending(f => f.Severity))
+                PackOutput.AppendText($"{Sev(f.Severity)} {f.Rule}: {f.Message}" +
+                    (f.File.Length > 0 ? $"  [{f.File}:{f.Line}]" : "") + "\n");
+            PackOutput.AppendText($"\n{(pf.Ok ? "✓" : "✗")} {pf.Errors} error(s), {pf.Warnings} warning(s), {pf.Infos} info");
+            PackStatus.Text = pf.Ok ? $"preflight ok ({pf.Warnings} warning(s))" : $"{pf.Errors} error(s) — fix or tick \"build anyway\"";
+        }
+        catch (Exception ex) { PackStatus.Text = "✗ " + ex.Message; }
+        finally { PreflightPackButton.IsEnabled = true; PackOutput.ScrollToEnd(); }
+    }
+
     private async void OnPackPbo(object sender, RoutedEventArgs e)
     {
         if (Vm is null) return;
         var src = PackSrcBox.Text.Trim();
         var dst = PackDstBox.Text.Trim();
-        if (src.Length == 0 || dst.Length == 0) { PackOutput.Text = "Pick a source and output folder."; return; }
-        if (!Directory.Exists(src)) { PackOutput.Text = "Source folder not found."; return; }
-        var binarize = PackBinarizeChk.IsChecked == true;
-        if (binarize && !WorkDrive.IsMounted())
-        {
-            PackOutput.Text = "Binarize needs the P: work drive mounted — mount it above, or uncheck binarize to pack the folder as-is.";
-            return;
-        }
+        if (src.Length == 0 || dst.Length == 0) { PackStatus.Text = "pick a source and output folder"; return; }
+        if (!Directory.Exists(src)) { PackStatus.Text = "source folder not found"; return; }
 
-        PackButton.IsEnabled = false;
-        PackOutput.Text = "Packing…\n";
+        PackButton.IsEnabled = PreflightPackButton.IsEnabled = false;
+        PackStatus.Text = "packing…";
+        PackOutput.Text = "";
         var log = new System.Progress<string>(line => { PackOutput.AppendText(line + "\n"); PackOutput.ScrollToEnd(); });
         try
         {
-            var r = await Vm.PackFolderAsync(src, dst, PackPrefixBox.Text, binarize, PackSignBox.Text, log);
-            PackOutput.AppendText(r.Ok ? $"\n✓ packed → {r.Pbo}" : $"\n✗ {r.Output}");
+            var r = await Vm.PackFolderAsync(src, dst, PackPrefixBox.Text,
+                binarize: PackBinarizeChk.IsChecked == true,
+                sign: PackSignChk.IsChecked == true,
+                keyName: PackSignChk.IsChecked == true ? PackKeyCombo.SelectedItem as string : null,
+                ignorePreflight: PackBuildAnywayChk.IsChecked == true,
+                log);
+            PackStatus.Text = r.Ok ? "✓ packed" : "✗ " + r.Message;
+            PackOutput.AppendText("\n" + (r.Ok ? $"✓ {r.Message}" : $"✗ {r.Message}"));
         }
-        catch (Exception ex) { PackOutput.AppendText("\n✗ Error: " + ex.Message); }
-        finally { PackButton.IsEnabled = true; PackOutput.ScrollToEnd(); }
+        catch (Exception ex) { PackStatus.Text = "✗ " + ex.Message; PackOutput.AppendText("\n✗ " + ex.Message); }
+        finally { PackButton.IsEnabled = PreflightPackButton.IsEnabled = true; PackOutput.ScrollToEnd(); }
     }
 
     private async void OnConvertPaa(object sender, RoutedEventArgs e)
