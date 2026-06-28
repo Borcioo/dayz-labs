@@ -18,6 +18,15 @@ public sealed partial class ModProjectVm : ObservableObject
     /// identity live at this (pack) level.</summary>
     public bool IsPack { get; }
 
+    /// <summary>True when this project is a junction to an external source (imported as a link, not created/copied
+    /// here). Its delete must only drop the link, never the source.</summary>
+    public bool IsImportLink { get; }
+
+    /// <summary>Label for the destructive menu item — a link is "removed" (source kept); a real folder is "deleted".</summary>
+    public string DeleteLabel => IsImportLink
+        ? "Remove from projects (keep source)"
+        : IsPack ? "Delete pack…" : "Delete project…";
+
     /// <summary>The inner mods of a pack (empty for a standalone mod).</summary>
     public IReadOnlyList<ModProjectVm> Children { get; }
 
@@ -50,6 +59,7 @@ public sealed partial class ModProjectVm : ObservableObject
         Path = p.Path;
         Linked = p.Linked;
         IsPack = p.IsPack;
+        IsImportLink = p.IsImportLink;
         IsExpanded = expanded;
         Children = p.Children.Select(c => new ModProjectVm(c)).ToList();
     }

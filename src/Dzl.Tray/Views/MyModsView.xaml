@@ -183,7 +183,7 @@
                                 </MenuItem.Style>
                               </MenuItem>
                               <Separator />
-                              <MenuItem Header="Delete project…" Tag="{Binding Name}" Click="OnDeleteProject"
+                              <MenuItem Header="{Binding DeleteLabel}" Tag="{Binding Name}" Click="OnDeleteProject"
                                         Foreground="#FF6B6B">
                                 <MenuItem.Icon><ui:SymbolIcon Symbol="Delete24" /></MenuItem.Icon>
                               </MenuItem>
@@ -267,7 +267,7 @@
                                   </MenuItem.Style>
                                 </MenuItem>
                                 <Separator />
-                                <MenuItem Header="Delete pack…" Tag="{Binding Name}" Click="OnDeleteProject"
+                                <MenuItem Header="{Binding DeleteLabel}" Tag="{Binding Name}" Click="OnDeleteProject"
                                           Foreground="#FF6B6B">
                                   <MenuItem.Icon><ui:SymbolIcon Symbol="Delete24" /></MenuItem.Icon>
                                 </MenuItem>

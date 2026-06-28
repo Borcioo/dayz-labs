@@ -7,6 +7,12 @@ namespace Dzl.Core.Projects;
 public sealed record ModProject(string Name, string Path, bool Linked)
 {
     public bool IsPack { get; init; }
+
+    /// <summary>True when <c>mods\&lt;Name&gt;</c> is itself a junction/symlink — i.e. the project was imported as a
+    /// LINK to an external source (not created or copied here). Deleting such a project must remove only the link,
+    /// never the external source it points at.</summary>
+    public bool IsImportLink { get; init; }
+
     public IReadOnlyList<ModProject> Children { get; init; } = System.Array.Empty<ModProject>();
 }
 
@@ -61,7 +67,7 @@ public static class ModProjects
     {
         var name = System.IO.Path.GetFileName(dir);
         var link = ProjectPaths.JunctionPath(workDriveSource, name);
-        return new ModProject(name, dir, Junction.IsLink(link));
+        return new ModProject(name, dir, Junction.IsLink(link)) { IsImportLink = Junction.IsLink(dir) };
     }
 
     private static IEnumerable<string> Sorted(IEnumerable<string> dirs) =>

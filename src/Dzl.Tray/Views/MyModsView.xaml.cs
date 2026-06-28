@@ -108,20 +108,31 @@ public partial class MyModsView : UserControl
 
     private bool _deletingProject;
 
-    // Delete a mod project (destructive). Yes = source + build, No = source only, Cancel = abort.
+    // Delete a mod project (destructive). Yes = also build output, No = project only, Cancel = abort. A
+    // link-imported project only ever loses its junction — its external source is never touched.
     private async void OnDeleteProject(object sender, RoutedEventArgs e)
     {
         if (Vm is null || _deletingProject) return;
-        if (sender is not FrameworkElement { Tag: string name }) return;
-        var r = System.Windows.MessageBox.Show(
-            $"Delete project \"{name}\"?\n\nThis removes its P: link and deletes the source folder — this can't be undone.\n\n" +
-            "Yes  → also delete the built @" + name + " output\n" +
-            "No   → delete the source only\n" +
-            "Cancel → keep everything",
-            "Delete project", System.Windows.MessageBoxButton.YesNoCancel, System.Windows.MessageBoxImage.Warning);
+        if (sender is not FrameworkElement { DataContext: ModProjectVm proj }) return;
+        var name = proj.Name;
+        var kind = proj.IsPack ? "pack" : "project";
+        var r = proj.IsImportLink
+            ? System.Windows.MessageBox.Show(
+                $"Remove {kind} \"{name}\" from projects?\n\nIt was imported as a LINK, so this only removes the " +
+                "junction — the original source folder is left completely untouched.\n\n" +
+                $"Yes  → also delete the built @{name} output\n" +
+                "No   → remove the link only\n" +
+                "Cancel → keep everything",
+                $"Remove {kind}", System.Windows.MessageBoxButton.YesNoCancel, System.Windows.MessageBoxImage.Warning)
+            : System.Windows.MessageBox.Show(
+                $"Delete {kind} \"{name}\"?\n\nThis removes its P: link and deletes the source folder — this can't be undone.\n\n" +
+                $"Yes  → also delete the built @{name} output\n" +
+                "No   → delete the source only\n" +
+                "Cancel → keep everything",
+                $"Delete {kind}", System.Windows.MessageBoxButton.YesNoCancel, System.Windows.MessageBoxImage.Warning);
         if (r == System.Windows.MessageBoxResult.Cancel) return;
         _deletingProject = true;
-        ShowRowStatus("deleting…");
+        ShowRowStatus("working…");
         try { ShowRowStatus(await Vm.DeleteModProjectAsync(name, alsoBuild: r == System.Windows.MessageBoxResult.Yes)); }
         catch (Exception ex) { ShowRowStatus("✗ " + ex.Message); }
         finally { _deletingProject = false; }

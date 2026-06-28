@@ -78,6 +78,26 @@ public class ModProjectsTests
     }
 
     [Fact]
+    public void Discover_flags_a_link_imported_mod_as_IsImportLink()
+    {
+        var root = Directory.CreateTempSubdirectory().FullName;
+        var mods = ProjectPaths.ModsDir(root);
+        Directory.CreateDirectory(mods);
+        // a real (created/copied) mod
+        var real = Path.Combine(mods, "Real"); Directory.CreateDirectory(real);
+        File.WriteAllText(Path.Combine(real, "config.cpp"), "class CfgPatches{};");
+        // an external source linked into mods\ (import-as-link)
+        var ext = Path.Combine(root, "external"); Directory.CreateDirectory(ext);
+        File.WriteAllText(Path.Combine(ext, "config.cpp"), "class CfgPatches{};");
+        if (!Junction.Ensure(Path.Combine(mods, "Linked"), ext).Ok) return;   // can't link here → skip
+
+        var found = ModProjects.Discover(root);
+
+        found.Single(p => p.Name == "Real").IsImportLink.Should().BeFalse();
+        found.Single(p => p.Name == "Linked").IsImportLink.Should().BeTrue();
+    }
+
+    [Fact]
     public void Discover_skips_a_dead_junction_without_killing_the_whole_list()
     {
         var root = Directory.CreateTempSubdirectory().FullName;

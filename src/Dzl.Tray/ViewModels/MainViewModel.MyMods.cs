@@ -265,14 +265,20 @@ public partial class MainViewModel
     {
         var root = ProjectsRoot;
         var source = WorkDriveSource;
+        var modDir = ProjectPaths.ModDir(root, name);
+        // A project imported as a LINK is a junction to an external source — only ever drop the link, NEVER the
+        // source it points at. A created/copied project is a real folder we own and may delete.
+        var wasLink = Junction.IsLink(modDir);
         // The recursive force-delete (read-only git files) can take a while; run it off the UI thread.
         var error = await Task.Run(() =>
         {
             try
             {
-                Junction.Remove(ProjectPaths.JunctionPath(source, name));   // drop the link, never the target
-                // Force-delete: cloned projects contain read-only git files that kill a plain delete.
-                FileOps.ForceDeleteDirectory(ProjectPaths.ModDir(root, name));
+                Junction.Remove(ProjectPaths.JunctionPath(source, name));   // P: link
+                if (wasLink)
+                    Junction.Remove(modDir);                               // import-link → remove the junction only
+                else
+                    FileOps.ForceDeleteDirectory(modDir);                  // real folder (cloned/created/copied) → delete
                 if (alsoBuild)
                     FileOps.ForceDeleteDirectory(ProjectPaths.BuildDir(root, name));
                 return (string?)null;
@@ -282,7 +288,9 @@ public partial class MainViewModel
         if (error is not null) { RefreshModProjects(); return $"✗ {name}: {error}"; }
         RefreshModProjects();
         Reload();   // the mod also drops out of the library / run-list discovery
-        return $"✓ deleted {name}" + (alsoBuild ? " (source + build)" : " (source)");
+        return wasLink
+            ? $"✓ removed {name} from projects — source kept" + (alsoBuild ? " (build deleted)" : "")
+            : $"✓ deleted {name}" + (alsoBuild ? " (source + build)" : " (source)");
     }
 
     /// <summary>Remove a mod's work-drive junction (leaves the source folder untouched). Returns a status line.</summary>

@@ -4,6 +4,14 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.25] - 2026-06-28
+
+### Fixed
+- **Deleting a link-imported mod/pack can no longer touch the external source.** A project imported as a link
+  (junction) now shows **"Remove from projects (keep source)"** instead of "Delete…", and removing it drops only
+  the junction — the original source folder is left completely untouched. The force-delete is now reparse-point
+  safe too, so it can never recurse into a junction's target and wipe files behind it.
+
 ## [0.1.24] - 2026-06-28
 
 ### Fixed
@@ -199,6 +207,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.25]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.25
 [0.1.24]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.24
 [0.1.23]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.23
 [0.1.22]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.22
