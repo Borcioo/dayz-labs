@@ -158,7 +158,7 @@ public sealed class BuildService
     /// <c>.bikey</c> into the mod's <c>keys\</c> so it ships. Fails if no key exists (generate one first).</param>
     /// <param name="force">Ignore the skip-unchanged cache and rebuild regardless.</param>
     /// <param name="keyName">Sign with this key from the keys folder instead of the configured/default one.</param>
-    public BuildResult Build(string modName, bool clean = false, bool binarize = true, bool sign = false, Action<string>? onLine = null, bool force = false, string? keyName = null)
+    public BuildResult Build(string modName, bool clean = false, bool binarize = true, bool sign = false, Action<string>? onLine = null, bool force = false, string? keyName = null, bool ignorePreflightErrors = false)
     {
         if (!ProjectPaths.IsValidName(modName))
             return FailResult(modName, null, $"invalid mod name: {modName}");
@@ -173,7 +173,7 @@ public sealed class BuildService
             return envFail!;
 
         // The preflight view rides along on every result from here on.
-        var (preflight, gateFail) = GateOnPreflight(modName, cfg, onLine);
+        var (preflight, gateFail) = GateOnPreflight(modName, cfg, onLine, ignorePreflightErrors);
         if (gateFail is not null)
             return gateFail;
 
@@ -271,7 +271,8 @@ public sealed class BuildService
     /// and published in one atomic swap, so a rebuild replaces the whole pack output. v1: full rebuild of the
     /// selected children (no skip-unchanged cache yet).</summary>
     public PackBuildResult BuildPack(string packName, IReadOnlyList<string>? selected = null,
-        bool binarize = true, bool sign = false, Action<string>? onLine = null, string? keyName = null)
+        bool binarize = true, bool sign = false, Action<string>? onLine = null, string? keyName = null,
+        bool ignorePreflightErrors = false)
     {
         PackBuildResult Fail(string msg, string output = "", IReadOnlyList<PackChildResult>? kids = null) =>
             new(false, packName, "", "", false, kids ?? System.Array.Empty<PackChildResult>(), msg, output);
@@ -322,9 +323,17 @@ public sealed class BuildService
             {
                 onLine?.Invoke($"preflight: {c.Name} ...");
                 var pf = PreflightEngine.Run(c.Path, c.Name, opts);
-                if (!pf.Ok)
+                if (pf.Ok) continue;
+
+                foreach (var f in pf.Findings.Where(f => f.Severity == FindingSeverity.Error))
+                    onLine?.Invoke($"preflight ✗ {c.Name}/{f.Rule}: {f.Message}");
+                // "Build anyway": report the errors but don't block (e.g. references to vanilla assets not
+                // extracted on P: that the engine resolves at runtime).
+                if (ignorePreflightErrors)
+                    onLine?.Invoke($"preflight: {c.Name} has {pf.Errors} error(s) — building anyway (errors ignored)");
+                else
                     return Fail(
-                        $"preflight failed for '{c.Name}' ({pf.Errors} error(s)) — fix them or set preflight_before_build=false",
+                        $"preflight failed for '{c.Name}' ({pf.Errors} error(s)) — fix them, tick \"build anyway\", or set preflight_before_build=false",
                         string.Join("\n", pf.Findings.Where(f => f.Severity == FindingSeverity.Error)
                             .Select(f => $"{c.Name}/{f.Rule}: {f.Message}")));
             }
@@ -407,7 +416,8 @@ public sealed class BuildService
     // AddonBuilder reports "Build Successful" even for configs it silently mangles, so error-severity
     // findings block the build (preflight_before_build=false opts out). The view rides along on the
     // result so frontends can show the findings without a second run.
-    private (PreflightView? preflight, BuildResult? fail) GateOnPreflight(string modName, DzlConfig cfg, Action<string>? onLine)
+    private (PreflightView? preflight, BuildResult? fail) GateOnPreflight(string modName, DzlConfig cfg,
+        Action<string>? onLine, bool ignoreErrors)
     {
         if (!cfg.PreflightBeforeBuild)
             return (null, null);
@@ -417,11 +427,21 @@ public sealed class BuildService
         foreach (var f in preflight.Findings.Where(f => f.Severity == FindingSeverity.Error))
             onLine?.Invoke($"preflight ✗ {f.Rule}: {f.Message}");
         if (!preflight.Ok)
+        {
+            // "Build anyway": preflight still runs and reports, but its errors don't block the build. Useful for
+            // map mods that reference vanilla assets not extracted on P: (e.g. an .emat the engine resolves at
+            // runtime) — the ref-missing errors are then false positives. The findings still ride along.
+            if (ignoreErrors)
+            {
+                onLine?.Invoke($"preflight: {preflight.Errors} error(s) — building anyway (errors ignored)");
+                return (preflight, null);
+            }
             return (preflight, FailResult(modName, preflight,
-                $"preflight failed with {preflight.Errors} error(s) — fix them or set preflight_before_build=false to bypass",
+                $"preflight failed with {preflight.Errors} error(s) — fix them, tick \"build anyway\", or set preflight_before_build=false",
                 string.Join("\n", preflight.Findings
                     .Where(f => f.Severity == FindingSeverity.Error)
                     .Select(f => $"{f.Rule}: {f.Message}" + (f.File.Length > 0 ? $"  [{f.File}:{f.Line}]" : "")))));
+        }
         onLine?.Invoke($"preflight: ok ({preflight.Warnings} warning(s))");
         return (preflight, null);
     }

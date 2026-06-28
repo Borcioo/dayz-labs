@@ -78,6 +78,8 @@
           <ComboBox x:Name="KeyCombo" MinWidth="140" FontSize="12" VerticalAlignment="Center"
                     IsEnabled="{Binding IsChecked, ElementName=SignChk}"
                     ToolTip="Signing key (from Settings → Signing)" />
+          <CheckBox x:Name="BuildAnywayChk" Content="build anyway" Margin="16,0,0,0" VerticalAlignment="Center"
+                    ToolTip="Run preflight but don't let its errors block the build — e.g. references to vanilla assets not extracted on P: (resolved at runtime)." />
         </StackPanel>
       </StackPanel>
     </Border>

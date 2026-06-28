@@ -4,6 +4,15 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.14] - 2026-06-28
+
+### Added
+- **"Build anyway" on the pack build console.** Preflight still runs and reports its findings, but its
+  errors no longer block the build. This is for map/world mods that reference vanilla assets which aren't
+  extracted on your `P:` drive (e.g. an `.emat` terrain/ocean material the engine resolves at runtime) — the
+  resulting "missing referenced file" errors are false positives, and you can now build past them without
+  turning off preflight globally. (`BuildService.Build`/`BuildPack` gained an `ignorePreflightErrors` option.)
+
 ## [0.1.13] - 2026-06-27
 
 ### Changed
@@ -110,6 +119,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.14]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.14
 [0.1.13]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.13
 [0.1.12]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.12
 [0.1.11]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.11

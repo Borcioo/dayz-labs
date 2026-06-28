@@ -307,15 +307,18 @@ public partial class MainViewModel
     /// <c>@&lt;pack&gt;</c> (Addons with many PBOs + keys) and registered as a single mod. Streams the log;
     /// null when a build is already running.</summary>
     public async Task<BuildService.PackBuildResult?> BuildPackAsync(
-        string packName, IReadOnlyList<string> selected, bool binarize = true, bool sign = false, string? keyName = null)
+        string packName, IReadOnlyList<string> selected, bool binarize = true, bool sign = false,
+        string? keyName = null, bool ignorePreflightErrors = false)
     {
         if (Building) return null;
         Building = true;
-        BuildLog = $"▸ Building pack {packName} ({selected.Count} mod(s), binarize={binarize}, sign={sign}) …\n";
+        BuildLog = $"▸ Building pack {packName} ({selected.Count} mod(s), binarize={binarize}, sign={sign}" +
+                   (ignorePreflightErrors ? ", build-anyway" : "") + ") …\n";
         var configPath = _configPath;
         var result = await Task.Run(() =>
             new BuildService(configPath).BuildPack(packName, selected, binarize: binarize, sign: sign,
-                onLine: line => _dispatcher.BeginInvoke(() => BuildLog += line + "\n"), keyName: keyName));
+                onLine: line => _dispatcher.BeginInvoke(() => BuildLog += line + "\n"), keyName: keyName,
+                ignorePreflightErrors: ignorePreflightErrors));
         BuildLog += (result.Ok ? "\n✓ " : "\n✗ ") + result.Message + "\n";
         Building = false;
         if (result.Ok) { Reload(); RefreshModProjects(); }

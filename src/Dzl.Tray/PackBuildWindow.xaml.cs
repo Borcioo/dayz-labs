@@ -118,7 +118,8 @@ public partial class PackBuildWindow : FluentWindow
         StatusText.Text = "building…";
         var r = await _vm.BuildPackAsync(_pack, selected,
             binarize: BinarizeChk.IsChecked != false, sign: SignChk.IsChecked == true,
-            keyName: SignChk.IsChecked == true ? KeyCombo.SelectedItem as string : null);
+            keyName: SignChk.IsChecked == true ? KeyCombo.SelectedItem as string : null,
+            ignorePreflightErrors: BuildAnywayChk.IsChecked == true);
         if (r is null) { StatusText.Text = "a build is already running"; return; }
 
         _outputDir = r.OutputDir;
