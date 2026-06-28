@@ -4,6 +4,14 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.23] - 2026-06-28
+
+### Added
+- **Import a mod by link or copy.** The Add → Import dialog now has a "Copy into projects" option. Off
+  (default) keeps the current behaviour — links the source in place via a junction, so it stays where it is and
+  edits affect the original. On copies the whole folder into your projects as an independent copy you can change
+  without touching the source.
+
 ## [0.1.22] - 2026-06-28
 
 ### Fixed
@@ -185,6 +193,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.23]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.23
 [0.1.22]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.22
 [0.1.21]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.21
 [0.1.20]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.20

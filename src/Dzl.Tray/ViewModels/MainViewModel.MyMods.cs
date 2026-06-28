@@ -241,12 +241,14 @@ public partial class MainViewModel
         return name;
     }
 
-    /// <summary>Import an external mod source folder as a project (non-invasive link). Returns a status line.</summary>
-    public string ImportModProject(string source, string? name)
+    /// <summary>Import an external mod source folder as a project — link (junction, default) or an independent
+    /// copy. Returns a status line.</summary>
+    public string ImportModProject(string source, string? name, bool copy = false)
     {
-        var res = ModImport.Import(ProjectsRoot, source, string.IsNullOrWhiteSpace(name) ? null : name.Trim(), WorkDriveSource);
+        var res = ModImport.Import(ProjectsRoot, source, string.IsNullOrWhiteSpace(name) ? null : name.Trim(),
+            WorkDriveSource, copy);
         RefreshModProjects();
-        return res.Ok ? $"✓ imported → {res.ModDir}" : $"✗ {res.Message}";
+        return res.Ok ? $"✓ {res.Message} → {res.ModDir}" : $"✗ {res.Message}";
     }
 
     /// <summary>(Re)create the P:\&lt;Mod&gt; junction for a project. Returns a status line.</summary>

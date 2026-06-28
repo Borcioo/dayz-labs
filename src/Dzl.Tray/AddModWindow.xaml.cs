@@ -45,7 +45,7 @@ public partial class AddModWindow : FluentWindow
     {
         var path = ImportPathBox.Text.Trim();
         if (path.Length == 0) { ImportStatus.Text = "Pick a mod source folder."; return; }
-        ImportStatus.Text = _vm.ImportModProject(path, ImportNameBox.Text);
+        ImportStatus.Text = _vm.ImportModProject(path, ImportNameBox.Text, copy: ImportCopyChk.IsChecked == true);
         if (ImportStatus.Text.StartsWith('✓')) Close();
     }
 

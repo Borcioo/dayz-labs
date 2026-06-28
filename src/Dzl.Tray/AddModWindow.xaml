@@ -87,6 +87,8 @@
               <ui:Button Grid.Column="1" Content="Import" Appearance="Primary"
                          Icon="{ui:SymbolIcon ArrowImport24}" Margin="8,0,0,0" Click="OnImportMod" />
             </Grid>
+            <CheckBox x:Name="ImportCopyChk" Margin="0,0,0,8" Content="Copy into projects (independent copy)"
+                      ToolTip="Off (default): link the source in place via a junction — it stays where it is and edits affect the original.&#10;On: copy the whole folder into projects — a separate copy you can change without touching the source." />
             <TextBlock x:Name="ImportStatus" FontSize="12" TextWrapping="Wrap"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
           </StackPanel>
