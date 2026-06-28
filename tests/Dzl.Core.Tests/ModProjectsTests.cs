@@ -76,4 +76,26 @@ public class ModProjectsTests
 
         ModProjects.Discover(root).Should().NotContain(p => p.Name == "junk");
     }
+
+    [Fact]
+    public void Discover_skips_a_dead_junction_without_killing_the_whole_list()
+    {
+        var root = Directory.CreateTempSubdirectory().FullName;
+        var mods = ProjectPaths.ModsDir(root);
+        Directory.CreateDirectory(mods);
+        // a healthy mod that must still appear
+        var good = Path.Combine(mods, "Good"); Directory.CreateDirectory(good);
+        File.WriteAllText(Path.Combine(good, "config.cpp"), "class CfgPatches{};");
+
+        // a mod folder that's a junction whose target gets moved/deleted out from under us
+        var target = Path.Combine(root, "ghost_target");
+        var ens = Junction.Ensure(Path.Combine(mods, "Ghost"), target);
+        if (!ens.Ok) return;                       // can't make a junction here (no privilege) → skip
+        Directory.Delete(target, recursive: true); // now mods\Ghost dangles
+
+        var found = ModProjects.Discover(root);     // must NOT throw on the dead junction
+
+        found.Select(p => p.Name).Should().Contain("Good");
+        found.Select(p => p.Name).Should().NotContain("Ghost");
+    }
 }

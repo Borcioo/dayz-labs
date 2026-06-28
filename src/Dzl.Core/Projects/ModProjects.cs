@@ -31,20 +31,28 @@ public static class ModProjects
 
         foreach (var dir in Sorted(Directory.GetDirectories(modsDir)))
         {
-            // A folder with its own marker is a single mod, even if it also has project subfolders.
-            if (IsProject(dir))
+            try
             {
-                list.Add(Make(dir, workDriveSource));
-                continue;
-            }
+                // A folder with its own marker is a single mod, even if it also has project subfolders.
+                if (IsProject(dir))
+                {
+                    list.Add(Make(dir, workDriveSource));
+                    continue;
+                }
 
-            // Otherwise it's a pack if any immediate subfolder is a project.
-            var children = Sorted(Directory.GetDirectories(dir))
-                .Where(IsProject)
-                .Select(child => Make(child, workDriveSource))
-                .ToList();
-            if (children.Count > 0)
-                list.Add(Make(dir, workDriveSource) with { IsPack = true, Children = children });
+                // Otherwise it's a pack if any immediate subfolder is a project.
+                var children = Sorted(Directory.GetDirectories(dir))
+                    .Where(IsProject)
+                    .Select(child => Make(child, workDriveSource))
+                    .ToList();
+                if (children.Count > 0)
+                    list.Add(Make(dir, workDriveSource) with { IsPack = true, Children = children });
+            }
+            catch
+            {
+                // One entry being unreadable — a dead junction whose target was moved/deleted, or a folder
+                // that vanished mid-scan — must NOT take down the whole list. Skip it.
+            }
         }
         return list;
     }
