@@ -15,6 +15,16 @@ public class ConfigStoreTests
     }
 
     [Fact]
+    public void Default_limits_server_fps_in_debug_only_and_both_configs_agree()
+    {
+        // -limitFPS lowers CPU on a low-pop dev server; debug only (a real/normal server shouldn't be capped).
+        DzlConfig.Default().ServerParamsDebug.Should().Contain("-limitFPS=120");
+        DzlConfig.Default().ServerParamsNormal.Should().NotContain(p => p.StartsWith("-limitFPS"));
+        // DzlConfig (runtime) and InstanceConfig (on-disk) defaults must stay in sync.
+        new InstanceConfig().ServerParamsDebug.Should().Equal(DzlConfig.Default().ServerParamsDebug);
+    }
+
+    [Fact]
     public void Save_then_load_round_trips()
     {
         var dir = Directory.CreateTempSubdirectory();

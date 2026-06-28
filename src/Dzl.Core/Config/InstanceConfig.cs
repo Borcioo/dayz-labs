@@ -16,7 +16,7 @@ public sealed record InstanceConfig
     public string ConnectIp { get; init; } = "127.0.0.1";
     public List<ModEntry> Mods { get; init; } = new();
     public string Mode { get; init; } = "debug";
-    public List<string> ServerParamsDebug { get; init; } = new() { "-filePatching", "-dologs", "-adminLog", "-freezecheck" };
+    public List<string> ServerParamsDebug { get; init; } = new() { "-filePatching", "-dologs", "-adminLog", "-freezecheck", "-limitFPS=120" };
     public List<string> ServerParamsNormal { get; init; } = new() { "-dologs", "-adminLog", "-freezecheck" };
     public List<string> ClientParamsDebug { get; init; } = new() { "-window", "-nosplash", "-filePatching", "-doLogs", "-scriptDebug=true" };
     public List<string> ClientParamsNormal { get; init; } = new() { "-window", "-nosplash" };
