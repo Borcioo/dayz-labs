@@ -79,4 +79,17 @@ public class ProjectPathsTests
     [InlineData("   ")]
     public void JunctionPath_falls_back_to_P_when_source_unknown(string? source)
         => ProjectPaths.JunctionPath(source, "MyMod").Should().Be(@"P:\MyMod");
+
+    [Fact]
+    public void PackChildPrefix_uses_the_child_explicit_prefix_when_present()
+        => ProjectPaths.PackChildPrefix("Balticrus", "world", @"Balticrus\world").Should().Be(@"Balticrus\world");
+
+    [Fact]
+    public void PackChildPrefix_falls_back_to_pack_relative_path_not_the_bare_leaf()
+    {
+        // No $PBOPREFIX$ on a terrain child → must be the UNIQUE <pack>\<child>, never just "world"
+        // (a bare "world" prefix collides with vanilla and fails "Cannot load world").
+        ProjectPaths.PackChildPrefix("Balticrus", "world", "").Should().Be(@"Balticrus\world");
+        ProjectPaths.PackChildPrefix("DemoPack", "Core", "").Should().Be(@"DemoPack\Core");
+    }
 }

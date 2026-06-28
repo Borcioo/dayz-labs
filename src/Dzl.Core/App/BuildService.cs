@@ -361,9 +361,11 @@ public sealed class BuildService
             onLine?.Invoke($"=== building {c.Name} ===");
             var childWork = Path.Combine(workRoot, c.Name + "_work");
             var childOut = Path.Combine(workRoot, c.Name + "_out");
-            var childPrefix = PathResolver.ReadPrefix(c.Path);
+            // A pack child with no $PBOPREFIX$ must still get a UNIQUE prefix (<pack>\<child>) — the bare leaf
+            // name collides with vanilla/other mods and breaks terrain loads (e.g. world.pbo prefix=world).
+            var childPrefix = ProjectPaths.PackChildPrefix(packName, c.Name, PathResolver.ReadPrefix(c.Path));
             var eng = BuildEngine.Run(cfg.DayzToolsPath, c.Path,
-                prefix: childPrefix.Length > 0 ? childPrefix : c.Name, pboName: c.Name,
+                prefix: childPrefix, pboName: c.Name,
                 workDir: childWork, outAddonsDir: childOut, binarize: binarize, signPrivateKey: signKey, onLine: onLine);
             output.AppendLine(eng.Output);
             if (!eng.Ok || !File.Exists(eng.Pbo))

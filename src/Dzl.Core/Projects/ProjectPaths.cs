@@ -104,4 +104,12 @@ public static partial class ProjectPaths
     /// <c>P:\Mods</c> when the source folder is unknown.</summary>
     public static string BuildAreaJunction(string? workDriveSource) =>
         Path.Combine(string.IsNullOrWhiteSpace(workDriveSource) ? @"P:\" : workDriveSource!, "Mods");
+
+    /// <summary>The PBO prefix for a pack's inner mod: its own <c>$PBOPREFIX$</c> if set, otherwise the unique
+    /// pack-relative path <c>&lt;pack&gt;\&lt;child&gt;</c> (how pboProject derives it from the folder layout).
+    /// The bare child leaf name is NOT unique — it collides with vanilla and other mods, so e.g. a terrain
+    /// child's <c>world.pbo</c> would carry <c>prefix=world</c> and its <c>worldName</c>
+    /// (<c>&lt;pack&gt;\world\&lt;map&gt;.wrp</c>) would fail to resolve at load ("Cannot load world").</summary>
+    public static string PackChildPrefix(string packName, string childName, string explicitPrefix) =>
+        explicitPrefix.Length > 0 ? explicitPrefix : $"{packName}\\{childName}";
 }

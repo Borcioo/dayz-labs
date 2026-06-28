@@ -4,6 +4,16 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.16] - 2026-06-28
+
+### Fixed
+- **Pack inner mods now get a unique PBO prefix.** A pack child with no `$PBOPREFIX$` of its own was packed
+  with just its folder name as the prefix (e.g. a terrain child → `prefix=world`). That collides with vanilla
+  and other mods and breaks loading — a map's `worldName` (`<pack>\world\<map>.wrp`) couldn't be found
+  ("Cannot load world"). It now falls back to the unique pack-relative path `<pack>\<child>` (how pboProject
+  derives it from the folder layout), so terrains and assets resolve. Children that already ship a `$PBOPREFIX$`
+  are unchanged.
+
 ## [0.1.15] - 2026-06-28
 
 ### Added
@@ -128,6 +138,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.16]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.16
 [0.1.15]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.15
 [0.1.14]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.14
 [0.1.13]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.13
