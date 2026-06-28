@@ -4,6 +4,13 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.21] - 2026-06-28
+
+### Added
+- **Pack groups get the same ⋯ actions menu as standalone mods.** A pack's header on My Mods now has the
+  "More actions" dropdown (Open folder, Open in editor, Link/Unlink P:, Delete pack) and the Open-on-GitHub
+  button — matching standalone mods, instead of just Build / Git / Open-folder.
+
 ## [0.1.20] - 2026-06-28
 
 ### Added
@@ -170,6 +177,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.21]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.21
 [0.1.20]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.20
 [0.1.19]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.19
 [0.1.18]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.18
