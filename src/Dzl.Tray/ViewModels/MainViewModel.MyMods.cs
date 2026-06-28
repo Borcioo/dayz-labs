@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Dzl.Core.App;
 using Dzl.Core.Build;
+using Dzl.Core.Config;
 using Dzl.Core.Build.Preflight;
 using Dzl.Core.Projects;
 using Dzl.Core.Vcs;
@@ -55,14 +56,32 @@ public partial class MainViewModel
     /// <summary>Cached author handle (for prefilling the New mod form), or "".</summary>
     public string CachedAuthor => ModScaffold.CachedAuthor(ConfigDir) ?? "";
 
+    // Persisted, view-only UI state (collapsed pack groups). Loaded once; survives the frequent
+    // ModProjects rebuilds AND app restarts (ui-state.json, separate from config/presets).
+    private UiState? _uiStateBacking;
+    private UiState UiState => _uiStateBacking ??= UiState.Load(_configPath);
+
     /// <summary>Re-enumerate mod source projects. Called on My Mods page show + after create/import/link.</summary>
     [RelayCommand]
     public void RefreshModProjects()
     {
         ModProjects.Clear();
-        foreach (var p in Dzl.Core.Projects.ModProjects.Discover(ProjectsRoot, WorkDriveSource)) ModProjects.Add(new ModProjectVm(p));
+        foreach (var p in Dzl.Core.Projects.ModProjects.Discover(ProjectsRoot, WorkDriveSource))
+        {
+            var expanded = !p.IsPack || !UiState.IsPackCollapsed(p.Name);
+            var vm = new ModProjectVm(p, expanded);
+            if (p.IsPack) vm.PropertyChanged += OnPackExpandedChanged;   // remember collapse/expand
+            ModProjects.Add(vm);
+        }
         OnPropertyChanged(nameof(ProjectsRoot));
         _ = LoadGitStatusesAsync();   // fire-and-forget; fills each card's git badge off the UI thread
+    }
+
+    private void OnPackExpandedChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(ModProjectVm.IsExpanded) || sender is not ModProjectVm vm) return;
+        UiState.SetPackCollapsed(vm.Name, !vm.IsExpanded);
+        UiState.Save(_configPath);
     }
 
     // Bumped per refresh so an older in-flight badge pass can't overwrite a newer one's results.

@@ -4,6 +4,14 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.18] - 2026-06-28
+
+### Added
+- **My Mods remembers collapsed pack groups.** Collapsing a pack's group now sticks — across list refreshes
+  (build / link / import / delete) and app restarts — instead of snapping back open every time the list
+  rebuilds. Stored in a small `ui-state.json` next to the config (separate from presets, so it's pure view
+  state).
+
 ## [0.1.17] - 2026-06-28
 
 ### Fixed
@@ -147,6 +155,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.18]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.18
 [0.1.17]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.17
 [0.1.16]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.16
 [0.1.15]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.15

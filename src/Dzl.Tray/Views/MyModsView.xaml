@@ -195,7 +195,7 @@
                   </Border>
 
                   <!-- Pack group (shown only for packs): one repo, inner mods listed inside -->
-                  <Expander Margin="0,0,0,8" IsExpanded="True"
+                  <Expander Margin="0,0,0,8" IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
                             Visibility="{Binding IsPack, Converter={StaticResource BoolToVis}}"
                             Background="{DynamicResource ControlFillColorDefaultBrush}"
                             BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">

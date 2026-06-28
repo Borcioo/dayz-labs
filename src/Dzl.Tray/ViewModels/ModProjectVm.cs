@@ -24,6 +24,10 @@ public sealed partial class ModProjectVm : ObservableObject
     /// <summary>Header badge for a pack, e.g. "pack · 3 mods".</summary>
     public string PackSummary => IsPack ? $"pack · {Children.Count} mods" : "";
 
+    /// <summary>Whether this pack's group is expanded on My Mods (two-way bound to the Expander). Seeded from the
+    /// persisted UI state on load so a collapsed pack stays collapsed across refreshes and app restarts.</summary>
+    [ObservableProperty] private bool _isExpanded = true;
+
     /// <summary>Short git summary, e.g. "main • clean", "main • dirty ↑1", "no repo", "main • clean (local)".</summary>
     [ObservableProperty] private string _git = "…";
 
@@ -39,12 +43,13 @@ public sealed partial class ModProjectVm : ObservableObject
     public Brush KindBg => Dzl.Tray.ModKindUi.Bg(ModKind.Source);
     public Brush KindFg => Dzl.Tray.ModKindUi.Fg(ModKind.Source);
 
-    public ModProjectVm(ModProject p)
+    public ModProjectVm(ModProject p, bool expanded = true)
     {
         Name = p.Name;
         Path = p.Path;
         Linked = p.Linked;
         IsPack = p.IsPack;
+        IsExpanded = expanded;
         Children = p.Children.Select(c => new ModProjectVm(c)).ToList();
     }
 }
