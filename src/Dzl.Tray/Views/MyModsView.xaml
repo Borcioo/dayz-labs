@@ -200,7 +200,7 @@
                             Background="{DynamicResource ControlFillColorDefaultBrush}"
                             BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
                     <Expander.Header>
-                      <Grid Margin="4,0,0,0">
+                      <Grid Margin="4,6,8,6">
                         <Grid.ColumnDefinitions>
                           <ColumnDefinition Width="*" />
                           <ColumnDefinition Width="Auto" />
@@ -220,7 +220,7 @@
                             <Run Text="git:" /><Run Text=" " /><Run Text="{Binding Git, Mode=OneWay}" />
                           </TextBlock>
                         </StackPanel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
                           <ui:Button Content="Build pack…" Appearance="Primary" Icon="{ui:SymbolIcon Box24}"
                                      Margin="0,0,8,0" Click="OnBuildPack"
                                      ToolTip="Build the inner mods into one @pack (Addons with a PBO per mod + keys)" />

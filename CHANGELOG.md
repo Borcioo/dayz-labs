@@ -4,6 +4,12 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.24] - 2026-06-28
+
+### Fixed
+- **My Mods pack header spacing.** The ⋯ actions button no longer sits jammed against the group's expander
+  chevron, and the pack header has a little vertical breathing room (matching the standalone-mod cards).
+
 ## [0.1.23] - 2026-06-28
 
 ### Added
@@ -193,6 +199,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.24]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.24
 [0.1.23]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.23
 [0.1.22]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.22
 [0.1.21]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.21
