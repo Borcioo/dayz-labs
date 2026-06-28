@@ -8,15 +8,16 @@ namespace Dzl.Core.Config;
 /// setting (it must not vary per preset or get carried into preset snapshots). Never throws.</summary>
 public sealed class UiState
 {
-    /// <summary>Names of pack groups the user has collapsed on My Mods (case-insensitive).</summary>
-    public HashSet<string> CollapsedPacks { get; init; } = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Names of pack groups the user has EXPANDED on My Mods (case-insensitive). Packs are collapsed by
+    /// default, so we only remember the ones explicitly opened.</summary>
+    public HashSet<string> ExpandedPacks { get; init; } = new(StringComparer.OrdinalIgnoreCase);
 
-    public bool IsPackCollapsed(string name) => CollapsedPacks.Contains(name);
+    public bool IsPackExpanded(string name) => ExpandedPacks.Contains(name);
 
-    public void SetPackCollapsed(string name, bool collapsed)
+    public void SetPackExpanded(string name, bool expanded)
     {
-        if (collapsed) CollapsedPacks.Add(name);
-        else CollapsedPacks.Remove(name);
+        if (expanded) ExpandedPacks.Add(name);
+        else ExpandedPacks.Remove(name);
     }
 
     /// <summary>The ui-state.json path in the same folder as <paramref name="configPath"/>.</summary>
@@ -30,7 +31,7 @@ public sealed class UiState
         DefaultIgnoreCondition = JsonIgnoreCondition.Never,
     };
 
-    private sealed record Dto(List<string> CollapsedPacks);
+    private sealed record Dto(List<string> ExpandedPacks);
 
     public static UiState Load(string configPath)
     {
@@ -40,8 +41,8 @@ public sealed class UiState
             if (File.Exists(path))
             {
                 var dto = JsonSerializer.Deserialize<Dto>(File.ReadAllText(path), Json);
-                if (dto?.CollapsedPacks is { } packs)
-                    return new UiState { CollapsedPacks = new HashSet<string>(packs, StringComparer.OrdinalIgnoreCase) };
+                if (dto?.ExpandedPacks is { } packs)
+                    return new UiState { ExpandedPacks = new HashSet<string>(packs, StringComparer.OrdinalIgnoreCase) };
             }
         }
         catch { /* missing/corrupt → fresh state */ }
@@ -55,7 +56,7 @@ public sealed class UiState
             var path = PathFor(configPath);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             File.WriteAllText(path, JsonSerializer.Serialize(
-                new Dto(CollapsedPacks.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList()), Json));
+                new Dto(ExpandedPacks.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList()), Json));
         }
         catch { /* best-effort — UI state is not critical */ }
     }

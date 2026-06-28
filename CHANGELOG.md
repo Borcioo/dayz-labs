@@ -4,6 +4,13 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.19] - 2026-06-28
+
+### Changed
+- **My Mods pack groups start collapsed by default.** Packs now begin collapsed; only the ones you explicitly
+  expand are remembered (still persisted across refreshes and restarts). Keeps the My Mods list compact when you
+  have many packs.
+
 ## [0.1.18] - 2026-06-28
 
 ### Added
@@ -155,6 +162,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.19]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.19
 [0.1.18]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.18
 [0.1.17]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.17
 [0.1.16]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.16

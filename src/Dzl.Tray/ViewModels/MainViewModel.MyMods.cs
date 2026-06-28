@@ -68,9 +68,10 @@ public partial class MainViewModel
         ModProjects.Clear();
         foreach (var p in Dzl.Core.Projects.ModProjects.Discover(ProjectsRoot, WorkDriveSource))
         {
-            var expanded = !p.IsPack || !UiState.IsPackCollapsed(p.Name);
+            // Packs default to collapsed; only ones the user explicitly expanded are remembered.
+            var expanded = p.IsPack && UiState.IsPackExpanded(p.Name);
             var vm = new ModProjectVm(p, expanded);
-            if (p.IsPack) vm.PropertyChanged += OnPackExpandedChanged;   // remember collapse/expand
+            if (p.IsPack) vm.PropertyChanged += OnPackExpandedChanged;   // remember expand/collapse
             ModProjects.Add(vm);
         }
         OnPropertyChanged(nameof(ProjectsRoot));
@@ -80,7 +81,7 @@ public partial class MainViewModel
     private void OnPackExpandedChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName != nameof(ModProjectVm.IsExpanded) || sender is not ModProjectVm vm) return;
-        UiState.SetPackCollapsed(vm.Name, !vm.IsExpanded);
+        UiState.SetPackExpanded(vm.Name, vm.IsExpanded);
         UiState.Save(_configPath);
     }
 
