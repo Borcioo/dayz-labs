@@ -137,4 +137,32 @@ public partial class MyModsView : UserControl
         catch (Exception ex) { ShowRowStatus("✗ " + ex.Message); }
         finally { _deletingProject = false; }
     }
+
+    // Broken link: re-point the dead junction at a new source folder the user picks.
+    private void OnRelinkProject(object sender, RoutedEventArgs e)
+    {
+        if (Vm is null || sender is not FrameworkElement { Tag: string name }) return;
+        var dlg = new Microsoft.Win32.OpenFolderDialog { Title = $"Pick the new source folder for \"{name}\"" };
+        if (!string.IsNullOrEmpty(Vm.ProjectsRoot) && System.IO.Directory.Exists(Vm.ProjectsRoot))
+            dlg.InitialDirectory = Vm.ProjectsRoot;
+        if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
+        ShowRowStatus(Vm.RelinkModProject(name, dlg.FolderName));
+    }
+
+    // Broken link: clear the leftover junctions (mods\ + P:). The source is already gone.
+    private async void OnRemoveBroken(object sender, RoutedEventArgs e)
+    {
+        if (Vm is null || _deletingProject) return;
+        if (sender is not FrameworkElement { Tag: string name }) return;
+        var r = System.Windows.MessageBox.Show(
+            $"Remove the leftover junctions for \"{name}\"?\n\nThe source folder is already gone — this just clears the " +
+            "dead links in mods\\ and on P:. Nothing else is deleted.",
+            "Remove broken link", System.Windows.MessageBoxButton.OKCancel, System.Windows.MessageBoxImage.Warning);
+        if (r != System.Windows.MessageBoxResult.OK) return;
+        _deletingProject = true;
+        ShowRowStatus("removing…");
+        try { ShowRowStatus(await Vm.DeleteModProjectAsync(name, alsoBuild: false)); }
+        catch (Exception ex) { ShowRowStatus("✗ " + ex.Message); }
+        finally { _deletingProject = false; }
+    }
 }

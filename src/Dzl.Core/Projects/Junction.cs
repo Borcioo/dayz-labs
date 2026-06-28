@@ -39,6 +39,15 @@ public static class Junction
         catch { return false; }
     }
 
+    /// <summary>True if the path is a reparse-point ENTRY, even a DANGLING one whose target is gone. Unlike
+    /// <see cref="IsLink"/> this reads the entry's own attributes and never resolves the target — so it still
+    /// detects (and lets us remove) a junction left behind after its source folder was moved/deleted.</summary>
+    public static bool IsReparsePointEntry(string path)
+    {
+        try { return File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint); }
+        catch { return false; }
+    }
+
     /// <summary>Resolved target of a link, or null if not a link / unreadable / dangling.</summary>
     public static string? LinkTarget(string path)
     {
@@ -77,10 +86,11 @@ public static class Junction
         catch (Exception ex) { return new EnsureResult(false, action, ex.Message); }
     }
 
-    /// <summary>Remove a link without descending into its target (delete the link itself).</summary>
+    /// <summary>Remove a link without descending into its target (delete the link itself). Works on a dangling
+    /// junction too (target gone), so leftover links can be cleaned up.</summary>
     public static void Remove(string linkPath)
     {
-        try { if (IsLink(linkPath)) Directory.Delete(linkPath); } catch { /* best-effort */ }
+        try { if (IsReparsePointEntry(linkPath)) Directory.Delete(linkPath); } catch { /* best-effort */ }
     }
 
     private static bool CreateLink(string linkPath, string target)

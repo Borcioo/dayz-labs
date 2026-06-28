@@ -98,7 +98,7 @@ public class ModProjectsTests
     }
 
     [Fact]
-    public void Discover_skips_a_dead_junction_without_killing_the_whole_list()
+    public void Discover_surfaces_a_dead_junction_as_broken_without_killing_the_list()
     {
         var root = Directory.CreateTempSubdirectory().FullName;
         var mods = ProjectPaths.ModsDir(root);
@@ -115,7 +115,25 @@ public class ModProjectsTests
 
         var found = ModProjects.Discover(root);     // must NOT throw on the dead junction
 
-        found.Select(p => p.Name).Should().Contain("Good");
-        found.Select(p => p.Name).Should().NotContain("Ghost");
+        found.Single(p => p.Name == "Good").IsBroken.Should().BeFalse();
+        var ghost = found.Single(p => p.Name == "Ghost");   // surfaced, not hidden
+        ghost.IsBroken.Should().BeTrue();
+        ghost.IsImportLink.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Junction_Remove_clears_a_dangling_junction()
+    {
+        var root = Directory.CreateTempSubdirectory().FullName;
+        var target = Path.Combine(root, "target");
+        var link = Path.Combine(root, "link");
+        if (!Junction.Ensure(link, target).Ok) return;
+        Directory.Delete(target, recursive: true);          // link now dangles
+        Junction.IsReparsePointEntry(link).Should().BeTrue();
+
+        Junction.Remove(link);                              // must clear the dead link
+
+        Junction.IsReparsePointEntry(link).Should().BeFalse();
+        Directory.Exists(target).Should().BeFalse();        // (it was already gone; sanity)
     }
 }

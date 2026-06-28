@@ -267,8 +267,9 @@ public partial class MainViewModel
         var source = WorkDriveSource;
         var modDir = ProjectPaths.ModDir(root, name);
         // A project imported as a LINK is a junction to an external source — only ever drop the link, NEVER the
-        // source it points at. A created/copied project is a real folder we own and may delete.
-        var wasLink = Junction.IsLink(modDir);
+        // source it points at. A created/copied project is a real folder we own and may delete. Attribute-based
+        // so a DANGLING junction (broken link, target gone) is still recognised as a link and cleaned up.
+        var wasLink = Junction.IsReparsePointEntry(modDir);
         // The recursive force-delete (read-only git files) can take a while; run it off the UI thread.
         var error = await Task.Run(() =>
         {
@@ -291,6 +292,17 @@ public partial class MainViewModel
         return wasLink
             ? $"✓ removed {name} from projects — source kept" + (alsoBuild ? " (build deleted)" : "")
             : $"✓ deleted {name}" + (alsoBuild ? " (source + build)" : " (source)");
+    }
+
+    /// <summary>Re-point a (usually broken) link project at a new source folder — replaces the dead junction in
+    /// mods\ and re-creates the P:\ link. Returns a status line.</summary>
+    public string RelinkModProject(string name, string newSource)
+    {
+        if (string.IsNullOrWhiteSpace(newSource) || !Directory.Exists(newSource))
+            return $"✗ {name}: folder not found: {newSource}";
+        var res = ModImport.Import(ProjectsRoot, newSource, name, WorkDriveSource, copy: false);
+        RefreshModProjects();
+        return res.Ok ? $"✓ re-linked {name} → {newSource}" : $"✗ {name}: {res.Message}";
     }
 
     /// <summary>Remove a mod's work-drive junction (leaves the source folder untouched). Returns a status line.</summary>

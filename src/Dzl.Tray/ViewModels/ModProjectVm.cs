@@ -22,6 +22,15 @@ public sealed partial class ModProjectVm : ObservableObject
     /// here). Its delete must only drop the link, never the source.</summary>
     public bool IsImportLink { get; }
 
+    /// <summary>True when this is a leftover junction whose target folder is gone — shown as a "broken link" card
+    /// with re-link / remove actions instead of a normal mod/pack.</summary>
+    public bool IsBroken { get; }
+
+    // Which card template renders for this row (a row is exactly one of the three).
+    public bool ShowStandalone => !IsPack && !IsBroken;
+    public bool ShowPack => IsPack && !IsBroken;
+    public bool ShowBroken => IsBroken;
+
     /// <summary>Label for the destructive menu item — a link is "removed" (source kept); a real folder is "deleted".</summary>
     public string DeleteLabel => IsImportLink
         ? "Remove from projects (keep source)"
@@ -60,6 +69,7 @@ public sealed partial class ModProjectVm : ObservableObject
         Linked = p.Linked;
         IsPack = p.IsPack;
         IsImportLink = p.IsImportLink;
+        IsBroken = p.IsBroken;
         IsExpanded = expanded;
         Children = p.Children.Select(c => new ModProjectVm(c)).ToList();
     }

@@ -4,6 +4,15 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.26] - 2026-06-28
+
+### Added
+- **My Mods detects broken links.** A mod imported as a link whose source folder was later moved or deleted no
+  longer silently disappears (leaving dead junctions behind in `mods\` and on `P:`). It now shows as an amber
+  **"broken link"** card with two fixes: **Re-link…** (point it at the new source folder) or **Remove** (clear
+  the leftover junctions). Dangling junctions are also reliably detected and removable now (previously a
+  reparse-point whose target was gone slipped past the link checks).
+
 ## [0.1.25] - 2026-06-28
 
 ### Fixed
@@ -207,6 +216,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.26]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.26
 [0.1.25]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.25
 [0.1.24]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.24
 [0.1.23]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.23

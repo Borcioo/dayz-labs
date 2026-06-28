@@ -13,6 +13,11 @@ public sealed record ModProject(string Name, string Path, bool Linked)
     /// never the external source it points at.</summary>
     public bool IsImportLink { get; init; }
 
+    /// <summary>True when this is a leftover junction whose target is gone (the source folder was moved/deleted):
+    /// the link still sits in <c>mods\</c> (and likely on P:\) but points nowhere. Surfaced so the user can clean
+    /// the dead links up or re-point them, instead of the project silently vanishing.</summary>
+    public bool IsBroken { get; init; }
+
     public IReadOnlyList<ModProject> Children { get; init; } = System.Array.Empty<ModProject>();
 }
 
@@ -56,8 +61,12 @@ public static class ModProjects
             }
             catch
             {
-                // One entry being unreadable — a dead junction whose target was moved/deleted, or a folder
-                // that vanished mid-scan — must NOT take down the whole list. Skip it.
+                // Couldn't read into the entry. If it's a reparse-point left behind after its target was
+                // moved/deleted, surface it as BROKEN so the user can clean the dead links up or re-point them —
+                // don't let it silently vanish (the links still sit in mods\ and on P:). Any other IO error: skip.
+                if (Junction.IsReparsePointEntry(dir))
+                    list.Add(new ModProject(System.IO.Path.GetFileName(dir), dir, false)
+                    { IsImportLink = true, IsBroken = true });
             }
         }
         return list;
