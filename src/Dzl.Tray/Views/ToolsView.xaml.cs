@@ -22,8 +22,7 @@ public partial class ToolsView : UserControl
     {
         if (Vm is null) return;
         Vm.RefreshTools();
-        PackToolMissing.Visibility = Vm.ToolExe("addonbuilder") is null ? Visibility.Visible : Visibility.Collapsed;
-        PackButton.IsEnabled = Vm.ToolExe("addonbuilder") is not null;
+        // Pack uses the in-process engine (PboWriter) — no external packer needed, so it's always available.
         PaaToolMissing.Visibility = Vm.ToolExe("imagetopaa") is null ? Visibility.Visible : Visibility.Collapsed;
         PaaButton.IsEnabled = Vm.ToolExe("imagetopaa") is not null;
         UnbinToolMissing.Visibility = Vm.ToolExe("cfgconvert") is null ? Visibility.Visible : Visibility.Collapsed;
@@ -35,20 +34,26 @@ public partial class ToolsView : UserControl
     private async void OnPackPbo(object sender, RoutedEventArgs e)
     {
         if (Vm is null) return;
-        var exe = Vm.ToolExe("addonbuilder");
-        if (exe is null) { PackOutput.Text = "Addon Builder not found."; return; }
         var src = PackSrcBox.Text.Trim();
         var dst = PackDstBox.Text.Trim();
         if (src.Length == 0 || dst.Length == 0) { PackOutput.Text = "Pick a source and output folder."; return; }
+        if (!Directory.Exists(src)) { PackOutput.Text = "Source folder not found."; return; }
+        var binarize = PackBinarizeChk.IsChecked == true;
+        if (binarize && !WorkDrive.IsMounted())
+        {
+            PackOutput.Text = "Binarize needs the P: work drive mounted — mount it above, or uncheck binarize to pack the folder as-is.";
+            return;
+        }
 
         PackButton.IsEnabled = false;
-        PackOutput.Text = "Packing…";
+        PackOutput.Text = "Packing…\n";
+        var log = new System.Progress<string>(line => { PackOutput.AppendText(line + "\n"); PackOutput.ScrollToEnd(); });
         try
         {
-            var r = await Vm.PackAsync(exe, src, dst, PackPrefixBox.Text, PackSignBox.Text);
-            PackOutput.Text = $"{(r.Ok ? "OK" : $"FAILED (exit {r.ExitCode})")}\n{r.Output}";
+            var r = await Vm.PackFolderAsync(src, dst, PackPrefixBox.Text, binarize, PackSignBox.Text, log);
+            PackOutput.AppendText(r.Ok ? $"\n✓ packed → {r.Pbo}" : $"\n✗ {r.Output}");
         }
-        catch (Exception ex) { PackOutput.Text = "Error: " + ex.Message; }
+        catch (Exception ex) { PackOutput.AppendText("\n✗ Error: " + ex.Message); }
         finally { PackButton.IsEnabled = true; PackOutput.ScrollToEnd(); }
     }
 

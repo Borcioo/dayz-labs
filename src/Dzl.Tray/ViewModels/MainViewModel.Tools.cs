@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Dzl.Core.Build;
+using Dzl.Core.Build.Preflight;
 using Dzl.Core.Env;
 using Dzl.Core.Tools;
 
@@ -103,11 +105,23 @@ public partial class MainViewModel
     /// <summary>Resolve a CLI-wrappable tool exe path by key, or null if not present.</summary>
     public string? ToolExe(string key) => ToolCatalog.Find(_cfg.DayzToolsPath, key) is { Exists: true } t ? t.ExePath : null;
 
-    /// <summary>Pack a PBO via Addon Builder on a background task; reports the combined output.</summary>
-    public Task<PackResult> PackAsync(string addonExe, string src, string dst, string? prefix, string? sign) =>
-        Task.Run(() => AddonBuilder.Pack(addonExe, src, dst, clear: true, packOnly: true,
-            prefix: string.IsNullOrWhiteSpace(prefix) ? null : prefix.Trim(),
-            signKey: string.IsNullOrWhiteSpace(sign) ? null : sign.Trim()));
+    /// <summary>Pack an arbitrary folder into a PBO with the in-process engine (the same one My Mods builds use):
+    /// pack-as-is via <see cref="PboWriter"/> by default, or full Binarize → CfgConvert → pack when
+    /// <paramref name="binarize"/> is on; sign when <paramref name="signKey"/> is given. The prefix falls back to
+    /// the folder's <c>$PBOPREFIX$</c>, then its name. Streams the log; runs off the UI thread.</summary>
+    public Task<EngineResult> PackFolderAsync(string source, string output, string? prefix, bool binarize,
+        string? signKey, IProgress<string>? log)
+    {
+        var toolsDir = _cfg.DayzToolsPath;
+        var src = Path.GetFullPath(source);
+        var pboName = Path.GetFileName(Path.TrimEndingDirectorySeparator(src));
+        var pfx = !string.IsNullOrWhiteSpace(prefix) ? prefix.Trim()
+                : PathResolver.ReadPrefix(src) is { Length: > 0 } p ? p : pboName;
+        var key = string.IsNullOrWhiteSpace(signKey) ? null : signKey.Trim();
+        var workDir = Path.Combine(Path.GetTempPath(), "dzl-pack", $"{pboName}_{Guid.NewGuid():N}");
+        return Task.Run(() => BuildEngine.Run(toolsDir, src, pfx, pboName, workDir, output,
+            binarize, key, line => log?.Report(line), binPath: @"P:\"));
+    }
 
     /// <summary>Plan a batch PAA conversion (suffix warnings) without running the exe.</summary>
     public List<PaaJob> PlanPaa(string dir, bool recursive) => ImageToPaa.PlanFolder(dir, recursive);

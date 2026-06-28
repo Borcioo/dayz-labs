@@ -143,12 +143,11 @@
               <ui:TextBox x:Name="PackPrefixBox" Grid.Column="0" Margin="0,0,4,0" PlaceholderText="prefix (optional)" />
               <ui:TextBox x:Name="PackSignBox" Grid.Column="1" Margin="4,0,0,0" PlaceholderText="sign key path (optional)" />
             </Grid>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Center">
               <ui:Button x:Name="PackButton" Content="Pack" Appearance="Primary"
-                         Icon="{ui:SymbolIcon Box24}" Click="OnPackPbo" />
-              <TextBlock x:Name="PackToolMissing" Text="Addon Builder not found"
-                         VerticalAlignment="Center" Margin="12,0,0,0" Visibility="Collapsed"
-                         Foreground="#FF6B6B" />
+                         Icon="{ui:SymbolIcon Box24}" Click="OnPackPbo" Margin="0,0,12,0" />
+              <CheckBox x:Name="PackBinarizeChk" Content="binarize" VerticalAlignment="Center"
+                        ToolTip="Off: pack the folder as-is into a PBO (in-process, no extra tools).&#10;On: full build — binarize models + config.cpp→config.bin — needs the P: work drive mounted." />
             </StackPanel>
             <TextBox x:Name="PackOutput" Height="110" Style="{StaticResource ToolOutputBox}" />
           </StackPanel>

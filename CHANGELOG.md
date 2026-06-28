@@ -4,6 +4,15 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.27] - 2026-06-28
+
+### Changed
+- **Tools "Pack PBO" now uses the in-process build engine.** Packing a folder no longer goes through
+  AddonBuilder — it uses the same reliable in-process PBO writer as the My Mods builds. A new **binarize**
+  toggle: off packs the folder as-is (no external tools or P: needed); on runs the full build (binarize models +
+  `config.cpp`→`config.bin`, needs the P: work drive mounted). Set a key path to sign. The Pack button is always
+  available now (no AddonBuilder dependency).
+
 ## [0.1.26] - 2026-06-28
 
 ### Added
@@ -216,6 +225,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.27]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.27
 [0.1.26]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.26
 [0.1.25]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.25
 [0.1.24]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.24
