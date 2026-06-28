@@ -4,6 +4,15 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.17] - 2026-06-28
+
+### Fixed
+- **Game-data extraction now unpacks vanilla only — not your mods.** The extractor enumerated PBOs recursively
+  under the DayZ install and followed junctions into `!Workshop\@<mod>` (and loose `@<mod>`) folders, so a
+  machine with many subscribed mods tried to unpack **thousands** of mod PBOs (e.g. 3600+) into `P:`. It now
+  skips any `@`- or `!`-prefixed folder and extracts only the game's own data (`Addons`, `sakhal\Addons`, `dta`,
+  …) — back to roughly the real vanilla count.
+
 ## [0.1.16] - 2026-06-28
 
 ### Fixed
@@ -138,6 +147,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.17]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.17
 [0.1.16]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.16
 [0.1.15]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.15
 [0.1.14]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.14

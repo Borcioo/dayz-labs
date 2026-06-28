@@ -11,21 +11,39 @@ public class GameUnpackTests
             .Should().Equal("-f", @"P:\", "-prefix", @"E:\DayZ\Addons\worlds_enoch.pbo");
 
     [Fact]
-    public void FindGamePbos_lists_every_pbo_recursively_sorted_ignoring_other_files()
+    public void FindGamePbos_lists_vanilla_pbos_only_excluding_mods_and_workshop()
     {
         var game = Tmp();
         Directory.CreateDirectory(Path.Combine(game, "Addons"));
         Directory.CreateDirectory(Path.Combine(game, "sakhal", "Addons"));
+        Directory.CreateDirectory(Path.Combine(game, "dta"));
+        Directory.CreateDirectory(Path.Combine(game, "@CF", "addons"));
+        Directory.CreateDirectory(Path.Combine(game, "!Workshop", "@SomeMod", "addons"));
+        // vanilla
         File.WriteAllText(Path.Combine(game, "Addons", "worlds_enoch.pbo"), "x");
         File.WriteAllText(Path.Combine(game, "Addons", "surfaces_bliss.pbo"), "x");
         File.WriteAllText(Path.Combine(game, "sakhal", "Addons", "worlds_sakhal_data.pbo"), "x");
-        File.WriteAllText(Path.Combine(game, "Addons", "readme.txt"), "x");   // ignored
+        File.WriteAllText(Path.Combine(game, "dta", "bin.pbo"), "x");           // vanilla, NOT under Addons
+        File.WriteAllText(Path.Combine(game, "Addons", "readme.txt"), "x");     // not a pbo
+        // mods / workshop — must be excluded
+        File.WriteAllText(Path.Combine(game, "@CF", "addons", "cf_gui.pbo"), "x");
+        File.WriteAllText(Path.Combine(game, "!Workshop", "@SomeMod", "addons", "mod.pbo"), "x");
 
         var pbos = GameUnpack.FindGamePbos(game);
 
-        pbos.Select(Path.GetFileName).Should().Equal(
-            "surfaces_bliss.pbo", "worlds_enoch.pbo", "worlds_sakhal_data.pbo");   // sorted, .pbo only
+        pbos.Select(Path.GetFileName).Should().BeEquivalentTo(
+            "bin.pbo", "surfaces_bliss.pbo", "worlds_enoch.pbo", "worlds_sakhal_data.pbo");   // vanilla only, no mod PBOs
     }
+
+    [Theory]
+    [InlineData(@"Addons\worlds_enoch.pbo", false)]
+    [InlineData(@"sakhal\Addons\worlds_sakhal_data.pbo", false)]
+    [InlineData(@"dta\bin.pbo", false)]
+    [InlineData(@"@CF\addons\cf_gui.pbo", true)]
+    [InlineData(@"!Workshop\@SomeMod\addons\mod.pbo", true)]
+    [InlineData(@"!dzsal\x.pbo", true)]
+    public void IsUnderModFolder_flags_at_and_bang_prefixed_segments(string rel, bool isMod)
+        => GameUnpack.IsUnderModFolder(@"C:\DayZ", $@"C:\DayZ\{rel}").Should().Be(isMod);
 
     [Fact]
     public void FindGamePbos_empty_for_missing_dir()

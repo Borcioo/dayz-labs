@@ -31,17 +31,32 @@ public static class GameUnpack
     /// <summary>Identity stamp for a PBO: last-write + size. Re-extract only when this changes. Pure.</summary>
     public static string Stamp(FileInfo pbo) => $"{pbo.LastWriteTimeUtc.Ticks}:{pbo.Length}";
 
-    /// <summary>Every <c>*.pbo</c> under the DayZ install (Addons, sakhal\Addons, any DLC), sorted. The install
-    /// holds only vanilla PBOs (workshop mods live elsewhere), so all of them are game data to unpack.</summary>
+    /// <summary>Every VANILLA <c>*.pbo</c> under the DayZ install (Addons, sakhal\Addons, dta, …), sorted —
+    /// EXCLUDING mod/workshop content. Subscribed Steam mods live under <c>!Workshop\@&lt;mod&gt;</c> (and loose
+    /// <c>@&lt;mod&gt;</c> folders), often as junctions that <c>EnumerateFiles</c> follows; without this filter a
+    /// machine with many mods reports thousands of PBOs (e.g. 3600+) and would unpack every mod into P:. We only
+    /// want game data, so any path segment starting with <c>@</c> or <c>!</c> is skipped.</summary>
     public static IReadOnlyList<string> FindGamePbos(string gameDir)
     {
         if (string.IsNullOrWhiteSpace(gameDir) || !Directory.Exists(gameDir)) return Array.Empty<string>();
         try
         {
-            return Directory.EnumerateFiles(gameDir, "*.pbo", SearchOption.AllDirectories)
+            var root = Path.GetFullPath(gameDir);
+            return Directory.EnumerateFiles(root, "*.pbo", SearchOption.AllDirectories)
+                .Where(p => !IsUnderModFolder(root, p))
                 .OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToList();
         }
         catch { return Array.Empty<string>(); }
+    }
+
+    /// <summary>True when any folder on <paramref name="pbo"/>'s path under <paramref name="root"/> starts with
+    /// <c>@</c> or <c>!</c> — the convention for mods / Steam Workshop (<c>!Workshop</c>), which are NOT vanilla.</summary>
+    public static bool IsUnderModFolder(string root, string pbo)
+    {
+        var rel = Path.GetRelativePath(root, pbo);
+        foreach (var seg in rel.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+            if (seg.Length > 0 && (seg[0] == '@' || seg[0] == '!')) return true;
+        return false;
     }
 
     /// <summary>Unpack every game PBO into <paramref name="destRoot"/> (the mounted project drive, e.g. <c>P:\</c>).
