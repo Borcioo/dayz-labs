@@ -484,19 +484,24 @@ public partial class SetupWizardWindow : FluentWindow
     // ---- Step 4: Game data ----------------------------------------------
 
     // Extract button: a real extract you watch (WorkDrive's progress console is shown).
-    private void OnExtractGameData(object sender, RoutedEventArgs e) => _ = RunExtract(showConsole: true);
+    private void OnExtractGameData(object sender, RoutedEventArgs e) => _ = RunExtract(showProgress: true);
 
-    // Re-check IS the same /ExtractGameData run — it's idempotent and version-checks every PBO, so
-    // re-running it is the authoritative verify (better than just probing P:\DZ on disk, which can't
-    // tell stale from current). Quiet: no console, ~1s when already up to date.
-    private void OnReCheckGameData(object sender, RoutedEventArgs e) => _ = RunExtract(showConsole: false);
+    // Re-check IS the same BankRev unpack — it's idempotent (a manifest skips PBOs already extracted at
+    // their current timestamp), so re-running it is the authoritative verify. Quiet: only the summary.
+    private void OnReCheckGameData(object sender, RoutedEventArgs e) => _ = RunExtract(showProgress: false);
 
-    private async Task RunExtract(bool showConsole)
+    private async Task RunExtract(bool showProgress)
     {
         var tools = ToolsPathBox.Text?.Trim() ?? "";
+        var game = DayzPathBox.Text?.Trim() ?? "";
         if (tools.Length == 0)
         {
             GameDataNote.Text = "Set the DayZ Tools path on the Paths step first.";
+            return;
+        }
+        if (!Directory.Exists(game))
+        {
+            GameDataNote.Text = "Set a valid DayZ install path on the Paths step first.";
             return;
         }
         if (!WorkDrive.IsMounted())
@@ -504,34 +509,30 @@ public partial class SetupWizardWindow : FluentWindow
             GameDataNote.Text = "P: is not mounted — mount P: on the previous (Work drive) step first.";
             return;
         }
-        var exe = Path.Combine(tools, "Bin", "WorkDrive", "WorkDrive.exe");
-        if (!File.Exists(exe))
+        var bankrev = ToolCatalog.Find(tools, "bankrev");
+        if (bankrev is null || !bankrev.Exists)
         {
-            GameDataNote.Text = @"WorkDrive.exe not found under <Tools>\Bin\WorkDrive. Use 'Open DayZ Tools' instead.";
+            GameDataNote.Text = @"BankRev.exe not found under <Tools>\Bin\PboUtils. Check the DayZ Tools path.";
             return;
         }
 
         ExtractBtn.IsEnabled = GameDataReCheckBtn.IsEnabled = false;
         ExtractRing.Visibility = Visibility.Visible;
-        GameDataNote.Text = showConsole
-            ? "Extracting… WorkDrive's console shows per-PBO progress. First run can take several minutes; "
-              + "re-runs are instant (it only unpacks what changed)."
-            : "Verifying… re-running extraction to version-check every PBO (instant when up to date).";
+        GameDataNote.Text = showProgress
+            ? "Extracting vanilla PBOs to P: with BankRev. First run unpacks everything (a few minutes); "
+              + "re-runs skip what's already current."
+            : "Verifying… re-checking each PBO (instant when already extracted).";
         try
         {
-            // Synchronous + idempotent: WorkDrive unpacks out-of-date PBOs then exits 0. Trust the code.
-            var (ok, _) = await Task.Run(() => WorkDrive.ExtractGameData(exe, showConsole));
+            // dzl unpacks every game PBO itself via BankRev (reliable + incremental) instead of WorkDrive.exe
+            // /ExtractGameData, whose built-in extract is unreliable. Idempotent: a manifest skips current PBOs.
+            var r = await Task.Run(() => GameUnpack.UnpackAll(bankrev.ExePath, game, @"P:\", force: false,
+                onItem: it => { if (showProgress) Dispatcher.BeginInvoke(() =>
+                    GameDataNote.Text = $"[{it.Index}/{it.Total}] {Path.GetFileName(it.Pbo)} — {it.Status}"); }));
             var present = GameDataPresent();
-            GameDataNote.Text = (ok, present) switch
-            {
-                (true, true)  => "✓ Done — vanilla game data is in P:\\ (P:\\DZ). Re-check anytime to re-verify.",
-                (true, false) => "WorkDrive reported success but P:\\DZ isn't there. P: may be mounted in another "
-                                 + "session (run dzl non-elevated — see the Work-drive step's warning).",
-                (false, true) => "P:\\DZ is present, but the last run returned an error code. Check WorkDrive's log "
-                                 + @"under <Tools>\Bin\Logs\WorkDrive.*.rpt.",
-                _             => "Extraction failed to complete. Use 'Open DayZ Tools…' to run it manually and watch "
-                                 + "the error, or check <Tools>\\Bin\\Logs\\WorkDrive.*.rpt.",
-            };
+            GameDataNote.Text = r.Ok
+                ? $"✓ {r.Message}. Vanilla game data is in P:\\ (P:\\DZ)."
+                : $"✗ {r.Message}" + (present ? "" : " — and P:\\DZ isn't there (is P: mounted in this session?).");
         }
         finally
         {

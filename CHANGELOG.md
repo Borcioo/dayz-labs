@@ -4,6 +4,15 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.15] - 2026-06-28
+
+### Added
+- **Reliable in-app game-data extraction.** A new **Extract game data** action (Tools page + the first-run
+  wizard) unpacks every vanilla PBO to the `P:` drive directly via DayZ Tools' `BankRev`, instead of going
+  through `WorkDrive.exe`'s built-in extract. It's **incremental** — a manifest skips PBOs already extracted at
+  their current version, and a **full re-extract** toggle forces everything — and it shows per-PBO progress.
+  This gives dzl a controllable, scriptable extraction that doesn't depend on the WorkDrive GUI.
+
 ## [0.1.14] - 2026-06-28
 
 ### Added
@@ -119,6 +128,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.15]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.15
 [0.1.14]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.14
 [0.1.13]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.13
 [0.1.12]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.12

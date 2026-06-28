@@ -45,6 +45,38 @@ public partial class MainViewModel
     [RelayCommand]
     public void LaunchTool(ToolEntry tool) => Task.Run(() => { try { ToolLauncher.Launch(tool); } catch { } });
 
+    [ObservableProperty] private bool _extractingGame;
+    [ObservableProperty] private string _extractGameStatus = "";
+
+    /// <summary>True when no extraction is in flight (drives the button's enabled state).</summary>
+    public bool CanExtractGame => !ExtractingGame;
+    partial void OnExtractingGameChanged(bool value) => OnPropertyChanged(nameof(CanExtractGame));
+
+    /// <summary>Reliable in-app game-data extraction: unpack every vanilla PBO to P: via BankRev (replaces
+    /// the flaky WorkDrive.exe /ExtractGameData). Incremental; <paramref name="force"/> re-extracts all.</summary>
+    [RelayCommand]
+    public async Task ExtractGameData(object? force)
+    {
+        if (ExtractingGame) return;
+        var full = force is bool b && b;
+        var bankrev = ToolExe("bankrev");
+        if (bankrev is null) { ExtractGameStatus = "BankRev.exe not found — set the DayZ Tools path"; return; }
+        if (!WorkDrive.IsMounted()) { ExtractGameStatus = "P: not mounted — mount it first"; return; }
+
+        ExtractingGame = true;
+        ExtractGameStatus = full ? "full re-extract starting…" : "starting…";
+        var game = _cfg.DayzPath;
+        try
+        {
+            var r = await Task.Run(() => GameUnpack.UnpackAll(bankrev, game, @"P:\", full,
+                onItem: it => _dispatcher.BeginInvoke(() =>
+                    ExtractGameStatus = $"[{it.Index}/{it.Total}] {Path.GetFileName(it.Pbo)} — {it.Status}")));
+            ExtractGameStatus = (r.Ok ? "✓ " : "✗ ") + r.Message;
+            RefreshWorkDrive();
+        }
+        finally { ExtractingGame = false; }
+    }
+
     [RelayCommand]
     public void MountWorkDrive()
     {

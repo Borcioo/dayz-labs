@@ -99,6 +99,17 @@
                          Margin="0,0,8,0" Command="{Binding UnmountWorkDriveCommand}" />
               <ui:Button Content="Refresh" Icon="{ui:SymbolIcon ArrowSync24}" Command="{Binding RefreshWorkDriveCommand}" />
             </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+              <ui:Button Content="Extract game data" Icon="{ui:SymbolIcon Box24}"
+                         Margin="0,0,8,0" IsEnabled="{Binding CanExtractGame}"
+                         Command="{Binding ExtractGameDataCommand}"
+                         CommandParameter="{Binding IsChecked, ElementName=ForceExtractChk}"
+                         ToolTip="Unpack every vanilla PBO to P: via BankRev (reliable, incremental). Replaces DayZ Tools' built-in extract." />
+              <CheckBox x:Name="ForceExtractChk" Content="full re-extract" VerticalAlignment="Center" Margin="0,0,12,0"
+                        ToolTip="Re-unpack every PBO, ignoring the incremental manifest." />
+              <TextBlock Text="{Binding ExtractGameStatus}" VerticalAlignment="Center"
+                         TextTrimming="CharacterEllipsis" MaxWidth="460" Opacity="0.85" />
+            </StackPanel>
           </StackPanel>
         </ui:Card>
 
