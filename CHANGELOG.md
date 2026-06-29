@@ -4,6 +4,14 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.29] - 2026-06-28
+
+### Fixed
+- **A partial pack build no longer wipes the other PBOs.** Building a subset of a pack's inner mods (e.g. just
+  `world`) now **swaps only those PBOs** and keeps the rest in `@<pack>\Addons` — changing one file no longer
+  means repacking (and risking) every addon. Building **all** of them still does a clean full rebuild that also
+  clears any stale PBO.
+
 ## [0.1.28] - 2026-06-28
 
 ### Changed
@@ -233,6 +241,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.29]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.29
 [0.1.28]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.28
 [0.1.27]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.27
 [0.1.26]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.26

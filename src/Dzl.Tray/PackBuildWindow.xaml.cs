@@ -25,7 +25,8 @@ public partial class PackBuildWindow : FluentWindow
         InitializeComponent();
         Title = TitleBarCtl.Title = $"Build pack — {pack.Name}";
         IntroText.Text = $"Builds the selected mods into one @{pack.Name} — each inner mod becomes its own PBO " +
-                         "under Addons\\, with a shared keys\\. The whole pack output is replaced atomically.";
+                         "under Addons\\, with a shared keys\\. Building a subset swaps just those PBOs and keeps " +
+                         "the rest; building all does a clean rebuild.";
         ChildList.ItemsSource = pack.Children.Select(c => new Pick(c.Name, c.Path)).ToList();
         UpdateCount();
         LogBox.Text = _vm.BuildLog;

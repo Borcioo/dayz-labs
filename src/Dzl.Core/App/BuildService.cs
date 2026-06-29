@@ -465,7 +465,12 @@ public sealed class BuildService
             onLine?.Invoke($"    {c.Name}: ok");
         }
 
-        var (pubOk, pubDetail) = ModBuild.PublishAtomically(staging, addonsDir);
+        // A partial build (a subset of the pack's mods) swaps ONLY those PBOs and keeps the rest — building one
+        // mod must not wipe the others. Building all of them does a clean full publish (removes any stale PBO).
+        var kept = pack.Children.Count - build.Count;
+        var merge = kept > 0;
+        if (merge) onLine?.Invoke($"publish: swapping {build.Count} PBO(s), keeping {kept} other(s)");
+        var (pubOk, pubDetail) = ModBuild.PublishAtomically(staging, addonsDir, merge);
         if (!pubOk)
             return Fail($"publish failed: {pubDetail}", output.ToString(), results);
         try { Directory.Delete(workRoot, recursive: true); } catch { /* harmless leftover */ }
@@ -476,7 +481,8 @@ public sealed class BuildService
 
         var (registered, _) = RegisterInRunList(cfg, active, packName);
         return new PackBuildResult(true, packName, buildDir, addonsDir, registered, results,
-            $"built {results.Count(r => r.Ok)}/{results.Count} mod(s) into @{packName}", output.ToString());
+            $"built {results.Count(r => r.Ok)}/{results.Count} mod(s) into @{packName}" +
+            (merge ? $" — swapped, {kept} other PBO(s) kept" : ""), output.ToString());
     }
 
     private static BuildResult FailResult(string modName, PreflightView? preflight, string msg, string output = "") =>

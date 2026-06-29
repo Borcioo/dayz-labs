@@ -43,8 +43,10 @@ public static class ModBuild
     /// <paramref name="workAddonsDir"/> into <paramref name="finalAddonsDir"/>, backing up what's there
     /// first and restoring it when anything fails.</summary>
     /// <remarks>A failed rebuild therefore never leaves the loadable <c>@Mod\Addons</c> half-written
-    /// (the server may be configured to load it).</remarks>
-    public static (bool Ok, string Detail) PublishAtomically(string workAddonsDir, string finalAddonsDir)
+    /// (the server may be configured to load it). When <paramref name="merge"/> is true only the artifacts being
+    /// (re)built are swapped — any OTHER pbo/bisign already in <paramref name="finalAddonsDir"/> is kept. This is
+    /// how a partial pack build (a subset of inner mods) replaces just those PBOs instead of wiping the rest.</remarks>
+    public static (bool Ok, string Detail) PublishAtomically(string workAddonsDir, string finalAddonsDir, bool merge = false)
     {
         string[] Artifacts(string dir) =>
             Directory.Exists(dir)
@@ -60,10 +62,13 @@ public static class ModBuild
         var backupDir = Path.Combine(finalAddonsDir, $".backup_{DateTime.UtcNow.Ticks}");
         var backedUp = new List<(string Original, string Backup)>();
         var published = new List<string>();
+        // In merge mode only the existing files we're about to overwrite are touched; everything else stays.
+        var freshNames = new HashSet<string>(fresh.Select(f => Path.GetFileName(f)!), StringComparer.OrdinalIgnoreCase);
 
         try
         {
-            var existing = Artifacts(finalAddonsDir);
+            var existing = Artifacts(finalAddonsDir)
+                .Where(f => !merge || freshNames.Contains(Path.GetFileName(f)!)).ToArray();
             if (existing.Length > 0)
             {
                 Directory.CreateDirectory(backupDir);

@@ -185,4 +185,33 @@ public class ModBuildTests
         var v = new BuildService(configPath).PreflightFolder(src);
         v.Findings.Should().NotBeNull();   // produced a view rather than throwing
     }
+
+    // --- partial pack publish: swap only what was built, keep the rest ---
+
+    [Fact]
+    public void PublishAtomically_full_replaces_the_whole_addons_folder()
+    {
+        var work = Tmp(); var final = Tmp();
+        File.WriteAllText(Path.Combine(final, "old.pbo"), "old");
+        File.WriteAllText(Path.Combine(work, "new.pbo"), "new");
+
+        ModBuild.PublishAtomically(work, final, merge: false).Ok.Should().BeTrue();
+
+        File.Exists(Path.Combine(final, "new.pbo")).Should().BeTrue();
+        File.Exists(Path.Combine(final, "old.pbo")).Should().BeFalse();   // full replace clears the rest
+    }
+
+    [Fact]
+    public void PublishAtomically_merge_swaps_only_the_built_pbo_and_keeps_the_others()
+    {
+        var work = Tmp(); var final = Tmp();
+        File.WriteAllText(Path.Combine(final, "keep.pbo"), "keep");
+        File.WriteAllText(Path.Combine(final, "world.pbo"), "OLD");
+        File.WriteAllText(Path.Combine(work, "world.pbo"), "NEW");   // rebuilding only world
+
+        ModBuild.PublishAtomically(work, final, merge: true).Ok.Should().BeTrue();
+
+        File.ReadAllText(Path.Combine(final, "world.pbo")).Should().Be("NEW");   // swapped
+        File.ReadAllText(Path.Combine(final, "keep.pbo")).Should().Be("keep");   // the others are kept
+    }
 }
