@@ -4,6 +4,15 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.32] - 2026-06-30
+
+### Added
+- **Detach a log into its own window.** Each pane has a pop-out button that opens that log in a separate,
+  resizable window — handy for watching the RPT on a second monitor while you work in the main app. The main
+  page greys the pane with a Bring-back placeholder while it's detached; closing the window re-attaches it. The
+  filter, search and auto-scroll stay in sync between the two views (they share the same live data). Any or all
+  panes can be detached at once, in every view mode.
+
 ## [0.1.31] - 2026-06-30
 
 ### Added
@@ -265,6 +274,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.32]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.32
 [0.1.31]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.31
 [0.1.30]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.30
 [0.1.29]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.29

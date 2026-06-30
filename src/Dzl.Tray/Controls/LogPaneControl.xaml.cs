@@ -18,6 +18,8 @@ public partial class LogPaneControl : UserControl
 {
     private LogPaneVm? _vm;
 
+    private bool _hooked;
+
     public LogPaneControl()
     {
         InitializeComponent();
@@ -26,16 +28,35 @@ public partial class LogPaneControl : UserControl
         tv.LineTransformers.Add(new TokenColorizer());                 // token foreground + underline
         tv.LineTransformers.Add(new SearchHighlighter(() => _vm?.Search ?? ""));  // match bg (wins, runs last)
         DataContextChanged += OnDataContextChanged;
+        // Subscribe/unsubscribe symmetrically with the visual tree. The pane VM is app-lifetime, so a detached
+        // window (or a tab switch) that unloads this control must drop its PropertyChanged subscription — else
+        // the closed window's control + AvalonEdit editor leak and keep running SetText() on every log batch.
+        Loaded += (_, _) => { Hook(); SetText(); };
+        Unloaded += (_, _) => Unhook();
         Editor.PreviewMouseMove += OnEditorMouseMove;
         Editor.PreviewMouseLeftButtonDown += OnEditorMouseDown;
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-        if (_vm is not null) _vm.PropertyChanged -= OnVmChanged;
+        Unhook();
         _vm = DataContext as LogPaneVm;
-        if (_vm is not null) _vm.PropertyChanged += OnVmChanged;
+        Hook();
         SetText();
+    }
+
+    private void Hook()
+    {
+        if (_hooked || _vm is null) return;
+        _vm.PropertyChanged += OnVmChanged;
+        _hooked = true;
+    }
+
+    private void Unhook()
+    {
+        if (!_hooked || _vm is null) return;
+        _vm.PropertyChanged -= OnVmChanged;
+        _hooked = false;
     }
 
     private void OnVmChanged(object? sender, PropertyChangedEventArgs e)

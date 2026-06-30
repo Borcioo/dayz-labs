@@ -22,7 +22,7 @@ public partial class MainWindow : FluentWindow
         InitializeComponent();
         _vm = new MainViewModel(App.ConfigPath());
         DataContext = _vm;
-        Closed += (_, _) => _vm.Dispose();
+        Closed += (_, _) => { LogWindow.CloseAll(); _vm.Dispose(); };
 
         // Select Dashboard on load so a panel is always visible; selecting the first
         // NavTop item raises OnNavChanged, which calls ShowPage("dashboard").

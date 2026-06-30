@@ -46,6 +46,11 @@ public sealed partial class LogPaneVm : ObservableObject
     /// <summary>Accordion (List view) expand state; default expanded so the tail is visible.</summary>
     [ObservableProperty] private bool _isExpanded = true;
 
+    /// <summary>True while this pane is popped out into its own window. The main Logs page greys the
+    /// pane and shows a "in a separate window" placeholder; the detached window hosts a second view of
+    /// this same VM (filter/search/auto-scroll stay in sync because both bind the same data).</summary>
+    [ObservableProperty] private bool _isDetached;
+
     /// <summary>Resolved log file path (for Open-folder / Open-in-editor); null until the tail resolves it.</summary>
     public string? Path { get; set; }
 

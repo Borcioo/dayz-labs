@@ -9,8 +9,8 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
-  <!-- Logs page (grid / list / tabs / focus view modes over the four log panes).
-       DataContext = MainViewModel (inherited from the host window). -->
+  <!-- Logs page (grid / tabs / focus view modes over the five log panes). Each pane's content lives in
+       controls:LogPaneView (reused by the detached LogWindow). DataContext = MainViewModel. -->
   <UserControl.Resources>
     <!-- Segmented-control-style radio for the Logs view-mode selector. Looks like a flat
          pill that fills with accent when checked. RadioButtons in one GroupName behave
@@ -43,137 +43,28 @@
       </Setter>
     </Style>
 
-    <!-- Quick-filter chip (pill RadioButton). No GroupName → grouped by its parent StackPanel, so each
-         pane's chips are independent. IsChecked is TwoWay-bound to the pane's Filter via StringEquals:
-         checking a chip writes its key to Filter; clicking the active chip is a no-op (radio semantics). -->
-    <Style x:Key="LogFilterChip" TargetType="RadioButton">
-      <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
-      <Setter Property="FontSize" Value="12" />
-      <Setter Property="Padding" Value="8,3" />
-      <Setter Property="Margin" Value="0,0,4,0" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="RadioButton">
-            <Border x:Name="Bd" CornerRadius="6" Padding="{TemplateBinding Padding}"
-                    Background="Transparent" BorderThickness="1" BorderBrush="Transparent">
-              <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center" />
-            </Border>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Bd" Property="Background" Value="#22FFFFFF" />
-              </Trigger>
-              <Trigger Property="IsChecked" Value="True">
-                <Setter TargetName="Bd" Property="Background" Value="#332D7DD2" />
-                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
-                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-                <Setter Property="FontWeight" Value="SemiBold" />
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
-
-    <!-- One log pane: card with header (icon + Title + dimmed FileName + open/clear) and a
-         mono read-only TextBox body. Reused by all four Logs view modes (grid/list/tabs/
-         focus); the TextChanged autoscroll keeps the tail pinned to the bottom everywhere. -->
+    <!-- One log pane card. Shows the full LogPaneView when attached, or a greyed "in a separate window"
+         placeholder (with a Bring-back button) when the pane is detached into its own LogWindow. Reused by
+         every Logs view mode (grid/tabs/focus). -->
     <DataTemplate x:Key="LogPaneTemplate">
-      <!-- Plain Border (not ui:Card): a Border is a decorator whose child always fills it,
-           so the pane stretches to its container. ui:Card sizes to content / won't stretch. -->
+      <!-- Plain Border (not ui:Card): a Border's child always fills it, so the pane stretches to its cell. -->
       <Border Margin="3" Padding="12" CornerRadius="8"
               Background="{DynamicResource ControlFillColorDefaultBrush}"
               BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
         <Grid>
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-          </Grid.RowDefinitions>
-          <Grid Grid.Row="0" Margin="0,0,0,8">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="*" />
-              <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-              <ui:SymbolIcon Symbol="Document24" FontSize="16" Margin="0,0,8,0"
-                             Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
-              <TextBlock Text="{Binding Title}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
-              <TextBlock Text="{Binding FileName}" FontSize="11" VerticalAlignment="Center"
-                         TextTrimming="CharacterEllipsis"
-                         Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-            </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal">
-              <ui:Button Icon="{ui:SymbolIcon Code24}" ToolTip="Open the full log file in your editor"
-                         Padding="6" Margin="0,0,6,0"
-                         Command="{Binding DataContext.OpenLogInEditorCommand, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}"
-                         CommandParameter="{Binding}" />
-              <ui:Button Icon="{ui:SymbolIcon WindowConsole20}" ToolTip="Live-tail this log in PowerShell"
-                         Padding="6" Margin="0,0,6,0"
-                         Command="{Binding DataContext.OpenLogTerminalCommand, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}"
-                         CommandParameter="{Binding}" />
-              <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" ToolTip="Open log folder"
-                         Padding="6" Margin="0,0,6,0"
-                         Command="{Binding DataContext.OpenLogFolderCommand, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}"
-                         CommandParameter="{Binding}" />
-              <ui:Button Icon="{ui:SymbolIcon Eraser24}" ToolTip="Clear view"
-                         Padding="6"
-                         Command="{Binding DataContext.ClearLogCommand, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}"
-                         CommandParameter="{Binding}" />
-            </StackPanel>
-          </Grid>
+          <controls:LogPaneView Visibility="{Binding IsDetached, Converter={StaticResource InverseBoolToVis}}" />
 
-          <!-- Toolbar: quick-filter chips + search box + auto-scroll toggle. WrapPanel so it flows to a
-               second line in the narrow Grid view panes instead of clipping. -->
-          <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
-            <StackPanel Orientation="Horizontal" Margin="0,0,12,4" VerticalAlignment="Center">
-              <RadioButton Style="{StaticResource LogFilterChip}" Content="All"
-                           IsChecked="{Binding Filter, Converter={StaticResource StringEquals}, ConverterParameter=all, Mode=TwoWay}" />
-              <RadioButton Style="{StaticResource LogFilterChip}"
-                           IsChecked="{Binding Filter, Converter={StaticResource StringEquals}, ConverterParameter=errors, Mode=TwoWay}">
-                <StackPanel Orientation="Horizontal">
-                  <Ellipse Width="8" Height="8" Fill="#E0533B" Margin="0,0,6,0" VerticalAlignment="Center" />
-                  <TextBlock Text="Errors" />
-                </StackPanel>
-              </RadioButton>
-              <RadioButton Style="{StaticResource LogFilterChip}"
-                           IsChecked="{Binding Filter, Converter={StaticResource StringEquals}, ConverterParameter=warnings, Mode=TwoWay}">
-                <StackPanel Orientation="Horizontal">
-                  <Ellipse Width="8" Height="8" Fill="#E0A93B" Margin="0,0,6,0" VerticalAlignment="Center" />
-                  <TextBlock Text="Warnings" />
-                </StackPanel>
-              </RadioButton>
-              <RadioButton Style="{StaticResource LogFilterChip}"
-                           IsChecked="{Binding Filter, Converter={StaticResource StringEquals}, ConverterParameter=connections, Mode=TwoWay}">
-                <StackPanel Orientation="Horizontal">
-                  <Ellipse Width="8" Height="8" Fill="#3B9BE0" Margin="0,0,6,0" VerticalAlignment="Center" />
-                  <TextBlock Text="Connections" />
-                </StackPanel>
-              </RadioButton>
-              <RadioButton Style="{StaticResource LogFilterChip}"
-                           IsChecked="{Binding Filter, Converter={StaticResource StringEquals}, ConverterParameter=mods, Mode=TwoWay}">
-                <StackPanel Orientation="Horizontal">
-                  <Ellipse Width="8" Height="8" Fill="#4CC76E" Margin="0,0,6,0" VerticalAlignment="Center" />
-                  <TextBlock Text="Mods/Success" />
-                </StackPanel>
-              </RadioButton>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,4" VerticalAlignment="Center">
-              <ui:TextBox Width="200" Margin="0,0,12,0" PlaceholderText="Search log lines…"
-                          Icon="{ui:SymbolIcon Search24}" ClearButtonEnabled="True"
-                          Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" />
-              <CheckBox Content="Auto-scroll" VerticalAlignment="Center"
-                        IsChecked="{Binding AutoScroll, Mode=TwoWay}" />
-            </StackPanel>
-          </WrapPanel>
-
-          <controls:LogPaneControl Grid.Row="2" />
-
-          <TextBlock Grid.Row="3" FontSize="11" Margin="2,4,0,0"
-                     Foreground="{DynamicResource TextFillColorTertiaryBrush}">
-            <Run Text="Showing " /><Run Text="{Binding VisibleCount, Mode=OneWay}" /><Run Text=" of " /><Run
-              Text="{Binding TotalCount, Mode=OneWay}" /><Run Text=" lines" />
-          </TextBlock>
+          <StackPanel Visibility="{Binding IsDetached, Converter={StaticResource BoolToVis}}"
+                      HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.75">
+            <ui:SymbolIcon Symbol="Open24" FontSize="28" HorizontalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+            <TextBlock Margin="0,8,0,0" HorizontalAlignment="Center"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+              <Run Text="{Binding Title, Mode=OneWay}" FontWeight="SemiBold" /><Run Text=" is open in a separate window" />
+            </TextBlock>
+            <ui:Button Margin="0,12,0,0" HorizontalAlignment="Center" Content="Bring back here"
+                       Click="OnReattach" Tag="{Binding}" />
+          </StackPanel>
         </Grid>
       </Border>
     </DataTemplate>
@@ -200,7 +91,7 @@
         </TextBlock>
       </StackPanel>
 
-      <!-- View-mode segmented control (grid/list/tabs/focus) -->
+      <!-- View-mode segmented control (grid/tabs/focus) -->
       <Border Grid.Column="1" HorizontalAlignment="Left" Margin="20,0,0,0"
               CornerRadius="8" Padding="3"
               Background="{DynamicResource ControlFillColorDefaultBrush}"
