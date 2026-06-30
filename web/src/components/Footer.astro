@@ -1,0 +1,25 @@
+---
+import Default from '@astrojs/starlight/components/Footer.astro';
+---
+
+<Default>
+	<slot />
+</Default>
+
+<p class="dzl-disclaimer">
+	DayZ Labs (dzl) is an unofficial, community-made tool, not affiliated with or authorized by
+	Bohemia Interactive&nbsp;a.s. Bohemia Interactive, ARMA, DAYZ, ENFUSION and all associated logos
+	and designs are trademarks or registered trademarks of Bohemia Interactive&nbsp;a.s.
+</p>
+
+<style>
+	.dzl-disclaimer {
+		margin-top: 2rem;
+		padding-top: 1rem;
+		border-top: 1px solid var(--sl-color-gray-5);
+		font-size: var(--sl-text-xs);
+		color: var(--sl-color-gray-3);
+		text-align: center;
+		line-height: 1.5;
+	}
+</style>

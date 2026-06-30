@@ -14,6 +14,9 @@ export default defineConfig({
         { icon: 'github', label: 'GitHub', href: 'https://github.com/Borcioo/dayz-labs' },
       ],
       customCss: ['./src/styles/theme.css'],
+      components: {
+        Footer: './src/components/Footer.astro',
+      },
       sidebar: [
         {
           label: 'Overview',

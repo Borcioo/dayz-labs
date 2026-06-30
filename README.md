@@ -117,3 +117,10 @@ built by `scripts/pack.ps1` (Velopack) and published on a `v*` tag by `.github/w
 `dzl` is licensed under the **GNU General Public License v3.0** — see [LICENSE](LICENSE).
 
 Copyright © 2026 Borcioo (DayZ Labs).
+
+## Disclaimer
+
+DayZ Labs (`dzl`) is an unofficial, community-made tool. It is **not affiliated with,
+endorsed by, or authorized by Bohemia Interactive a.s.** Bohemia Interactive, ARMA, DAYZ,
+ENFUSION and all associated logos and designs are trademarks or registered trademarks of
+Bohemia Interactive a.s.
