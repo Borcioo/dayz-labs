@@ -4,6 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:local="clr-namespace:Dzl.Tray"
+             xmlns:controls="clr-namespace:Dzl.Tray.Controls"
              xmlns:vm="clr-namespace:Dzl.Tray.ViewModels"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              mc:Ignorable="d"
@@ -11,23 +12,6 @@
   <!-- Logs page (grid / list / tabs / focus view modes over the four log panes).
        DataContext = MainViewModel (inherited from the host window). -->
   <UserControl.Resources>
-    <!-- Read-only monospace, dark, no-wrap log pane (script/rpt/adm/client). -->
-    <Style x:Key="LogTextBox" TargetType="TextBox">
-      <Setter Property="IsReadOnly" Value="True" />
-      <Setter Property="IsReadOnlyCaretVisible" Value="False" />
-      <Setter Property="FontFamily" Value="Cascadia Mono, Consolas" />
-      <Setter Property="FontSize" Value="12" />
-      <Setter Property="TextWrapping" Value="NoWrap" />
-      <Setter Property="AcceptsReturn" Value="True" />
-      <Setter Property="Background" Value="{DynamicResource ApplicationBackgroundBrush}" />
-      <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
-      <Setter Property="Padding" Value="8" />
-      <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
-      <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
-    </Style>
-
     <!-- Segmented-control-style radio for the Logs view-mode selector. Looks like a flat
          pill that fills with accent when checked. RadioButtons in one GroupName behave
          as a mutually-exclusive segment group. -->
@@ -183,9 +167,7 @@
             </StackPanel>
           </WrapPanel>
 
-          <TextBox Grid.Row="2" Text="{Binding Text, Mode=OneWay}"
-                   TextChanged="OnLogTextChanged"
-                   Style="{StaticResource LogTextBox}" />
+          <controls:LogPaneControl Grid.Row="2" />
 
           <TextBlock Grid.Row="3" FontSize="11" Margin="2,4,0,0"
                      Foreground="{DynamicResource TextFillColorTertiaryBrush}">
@@ -265,11 +247,12 @@
     </Grid>
 
     <Grid Grid.Row="1">
-      <!-- GRID: explicit 2x2. ContentControls with *ContentAlignment=Stretch so each
-           pane fills its cell (ItemsControl+UniformGrid wouldn't stretch the cards;
-           the default ContentControl content alignment is Left/Top). Reorder lives in List. -->
+      <!-- GRID: 2 columns. Script/RPT/ADM/Client fill a 2x2; Console spans the full width on the
+           third row (it's the cleanest startup/CE overview, nice to read wide). ContentControls with
+           *ContentAlignment=Stretch so each pane fills its cell. -->
       <Grid Visibility="{Binding LogsViewMode, Converter={StaticResource StringEqualsVis}, ConverterParameter=grid}">
         <Grid.RowDefinitions>
+          <RowDefinition Height="*" />
           <RowDefinition Height="*" />
           <RowDefinition Height="*" />
         </Grid.RowDefinitions>
@@ -287,6 +270,9 @@
                         ContentTemplate="{StaticResource LogPaneTemplate}"
                         HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
         <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding LogPanes[3]}"
+                        ContentTemplate="{StaticResource LogPaneTemplate}"
+                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+        <ContentControl Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Content="{Binding LogPanes[4]}"
                         ContentTemplate="{StaticResource LogPaneTemplate}"
                         HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
       </Grid>

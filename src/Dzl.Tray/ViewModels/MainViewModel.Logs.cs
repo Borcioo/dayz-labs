@@ -111,6 +111,30 @@ public partial class MainViewModel
         Dzl.Core.Tools.EditorLauncher.OpenFile(Cfg.EditorPath, path, 0, Path.GetDirectoryName(path));
     }
 
+    /// <summary>Open a clicked stack-trace reference (<c>file.c : line</c>) in the configured editor. Absolute
+    /// paths open directly; relative script paths are resolved best-effort against the projects root and the
+    /// mounted P: work drive (where vanilla + mod scripts live). Silently no-ops when nothing resolves.</summary>
+    public void OpenLogFileRef(LogPaneVm pane, string path, int line)
+    {
+        var resolved = ResolveLogPath(pane, path);
+        if (resolved is null) return;
+        Dzl.Core.Tools.EditorLauncher.OpenFile(Cfg.EditorPath, resolved, line, Path.GetDirectoryName(resolved));
+    }
+
+    private string? ResolveLogPath(LogPaneVm pane, string path)
+    {
+        if (Path.IsPathRooted(path)) return File.Exists(path) ? path : null;
+        var rel = path.Replace('/', Path.DirectorySeparatorChar);
+        var bases = new[] { Cfg.ProjectsRoot, @"P:\", Path.GetDirectoryName(pane.Path) };
+        foreach (var b in bases)
+        {
+            if (string.IsNullOrEmpty(b)) continue;
+            var cand = Path.Combine(b, rel);
+            if (File.Exists(cand)) return cand;
+        }
+        return null;
+    }
+
     /// <summary>Open the pane's log file in a PowerShell window that live-tails it
     /// (<c>Get-Content -Wait</c>) — a real terminal view for grepping/following.</summary>
     [RelayCommand]

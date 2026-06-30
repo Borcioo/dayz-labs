@@ -118,6 +118,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         LogPanes.Add(new LogPaneVm("rpt", "RPT"));
         LogPanes.Add(new LogPaneVm("adm", "ADM"));
         LogPanes.Add(new LogPaneVm("client", "Client"));
+        LogPanes.Add(new LogPaneVm("console", "Console"));
         SelectedLogPane = LogPanes[0];
 
         LoadMods();

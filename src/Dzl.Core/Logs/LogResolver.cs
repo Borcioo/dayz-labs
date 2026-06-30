@@ -13,9 +13,10 @@ public static class LogResolver
 
     public static Dictionary<string, string?> Resolve(string serverProfiles, string clientProfiles) => new()
     {
-        ["script"] = Newest(serverProfiles, "script_*.log"),
-        ["rpt"]    = Newest(serverProfiles, "*.RPT"),
-        ["adm"]    = Newest(serverProfiles, "*.ADM"),
-        ["client"] = Newest(clientProfiles, "script_*.log"),
+        ["script"]  = Newest(serverProfiles, "script_*.log"),
+        ["rpt"]     = Newest(serverProfiles, "*.RPT"),
+        ["adm"]     = Newest(serverProfiles, "*.ADM"),
+        ["console"] = Newest(serverProfiles, "server_console.log"),
+        ["client"]  = Newest(clientProfiles, "script_*.log"),
     };
 }

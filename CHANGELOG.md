@@ -4,6 +4,19 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.31] - 2026-06-30
+
+### Added
+- **Syntax-coloured log viewer (AvalonEdit).** The log panes now render through a real code/log editor:
+  per-token colouring (timestamp, subsystem, `(E)`/`(W)` severity, quoted strings, ADM `pos=<…>`), faint
+  red/amber tint on error/warning lines, **gutter line numbers**, and **search-match highlighting** in the
+  visible text. Stack-trace file references (`scripts/…/foo.c : 339`, absolute `…\init.c : 97`) are
+  underlined and **clickable — they open the file at that line in your configured editor** (absolute paths
+  always; relative script paths resolved best-effort against the projects root and the mounted P: drive).
+- **Fifth log pane: Console.** `server_console.log` is now tailed alongside script/RPT/ADM/client — the
+  cleanest startup + Central Economy overview (`SUCCESS:`, `[CE][Hive] :: …`, mission/map load). In Grid
+  view it spans the full width on its own row.
+
 ## [0.1.30] - 2026-06-30
 
 ### Added
@@ -252,6 +265,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.31]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.31
 [0.1.30]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.30
 [0.1.29]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.29
 [0.1.28]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.28
