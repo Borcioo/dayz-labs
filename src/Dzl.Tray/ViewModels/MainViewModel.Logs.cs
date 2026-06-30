@@ -101,6 +101,16 @@ public partial class MainViewModel
     [RelayCommand]
     private void ClearLog(LogPaneVm? pane) => pane?.Clear();
 
+    /// <summary>Open the pane's resolved log file in the configured editor (its folder as the
+    /// workspace). Falls back to the OS default app when no editor is set.</summary>
+    [RelayCommand]
+    private void OpenLogInEditor(LogPaneVm? pane)
+    {
+        var path = pane?.Path;
+        if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
+        Dzl.Core.Tools.EditorLauncher.OpenFile(Cfg.EditorPath, path, 0, Path.GetDirectoryName(path));
+    }
+
     /// <summary>Open the pane's log file in a PowerShell window that live-tails it
     /// (<c>Get-Content -Wait</c>) — a real terminal view for grepping/following.</summary>
     [RelayCommand]

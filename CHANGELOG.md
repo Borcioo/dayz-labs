@@ -4,6 +4,17 @@ All notable changes to dzl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the app is versioned by
 git tag (`v*`), which the release workflow turns into a Velopack release.
 
+## [0.1.30] - 2026-06-30
+
+### Added
+- **The Logs viewer got search, quick filters and an auto-scroll toggle.** Every log pane (script/RPT/ADM/client,
+  in any view mode) now has its own toolbar: a **search box** (live, case-insensitive substring), **quick-filter
+  chips** — All · Errors · Warnings · Connections · Mods/Success — that narrow the pane to just those lines, an
+  **Auto-scroll** toggle (turn it off to read older lines without being yanked to the tail), and a new **Open in
+  editor** button that opens the full log file in your configured editor. A footer shows "Showing N of M lines"
+  so it's clear how much the filter/search is hiding. Filtering is in-memory over the live tail; the underlying
+  file is never touched.
+
 ## [0.1.29] - 2026-06-28
 
 ### Fixed
@@ -241,6 +252,7 @@ git tag (`v*`), which the release workflow turns into a Velopack release.
   actually load (instance / install / missing), read from `serverDZ.cfg`, with a one-click
   "Fix" that repoints the template at the instance's own mission.
 
+[0.1.30]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.30
 [0.1.29]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.29
 [0.1.28]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.28
 [0.1.27]: https://github.com/Borcioo/dayz-labs/releases/tag/v0.1.27

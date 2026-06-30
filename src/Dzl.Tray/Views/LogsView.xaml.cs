@@ -11,10 +11,11 @@ public partial class LogsView : UserControl
 {
     public LogsView() => InitializeComponent();
 
-    /// <summary>Auto-scroll a log pane to the end whenever new lines arrive. Wired from the
+    /// <summary>Auto-scroll a log pane to the end whenever new lines arrive — but only when the pane's
+    /// Auto-scroll toggle is on, so a user reading older lines isn't yanked to the tail. Wired from the
     /// log TextBox inside <c>LogPaneTemplate</c>, so it works in every view mode.</summary>
     private void OnLogTextChanged(object sender, TextChangedEventArgs e)
     {
-        if (sender is TextBox tb) tb.ScrollToEnd();
+        if (sender is TextBox { DataContext: LogPaneVm { AutoScroll: true } } tb) tb.ScrollToEnd();
     }
 }

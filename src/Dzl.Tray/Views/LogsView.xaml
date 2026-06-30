@@ -59,6 +59,37 @@
       </Setter>
     </Style>
 
+    <!-- Quick-filter chip (pill RadioButton). No GroupName → grouped by its parent StackPanel, so each
+         pane's chips are independent. IsChecked is TwoWay-bound to the pane's Filter via StringEquals:
+         checking a chip writes its key to Filter; clicking the active chip is a no-op (radio semantics). -->
+    <Style x:Key="LogFilterChip" TargetType="RadioButton">
+      <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Padding" Value="8,3" />
+      <Setter Property="Margin" Value="0,0,4,0" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RadioButton">
+            <Border x:Name="Bd" CornerRadius="6" Padding="{TemplateBinding Padding}"
+                    Background="Transparent" BorderThickness="1" BorderBrush="Transparent">
+              <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="#22FFFFFF" />
+              </Trigger>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="#332D7DD2" />
+                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
     <!-- One log pane: card with header (icon + Title + dimmed FileName + open/clear) and a
          mono read-only TextBox body. Reused by all four Logs view modes (grid/list/tabs/
          focus); the TextChanged autoscroll keeps the tail pinned to the bottom everywhere. -->
@@ -71,7 +102,9 @@
         <Grid>
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
           <Grid Grid.Row="0" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
@@ -87,6 +120,10 @@
                          Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
+              <ui:Button Icon="{ui:SymbolIcon Code24}" ToolTip="Open the full log file in your editor"
+                         Padding="6" Margin="0,0,6,0"
+                         Command="{Binding DataContext.OpenLogInEditorCommand, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}"
+                         CommandParameter="{Binding}" />
               <ui:Button Icon="{ui:SymbolIcon WindowConsole20}" ToolTip="Live-tail this log in PowerShell"
                          Padding="6" Margin="0,0,6,0"
                          Command="{Binding DataContext.OpenLogTerminalCommand, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}"
@@ -101,9 +138,60 @@
                          CommandParameter="{Binding}" />
             </StackPanel>
           </Grid>
-          <TextBox Grid.Row="1" Text="{Binding Text, Mode=OneWay}"
+
+          <!-- Toolbar: quick-filter chips + search box + auto-scroll toggle. WrapPanel so it flows to a
+               second line in the narrow Grid view panes instead of clipping. -->
+          <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal" Margin="0,0,12,4" VerticalAlignment="Center">
+              <RadioButton Style="{StaticResource LogFilterChip}" Content="All"
+                           IsChecked="{Binding Filter, Converter={StaticResource StringEquals}, ConverterParameter=all, Mode=TwoWay}" />
+              <RadioButton Style="{StaticResource LogFilterChip}"
+                           IsChecked="{Binding Filter, Converter={StaticResource StringEquals}, ConverterParameter=errors, Mode=TwoWay}">
+                <StackPanel Orientation="Horizontal">
+                  <Ellipse Width="8" Height="8" Fill="#E0533B" Margin="0,0,6,0" VerticalAlignment="Center" />
+                  <TextBlock Text="Errors" />
+                </StackPanel>
+              </RadioButton>
+              <RadioButton Style="{StaticResource LogFilterChip}"
+                           IsChecked="{Binding Filter, Converter={StaticResource StringEquals}, ConverterParameter=warnings, Mode=TwoWay}">
+                <StackPanel Orientation="Horizontal">
+                  <Ellipse Width="8" Height="8" Fill="#E0A93B" Margin="0,0,6,0" VerticalAlignment="Center" />
+                  <TextBlock Text="Warnings" />
+                </StackPanel>
+              </RadioButton>
+              <RadioButton Style="{StaticResource LogFilterChip}"
+                           IsChecked="{Binding Filter, Converter={StaticResource StringEquals}, ConverterParameter=connections, Mode=TwoWay}">
+                <StackPanel Orientation="Horizontal">
+                  <Ellipse Width="8" Height="8" Fill="#3B9BE0" Margin="0,0,6,0" VerticalAlignment="Center" />
+                  <TextBlock Text="Connections" />
+                </StackPanel>
+              </RadioButton>
+              <RadioButton Style="{StaticResource LogFilterChip}"
+                           IsChecked="{Binding Filter, Converter={StaticResource StringEquals}, ConverterParameter=mods, Mode=TwoWay}">
+                <StackPanel Orientation="Horizontal">
+                  <Ellipse Width="8" Height="8" Fill="#4CC76E" Margin="0,0,6,0" VerticalAlignment="Center" />
+                  <TextBlock Text="Mods/Success" />
+                </StackPanel>
+              </RadioButton>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4" VerticalAlignment="Center">
+              <ui:TextBox Width="200" Margin="0,0,12,0" PlaceholderText="Search log lines…"
+                          Icon="{ui:SymbolIcon Search24}" ClearButtonEnabled="True"
+                          Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" />
+              <CheckBox Content="Auto-scroll" VerticalAlignment="Center"
+                        IsChecked="{Binding AutoScroll, Mode=TwoWay}" />
+            </StackPanel>
+          </WrapPanel>
+
+          <TextBox Grid.Row="2" Text="{Binding Text, Mode=OneWay}"
                    TextChanged="OnLogTextChanged"
                    Style="{StaticResource LogTextBox}" />
+
+          <TextBlock Grid.Row="3" FontSize="11" Margin="2,4,0,0"
+                     Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+            <Run Text="Showing " /><Run Text="{Binding VisibleCount, Mode=OneWay}" /><Run Text=" of " /><Run
+              Text="{Binding TotalCount, Mode=OneWay}" /><Run Text=" lines" />
+          </TextBlock>
         </Grid>
       </Border>
     </DataTemplate>
